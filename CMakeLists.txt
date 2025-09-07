@@ -19,7 +19,19 @@ endif ()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-add_executable(${PROJECT_NAME} main.cc)
+add_executable(${PROJECT_NAME} main.cc
+        services/users/UserService.h
+        services/users/UserService.cc
+        dto/BaseApiResponse.h
+        services/subscriptions/SubscriptionService.h
+        services/subscriptions/SubscriptionService.cc
+        services/publications/PublicationService.h
+        services/publications/PublicationService.cc
+        services/newspapers/NewspaperService.cc
+        services/newspapers/NewspaperService.h
+        dto/CreatePublicationDto.h
+        dto/UpdatePublicationDto.h
+        constants/ErrorCodes.h)
 
 # ##############################################################################
 # If you include the drogon source code locally in your project, use this method
@@ -44,6 +56,7 @@ endif ()
 aux_source_directory(controllers CTL_SRC)
 aux_source_directory(filters FILTER_SRC)
 aux_source_directory(plugins PLUGIN_SRC)
+aux_source_directory(constants PLUGIN_SRC)
 aux_source_directory(models MODEL_SRC)
 
 drogon_create_views(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/views
@@ -65,6 +78,8 @@ target_sources(${PROJECT_NAME}
                ${CTL_SRC}
                ${FILTER_SRC}
                ${PLUGIN_SRC}
+               ${CONSTANTS_SRC}
+               ${SERVICE_SRC}
                ${MODEL_SRC})
 # ##############################################################################
 # uncomment the following line for dynamically loading views 
