@@ -1,0 +1,37 @@
+/**
+ *
+ *  GnpServicePlugin.h
+ *
+ */
+
+#pragma once
+
+#include <drogon/plugins/Plugin.h>
+#include "services/users/UserService.h"
+#include "services/publications/PublicationService.h"
+
+namespace gnp::plugins {
+
+    class GnpServicePlugin : public drogon::Plugin<GnpServicePlugin>
+    {
+    public:
+        GnpServicePlugin() {}
+        /// This method must be called by drogon to initialize and start the plugin.
+        /// It must be implemented by the user.
+        void initAndStart(const Json::Value &config) override;
+
+        /// This method must be called by drogon to shutdown the plugin.
+        /// It must be implemented by the user.
+        void shutdown() override;
+
+        // Provide access to the service
+        services::UserService& getUserService() { return userService_; }
+        services::PublicationService& getPublicationService() { return publicationService_; }
+
+    private:
+        services::UserService userService_;
+        services::PublicationService publicationService_;
+    };
+
+}
+
