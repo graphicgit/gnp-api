@@ -15,6 +15,7 @@ using namespace drogon_model::Gnp;
 
 const std::string SubscriptionPlans::Cols::_id = "\"id\"";
 const std::string SubscriptionPlans::Cols::_name = "\"name\"";
+const std::string SubscriptionPlans::Cols::_plan_type = "\"plan_type\"";
 const std::string SubscriptionPlans::Cols::_description = "\"description\"";
 const std::string SubscriptionPlans::Cols::_pricing = "\"pricing\"";
 const std::string SubscriptionPlans::Cols::_created_at = "\"created_at\"";
@@ -26,6 +27,7 @@ const std::string SubscriptionPlans::tableName = "\"subscription_plans\"";
 const std::vector<typename SubscriptionPlans::MetaData> SubscriptionPlans::metaData_={
 {"id","std::string","uuid",0,0,1,1},
 {"name","std::string","character varying",255,0,0,1},
+{"plan_type","std::string","character varying",50,0,0,1},
 {"description","std::string","text",0,0,0,0},
 {"pricing","std::string","jsonb",0,0,0,1},
 {"created_at","::trantor::Date","timestamp without time zone",0,0,0,1},
@@ -47,6 +49,10 @@ SubscriptionPlans::SubscriptionPlans(const Row &r, const ssize_t indexOffset) no
         if(!r["name"].isNull())
         {
             name_=std::make_shared<std::string>(r["name"].as<std::string>());
+        }
+        if(!r["plan_type"].isNull())
+        {
+            planType_=std::make_shared<std::string>(r["plan_type"].as<std::string>());
         }
         if(!r["description"].isNull())
         {
@@ -104,7 +110,7 @@ SubscriptionPlans::SubscriptionPlans(const Row &r, const ssize_t indexOffset) no
     else
     {
         size_t offset = (size_t)indexOffset;
-        if(offset + 6 > r.size())
+        if(offset + 7 > r.size())
         {
             LOG_FATAL << "Invalid SQL result for this model";
             return;
@@ -123,14 +129,19 @@ SubscriptionPlans::SubscriptionPlans(const Row &r, const ssize_t indexOffset) no
         index = offset + 2;
         if(!r[index].isNull())
         {
-            description_=std::make_shared<std::string>(r[index].as<std::string>());
+            planType_=std::make_shared<std::string>(r[index].as<std::string>());
         }
         index = offset + 3;
         if(!r[index].isNull())
         {
-            pricing_=std::make_shared<std::string>(r[index].as<std::string>());
+            description_=std::make_shared<std::string>(r[index].as<std::string>());
         }
         index = offset + 4;
+        if(!r[index].isNull())
+        {
+            pricing_=std::make_shared<std::string>(r[index].as<std::string>());
+        }
+        index = offset + 5;
         if(!r[index].isNull())
         {
             auto timeStr = r[index].as<std::string>();
@@ -153,7 +164,7 @@ SubscriptionPlans::SubscriptionPlans(const Row &r, const ssize_t indexOffset) no
                 createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
-        index = offset + 5;
+        index = offset + 6;
         if(!r[index].isNull())
         {
             auto timeStr = r[index].as<std::string>();
@@ -182,7 +193,7 @@ SubscriptionPlans::SubscriptionPlans(const Row &r, const ssize_t indexOffset) no
 
 SubscriptionPlans::SubscriptionPlans(const Json::Value &pJson, const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 6)
+    if(pMasqueradingVector.size() != 7)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -208,7 +219,7 @@ SubscriptionPlans::SubscriptionPlans(const Json::Value &pJson, const std::vector
         dirtyFlag_[2] = true;
         if(!pJson[pMasqueradingVector[2]].isNull())
         {
-            description_=std::make_shared<std::string>(pJson[pMasqueradingVector[2]].asString());
+            planType_=std::make_shared<std::string>(pJson[pMasqueradingVector[2]].asString());
         }
     }
     if(!pMasqueradingVector[3].empty() && pJson.isMember(pMasqueradingVector[3]))
@@ -216,7 +227,7 @@ SubscriptionPlans::SubscriptionPlans(const Json::Value &pJson, const std::vector
         dirtyFlag_[3] = true;
         if(!pJson[pMasqueradingVector[3]].isNull())
         {
-            pricing_=std::make_shared<std::string>(pJson[pMasqueradingVector[3]].asString());
+            description_=std::make_shared<std::string>(pJson[pMasqueradingVector[3]].asString());
         }
     }
     if(!pMasqueradingVector[4].empty() && pJson.isMember(pMasqueradingVector[4]))
@@ -224,7 +235,15 @@ SubscriptionPlans::SubscriptionPlans(const Json::Value &pJson, const std::vector
         dirtyFlag_[4] = true;
         if(!pJson[pMasqueradingVector[4]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[4]].asString();
+            pricing_=std::make_shared<std::string>(pJson[pMasqueradingVector[4]].asString());
+        }
+    }
+    if(!pMasqueradingVector[5].empty() && pJson.isMember(pMasqueradingVector[5]))
+    {
+        dirtyFlag_[5] = true;
+        if(!pJson[pMasqueradingVector[5]].isNull())
+        {
+            auto timeStr = pJson[pMasqueradingVector[5]].asString();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -245,12 +264,12 @@ SubscriptionPlans::SubscriptionPlans(const Json::Value &pJson, const std::vector
             }
         }
     }
-    if(!pMasqueradingVector[5].empty() && pJson.isMember(pMasqueradingVector[5]))
+    if(!pMasqueradingVector[6].empty() && pJson.isMember(pMasqueradingVector[6]))
     {
-        dirtyFlag_[5] = true;
-        if(!pJson[pMasqueradingVector[5]].isNull())
+        dirtyFlag_[6] = true;
+        if(!pJson[pMasqueradingVector[6]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[5]].asString();
+            auto timeStr = pJson[pMasqueradingVector[6]].asString();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -291,9 +310,17 @@ SubscriptionPlans::SubscriptionPlans(const Json::Value &pJson) noexcept(false)
             name_=std::make_shared<std::string>(pJson["name"].asString());
         }
     }
-    if(pJson.isMember("description"))
+    if(pJson.isMember("plan_type"))
     {
         dirtyFlag_[2]=true;
+        if(!pJson["plan_type"].isNull())
+        {
+            planType_=std::make_shared<std::string>(pJson["plan_type"].asString());
+        }
+    }
+    if(pJson.isMember("description"))
+    {
+        dirtyFlag_[3]=true;
         if(!pJson["description"].isNull())
         {
             description_=std::make_shared<std::string>(pJson["description"].asString());
@@ -301,7 +328,7 @@ SubscriptionPlans::SubscriptionPlans(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("pricing"))
     {
-        dirtyFlag_[3]=true;
+        dirtyFlag_[4]=true;
         if(!pJson["pricing"].isNull())
         {
             pricing_=std::make_shared<std::string>(pJson["pricing"].asString());
@@ -309,7 +336,7 @@ SubscriptionPlans::SubscriptionPlans(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("created_at"))
     {
-        dirtyFlag_[4]=true;
+        dirtyFlag_[5]=true;
         if(!pJson["created_at"].isNull())
         {
             auto timeStr = pJson["created_at"].asString();
@@ -335,7 +362,7 @@ SubscriptionPlans::SubscriptionPlans(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("updated_at"))
     {
-        dirtyFlag_[5]=true;
+        dirtyFlag_[6]=true;
         if(!pJson["updated_at"].isNull())
         {
             auto timeStr = pJson["updated_at"].asString();
@@ -364,7 +391,7 @@ SubscriptionPlans::SubscriptionPlans(const Json::Value &pJson) noexcept(false)
 void SubscriptionPlans::updateByMasqueradedJson(const Json::Value &pJson,
                                             const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 6)
+    if(pMasqueradingVector.size() != 7)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -389,7 +416,7 @@ void SubscriptionPlans::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[2] = true;
         if(!pJson[pMasqueradingVector[2]].isNull())
         {
-            description_=std::make_shared<std::string>(pJson[pMasqueradingVector[2]].asString());
+            planType_=std::make_shared<std::string>(pJson[pMasqueradingVector[2]].asString());
         }
     }
     if(!pMasqueradingVector[3].empty() && pJson.isMember(pMasqueradingVector[3]))
@@ -397,7 +424,7 @@ void SubscriptionPlans::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[3] = true;
         if(!pJson[pMasqueradingVector[3]].isNull())
         {
-            pricing_=std::make_shared<std::string>(pJson[pMasqueradingVector[3]].asString());
+            description_=std::make_shared<std::string>(pJson[pMasqueradingVector[3]].asString());
         }
     }
     if(!pMasqueradingVector[4].empty() && pJson.isMember(pMasqueradingVector[4]))
@@ -405,7 +432,15 @@ void SubscriptionPlans::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[4] = true;
         if(!pJson[pMasqueradingVector[4]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[4]].asString();
+            pricing_=std::make_shared<std::string>(pJson[pMasqueradingVector[4]].asString());
+        }
+    }
+    if(!pMasqueradingVector[5].empty() && pJson.isMember(pMasqueradingVector[5]))
+    {
+        dirtyFlag_[5] = true;
+        if(!pJson[pMasqueradingVector[5]].isNull())
+        {
+            auto timeStr = pJson[pMasqueradingVector[5]].asString();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -426,12 +461,12 @@ void SubscriptionPlans::updateByMasqueradedJson(const Json::Value &pJson,
             }
         }
     }
-    if(!pMasqueradingVector[5].empty() && pJson.isMember(pMasqueradingVector[5]))
+    if(!pMasqueradingVector[6].empty() && pJson.isMember(pMasqueradingVector[6]))
     {
-        dirtyFlag_[5] = true;
-        if(!pJson[pMasqueradingVector[5]].isNull())
+        dirtyFlag_[6] = true;
+        if(!pJson[pMasqueradingVector[6]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[5]].asString();
+            auto timeStr = pJson[pMasqueradingVector[6]].asString();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -471,9 +506,17 @@ void SubscriptionPlans::updateByJson(const Json::Value &pJson) noexcept(false)
             name_=std::make_shared<std::string>(pJson["name"].asString());
         }
     }
-    if(pJson.isMember("description"))
+    if(pJson.isMember("plan_type"))
     {
         dirtyFlag_[2] = true;
+        if(!pJson["plan_type"].isNull())
+        {
+            planType_=std::make_shared<std::string>(pJson["plan_type"].asString());
+        }
+    }
+    if(pJson.isMember("description"))
+    {
+        dirtyFlag_[3] = true;
         if(!pJson["description"].isNull())
         {
             description_=std::make_shared<std::string>(pJson["description"].asString());
@@ -481,7 +524,7 @@ void SubscriptionPlans::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("pricing"))
     {
-        dirtyFlag_[3] = true;
+        dirtyFlag_[4] = true;
         if(!pJson["pricing"].isNull())
         {
             pricing_=std::make_shared<std::string>(pJson["pricing"].asString());
@@ -489,7 +532,7 @@ void SubscriptionPlans::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("created_at"))
     {
-        dirtyFlag_[4] = true;
+        dirtyFlag_[5] = true;
         if(!pJson["created_at"].isNull())
         {
             auto timeStr = pJson["created_at"].asString();
@@ -515,7 +558,7 @@ void SubscriptionPlans::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("updated_at"))
     {
-        dirtyFlag_[5] = true;
+        dirtyFlag_[6] = true;
         if(!pJson["updated_at"].isNull())
         {
             auto timeStr = pJson["updated_at"].asString();
@@ -590,6 +633,28 @@ void SubscriptionPlans::setName(std::string &&pName) noexcept
     dirtyFlag_[1] = true;
 }
 
+const std::string &SubscriptionPlans::getValueOfPlanType() const noexcept
+{
+    static const std::string defaultValue = std::string();
+    if(planType_)
+        return *planType_;
+    return defaultValue;
+}
+const std::shared_ptr<std::string> &SubscriptionPlans::getPlanType() const noexcept
+{
+    return planType_;
+}
+void SubscriptionPlans::setPlanType(const std::string &pPlanType) noexcept
+{
+    planType_ = std::make_shared<std::string>(pPlanType);
+    dirtyFlag_[2] = true;
+}
+void SubscriptionPlans::setPlanType(std::string &&pPlanType) noexcept
+{
+    planType_ = std::make_shared<std::string>(std::move(pPlanType));
+    dirtyFlag_[2] = true;
+}
+
 const std::string &SubscriptionPlans::getValueOfDescription() const noexcept
 {
     static const std::string defaultValue = std::string();
@@ -604,17 +669,17 @@ const std::shared_ptr<std::string> &SubscriptionPlans::getDescription() const no
 void SubscriptionPlans::setDescription(const std::string &pDescription) noexcept
 {
     description_ = std::make_shared<std::string>(pDescription);
-    dirtyFlag_[2] = true;
+    dirtyFlag_[3] = true;
 }
 void SubscriptionPlans::setDescription(std::string &&pDescription) noexcept
 {
     description_ = std::make_shared<std::string>(std::move(pDescription));
-    dirtyFlag_[2] = true;
+    dirtyFlag_[3] = true;
 }
 void SubscriptionPlans::setDescriptionToNull() noexcept
 {
     description_.reset();
-    dirtyFlag_[2] = true;
+    dirtyFlag_[3] = true;
 }
 
 const std::string &SubscriptionPlans::getValueOfPricing() const noexcept
@@ -631,12 +696,12 @@ const std::shared_ptr<std::string> &SubscriptionPlans::getPricing() const noexce
 void SubscriptionPlans::setPricing(const std::string &pPricing) noexcept
 {
     pricing_ = std::make_shared<std::string>(pPricing);
-    dirtyFlag_[3] = true;
+    dirtyFlag_[4] = true;
 }
 void SubscriptionPlans::setPricing(std::string &&pPricing) noexcept
 {
     pricing_ = std::make_shared<std::string>(std::move(pPricing));
-    dirtyFlag_[3] = true;
+    dirtyFlag_[4] = true;
 }
 
 const ::trantor::Date &SubscriptionPlans::getValueOfCreatedAt() const noexcept
@@ -653,7 +718,7 @@ const std::shared_ptr<::trantor::Date> &SubscriptionPlans::getCreatedAt() const 
 void SubscriptionPlans::setCreatedAt(const ::trantor::Date &pCreatedAt) noexcept
 {
     createdAt_ = std::make_shared<::trantor::Date>(pCreatedAt);
-    dirtyFlag_[4] = true;
+    dirtyFlag_[5] = true;
 }
 
 const ::trantor::Date &SubscriptionPlans::getValueOfUpdatedAt() const noexcept
@@ -670,12 +735,12 @@ const std::shared_ptr<::trantor::Date> &SubscriptionPlans::getUpdatedAt() const 
 void SubscriptionPlans::setUpdatedAt(const ::trantor::Date &pUpdatedAt) noexcept
 {
     updatedAt_ = std::make_shared<::trantor::Date>(pUpdatedAt);
-    dirtyFlag_[5] = true;
+    dirtyFlag_[6] = true;
 }
 void SubscriptionPlans::setUpdatedAtToNull() noexcept
 {
     updatedAt_.reset();
-    dirtyFlag_[5] = true;
+    dirtyFlag_[6] = true;
 }
 
 void SubscriptionPlans::updateId(const uint64_t id)
@@ -687,6 +752,7 @@ const std::vector<std::string> &SubscriptionPlans::insertColumns() noexcept
     static const std::vector<std::string> inCols={
         "id",
         "name",
+        "plan_type",
         "description",
         "pricing",
         "created_at",
@@ -721,6 +787,17 @@ void SubscriptionPlans::outputArgs(drogon::orm::internal::SqlBinder &binder) con
     }
     if(dirtyFlag_[2])
     {
+        if(getPlanType())
+        {
+            binder << getValueOfPlanType();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[3])
+    {
         if(getDescription())
         {
             binder << getValueOfDescription();
@@ -730,7 +807,7 @@ void SubscriptionPlans::outputArgs(drogon::orm::internal::SqlBinder &binder) con
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[3])
+    if(dirtyFlag_[4])
     {
         if(getPricing())
         {
@@ -741,7 +818,7 @@ void SubscriptionPlans::outputArgs(drogon::orm::internal::SqlBinder &binder) con
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[4])
+    if(dirtyFlag_[5])
     {
         if(getCreatedAt())
         {
@@ -752,7 +829,7 @@ void SubscriptionPlans::outputArgs(drogon::orm::internal::SqlBinder &binder) con
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[5])
+    if(dirtyFlag_[6])
     {
         if(getUpdatedAt())
         {
@@ -792,6 +869,10 @@ const std::vector<std::string> SubscriptionPlans::updateColumns() const
     {
         ret.push_back(getColumnName(5));
     }
+    if(dirtyFlag_[6])
+    {
+        ret.push_back(getColumnName(6));
+    }
     return ret;
 }
 
@@ -821,6 +902,17 @@ void SubscriptionPlans::updateArgs(drogon::orm::internal::SqlBinder &binder) con
     }
     if(dirtyFlag_[2])
     {
+        if(getPlanType())
+        {
+            binder << getValueOfPlanType();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[3])
+    {
         if(getDescription())
         {
             binder << getValueOfDescription();
@@ -830,7 +922,7 @@ void SubscriptionPlans::updateArgs(drogon::orm::internal::SqlBinder &binder) con
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[3])
+    if(dirtyFlag_[4])
     {
         if(getPricing())
         {
@@ -841,7 +933,7 @@ void SubscriptionPlans::updateArgs(drogon::orm::internal::SqlBinder &binder) con
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[4])
+    if(dirtyFlag_[5])
     {
         if(getCreatedAt())
         {
@@ -852,7 +944,7 @@ void SubscriptionPlans::updateArgs(drogon::orm::internal::SqlBinder &binder) con
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[5])
+    if(dirtyFlag_[6])
     {
         if(getUpdatedAt())
         {
@@ -882,6 +974,14 @@ Json::Value SubscriptionPlans::toJson() const
     else
     {
         ret["name"]=Json::Value();
+    }
+    if(getPlanType())
+    {
+        ret["plan_type"]=getValueOfPlanType();
+    }
+    else
+    {
+        ret["plan_type"]=Json::Value();
     }
     if(getDescription())
     {
@@ -927,7 +1027,7 @@ Json::Value SubscriptionPlans::toMasqueradedJson(
     const std::vector<std::string> &pMasqueradingVector) const
 {
     Json::Value ret;
-    if(pMasqueradingVector.size() == 6)
+    if(pMasqueradingVector.size() == 7)
     {
         if(!pMasqueradingVector[0].empty())
         {
@@ -953,9 +1053,9 @@ Json::Value SubscriptionPlans::toMasqueradedJson(
         }
         if(!pMasqueradingVector[2].empty())
         {
-            if(getDescription())
+            if(getPlanType())
             {
-                ret[pMasqueradingVector[2]]=getValueOfDescription();
+                ret[pMasqueradingVector[2]]=getValueOfPlanType();
             }
             else
             {
@@ -964,9 +1064,9 @@ Json::Value SubscriptionPlans::toMasqueradedJson(
         }
         if(!pMasqueradingVector[3].empty())
         {
-            if(getPricing())
+            if(getDescription())
             {
-                ret[pMasqueradingVector[3]]=getValueOfPricing();
+                ret[pMasqueradingVector[3]]=getValueOfDescription();
             }
             else
             {
@@ -975,9 +1075,9 @@ Json::Value SubscriptionPlans::toMasqueradedJson(
         }
         if(!pMasqueradingVector[4].empty())
         {
-            if(getCreatedAt())
+            if(getPricing())
             {
-                ret[pMasqueradingVector[4]]=getCreatedAt()->toDbStringLocal();
+                ret[pMasqueradingVector[4]]=getValueOfPricing();
             }
             else
             {
@@ -986,13 +1086,24 @@ Json::Value SubscriptionPlans::toMasqueradedJson(
         }
         if(!pMasqueradingVector[5].empty())
         {
-            if(getUpdatedAt())
+            if(getCreatedAt())
             {
-                ret[pMasqueradingVector[5]]=getUpdatedAt()->toDbStringLocal();
+                ret[pMasqueradingVector[5]]=getCreatedAt()->toDbStringLocal();
             }
             else
             {
                 ret[pMasqueradingVector[5]]=Json::Value();
+            }
+        }
+        if(!pMasqueradingVector[6].empty())
+        {
+            if(getUpdatedAt())
+            {
+                ret[pMasqueradingVector[6]]=getUpdatedAt()->toDbStringLocal();
+            }
+            else
+            {
+                ret[pMasqueradingVector[6]]=Json::Value();
             }
         }
         return ret;
@@ -1013,6 +1124,14 @@ Json::Value SubscriptionPlans::toMasqueradedJson(
     else
     {
         ret["name"]=Json::Value();
+    }
+    if(getPlanType())
+    {
+        ret["plan_type"]=getValueOfPlanType();
+    }
+    else
+    {
+        ret["plan_type"]=Json::Value();
     }
     if(getDescription())
     {
@@ -1066,14 +1185,24 @@ bool SubscriptionPlans::validateJsonForCreation(const Json::Value &pJson, std::s
         err="The name column cannot be null";
         return false;
     }
+    if(pJson.isMember("plan_type"))
+    {
+        if(!validJsonOfField(2, "plan_type", pJson["plan_type"], err, true))
+            return false;
+    }
+    else
+    {
+        err="The plan_type column cannot be null";
+        return false;
+    }
     if(pJson.isMember("description"))
     {
-        if(!validJsonOfField(2, "description", pJson["description"], err, true))
+        if(!validJsonOfField(3, "description", pJson["description"], err, true))
             return false;
     }
     if(pJson.isMember("pricing"))
     {
-        if(!validJsonOfField(3, "pricing", pJson["pricing"], err, true))
+        if(!validJsonOfField(4, "pricing", pJson["pricing"], err, true))
             return false;
     }
     else
@@ -1083,7 +1212,7 @@ bool SubscriptionPlans::validateJsonForCreation(const Json::Value &pJson, std::s
     }
     if(pJson.isMember("created_at"))
     {
-        if(!validJsonOfField(4, "created_at", pJson["created_at"], err, true))
+        if(!validJsonOfField(5, "created_at", pJson["created_at"], err, true))
             return false;
     }
     else
@@ -1093,7 +1222,7 @@ bool SubscriptionPlans::validateJsonForCreation(const Json::Value &pJson, std::s
     }
     if(pJson.isMember("updated_at"))
     {
-        if(!validJsonOfField(5, "updated_at", pJson["updated_at"], err, true))
+        if(!validJsonOfField(6, "updated_at", pJson["updated_at"], err, true))
             return false;
     }
     return true;
@@ -1102,7 +1231,7 @@ bool SubscriptionPlans::validateMasqueradedJsonForCreation(const Json::Value &pJ
                                                            const std::vector<std::string> &pMasqueradingVector,
                                                            std::string &err)
 {
-    if(pMasqueradingVector.size() != 6)
+    if(pMasqueradingVector.size() != 7)
     {
         err = "Bad masquerading vector";
         return false;
@@ -1136,6 +1265,11 @@ bool SubscriptionPlans::validateMasqueradedJsonForCreation(const Json::Value &pJ
               if(!validJsonOfField(2, pMasqueradingVector[2], pJson[pMasqueradingVector[2]], err, true))
                   return false;
           }
+        else
+        {
+            err="The " + pMasqueradingVector[2] + " column cannot be null";
+            return false;
+        }
       }
       if(!pMasqueradingVector[3].empty())
       {
@@ -1144,11 +1278,6 @@ bool SubscriptionPlans::validateMasqueradedJsonForCreation(const Json::Value &pJ
               if(!validJsonOfField(3, pMasqueradingVector[3], pJson[pMasqueradingVector[3]], err, true))
                   return false;
           }
-        else
-        {
-            err="The " + pMasqueradingVector[3] + " column cannot be null";
-            return false;
-        }
       }
       if(!pMasqueradingVector[4].empty())
       {
@@ -1168,6 +1297,19 @@ bool SubscriptionPlans::validateMasqueradedJsonForCreation(const Json::Value &pJ
           if(pJson.isMember(pMasqueradingVector[5]))
           {
               if(!validJsonOfField(5, pMasqueradingVector[5], pJson[pMasqueradingVector[5]], err, true))
+                  return false;
+          }
+        else
+        {
+            err="The " + pMasqueradingVector[5] + " column cannot be null";
+            return false;
+        }
+      }
+      if(!pMasqueradingVector[6].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[6]))
+          {
+              if(!validJsonOfField(6, pMasqueradingVector[6], pJson[pMasqueradingVector[6]], err, true))
                   return false;
           }
       }
@@ -1196,24 +1338,29 @@ bool SubscriptionPlans::validateJsonForUpdate(const Json::Value &pJson, std::str
         if(!validJsonOfField(1, "name", pJson["name"], err, false))
             return false;
     }
+    if(pJson.isMember("plan_type"))
+    {
+        if(!validJsonOfField(2, "plan_type", pJson["plan_type"], err, false))
+            return false;
+    }
     if(pJson.isMember("description"))
     {
-        if(!validJsonOfField(2, "description", pJson["description"], err, false))
+        if(!validJsonOfField(3, "description", pJson["description"], err, false))
             return false;
     }
     if(pJson.isMember("pricing"))
     {
-        if(!validJsonOfField(3, "pricing", pJson["pricing"], err, false))
+        if(!validJsonOfField(4, "pricing", pJson["pricing"], err, false))
             return false;
     }
     if(pJson.isMember("created_at"))
     {
-        if(!validJsonOfField(4, "created_at", pJson["created_at"], err, false))
+        if(!validJsonOfField(5, "created_at", pJson["created_at"], err, false))
             return false;
     }
     if(pJson.isMember("updated_at"))
     {
-        if(!validJsonOfField(5, "updated_at", pJson["updated_at"], err, false))
+        if(!validJsonOfField(6, "updated_at", pJson["updated_at"], err, false))
             return false;
     }
     return true;
@@ -1222,7 +1369,7 @@ bool SubscriptionPlans::validateMasqueradedJsonForUpdate(const Json::Value &pJso
                                                          const std::vector<std::string> &pMasqueradingVector,
                                                          std::string &err)
 {
-    if(pMasqueradingVector.size() != 6)
+    if(pMasqueradingVector.size() != 7)
     {
         err = "Bad masquerading vector";
         return false;
@@ -1261,6 +1408,11 @@ bool SubscriptionPlans::validateMasqueradedJsonForUpdate(const Json::Value &pJso
       if(!pMasqueradingVector[5].empty() && pJson.isMember(pMasqueradingVector[5]))
       {
           if(!validJsonOfField(5, pMasqueradingVector[5], pJson[pMasqueradingVector[5]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[6].empty() && pJson.isMember(pMasqueradingVector[6]))
+      {
+          if(!validJsonOfField(6, pMasqueradingVector[6], pJson[pMasqueradingVector[6]], err, false))
               return false;
       }
     }
@@ -1314,19 +1466,27 @@ bool SubscriptionPlans::validJsonOfField(size_t index,
         case 2:
             if(pJson.isNull())
             {
-                return true;
+                err="The " + fieldName + " column cannot be null";
+                return false;
             }
             if(!pJson.isString())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;
             }
+            if(pJson.isString() && std::strlen(pJson.asCString()) > 50)
+            {
+                err="String length exceeds limit for the " +
+                    fieldName +
+                    " field (the maximum value is 50)";
+                return false;
+            }
+
             break;
         case 3:
             if(pJson.isNull())
             {
-                err="The " + fieldName + " column cannot be null";
-                return false;
+                return true;
             }
             if(!pJson.isString())
             {
@@ -1347,6 +1507,18 @@ bool SubscriptionPlans::validJsonOfField(size_t index,
             }
             break;
         case 5:
+            if(pJson.isNull())
+            {
+                err="The " + fieldName + " column cannot be null";
+                return false;
+            }
+            if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 6:
             if(pJson.isNull())
             {
                 return true;

@@ -38,6 +38,10 @@ add_executable(${PROJECT_NAME} main.cc
         services/paystack/PaystackApi.h
         services/hubtel_sms/HubtelSmsApi.h
         dto/SigninDto.h
+        services/subscription_plans/SubscriptionPlanService.h
+        dto/CreateSubscriptionPlanDto.h
+        dto/UpdateSubscriptionPlanDto.h
+        services/subscription_plans/SubscriptionPlanService.cc
 )
 
 # ##############################################################################

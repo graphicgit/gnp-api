@@ -46,6 +46,7 @@ class SubscriptionPlans
     {
         static const std::string _id;
         static const std::string _name;
+        static const std::string _plan_type;
         static const std::string _description;
         static const std::string _pricing;
         static const std::string _created_at;
@@ -119,6 +120,15 @@ class SubscriptionPlans
     void setName(const std::string &pName) noexcept;
     void setName(std::string &&pName) noexcept;
 
+    /**  For column plan_type  */
+    ///Get the value of the column plan_type, returns the default value if the column is null
+    const std::string &getValueOfPlanType() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getPlanType() const noexcept;
+    ///Set the value of the column plan_type
+    void setPlanType(const std::string &pPlanType) noexcept;
+    void setPlanType(std::string &&pPlanType) noexcept;
+
     /**  For column description  */
     ///Get the value of the column description, returns the default value if the column is null
     const std::string &getValueOfDescription() const noexcept;
@@ -156,7 +166,7 @@ class SubscriptionPlans
     void setUpdatedAtToNull() noexcept;
 
 
-    static size_t getColumnNumber() noexcept {  return 6;  }
+    static size_t getColumnNumber() noexcept {  return 7;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -180,6 +190,7 @@ class SubscriptionPlans
     void updateId(const uint64_t id);
     std::shared_ptr<std::string> id_;
     std::shared_ptr<std::string> name_;
+    std::shared_ptr<std::string> planType_;
     std::shared_ptr<std::string> description_;
     std::shared_ptr<std::string> pricing_;
     std::shared_ptr<::trantor::Date> createdAt_;
@@ -195,7 +206,7 @@ class SubscriptionPlans
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[6]={ false };
+    bool dirtyFlag_[7]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -226,20 +237,25 @@ class SubscriptionPlans
         }
         if(dirtyFlag_[2])
         {
-            sql += "description,";
+            sql += "plan_type,";
             ++parametersCount;
         }
         if(dirtyFlag_[3])
         {
-            sql += "pricing,";
+            sql += "description,";
             ++parametersCount;
         }
         if(dirtyFlag_[4])
         {
-            sql += "created_at,";
+            sql += "pricing,";
             ++parametersCount;
         }
         if(dirtyFlag_[5])
+        {
+            sql += "created_at,";
+            ++parametersCount;
+        }
+        if(dirtyFlag_[6])
         {
             sql += "updated_at,";
             ++parametersCount;
@@ -285,6 +301,11 @@ class SubscriptionPlans
             sql.append(placeholderStr, n);
         }
         if(dirtyFlag_[5])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[6])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
