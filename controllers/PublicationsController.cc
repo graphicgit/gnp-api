@@ -56,6 +56,7 @@ void PublicationsController::createPublication(const HttpRequestPtr& req, std::f
     }
 
     dto::CreatePublicationDto publicationDto;
+
     publicationDto.fromJson(*jsonBody);
 
     // Get tenant service from plugin

@@ -82,7 +82,7 @@ namespace gnp::services {
                         // Handle find error
                         dto::BaseApiResponse errorResponse;
                         errorResponse.success = false;
-                        errorResponse.error["message"] = "Database error while fetching users.";
+                        errorResponse.error["message"] = "Database error while fetching publications.";
                         errorResponse.error["detail"] = e.base().what();
                         callback(errorResponse);
                     }
@@ -113,6 +113,7 @@ namespace gnp::services {
 
         newPublication.setName(publicationData.getName());
         newPublication.setDescription(publicationData.getDescription());
+        newPublication.setType(publicationData.getType());
         newPublication.setIsActive(true);
 
         mp.insert(newPublication, [callback](const drogon_model::Gnp::Publications& publication) {
@@ -125,8 +126,7 @@ namespace gnp::services {
             callback(successResponse);
 
         }, [callback](const drogon::orm::DrogonDbException& e) {
-            // 6. Handle database errors
-            // C++
+
             dto::BaseApiResponse errorResponse;
             errorResponse.success = false;
             errorResponse.message = "Database error while creating Publication";

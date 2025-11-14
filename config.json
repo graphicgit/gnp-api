@@ -317,6 +317,12 @@
     ],
     //custom_config: custom configuration for users. This object can be get by the app().getCustomConfig() method.
     "custom_config": {
-
+        "JwtBearer": {
+            "JwtSecurityKey" : "Gnp_ca01ca76-4866-4d54-9882-d9e365b81473",
+            "JwtIssuer" : "Gnp",
+            "JwtAudience" : "Gnp_Users",
+            "JwtExpirationTime" : 3600
+        },
+        "PrivateKey": "ca11ca76-3866-4d44-9881-d9e365b81474"
     }
 }

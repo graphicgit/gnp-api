@@ -20,15 +20,18 @@ namespace gnp::dto {
         // Getters
         [[nodiscard]] const std::string& getName() const { return name_; }
         [[nodiscard]] const std::string& getDescription() const { return description_; }
+        [[nodiscard]] int getType() const { return type_; }
 
         // Setters
         void setName(const std::string& name) { name_ = name; }
         void setDescription(const std::string& description) { description_ = description; }
+        void setType(int type) { type_ = type; }
 
     private:
 
         std::string name_;
         std::string description_;
+        int type_;
 
     };
 
@@ -38,6 +41,11 @@ namespace gnp::dto {
         if (json.isMember("name") && !json["name"].isNull()) {
             name_ = json["name"].asString();
         }
+
+        if (json.isMember("type") && !json["type"].isNull()) {
+            type_ = json["type"].asInt();
+        }
+
         if (json.isMember("description") && !json["description"].isNull()) {
             description_ = json["description"].asString();
         }
