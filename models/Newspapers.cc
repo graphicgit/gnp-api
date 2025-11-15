@@ -59,7 +59,7 @@ const std::vector<typename Newspapers::MetaData> Newspapers::metaData_={
 {"preview_url","std::string","character varying",191,0,0,0},
 {"document_url","std::string","character varying",255,0,0,0},
 {"is_published","bool","boolean",1,0,0,1},
-{"published_date","::trantor::Date","date",0,0,0,1},
+{"published_date","::trantor::Date","date",0,0,0,0},
 {"created_at","::trantor::Date","timestamp without time zone",0,0,0,0},
 {"updated_at","::trantor::Date","timestamp without time zone",0,0,0,0}
 };
@@ -1718,6 +1718,11 @@ void Newspapers::setPublishedDate(const ::trantor::Date &pPublishedDate) noexcep
     publishedDate_ = std::make_shared<::trantor::Date>(pPublishedDate.roundDay());
     dirtyFlag_[19] = true;
 }
+void Newspapers::setPublishedDateToNull() noexcept
+{
+    publishedDate_.reset();
+    dirtyFlag_[19] = true;
+}
 
 const ::trantor::Date &Newspapers::getValueOfCreatedAt() const noexcept
 {
@@ -3140,11 +3145,6 @@ bool Newspapers::validateJsonForCreation(const Json::Value &pJson, std::string &
         if(!validJsonOfField(19, "published_date", pJson["published_date"], err, true))
             return false;
     }
-    else
-    {
-        err="The published_date column cannot be null";
-        return false;
-    }
     if(pJson.isMember("created_at"))
     {
         if(!validJsonOfField(20, "created_at", pJson["created_at"], err, true))
@@ -3366,11 +3366,6 @@ bool Newspapers::validateMasqueradedJsonForCreation(const Json::Value &pJson,
               if(!validJsonOfField(19, pMasqueradingVector[19], pJson[pMasqueradingVector[19]], err, true))
                   return false;
           }
-        else
-        {
-            err="The " + pMasqueradingVector[19] + " column cannot be null";
-            return false;
-        }
       }
       if(!pMasqueradingVector[20].empty())
       {
@@ -3960,8 +3955,7 @@ bool Newspapers::validJsonOfField(size_t index,
         case 19:
             if(pJson.isNull())
             {
-                err="The " + fieldName + " column cannot be null";
-                return false;
+                return true;
             }
             if(!pJson.isString())
             {

@@ -19,21 +19,24 @@ namespace gnp::dto {
         // Getters
         [[nodiscard]] const std::string& getId() const { return id_; }
         [[nodiscard]] const std::string& getName() const { return name_; }
+        [[nodiscard]] const std::string& getPlanType() const { return plan_type_; }
         [[nodiscard]] const std::string& getDescription() const { return description_; }
-        [[nodiscard]] const Json::Value& getPricing() const { return pricing_; }
+        [[nodiscard]] const std::string&  getPricing() const { return pricing_; }
 
         // Setters
         void setId(const std::string& id) { id_ = id; }
         void setName(const std::string& name) { name_ = name; }
+        void setPlanType(const std::string& plan_type) { plan_type_ = plan_type; }
         void setDescription(const std::string& description) { description_ = description; }
-        void setPricing(const Json::Value& pricing) { pricing_ = pricing; }
+        void setPricing(const std::string& pricing) { pricing_ = pricing; }
 
     private:
 
         std::string id_;
         std::string name_;
+        std::string plan_type_;
         std::string description_;
-        Json::Value pricing_;
+        std::string pricing_;
     };
 
     inline void UpdateSubscriptionPlanDto::fromJson(const Json::Value& json) {
@@ -46,12 +49,23 @@ namespace gnp::dto {
             name_ = json["name"].asString();
         }
 
-        if (json.isMember("description_") && !json["description_"].isNull()) {
-            description_ = json["description_"].asString();
+        if (json.isMember("plan_type") && !json["plan_type"].isNull()) {
+            plan_type_ = json["plan_type"].asString();
         }
 
-        if (json.isMember("pricing"))
-            pricing_ = json["pricing"];
+        if (json.isMember("description") && !json["description"].isNull()) {
+            description_ = json["description"].asString();
+        }
+
+
+        if (json.isMember("pricing") && json["pricing"].isObject()) {
+            Json::StreamWriterBuilder builder;
+            builder["commentStyle"] = "None";
+            builder["indentation"] = "";  // Compact JSON
+            pricing_ = Json::writeString(builder, json["pricing"]);
+        } else {
+            pricing_ = "[]";  // Default empty array
+        }
 
     }
 

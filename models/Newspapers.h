@@ -299,6 +299,7 @@ class Newspapers
     const std::shared_ptr<::trantor::Date> &getPublishedDate() const noexcept;
     ///Set the value of the column published_date
     void setPublishedDate(const ::trantor::Date &pPublishedDate) noexcept;
+    void setPublishedDateToNull() noexcept;
 
     /**  For column created_at  */
     ///Get the value of the column created_at, returns the default value if the column is null

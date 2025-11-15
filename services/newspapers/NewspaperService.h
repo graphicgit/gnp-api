@@ -7,6 +7,7 @@
 
 #include "dto/BaseApiResponse.h"
 #include <drogon/drogon.h>
+#include "dto/IngestNewsPaperDto.h"
 
 namespace gnp::services {
 
@@ -14,7 +15,7 @@ namespace gnp::services {
 
     public:
 
-        void getAllNewspapers(
+        void getAll(
            int pageNo,
            int pageSize,
            const std::string& publicationId,
@@ -23,6 +24,30 @@ namespace gnp::services {
            const std::string& query,
            const std::function<void(const gnp::dto::BaseApiResponse&)>& callback
        );
+
+        void ingest(const dto::IngestNewsPaperDto& dto,
+           const std::function<void(const dto::BaseApiResponse&)>& callback);
+
+
+        void partialIngest(const dto::IngestNewsPaperDto& dto,
+          const std::function<void(const dto::BaseApiResponse&)>& callback);
+
+
+        void publish(
+            const std::string& id,
+            const std::function<void(const gnp::dto::BaseApiResponse&)>& callback);
+
+        void unPublish(
+            const std::string& id,
+            const std::function<void(const gnp::dto::BaseApiResponse&)>& callback);
+
+        void deleteNewspaper(
+            const std::string& id,
+            const std::function<void(const dto::BaseApiResponse&)>& callback);
+
+
+
+
 
     };
 

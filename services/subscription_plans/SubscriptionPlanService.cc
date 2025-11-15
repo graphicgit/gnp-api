@@ -159,4 +159,110 @@ namespace gnp::services {
     }
 
 
+
+    void SubscriptionPlanService::update(
+        const dto::UpdateSubscriptionPlanDto& dto,
+        const std::function<void(const gnp::dto::BaseApiResponse&)>& callback)
+    {
+        auto dbClient = drogon::app().getDbClient();
+        auto mp = std::make_shared<Mapper<drogon_model::Gnp::SubscriptionPlans>>(dbClient);
+
+        Criteria criteria = Criteria(drogon_model::Gnp::SubscriptionPlans::Cols::_id, CompareOperator::EQ, dto.getId());
+
+        mp->findOne(criteria,
+            [mp, dto, callback](drogon_model::Gnp::SubscriptionPlans subscriptionPlan) {
+                if (!dto.getName().empty()) subscriptionPlan.setName(dto.getName());
+                if (!dto.getPlanType().empty()) subscriptionPlan.setPlanType(dto.getPlanType());
+                if (!dto.getDescription().empty()) subscriptionPlan.setDescription(dto.getDescription());
+                if (!dto.getPricing().empty()) subscriptionPlan.setPricing(dto.getPricing());
+
+                mp->update(subscriptionPlan, [callback](const size_t count) {
+                    gnp::dto::BaseApiResponse response;
+                    response.success = true;
+                    response.message = "Role updated successfully";
+                    callback(response);
+                },
+                [callback](const DrogonDbException& e) {
+                    gnp::dto::BaseApiResponse errorResponse;
+                    errorResponse.success = false;
+                    errorResponse.message = "Failed to update role";
+                    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+                    errorResponse.error["detail"] = e.base().what();
+                    callback(errorResponse);
+                });
+            },
+            [callback](const DrogonDbException& e) {
+                gnp::dto::BaseApiResponse errorResponse;
+                errorResponse.success = false;
+                errorResponse.message = "Role not found";
+                errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+                errorResponse.error["detail"] = e.base().what();
+                callback(errorResponse);
+            }
+        );
+    }
+
+    void SubscriptionPlanService::deletePlan(
+            const std::string& publicationId,
+            const std::function<void(const dto::BaseApiResponse&)>& callback
+        ) {
+
+        auto dbClient = drogon::app().getDbClient();
+
+        Mapper<drogon_model::Gnp::SubscriptionPlans> mp(dbClient);
+
+        // Create criteria to find the user with specified ID in the tenant
+        Criteria criteria = Criteria(drogon_model::Gnp::SubscriptionPlans::Cols::_id, CompareOperator::EQ, publicationId);
+
+        // First verify the user exists
+        mp.findOne(criteria,
+            [=](const drogon_model::Gnp::SubscriptionPlans& publication) {
+                // User found, proceed with deletion
+                Mapper<drogon_model::Gnp::SubscriptionPlans> deleteMp(dbClient);
+                deleteMp.deleteBy(criteria,
+                    [=](const size_t count) {
+                        if (count > 0) {
+                            // Successfully deleted
+                            dto::BaseApiResponse response;
+                            response.success = true;
+                            response.message = "Publication deleted successfully";
+                            callback(response);
+                        } else {
+                            // No rows were deleted (shouldn't happen if we found the user)
+                            dto::BaseApiResponse errorResponse;
+                            errorResponse.success = false;
+                            errorResponse.message = "Failed to delete publication";
+                            errorResponse.error["code"] = constants::ERR_DB_QUERY;
+                            callback(errorResponse);
+                        }
+                    },
+                    [=](const DrogonDbException& e) {
+                        // Error during deletion
+                        dto::BaseApiResponse errorResponse;
+                        errorResponse.success = false;
+                        errorResponse.message = "Failed to delete publication";
+                        errorResponse.error["code"] = constants::ERR_DB_QUERY;
+                        errorResponse.error["detail"] = e.base().what();
+                        callback(errorResponse);
+                    }
+                );
+            },
+            [=](const DrogonDbException& e) {
+                // User not found
+                dto::BaseApiResponse errorResponse;
+                errorResponse.success = false;
+                errorResponse.message = "Publication not found";
+                errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+                errorResponse.error["detail"] = e.base().what();
+                callback(errorResponse);
+            }
+        );
+
+
+
+    }
+
+
+
+
 }

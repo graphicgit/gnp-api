@@ -42,6 +42,7 @@ add_executable(${PROJECT_NAME} main.cc
         dto/CreateSubscriptionPlanDto.h
         dto/UpdateSubscriptionPlanDto.h
         services/subscription_plans/SubscriptionPlanService.cc
+        dto/IngestNewsPaperDto.h
 )
 
 # ##############################################################################
