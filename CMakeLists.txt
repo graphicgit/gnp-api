@@ -33,7 +33,6 @@ add_executable(${PROJECT_NAME} main.cc
         dto/UpdatePublicationDto.h
         constants/ErrorCodes.h
         constants/PublicationTypes.h
-        services/rabbit_mq/RabbitMqClient.h
         dto/CreateUserDto.h
         services/paystack/PaystackApi.h
         services/hubtel_sms/HubtelSmsApi.h
@@ -43,7 +42,9 @@ add_executable(${PROJECT_NAME} main.cc
         dto/UpdateSubscriptionPlanDto.h
         services/subscription_plans/SubscriptionPlanService.cc
         dto/IngestNewsPaperDto.h
-        services/rabbit_mq/RabbitMqClient.cc
+        services/email/EmailService.h
+        services/email/EmailService.cc
+        dto/SendEmailDto.h
 )
 
 # ##############################################################################
@@ -56,10 +57,7 @@ add_executable(${PROJECT_NAME} main.cc
 find_package(Drogon CONFIG REQUIRED)
 find_package(bcrypt CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE Drogon::Drogon)
-#target_link_libraries(${PROJECT_NAME} PRIVATE bcrypt::bcrypt)
-target_link_libraries(${PROJECT_NAME} PRIVATE bcrypt)
-target_link_directories(${PROJECT_NAME} PRIVATE /opt/homebrew/lib)
-target_link_libraries(${PROJECT_NAME} PRIVATE rabbitmq)
+target_link_libraries(${PROJECT_NAME} PRIVATE bcrypt::bcrypt)
 
 
 # ##############################################################################
@@ -107,4 +105,4 @@ target_sources(${PROJECT_NAME}
 # ##############################################################################
 
 add_subdirectory(test)
-add_subdirectory(external/Bcrypt)
+#add_subdirectory(external/Bcrypt)

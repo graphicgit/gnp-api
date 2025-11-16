@@ -143,7 +143,6 @@ namespace gnp::services {
            const std::function<void(const dto::BaseApiResponse&)>& callback) {
 
 
-
     }
 
 
@@ -163,7 +162,9 @@ namespace gnp::services {
         newspaper.setPrice(std::to_string(dto.getPrice()));
         newspaper.setIsFree(dto.isFree());
         newspaper.setCategoryId(dto.getCategoryId());
+        newspaper.setCategoryName(dto.getCategoryName());
         newspaper.setPublicationId(dto.getPublicationId());
+        newspaper.setPublicationName(dto.getPublicationName());
         newspaper.setPublishedDateToNull();
 
         // Optional fields

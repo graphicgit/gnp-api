@@ -7,10 +7,10 @@
 #pragma once
 
 #include <drogon/plugins/Plugin.h>
-
 #include "services/newspapers/NewspaperService.h"
 #include "services/users/UserService.h"
 #include "services/publications/PublicationService.h"
+#include "services/email/EmailService.h"
 #include "services/subscription_plans/SubscriptionPlanService.h"
 
 namespace gnp::plugins {
@@ -28,13 +28,17 @@ namespace gnp::plugins {
         void shutdown() override;
 
         // Provide access to the service
+
         services::UserService& getUserService() { return userService_; }
+        services::EmailService& getEmailService() { return emailService_; }
         services::NewspaperService& getNewsPaperService() { return newspaperService_ ; }
         services::SubscriptionPlanService& getSubscriptionPlanService() { return subscriptionPlanService_; }
         services::PublicationService& getPublicationService() { return publicationService_; }
 
     private:
+
         services::UserService userService_;
+        services::EmailService emailService_;
         services::NewspaperService newspaperService_ ;
         services::SubscriptionPlanService subscriptionPlanService_;
         services::PublicationService publicationService_;

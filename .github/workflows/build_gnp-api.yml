@@ -14,8 +14,6 @@ jobs:
       # Step 1: Check out the repository code
       - name: Checkout code
         uses: actions/checkout@v3
-        with:
-          submodules: recursive
 
       # Step 2: Install dependencies for Drogon, PostgreSQL, and Redis
       - name: Install dependencies
