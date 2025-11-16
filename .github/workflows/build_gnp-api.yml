@@ -13,7 +13,9 @@ jobs:
     steps:
       # Step 1: Check out the repository code
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
 
       # Step 2: Install dependencies for Drogon, PostgreSQL, and Redis
       - name: Install dependencies
@@ -24,17 +26,6 @@ jobs:
           
           sudo apt install -y librabbitmq-dev
 
-      # -------------------------------------------
-      # Clone and build Bcrypt.cpp from source
-      # -------------------------------------------
-      - name: Build Bcrypt.cpp
-        run: |
-          git clone https://github.com/kay-smith/Bcrypt.cpp.git
-          cd Bcrypt.cpp
-          mkdir build && cd build
-          cmake ..
-          make -j$(nproc)
-          sudo make install
 
       # Step 3: Download and install Drogon
       - name: Install Drogon
