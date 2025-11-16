@@ -14,6 +14,9 @@ jobs:
       # Step 1: Check out the repository code
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
 
       # Step 2: Install dependencies for Drogon, PostgreSQL, and Redis
       - name: Install dependencies
@@ -23,8 +26,6 @@ jobs:
           sudo apt install postgresql libhiredis-dev  doxygen graphviz dia
           
           sudo apt install -y librabbitmq-dev
-          
-          sudo apt install -y libbcrypt-dev
 
 
       # Step 3: Download and install Drogon
