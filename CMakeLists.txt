@@ -33,7 +33,7 @@ add_executable(${PROJECT_NAME} main.cc
         dto/UpdatePublicationDto.h
         constants/ErrorCodes.h
         constants/PublicationTypes.h
-        services/rabbit_mq/RabbitMQProducer.h
+        services/rabbit_mq/RabbitMqClient.h
         dto/CreateUserDto.h
         services/paystack/PaystackApi.h
         services/hubtel_sms/HubtelSmsApi.h
@@ -43,6 +43,7 @@ add_executable(${PROJECT_NAME} main.cc
         dto/UpdateSubscriptionPlanDto.h
         services/subscription_plans/SubscriptionPlanService.cc
         dto/IngestNewsPaperDto.h
+        services/rabbit_mq/RabbitMqClient.cc
 )
 
 # ##############################################################################
@@ -56,6 +57,9 @@ find_package(Drogon CONFIG REQUIRED)
 find_package(bcrypt CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE Drogon::Drogon)
 target_link_libraries(${PROJECT_NAME} PRIVATE bcrypt::bcrypt)
+target_link_directories(${PROJECT_NAME} PRIVATE /opt/homebrew/lib)
+target_link_libraries(${PROJECT_NAME} PRIVATE rabbitmq)
+
 
 # ##############################################################################
 

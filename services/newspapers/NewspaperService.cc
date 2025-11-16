@@ -284,10 +284,10 @@ namespace gnp::services {
                     return;
                 }
 
-                auto updatedTenant = newspaper;
-                updatedTenant.setIsPublished(false);
+                auto updatedNewspaper = newspaper;
+                updatedNewspaper.setIsPublished(false);
 
-                tenantMapper->update(updatedTenant,
+                tenantMapper->update(updatedNewspaper,
                     [=](const size_t count) {
 
                         // Newspaper published successfully ...
