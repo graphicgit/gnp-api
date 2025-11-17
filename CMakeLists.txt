@@ -55,14 +55,18 @@ add_executable(${PROJECT_NAME} main.cc
 #
 # and comment out the following lines
 find_package(Drogon CONFIG REQUIRED)
+find_package(OpenSSL REQUIRED)
+
 #find_package(bcrypt CONFIG REQUIRED)
 #target_link_libraries(${PROJECT_NAME} PRIVATE Drogon::Drogon)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
         Drogon::Drogon
         bcrypt
+        jwt-cpp
+        OpenSSL::SSL
+        OpenSSL::Crypto
 )
-
 
 
 # ##############################################################################
@@ -94,6 +98,14 @@ drogon_create_views(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/views
 target_include_directories(${PROJECT_NAME}
                            PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
                                    ${CMAKE_CURRENT_SOURCE_DIR}/models)
+
+
+# Add the jwt-cpp include directory
+target_include_directories(${PROJECT_NAME} PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/external/jwt-cpp/include
+)
+
+
 target_sources(${PROJECT_NAME}
                PRIVATE
                ${SRC_DIR}
@@ -111,3 +123,5 @@ target_sources(${PROJECT_NAME}
 
 add_subdirectory(test)
 add_subdirectory(external_deps/Bcrypt)
+add_subdirectory(external_deps/jwt-cpp)
+
