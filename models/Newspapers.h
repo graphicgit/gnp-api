@@ -66,6 +66,8 @@ class Newspapers
         static const std::string _published_date;
         static const std::string _created_at;
         static const std::string _updated_at;
+        static const std::string _publication_name;
+        static const std::string _category_name;
     };
 
     static const int primaryKeyNumber;
@@ -319,8 +321,28 @@ class Newspapers
     void setUpdatedAt(const ::trantor::Date &pUpdatedAt) noexcept;
     void setUpdatedAtToNull() noexcept;
 
+    /**  For column publication_name  */
+    ///Get the value of the column publication_name, returns the default value if the column is null
+    const std::string &getValueOfPublicationName() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getPublicationName() const noexcept;
+    ///Set the value of the column publication_name
+    void setPublicationName(const std::string &pPublicationName) noexcept;
+    void setPublicationName(std::string &&pPublicationName) noexcept;
+    void setPublicationNameToNull() noexcept;
 
-    static size_t getColumnNumber() noexcept {  return 22;  }
+    /**  For column category_name  */
+    ///Get the value of the column category_name, returns the default value if the column is null
+    const std::string &getValueOfCategoryName() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getCategoryName() const noexcept;
+    ///Set the value of the column category_name
+    void setCategoryName(const std::string &pCategoryName) noexcept;
+    void setCategoryName(std::string &&pCategoryName) noexcept;
+    void setCategoryNameToNull() noexcept;
+
+
+    static size_t getColumnNumber() noexcept {  return 24;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -364,6 +386,8 @@ class Newspapers
     std::shared_ptr<::trantor::Date> publishedDate_;
     std::shared_ptr<::trantor::Date> createdAt_;
     std::shared_ptr<::trantor::Date> updatedAt_;
+    std::shared_ptr<std::string> publicationName_;
+    std::shared_ptr<std::string> categoryName_;
     struct MetaData
     {
         const std::string colName_;
@@ -375,7 +399,7 @@ class Newspapers
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[22]={ false };
+    bool dirtyFlag_[24]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -505,6 +529,16 @@ class Newspapers
         if(dirtyFlag_[21])
         {
             sql += "updated_at,";
+            ++parametersCount;
+        }
+        if(dirtyFlag_[22])
+        {
+            sql += "publication_name,";
+            ++parametersCount;
+        }
+        if(dirtyFlag_[23])
+        {
+            sql += "category_name,";
             ++parametersCount;
         }
         if(parametersCount > 0)
@@ -640,6 +674,16 @@ class Newspapers
             sql.append(placeholderStr, n);
         }
         if(dirtyFlag_[21])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[22])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[23])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);

@@ -33,7 +33,6 @@ add_executable(${PROJECT_NAME} main.cc
         dto/UpdatePublicationDto.h
         constants/ErrorCodes.h
         constants/PublicationTypes.h
-        services/rabbit_mq/RabbitMqClient.h
         dto/CreateUserDto.h
         services/paystack/PaystackApi.h
         services/hubtel_sms/HubtelSmsApi.h
@@ -43,7 +42,9 @@ add_executable(${PROJECT_NAME} main.cc
         dto/UpdateSubscriptionPlanDto.h
         services/subscription_plans/SubscriptionPlanService.cc
         dto/IngestNewsPaperDto.h
-        services/rabbit_mq/RabbitMqClient.cc
+        services/email/EmailService.h
+        services/email/EmailService.cc
+        dto/SendEmailDto.h
 )
 
 # ##############################################################################
@@ -54,11 +55,18 @@ add_executable(${PROJECT_NAME} main.cc
 #
 # and comment out the following lines
 find_package(Drogon CONFIG REQUIRED)
-find_package(bcrypt CONFIG REQUIRED)
-target_link_libraries(${PROJECT_NAME} PRIVATE Drogon::Drogon)
-target_link_libraries(${PROJECT_NAME} PRIVATE bcrypt::bcrypt)
-target_link_directories(${PROJECT_NAME} PRIVATE /opt/homebrew/lib)
-target_link_libraries(${PROJECT_NAME} PRIVATE rabbitmq)
+find_package(OpenSSL REQUIRED)
+
+#find_package(bcrypt CONFIG REQUIRED)
+#target_link_libraries(${PROJECT_NAME} PRIVATE Drogon::Drogon)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE
+        Drogon::Drogon
+        bcrypt
+        jwt-cpp
+        OpenSSL::SSL
+        OpenSSL::Crypto
+)
 
 
 # ##############################################################################
@@ -87,9 +95,15 @@ drogon_create_views(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/views
 # drogon_create_views(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/views
 #                     ${CMAKE_CURRENT_BINARY_DIR} TRUE CHANGE_ME)
 
-target_include_directories(${PROJECT_NAME}
-                           PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
-                                   ${CMAKE_CURRENT_SOURCE_DIR}/models)
+
+# Update the include directory for jwt-cpp
+target_include_directories(${PROJECT_NAME} PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/external_deps/jwt-cpp/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/models
+)
+
+
 target_sources(${PROJECT_NAME}
                PRIVATE
                ${SRC_DIR}
@@ -106,3 +120,6 @@ target_sources(${PROJECT_NAME}
 # ##############################################################################
 
 add_subdirectory(test)
+add_subdirectory(external_deps/Bcrypt)
+add_subdirectory(external_deps/jwt-cpp)
+

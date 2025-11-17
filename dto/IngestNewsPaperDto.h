@@ -22,7 +22,9 @@ namespace gnp::dto {
         [[nodiscard]] double getPrice() const { return price_; }
         [[nodiscard]] bool isFree() const { return is_free_; }
         [[nodiscard]] const std::string& getCategoryId() const { return category_id_; }
+        [[nodiscard]] const std::string& getCategoryName() const { return category_name_; }
         [[nodiscard]] const std::string& getPublicationId() const { return publication_id_; }
+        [[nodiscard]] const std::string& getPublicationName() const { return publication_name_; }
         [[nodiscard]] const std::string& getCopyrightOwner() const { return copyright_owner_; }
         [[nodiscard]] const std::string& getEditionNumber() const { return edition_number_; }
         [[nodiscard]] int getPopular() const { return popular_; }
@@ -43,7 +45,9 @@ namespace gnp::dto {
         void setPrice(double v) { price_ = v; }
         void setIsFree(bool v) { is_free_ = v; }
         void setCategoryId(const std::string& v) { category_id_ = v; }
+        void setCategoryName(const std::string& v) { category_name_ = v; }
         void setPublicationId(const std::string& v) { publication_id_ = v; }
+        void setPublicationName(const std::string& v) { publication_name_ = v; }
         void setCopyrightOwner(const std::string& v) { copyright_owner_ = v; }
         void setEditionNumber(const std::string& v) { edition_number_ = v; }
         void setPopular(int v) { popular_ = v; }
@@ -66,7 +70,9 @@ namespace gnp::dto {
         double price_ = 0.00;
         bool is_free_ = false;
         std::string category_id_;
+        std::string category_name_;
         std::string publication_id_;
+        std::string publication_name_;
         std::string copyright_owner_;
         std::string edition_number_;
         int popular_ = 0;

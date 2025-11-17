@@ -4,5 +4,7 @@
 
 #ifndef HUBTELSMSAPI_H
 #define HUBTELSMSAPI_H
+namespace gnp::services {
 
+}
 #endif //HUBTELSMSAPI_H

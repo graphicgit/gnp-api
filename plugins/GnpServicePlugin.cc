@@ -11,10 +11,10 @@ using namespace gnp::plugins;
 
 void GnpServicePlugin::initAndStart(const Json::Value &config)
 {
-    /// Initialize and start the plugin
+
 }
 
-void GnpServicePlugin::shutdown() 
-{
-    /// Shutdown the plugin
+void GnpServicePlugin::shutdown() {
+
+
 }
