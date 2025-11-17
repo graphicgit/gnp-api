@@ -28,13 +28,6 @@ jobs:
           sudo apt install -y librabbitmq-dev
           
 
-      - name: Clone Dependencies
-        run: |
-          mkdir -p external_deps
-          git clone https://github.com/kay-smith/Bcrypt.cpp external_deps/Bcrypt
-          git clone https://github.com/Thalhammer/jwt-cpp.git external_deps/jwt-cpp
-          
-
       # Step 3: Download and install Drogon
       - name: Install Drogon
         run: |
