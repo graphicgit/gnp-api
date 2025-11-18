@@ -3,8 +3,9 @@
 #include "filters/CorsFilter.h"
 
 int main() {
-    //Set HTTP listener address and port
-    drogon::app().loadConfigFile("../config.json");
+    //Load config file
+    //drogon::app().loadConfigFile("../config.json");
+    drogon::app().loadConfigFile("config.json");
 
     drogon::app().registerPostHandlingAdvice([](const drogon::HttpRequestPtr &req,
                                                const drogon::HttpResponsePtr &resp) {
@@ -38,8 +39,7 @@ int main() {
         resp->addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
     });
 
-    //Load config file
-    //drogon::app().loadConfigFile("../config.json");
+
     //Run HTTP framework,the method will block in the internal event loop
 
     drogon::app().run();
