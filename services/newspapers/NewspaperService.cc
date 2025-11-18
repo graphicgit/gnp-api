@@ -27,6 +27,124 @@ namespace gnp::services {
         auto mp = std::make_shared<Mapper<drogon_model::Gnp::Newspapers>>(dbClient);
 
         // 1. Build the search criteria
+        Criteria searchCriteria =  Criteria(Newspapers::Cols::_is_published, CompareOperator::EQ, true);
+
+        // text search
+        if (!query.empty())
+        {
+            std::string likeQuery = "%" + query + "%";
+            searchCriteria =
+                Criteria(Newspapers::Cols::_title, CompareOperator::Like, likeQuery) ||
+                Criteria(Newspapers::Cols::_full_description, CompareOperator::Like, likeQuery) ||
+                Criteria(Newspapers::Cols::_short_description, CompareOperator::Like, likeQuery);
+        }
+
+
+        // filter by publicationId
+        if (!publicationId.empty()) {
+            searchCriteria = searchCriteria &&
+                Criteria(Newspapers::Cols::_publication_id, CompareOperator::EQ, publicationId);
+        }
+
+        // filter by startDate (created_at >= startDate)
+        if (!startDate.empty()) {
+            searchCriteria = searchCriteria &&
+                Criteria(Newspapers::Cols::_published_date, CompareOperator::GE, startDate);
+        }
+
+        // filter by endDate (created_at <= endDate)
+        if (!endDate.empty()) {
+            searchCriteria = searchCriteria &&
+                Criteria(Newspapers::Cols::_published_date, CompareOperator::LE, endDate);
+        }
+
+        // 2. Asynchronously get the total count matching the criteria ...
+        mp->count(searchCriteria,
+            [=](const size_t totalCount) {
+                if (totalCount == 0)
+                {
+                    dto::BaseApiResponse response;
+                    response.success = true;
+                    response.result["data"] = Json::arrayValue;
+                    response.result["totalCount"] = 0;
+                    callback(response);
+                    return;
+                }
+
+                // 3. Asynchronously find the paginated data
+                int offset = (pageNo - 1) * pageSize;
+                mp->limit(pageSize).offset(offset).findBy(searchCriteria,
+                    [=](const std::vector<Newspapers>& publications) {
+                        // 4. Build the final response inside the callback
+                        dto::BaseApiResponse response;
+                        response.success = true;
+                        response.result["totalCount"] = (Json::UInt64)totalCount;
+                        response.result["pageNo"] = pageNo;
+                        response.result["pageSize"] = pageSize;
+                        response.result["totalPages"] = (int)((totalCount + pageSize - 1) / pageSize);
+
+                        Json::Value data = Json::arrayValue;
+                        for (const auto& role : publications)
+                        {
+                            Json::Value roleJson = role.toJson();
+
+                            // Convert snake_case to camelCase
+                            Json::Value camelCaseRole;
+                            camelCaseRole["id"] = roleJson["id"];
+                            camelCaseRole["title"] = roleJson["title"];
+                            camelCaseRole["slug"] = roleJson["slug"];
+                            camelCaseRole["price"] = roleJson["price"];
+                            camelCaseRole["editionNumber"] = roleJson["edition_number"];
+                            camelCaseRole["shortDescription"] = roleJson["short_description"];
+                            camelCaseRole["fullDescription"] = roleJson["full_description"];
+                            camelCaseRole["thumbnailId"] = roleJson["thumbnail_id"];
+                            camelCaseRole["fileType"] = roleJson["file_type"];
+                            camelCaseRole["documentId"] = roleJson["document_id"];
+                            camelCaseRole["publishedDate"] = roleJson["published_date"];
+
+                            data.append(camelCaseRole);
+                        }
+
+                        response.result["data"] = data;
+                        callback(response);
+                    },
+                    [callback](const DrogonDbException& e) {
+                        // Handle find error
+                        dto::BaseApiResponse errorResponse;
+                        errorResponse.success = false;
+                        errorResponse.error["message"] = "Database error while fetching newspapers.";
+                        errorResponse.error["detail"] = e.base().what();
+                        callback(errorResponse);
+                    }
+                );
+            },
+            [callback](const DrogonDbException& e) {
+                // Handle count error
+                dto::BaseApiResponse errorResponse;
+                errorResponse.success = false;
+                errorResponse.error["code"] = constants::ERR_DB_QUERY;
+                errorResponse.error["message"] = "Database error while fetching newspapers.";
+                errorResponse.error["detail"] = e.base().what();
+                callback(errorResponse);
+            }
+        );
+    }
+
+
+    //for admin use only
+    void NewspaperService::listAll(
+        int pageNo,
+        int pageSize,
+        const std::string& publicationId,
+        const std::string& startDate,
+        const std::string& endDate,
+        const std::string& query,
+        const std::function<void(const dto::BaseApiResponse&)>& callback)
+    {
+        auto dbClient = drogon::app().getDbClient();
+        auto mp = std::make_shared<Mapper<drogon_model::Gnp::Newspapers>>(dbClient);
+
+        // 1. Build the search criteria
         Criteria searchCriteria;
 
         // text search
@@ -35,7 +153,8 @@ namespace gnp::services {
             std::string likeQuery = "%" + query + "%";
             searchCriteria =
                 Criteria(Newspapers::Cols::_title, CompareOperator::Like, likeQuery) ||
-                Criteria(Newspapers::Cols::_description, CompareOperator::Like, likeQuery);
+                Criteria(Newspapers::Cols::_full_description, CompareOperator::Like, likeQuery) ||
+                Criteria(Newspapers::Cols::_short_description, CompareOperator::Like, likeQuery);
         }
         else
         {
@@ -138,7 +257,6 @@ namespace gnp::services {
         );
     }
 
-
     void NewspaperService::ingest(const dto::IngestNewsPaperDto& dto,
            const std::function<void(const dto::BaseApiResponse&)>& callback) {
 
@@ -170,15 +288,13 @@ namespace gnp::services {
         // Optional fields
         newspaper.setCopyrightOwner(dto.getCopyrightOwner());
         newspaper.setEditionNumber(dto.getEditionNumber());
-        newspaper.setPopular(0);
+        newspaper.setIsPopular(dto.getIsPopular());
         newspaper.setShortDescription(dto.getShortDescription());
-        newspaper.setDescription(dto.getDescription());
-        newspaper.setThumbnailImage(dto.getThumbnailImage());
-        newspaper.setCoverImage(dto.getCoverImage());
-        newspaper.setFileConverted(dto.getFileConverted());
+        newspaper.setFullDescription(dto.getFullDescription());
+        newspaper.setThumbnailId(dto.getThumbnailId());
         newspaper.setFileType(dto.getFileType());
-        newspaper.setPreviewUrl(dto.getPreviewUrl());
-        newspaper.setDocumentUrl(dto.getDocumentUrl());
+        newspaper.setStorageType(dto.getStorageType());
+        newspaper.setDocumentId(dto.getDocumentId());
         newspaper.setIsPublished(false);
         newspaper.setCreatedAt(trantor::Date::now());
 

@@ -25,6 +25,20 @@ namespace gnp::services {
            const std::function<void(const gnp::dto::BaseApiResponse&)>& callback
        );
 
+        //void getLatest(const std::function<void(const gnp::dto::BaseApiResponse&)>& callback);
+
+        //void getRelatedContent(const std::string& newsPaperId, const std::function<void(const gnp::dto::BaseApiResponse&)>& callback);
+
+        void listAll(
+           int pageNo,
+           int pageSize,
+           const std::string& publicationId,
+           const std::string& startDate,
+           const std::string& endDate,
+           const std::string& query,
+           const std::function<void(const gnp::dto::BaseApiResponse&)>& callback
+       );
+
         void ingest(const dto::IngestNewsPaperDto& dto,
            const std::function<void(const dto::BaseApiResponse&)>& callback);
 
