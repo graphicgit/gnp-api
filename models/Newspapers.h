@@ -66,6 +66,7 @@ class Newspapers
         static const std::string _published_date;
         static const std::string _created_at;
         static const std::string _updated_at;
+        static const std::string _featured_stories;
     };
 
     static const int primaryKeyNumber;
@@ -320,8 +321,18 @@ class Newspapers
     void setUpdatedAt(const ::trantor::Date &pUpdatedAt) noexcept;
     void setUpdatedAtToNull() noexcept;
 
+    /**  For column featured_stories  */
+    ///Get the value of the column featured_stories, returns the default value if the column is null
+    const std::string &getValueOfFeaturedStories() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getFeaturedStories() const noexcept;
+    ///Set the value of the column featured_stories
+    void setFeaturedStories(const std::string &pFeaturedStories) noexcept;
+    void setFeaturedStories(std::string &&pFeaturedStories) noexcept;
+    void setFeaturedStoriesToNull() noexcept;
 
-    static size_t getColumnNumber() noexcept {  return 22;  }
+
+    static size_t getColumnNumber() noexcept {  return 23;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -365,6 +376,7 @@ class Newspapers
     std::shared_ptr<::trantor::Date> publishedDate_;
     std::shared_ptr<::trantor::Date> createdAt_;
     std::shared_ptr<::trantor::Date> updatedAt_;
+    std::shared_ptr<std::string> featuredStories_;
     struct MetaData
     {
         const std::string colName_;
@@ -376,7 +388,7 @@ class Newspapers
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[22]={ false };
+    bool dirtyFlag_[23]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -506,6 +518,11 @@ class Newspapers
         if(dirtyFlag_[21])
         {
             sql += "updated_at,";
+            ++parametersCount;
+        }
+        if(dirtyFlag_[22])
+        {
+            sql += "featured_stories,";
             ++parametersCount;
         }
         if(parametersCount > 0)
@@ -641,6 +658,11 @@ class Newspapers
             sql.append(placeholderStr, n);
         }
         if(dirtyFlag_[21])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[22])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);

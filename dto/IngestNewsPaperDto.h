@@ -36,6 +36,7 @@ namespace gnp::dto {
         [[nodiscard]] const std::string& getDocumentId() const { return document_id_; }
         [[nodiscard]] bool isPublished() const { return is_published_; }
         [[nodiscard]] const std::string& getPublishedDate() const { return published_date_; }
+        [[nodiscard]] const std::string& getFeaturedStories() const { return featured_stories_; }
 
         // Setters
         void setTitle(const std::string& v) { title_ = v; }
@@ -57,6 +58,7 @@ namespace gnp::dto {
         void setDocumentId(const std::string& v) { document_id_ = v; }
         void setIsPublished(bool v) { is_published_ = v; }
         void setPublishedDate(const std::string& v) { published_date_ = v; }
+        void setFeaturedStories(const std::string& v) { featured_stories_ = v; }
 
 
     private:
@@ -76,6 +78,7 @@ namespace gnp::dto {
         std::string full_description_;
         std::string thumbnail_id_;
         std::string file_type_;
+        std::string featured_stories_;
         std::string storage_type_;
         std::string document_id_;
         bool is_published_ = false;
@@ -100,8 +103,18 @@ namespace gnp::dto {
         if (json.isMember("fileType")) file_type_ = json["fileType"].asString();
         if (json.isMember("storageType")) storage_type_ = json["storageType"].asString();
         if (json.isMember("documentId")) document_id_ = json["documentId"].asString();
+        if (json.isMember("featuredStories")) featured_stories_ = json["featuredStories"].asString();
         if (json.isMember("isPublished")) is_published_ = json["isPublished"].asBool();
         if (json.isMember("publishedDate")) published_date_ = json["publishedDate"].asString();
+
+        if (json.isMember("featuredStories") && json["featuredStories"].isArray()) {
+            Json::StreamWriterBuilder builder;
+            builder["commentStyle"] = "None";
+            builder["indentation"] = "";  // Compact JSON
+            featured_stories_ = Json::writeString(builder, json["permissions"]);
+        } else {
+            featured_stories_ = "[]";  // Default empty array
+        }
 
     }
 

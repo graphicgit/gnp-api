@@ -297,6 +297,7 @@ namespace gnp::services {
         newspaper.setDocumentId(dto.getDocumentId());
         newspaper.setIsPublished(false);
         newspaper.setCreatedAt(trantor::Date::now());
+        newspaper.setFeaturedStories(dto.getFeaturedStories());
 
         mp.insert(newspaper, [callback](const drogon_model::Gnp::Newspapers& newspaper) {
             // 5. Prepare success response

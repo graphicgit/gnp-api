@@ -35,6 +35,7 @@ const std::string Newspapers::Cols::_is_published = "\"is_published\"";
 const std::string Newspapers::Cols::_published_date = "\"published_date\"";
 const std::string Newspapers::Cols::_created_at = "\"created_at\"";
 const std::string Newspapers::Cols::_updated_at = "\"updated_at\"";
+const std::string Newspapers::Cols::_featured_stories = "\"featured_stories\"";
 const std::string Newspapers::primaryKeyName = "id";
 const bool Newspapers::hasPrimaryKey = true;
 const std::string Newspapers::tableName = "\"newspapers\"";
@@ -61,7 +62,8 @@ const std::vector<typename Newspapers::MetaData> Newspapers::metaData_={
 {"is_published","bool","boolean",1,0,0,1},
 {"published_date","::trantor::Date","date",0,0,0,0},
 {"created_at","::trantor::Date","timestamp without time zone",0,0,0,0},
-{"updated_at","::trantor::Date","timestamp without time zone",0,0,0,0}
+{"updated_at","::trantor::Date","timestamp without time zone",0,0,0,0},
+{"featured_stories","std::string","jsonb",0,0,0,0}
 };
 const std::string &Newspapers::getColumnName(size_t index) noexcept(false)
 {
@@ -201,11 +203,15 @@ Newspapers::Newspapers(const Row &r, const ssize_t indexOffset) noexcept
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
+        if(!r["featured_stories"].isNull())
+        {
+            featuredStories_=std::make_shared<std::string>(r["featured_stories"].as<std::string>());
+        }
     }
     else
     {
         size_t offset = (size_t)indexOffset;
-        if(offset + 22 > r.size())
+        if(offset + 23 > r.size())
         {
             LOG_FATAL << "Invalid SQL result for this model";
             return;
@@ -362,13 +368,18 @@ Newspapers::Newspapers(const Row &r, const ssize_t indexOffset) noexcept
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
+        index = offset + 22;
+        if(!r[index].isNull())
+        {
+            featuredStories_=std::make_shared<std::string>(r[index].as<std::string>());
+        }
     }
 
 }
 
 Newspapers::Newspapers(const Json::Value &pJson, const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 22)
+    if(pMasqueradingVector.size() != 23)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -588,6 +599,14 @@ Newspapers::Newspapers(const Json::Value &pJson, const std::vector<std::string> 
                 }
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
+        }
+    }
+    if(!pMasqueradingVector[22].empty() && pJson.isMember(pMasqueradingVector[22]))
+    {
+        dirtyFlag_[22] = true;
+        if(!pJson[pMasqueradingVector[22]].isNull())
+        {
+            featuredStories_=std::make_shared<std::string>(pJson[pMasqueradingVector[22]].asString());
         }
     }
 }
@@ -811,12 +830,20 @@ Newspapers::Newspapers(const Json::Value &pJson) noexcept(false)
             }
         }
     }
+    if(pJson.isMember("featured_stories"))
+    {
+        dirtyFlag_[22]=true;
+        if(!pJson["featured_stories"].isNull())
+        {
+            featuredStories_=std::make_shared<std::string>(pJson["featured_stories"].asString());
+        }
+    }
 }
 
 void Newspapers::updateByMasqueradedJson(const Json::Value &pJson,
                                             const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 22)
+    if(pMasqueradingVector.size() != 23)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -1037,6 +1064,14 @@ void Newspapers::updateByMasqueradedJson(const Json::Value &pJson,
             }
         }
     }
+    if(!pMasqueradingVector[22].empty() && pJson.isMember(pMasqueradingVector[22]))
+    {
+        dirtyFlag_[22] = true;
+        if(!pJson[pMasqueradingVector[22]].isNull())
+        {
+            featuredStories_=std::make_shared<std::string>(pJson[pMasqueradingVector[22]].asString());
+        }
+    }
 }
 
 void Newspapers::updateByJson(const Json::Value &pJson) noexcept(false)
@@ -1255,6 +1290,14 @@ void Newspapers::updateByJson(const Json::Value &pJson) noexcept(false)
                 }
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
+        }
+    }
+    if(pJson.isMember("featured_stories"))
+    {
+        dirtyFlag_[22] = true;
+        if(!pJson["featured_stories"].isNull())
+        {
+            featuredStories_=std::make_shared<std::string>(pJson["featured_stories"].asString());
         }
     }
 }
@@ -1773,6 +1816,33 @@ void Newspapers::setUpdatedAtToNull() noexcept
     dirtyFlag_[21] = true;
 }
 
+const std::string &Newspapers::getValueOfFeaturedStories() const noexcept
+{
+    static const std::string defaultValue = std::string();
+    if(featuredStories_)
+        return *featuredStories_;
+    return defaultValue;
+}
+const std::shared_ptr<std::string> &Newspapers::getFeaturedStories() const noexcept
+{
+    return featuredStories_;
+}
+void Newspapers::setFeaturedStories(const std::string &pFeaturedStories) noexcept
+{
+    featuredStories_ = std::make_shared<std::string>(pFeaturedStories);
+    dirtyFlag_[22] = true;
+}
+void Newspapers::setFeaturedStories(std::string &&pFeaturedStories) noexcept
+{
+    featuredStories_ = std::make_shared<std::string>(std::move(pFeaturedStories));
+    dirtyFlag_[22] = true;
+}
+void Newspapers::setFeaturedStoriesToNull() noexcept
+{
+    featuredStories_.reset();
+    dirtyFlag_[22] = true;
+}
+
 void Newspapers::updateId(const uint64_t id)
 {
 }
@@ -1801,7 +1871,8 @@ const std::vector<std::string> &Newspapers::insertColumns() noexcept
         "is_published",
         "published_date",
         "created_at",
-        "updated_at"
+        "updated_at",
+        "featured_stories"
     };
     return inCols;
 }
@@ -2050,6 +2121,17 @@ void Newspapers::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[22])
+    {
+        if(getFeaturedStories())
+        {
+            binder << getValueOfFeaturedStories();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 
 const std::vector<std::string> Newspapers::updateColumns() const
@@ -2142,6 +2224,10 @@ const std::vector<std::string> Newspapers::updateColumns() const
     if(dirtyFlag_[21])
     {
         ret.push_back(getColumnName(21));
+    }
+    if(dirtyFlag_[22])
+    {
+        ret.push_back(getColumnName(22));
     }
     return ret;
 }
@@ -2390,6 +2476,17 @@ void Newspapers::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[22])
+    {
+        if(getFeaturedStories())
+        {
+            binder << getValueOfFeaturedStories();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 Json::Value Newspapers::toJson() const
 {
@@ -2570,6 +2667,14 @@ Json::Value Newspapers::toJson() const
     {
         ret["updated_at"]=Json::Value();
     }
+    if(getFeaturedStories())
+    {
+        ret["featured_stories"]=getValueOfFeaturedStories();
+    }
+    else
+    {
+        ret["featured_stories"]=Json::Value();
+    }
     return ret;
 }
 
@@ -2582,7 +2687,7 @@ Json::Value Newspapers::toMasqueradedJson(
     const std::vector<std::string> &pMasqueradingVector) const
 {
     Json::Value ret;
-    if(pMasqueradingVector.size() == 22)
+    if(pMasqueradingVector.size() == 23)
     {
         if(!pMasqueradingVector[0].empty())
         {
@@ -2826,6 +2931,17 @@ Json::Value Newspapers::toMasqueradedJson(
                 ret[pMasqueradingVector[21]]=Json::Value();
             }
         }
+        if(!pMasqueradingVector[22].empty())
+        {
+            if(getFeaturedStories())
+            {
+                ret[pMasqueradingVector[22]]=getValueOfFeaturedStories();
+            }
+            else
+            {
+                ret[pMasqueradingVector[22]]=Json::Value();
+            }
+        }
         return ret;
     }
     LOG_ERROR << "Masquerade failed";
@@ -3005,6 +3121,14 @@ Json::Value Newspapers::toMasqueradedJson(
     {
         ret["updated_at"]=Json::Value();
     }
+    if(getFeaturedStories())
+    {
+        ret["featured_stories"]=getValueOfFeaturedStories();
+    }
+    else
+    {
+        ret["featured_stories"]=Json::Value();
+    }
     return ret;
 }
 
@@ -3155,13 +3279,18 @@ bool Newspapers::validateJsonForCreation(const Json::Value &pJson, std::string &
         if(!validJsonOfField(21, "updated_at", pJson["updated_at"], err, true))
             return false;
     }
+    if(pJson.isMember("featured_stories"))
+    {
+        if(!validJsonOfField(22, "featured_stories", pJson["featured_stories"], err, true))
+            return false;
+    }
     return true;
 }
 bool Newspapers::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                                                     const std::vector<std::string> &pMasqueradingVector,
                                                     std::string &err)
 {
-    if(pMasqueradingVector.size() != 22)
+    if(pMasqueradingVector.size() != 23)
     {
         err = "Bad masquerading vector";
         return false;
@@ -3378,6 +3507,14 @@ bool Newspapers::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                   return false;
           }
       }
+      if(!pMasqueradingVector[22].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[22]))
+          {
+              if(!validJsonOfField(22, pMasqueradingVector[22], pJson[pMasqueradingVector[22]], err, true))
+                  return false;
+          }
+      }
     }
     catch(const Json::LogicError &e)
     {
@@ -3503,13 +3640,18 @@ bool Newspapers::validateJsonForUpdate(const Json::Value &pJson, std::string &er
         if(!validJsonOfField(21, "updated_at", pJson["updated_at"], err, false))
             return false;
     }
+    if(pJson.isMember("featured_stories"))
+    {
+        if(!validJsonOfField(22, "featured_stories", pJson["featured_stories"], err, false))
+            return false;
+    }
     return true;
 }
 bool Newspapers::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
                                                   const std::vector<std::string> &pMasqueradingVector,
                                                   std::string &err)
 {
-    if(pMasqueradingVector.size() != 22)
+    if(pMasqueradingVector.size() != 23)
     {
         err = "Bad masquerading vector";
         return false;
@@ -3628,6 +3770,11 @@ bool Newspapers::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
       if(!pMasqueradingVector[21].empty() && pJson.isMember(pMasqueradingVector[21]))
       {
           if(!validJsonOfField(21, pMasqueradingVector[21], pJson[pMasqueradingVector[21]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[22].empty() && pJson.isMember(pMasqueradingVector[22]))
+      {
+          if(!validJsonOfField(22, pMasqueradingVector[22], pJson[pMasqueradingVector[22]], err, false))
               return false;
       }
     }
@@ -3969,6 +4116,17 @@ bool Newspapers::validJsonOfField(size_t index,
             }
             break;
         case 21:
+            if(pJson.isNull())
+            {
+                return true;
+            }
+            if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 22:
             if(pJson.isNull())
             {
                 return true;
