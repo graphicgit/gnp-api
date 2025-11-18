@@ -103,7 +103,6 @@ namespace gnp::dto {
         if (json.isMember("fileType")) file_type_ = json["fileType"].asString();
         if (json.isMember("storageType")) storage_type_ = json["storageType"].asString();
         if (json.isMember("documentId")) document_id_ = json["documentId"].asString();
-        if (json.isMember("featuredStories")) featured_stories_ = json["featuredStories"].asString();
         if (json.isMember("isPublished")) is_published_ = json["isPublished"].asBool();
         if (json.isMember("publishedDate")) published_date_ = json["publishedDate"].asString();
 
@@ -111,7 +110,7 @@ namespace gnp::dto {
             Json::StreamWriterBuilder builder;
             builder["commentStyle"] = "None";
             builder["indentation"] = "";  // Compact JSON
-            featured_stories_ = Json::writeString(builder, json["permissions"]);
+            featured_stories_ = Json::writeString(builder, json["featuredStories"]);
         } else {
             featured_stories_ = "[]";  // Default empty array
         }
