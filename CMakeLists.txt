@@ -57,9 +57,6 @@ add_executable(${PROJECT_NAME} main.cc
 find_package(Drogon CONFIG REQUIRED)
 find_package(OpenSSL REQUIRED)
 
-#find_package(bcrypt CONFIG REQUIRED)
-#target_link_libraries(${PROJECT_NAME} PRIVATE Drogon::Drogon)
-
 target_link_libraries(${PROJECT_NAME} PRIVATE
         Drogon::Drogon
         bcrypt
