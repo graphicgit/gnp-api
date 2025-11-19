@@ -93,7 +93,9 @@ namespace gnp::dto {
         if (json.isMember("price")) price_ = json["price"].asDouble();
         if (json.isMember("isFree")) is_free_ = json["isFree"].asBool();
         if (json.isMember("categoryId")) category_id_ = json["categoryId"].asString();
+        if (json.isMember("categoryName")) category_name_ = json["categoryName"].asString();
         if (json.isMember("publicationId")) publication_id_ = json["publicationId"].asString();
+        if (json.isMember("publicationName")) publication_name_ = json["publicationName"].asString();
         if (json.isMember("copyrightOwner")) copyright_owner_ = json["copyrightOwner"].asString();
         if (json.isMember("editionNumber")) edition_number_ = json["editionNumber"].asString();
         if (json.isMember("isPopular")) is_popular_ = json["isPopular"].asBool();

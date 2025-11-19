@@ -145,6 +145,79 @@ namespace gnp::services {
     }
 
 
+        void NewspaperService::getDetails(
+        const std::string& id,
+        const std::function<void(const gnp::dto::BaseApiResponse&)>& callback)
+    {
+        auto dbClient = drogon::app().getDbClient();
+        auto mp = std::make_shared<Mapper<drogon_model::Gnp::Newspapers>>(dbClient);
+
+        // Only published newspapers are visible here
+        Criteria criteria =
+            Criteria(Newspapers::Cols::_id, CompareOperator::EQ, id) &&
+            Criteria(Newspapers::Cols::_is_published, CompareOperator::EQ, true);
+
+        mp->findOne(criteria,
+            [callback](const drogon_model::Gnp::Newspapers& newspaper) {
+                dto::BaseApiResponse response;
+                response.success = true;
+
+                Json::Value src = newspaper.toJson();
+                Json::Value data;
+
+                // Basic fields
+                data["id"] = src["id"];
+                data["title"] = src["title"];
+                data["slug"] = src["slug"];
+                data["price"] = src["price"];
+                data["editionNumber"] = src["edition_number"];
+                data["shortDescription"] = src["short_description"];
+                data["fullDescription"] = src["full_description"];
+                data["thumbnailId"] = src["thumbnail_id"];
+                data["fileType"] = src["file_type"];
+                data["storageType"] = src["storage_type"];
+                data["documentId"] = src["document_id"];
+                data["isFree"] = src["is_free"];
+                data["isPopular"] = src["is_popular"];
+                data["publishedDate"] = src["published_date"];
+                data["isPublished"] = src["is_published"];
+
+                // Category / publication info
+                data["categoryId"] = src["category_id"];
+                data["categoryName"] = src["category_name"];
+                data["publicationId"] = src["publication_id"];
+                data["publicationName"] = src["publication_name"];
+
+                // Copyright
+                data["copyrightOwner"] = src["copyright_owner"];
+
+                // Featured stories (stored as JSON string)
+                std::string featuredStoriesStr = newspaper.getValueOfFeaturedStories();
+                Json::Value featuredStoriesJson;
+                Json::Reader reader;
+                if (!featuredStoriesStr.empty() && reader.parse(featuredStoriesStr, featuredStoriesJson))
+                {
+                    data["featuredStories"] = featuredStoriesJson;
+                }
+                else
+                {
+                    data["featuredStories"] = Json::arrayValue;
+                }
+
+                response.result = data;
+                callback(response);
+            },
+            [callback](const DrogonDbException& e) {
+                dto::BaseApiResponse errorResponse;
+                errorResponse.success = false;
+                errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+                errorResponse.error["message"] = "Newspaper not found.";
+                errorResponse.error["detail"] = e.base().what();
+                callback(errorResponse);
+            }
+        );
+    }
+
     //for admin use only
     void NewspaperService::listAll(
         int pageNo,

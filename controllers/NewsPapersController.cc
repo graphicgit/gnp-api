@@ -57,7 +57,28 @@ void NewsPapersController::getAll(const HttpRequestPtr& req, std::function<void 
 
 void NewsPapersController::getPaperDetails(const HttpRequestPtr& req, std::function<void (const HttpResponsePtr &)> &&callback)
 {
-    // write your application logic here
+    if (req->getParameter("id").empty()) {
+        // Missing tenant ID - return early
+        gnp::dto::BaseApiResponse response;
+        response.success = false;
+        response.error["message"] = "Missing required parameter: id";
+        auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+        resp->setStatusCode(k400BadRequest);
+        callback(resp);
+        return;
+    }
+
+    std::string id = req->getParameter("id");
+
+    // Get tenant service from plugin
+    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto& newsPaperService = plugin->getNewsPaperService();
+
+    // Call service method to delete the tenant
+    newsPaperService.getDetails(id, [callback](const gnp::dto::BaseApiResponse& result) {
+        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+        callback(resp);
+    });
 }
 
 void NewsPapersController::publish(const HttpRequestPtr& req, std::function<void (const HttpResponsePtr &)> &&callback)
