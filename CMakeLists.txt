@@ -45,8 +45,6 @@ add_executable(${PROJECT_NAME} main.cc
         services/email/EmailService.h
         services/email/EmailService.cc
         dto/SendEmailDto.h
-        services/storage/GoogleDriveService.h
-        services/storage/GoogleDriveService.cc
 )
 
 # ##############################################################################
