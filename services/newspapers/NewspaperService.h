@@ -29,6 +29,10 @@ namespace gnp::services {
 
         //void getRelatedContent(const std::string& newsPaperId, const std::function<void(const gnp::dto::BaseApiResponse&)>& callback);
 
+        std::string getGoogleAccessToken(const std::string &clientEmail,
+                                 const std::string &privateKey,
+                                 const std::string &tokenUri);
+
         void listAll(
            int pageNo,
            int pageSize,

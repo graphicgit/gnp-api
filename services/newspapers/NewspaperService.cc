@@ -6,6 +6,7 @@
 #include <drogon/orm/Mapper.h>
 #include "Newspapers.h"
 #include "constants/ErrorCodes.h"
+#include <jwt-cpp/jwt.h>
 
 
 using namespace drogon::orm;
@@ -84,23 +85,36 @@ namespace gnp::services {
                         response.result["totalPages"] = (int)((totalCount + pageSize - 1) / pageSize);
 
                         Json::Value data = Json::arrayValue;
-                        for (const auto& role : publications)
+                        for (const auto& newspaper : publications)
                         {
-                            Json::Value roleJson = role.toJson();
+                            Json::Value newsPaperJson = newspaper.toJson();
 
                             // Convert snake_case to camelCase
                             Json::Value camelCaseRole;
-                            camelCaseRole["id"] = roleJson["id"];
-                            camelCaseRole["title"] = roleJson["title"];
-                            camelCaseRole["slug"] = roleJson["slug"];
-                            camelCaseRole["price"] = roleJson["price"];
-                            camelCaseRole["editionNumber"] = roleJson["edition_number"];
-                            camelCaseRole["shortDescription"] = roleJson["short_description"];
-                            camelCaseRole["fullDescription"] = roleJson["full_description"];
-                            camelCaseRole["thumbnailId"] = roleJson["thumbnail_id"];
-                            camelCaseRole["fileType"] = roleJson["file_type"];
-                            camelCaseRole["documentId"] = roleJson["document_id"];
-                            camelCaseRole["publishedDate"] = roleJson["published_date"];
+                            camelCaseRole["id"] = newsPaperJson["id"];
+                            camelCaseRole["title"] = newsPaperJson["title"];
+                            camelCaseRole["slug"] = newsPaperJson["slug"];
+                            camelCaseRole["price"] = newsPaperJson["price"];
+                            camelCaseRole["editionNumber"] = newsPaperJson["edition_number"];
+                            camelCaseRole["shortDescription"] = newsPaperJson["short_description"];
+                            camelCaseRole["fullDescription"] = newsPaperJson["full_description"];
+                            camelCaseRole["thumbnailId"] = newsPaperJson["thumbnail_id"];
+                            camelCaseRole["fileType"] = newsPaperJson["file_type"];
+                            //camelCaseRole["documentId"] = newsPaperJson["document_id"];
+                            camelCaseRole["publishedDate"] = newsPaperJson["published_date"];
+
+                            std::string featuredStoriesStr = newspaper.getValueOfFeaturedStories();
+                            Json::Value featuredStoriesJson;
+                            Json::Reader reader;
+
+                            if (!featuredStoriesStr.empty() && reader.parse(featuredStoriesStr, featuredStoriesJson))
+                            {
+                                camelCaseRole["featuredStories"] = featuredStoriesJson;
+                            }
+                            else
+                            {
+                                camelCaseRole["featuredStories"] = Json::arrayValue;
+                            }
 
                             data.append(camelCaseRole);
                         }

@@ -328,17 +328,6 @@
             "JwtAudience" : "Gnp_Users",
             "JwtExpirationTime" : 3600
         },
-        "RabbitMqBroker": {
-            "Url": "amqps://vedfplxy:ULj-Mt6eUZpfm4g489PQxAgHu6-iqJqJ@cow.rmq2.cloudamqp.com/vedfplxy",
-            "EmailNotificationQueue": "email_notification",
-            "ExchangeTypes": {
-                "AmqDirect": "amq.direct",
-                "AmqTopic": "amq.topic",
-                "AmqFanOut": "amq.fanout",
-                "AmqHeaders": "amq.headers",
-                "AmqMatch": "amq.match"
-            }
-        },
         "PrivateKey": "ca11ca76-3866-4d44-9881-d9e365b81474"
     }
 }
