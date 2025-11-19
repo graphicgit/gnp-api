@@ -14,7 +14,7 @@ int main() {
         // Array of allowed origins
       const std::vector<std::string> allowedOrigins = {
           "http://localhost:3009",
-          "https://dev-api.graphicnewsplus.com",
+          "https://dev.graphicnewsplus.com",
           // Add more origins as needed
       };
 
