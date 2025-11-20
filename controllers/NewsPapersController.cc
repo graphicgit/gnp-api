@@ -55,7 +55,7 @@ void NewsPapersController::getAll(const HttpRequestPtr& req, std::function<void 
     });
 }
 
-void NewsPapersController::getPaperDetails(const HttpRequestPtr& req, std::function<void (const HttpResponsePtr &)> &&callback)
+void NewsPapersController::getReductedDetails(const HttpRequestPtr& req, std::function<void (const HttpResponsePtr &)> &&callback)
 {
     if (req->getParameter("id").empty()) {
         // Missing tenant ID - return early
@@ -75,7 +75,64 @@ void NewsPapersController::getPaperDetails(const HttpRequestPtr& req, std::funct
     auto& newsPaperService = plugin->getNewsPaperService();
 
     // Call service method to delete the tenant
-    newsPaperService.getDetails(id, [callback](const gnp::dto::BaseApiResponse& result) {
+    newsPaperService.getReductedDetails(id, [callback](const gnp::dto::BaseApiResponse& result) {
+        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+        callback(resp);
+    });
+}
+
+
+void NewsPapersController::getFullDetails(const HttpRequestPtr& req, std::function<void (const HttpResponsePtr &)> &&callback)
+{
+    if (req->getParameter("id").empty()) {
+        // Missing tenant ID - return early
+        gnp::dto::BaseApiResponse response;
+        response.success = false;
+        response.error["message"] = "Missing required parameter: id";
+        auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+        resp->setStatusCode(k400BadRequest);
+        callback(resp);
+        return;
+    }
+
+    std::string id = req->getParameter("id");
+    std::string privateKey = req->getHeader("Vitamin");
+
+    if (privateKey.empty()) {
+
+        gnp::dto::BaseApiResponse response;
+        response.success = false;
+        response.error["message"] = "Missing required Header";
+        auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+        resp->setStatusCode(k500InternalServerError);
+        callback(resp);
+        return;
+    }
+
+    //compare header with value in custom config
+    auto& app = drogon::app();
+    auto customConfig = app.getCustomConfig();
+    std::string privateKeyInConfig = customConfig["PrivateKey"].asString();
+
+    if (privateKey != privateKeyInConfig) {
+
+        gnp::dto::BaseApiResponse response;
+        response.success = false;
+        response.error["message"] = "Invalid Header";
+        auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+        resp->setStatusCode(k500InternalServerError);
+        callback(resp);
+        return;
+    }
+
+
+
+    // Get tenant service from plugin
+    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto& newsPaperService = plugin->getNewsPaperService();
+
+    // Call service method to delete the tenant
+    newsPaperService.getFullDetails(id, [callback](const gnp::dto::BaseApiResponse& result) {
         auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
         callback(resp);
     });

@@ -33,7 +33,6 @@ namespace gnp::services {
                 Criteria(SubscriptionPlans::Cols::_name, CompareOperator::Like, likeQuery) ||
                 Criteria(SubscriptionPlans::Cols::_description, CompareOperator::Like, likeQuery);
 
-
         }
 
         // 2. Asynchronously get the total count matching the criteria

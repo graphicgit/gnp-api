@@ -328,6 +328,6 @@
             "JwtAudience" : "Gnp_Users",
             "JwtExpirationTime" : 3600
         },
-        "PrivateKey": "ca11ca76-3866-4d44-9881-d9e365b81474"
+        "PrivateKey": "ca11ca76-3876-4d45-9882-b9e365b81474"
     }
 }
