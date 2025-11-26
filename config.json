@@ -152,12 +152,7 @@
                 //is_recursive: true by default. If it is set to false, files in sub directories can't be accessed.
                 "is_recursive": true,
                 //filters: string array, the filters applied to the location.
-                "filters": [
-                    {
-                        "name": "CorsFilter",
-                        "class_name": "CorsFilter"
-                    }
-                ]
+                "filters": []
             }
         ],
         //max_connections: maximum number of connections, 100000 by default
@@ -328,6 +323,10 @@
             "JwtAudience" : "Gnp_Users",
             "JwtExpirationTime" : 3600
         },
-        "PrivateKey": "ca11ca76-3876-4d45-9882-b9e365b81474"
+        "PrivateKey": "ca11ca76-3876-4d45-9882-b9e365b81474",
+        "PayStackApi": {
+            "BaseUrl" : "https://api.paystack.co",
+            "SecretKey" : "sk_live_844f99e0b5acfff9b8b52bde395bb6fd39e4e346"
+        }
     }
 }

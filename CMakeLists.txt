@@ -45,6 +45,11 @@ add_executable(${PROJECT_NAME} main.cc
         services/email/EmailService.h
         services/email/EmailService.cc
         dto/SendEmailDto.h
+        dto/GuestSubscriptionDto.h
+        dto/InitializePaymentRequest.h
+        dto/VerifyPayResponse.h
+        dto/InitializePaymentResponse.h
+        services/paystack/PaystackApi.cc
 )
 
 # ##############################################################################

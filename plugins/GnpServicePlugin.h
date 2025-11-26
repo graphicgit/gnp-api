@@ -11,6 +11,8 @@
 #include "services/users/UserService.h"
 #include "services/publications/PublicationService.h"
 #include "services/email/EmailService.h"
+#include "services/paystack/PaystackApi.h"
+#include "services/subscriptions/SubscriptionService.h"
 #include "services/subscription_plans/SubscriptionPlanService.h"
 
 namespace gnp::plugins {
@@ -33,7 +35,9 @@ namespace gnp::plugins {
         services::EmailService& getEmailService() { return emailService_; }
         services::NewspaperService& getNewsPaperService() { return newspaperService_ ; }
         services::SubscriptionPlanService& getSubscriptionPlanService() { return subscriptionPlanService_; }
+        services::SubscriptionService& getSubscriptionService() { return subscriptionService_; }
         services::PublicationService& getPublicationService() { return publicationService_; }
+        services::PaystackApi& getPaystackApi() { return paystackApi_; }
 
     private:
 
@@ -41,7 +45,9 @@ namespace gnp::plugins {
         services::EmailService emailService_;
         services::NewspaperService newspaperService_ ;
         services::SubscriptionPlanService subscriptionPlanService_;
+        services::SubscriptionService subscriptionService_;
         services::PublicationService publicationService_;
+        services::PaystackApi paystackApi_;
     };
 
 }

@@ -6,6 +6,7 @@
 
 #include "dto/BaseApiResponse.h"
 #include <drogon/drogon.h>
+#include "dto/GuestSubscriptionDto.h"
 
 namespace gnp::services {
 
@@ -25,6 +26,11 @@ namespace gnp::services {
            int pageNo,
            int pageSize,
            const std::string& query,
+           const std::function<void(const gnp::dto::BaseApiResponse&)>& callback
+       );
+
+        void manageGuestSubscription(
+           const dto::GuestSubscriptionDto& dto,
            const std::function<void(const gnp::dto::BaseApiResponse&)>& callback
        );
 
