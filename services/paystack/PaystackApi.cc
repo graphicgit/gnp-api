@@ -6,10 +6,6 @@
 #include "PaystackApi.h"
 #include "dto/InitializePaymentRequest.h"
 #include "dto/InitializePaymentResponse.h"
-#include <nlohmann/json.hpp>
-
-
-using json = nlohmann::json;
 
 
 namespace gnp::services {
