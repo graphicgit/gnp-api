@@ -1,8 +1,10 @@
 #include <drogon/drogon.h>
+#include <drogon/WebSocketConnection.h>
 
 #include "filters/CorsFilter.h"
 
 int main() {
+  printf("Starting GnpApi...\n");
   // Load config file
   drogon::app().loadConfigFile("../config.json");
   // drogon::app().loadConfigFile("config.json");
@@ -20,6 +22,9 @@ int main() {
         const std::string &origin = req->getHeader("Origin");
 
         // Check if the origin is in our allowed list
+        // For development, allow all origins
+        resp->addHeader("Access-Control-Allow-Origin", "*");
+        /*
         if (std::find(allowedOrigins.begin(), allowedOrigins.end(), origin) !=
             allowedOrigins.end()) {
           resp->addHeader("Access-Control-Allow-Origin", origin);
@@ -31,6 +36,7 @@ int main() {
           resp->addHeader("Access-Control-Allow-Origin", allowedOrigins[0]);
           return;
         }
+        */
 
         // Add CORS headers to every response
 

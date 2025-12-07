@@ -1,18 +1,18 @@
 //
-// Created by Emmanuel Addo-Odame on 23/11/2025.
+// Created by Emmanuel Addo-Odame on 28/11/2025.
 //
 
-#ifndef GUESTSUBSCRIPTIONDTO_H
-#define GUESTSUBSCRIPTIONDTO_H
+#ifndef GUESTONETIMEBUYDTO_H
+#define GUESTONETIMEBUYDTO_H
 #include <json/json.h>
 
 namespace gnp::dto {
 
-    class  GuestSubscriptionDto {
+    class  GuestOnetimeBuyDto {
 
     public:
 
-        GuestSubscriptionDto() = default;
+        GuestOnetimeBuyDto() = default;
 
         void fromJson(const Json::Value& json);
 
@@ -21,16 +21,14 @@ namespace gnp::dto {
         [[nodiscard]] const std::string& getLastName() const { return last_name_; }
         [[nodiscard]] const std::string& getEmail() const { return email_; }
         [[nodiscard]] const std::string& getPhoneNumber() const { return phone_number_; }
-        [[nodiscard]] const std::string& getSubscriptionType() const { return subscription_type_; }
-        [[nodiscard]] const std::string& getSubscriptionPlanId() const { return subscription_plan_id_; }
+        [[nodiscard]] const std::string& getNewsPaperId() const { return newspaper_id_; }
 
         // Setters
         void setFirstName(const std::string& v) { first_name_ = v; }
         void setLastName(const std::string& v) { last_name_ = v; }
         void setEmail(const std::string& v) { email_ = v; }
         void setPhoneNumber(const std::string& v) { phone_number_ = v; }
-        void setSubscriptionType(const std::string& v) { subscription_type_ = v; }
-        void setSubscriptionPlanId(const std::string& v) { subscription_plan_id_ = v; }
+        void setNewsPaperId(const std::string& v) { newspaper_id_ = v; }
 
     private:
 
@@ -38,13 +36,12 @@ namespace gnp::dto {
         std::string last_name_;
         std::string email_;
         std::string phone_number_;
-        std::string subscription_type_;
-        std::string subscription_plan_id_;
+        std::string newspaper_id_;
 
     };
 
 
-    inline void GuestSubscriptionDto::fromJson(const Json::Value& json) {
+    inline void GuestOnetimeBuyDto::fromJson(const Json::Value& json) {
 
         if (json.isMember("firstName") && !json["firstName"].isNull()) {
             first_name_ = json["firstName"].asString();
@@ -62,16 +59,12 @@ namespace gnp::dto {
             phone_number_ = json["phoneNumber"].asString();
         }
 
-        if (json.isMember("subscriptionType") && !json["subscriptionType"].isNull()) {
-            subscription_type_ = json["subscriptionType"].asString();
-        }
-
-        if (json.isMember("subscriptionPlanId") && !json["subscriptionPlanId"].isNull()) {
-            subscription_plan_id_ = json["subscriptionPlanId"].asString();
+        if (json.isMember("newsPaperId") && !json["newsPaperId"].isNull()) {
+            newspaper_id_ = json["newsPaperId"].asString();
         }
 
     }
 }
 
 
-#endif //GUESTSUBSCRIPTIONDTO_H
+#endif //GUESTONETIMEBUYDTO_H

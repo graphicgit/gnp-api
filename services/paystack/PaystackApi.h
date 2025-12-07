@@ -28,6 +28,8 @@ namespace gnp::services {
            const std::function<void(const gnp::dto::VerifyPayResponse&)>& callback
        );
 
+        // create a method that can initialize a deferred routine :: with appropraite params on a WSSD service to complete
+        // when u call each of the steps within the WSSD flow, delay for at least 2 seconds,  before calling the next step.
 
 
     };

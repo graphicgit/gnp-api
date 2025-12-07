@@ -50,6 +50,7 @@ add_executable(${PROJECT_NAME} main.cc
         dto/VerifyPayResponse.h
         dto/InitializePaymentResponse.h
         services/paystack/PaystackApi.cc
+        dto/GuestOnetimeBuyDto.h
 )
 
 # ##############################################################################

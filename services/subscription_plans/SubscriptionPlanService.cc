@@ -133,6 +133,7 @@ namespace gnp::services {
         newSubscriptionPlan.setDescription(dto.getDescription());
         newSubscriptionPlan.setPricing(dto.getPricing());
         newSubscriptionPlan.setPlanType(dto.getPlanType());
+        newSubscriptionPlan.setTargetPublications(dto.getTargetPublications());
         newSubscriptionPlan.setCreatedAt(trantor::Date::now());
 
 
@@ -156,7 +157,6 @@ namespace gnp::services {
         });
 
     }
-
 
 
     void SubscriptionPlanService::update(
@@ -200,6 +200,7 @@ namespace gnp::services {
             }
         );
     }
+
 
     void SubscriptionPlanService::deletePlan(
             const std::string& publicationId,

@@ -6,6 +6,8 @@
 
 #include "dto/BaseApiResponse.h"
 #include <drogon/drogon.h>
+
+#include "dto/GuestOnetimeBuyDto.h"
 #include "dto/GuestSubscriptionDto.h"
 
 namespace gnp::services {
@@ -31,6 +33,16 @@ namespace gnp::services {
 
         void manageGuestSubscription(
            const dto::GuestSubscriptionDto& dto,
+           const std::function<void(const gnp::dto::BaseApiResponse&)>& callback
+       );
+
+        void manageGuestOneTimeBuy(
+           const dto::GuestOnetimeBuyDto& dto,
+           const std::function<void(const gnp::dto::BaseApiResponse&)>& callback
+       );
+
+        void completeGuestOneTimeBuy(
+            const std::string& reference,
            const std::function<void(const gnp::dto::BaseApiResponse&)>& callback
        );
 
