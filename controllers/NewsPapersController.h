@@ -14,8 +14,8 @@ class NewsPapersController : public drogon::HttpController<NewsPapersController>
   public:
 
   METHOD_LIST_BEGIN
-      ADD_METHOD_TO(NewsPapersController::getAll, PREFIX + "/get-all", Get);
-      ADD_METHOD_TO(NewsPapersController::getReductedDetails, PREFIX + "/get-reducted-details", Get);
+      ADD_METHOD_TO(NewsPapersController::getAll, PREFIX + "/get-all", Get, Options);
+      ADD_METHOD_TO(NewsPapersController::getReductedDetails, PREFIX + "/get-reducted-details", Get, Options);
       ADD_METHOD_TO(NewsPapersController::getFullDetails, PREFIX + "/get-full-details", Get);
       ADD_METHOD_TO(NewsPapersController::publish, PREFIX + "/publish", Get);
       ADD_METHOD_TO(NewsPapersController::unPublish, PREFIX + "/unpublish", Get);

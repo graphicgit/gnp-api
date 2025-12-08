@@ -1,7 +1,49 @@
 cmake_minimum_required(VERSION 3.5)
 project(GnpApi_test CXX)
 
-add_executable(${PROJECT_NAME} test_main.cc)
+file(GLOB CTL_SRC "../controllers/*.cc")
+file(GLOB FILTER_SRC "../filters/*.cc")
+file(GLOB PLUGIN_SRC "../plugins/*.cc")
+file(GLOB CONSTANTS_SRC "../constants/*.cc")
+file(GLOB MODEL_SRC "../models/*.cc")
+file(GLOB USER_SVC "../services/users/*.cc")
+file(GLOB NEWSPAPER_SVC "../services/newspapers/*.cc")
+file(GLOB SUB_SVC "../services/subscriptions/*.cc")
+file(GLOB PUB_SVC "../services/publications/*.cc")
+file(GLOB EMAIL_SVC "../services/email/*.cc")
+file(GLOB PAYSTACK_SVC "../services/paystack/*.cc")
+file(GLOB HUBTEL_SVC "../services/hubtel_sms/*.cc")
+file(GLOB SUB_PLAN_SVC "../services/subscription_plans/*.cc")
+
+add_executable(${PROJECT_NAME} test_main.cc
+        ${CTL_SRC}
+    ${FILTER_SRC}
+    ${PLUGIN_SRC}
+    ${CONSTANTS_SRC}
+    ${MODEL_SRC}
+    ${USER_SVC}
+    ${NEWSPAPER_SVC}
+    ${SUB_SVC}
+    ${PUB_SVC}
+    ${EMAIL_SVC}
+    ${PAYSTACK_SVC}
+    ${HUBTEL_SVC}
+    ${SUB_PLAN_SVC}
+)
+
+target_include_directories(${PROJECT_NAME} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../
+    ${CMAKE_CURRENT_SOURCE_DIR}/../external_deps/jwt-cpp/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../models
+)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    Drogon::Drogon
+    bcrypt
+    jwt-cpp
+    OpenSSL::SSL
+    OpenSSL::Crypto
+)
 
 # ##############################################################################
 # If you include the drogon source code locally in your project, use this method
@@ -9,6 +51,6 @@ add_executable(${PROJECT_NAME} test_main.cc)
 # target_link_libraries(${PROJECT_NAME} PRIVATE drogon)
 #
 # and comment out the following lines
-target_link_libraries(${PROJECT_NAME} PRIVATE Drogon::Drogon)
+
 
 ParseAndAddDrogonTests(${PROJECT_NAME})

@@ -3,7 +3,7 @@
 //
 
 #include "SubscriptionService.h"
-
+#include <jwt-cpp/jwt.h>
 #include <random>
 #include <sstream>
 
@@ -351,12 +351,6 @@ void SubscriptionService::completeGuestOneTimeBuy(
     const std::string &reference,
     const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {
 
-  // scan the purchase_attempt table with the reference
-  // if the record is found call paystack verify to check the transaction status
-  // if successful, update the purchase_attempt record with the transaction
-  // status;update the user subscription adding the purchased newspaperId if
-  // failed, update the purchase_attempt record with the failure reason
-
   auto dbClient = drogon::app().getDbClient();
 
   Mapper<drogon_model::Gnp::PurchaseAttempts> purchaseAttemptMapper(dbClient);
@@ -367,128 +361,299 @@ void SubscriptionService::completeGuestOneTimeBuy(
   purchaseAttemptMapper.findOne(
       criteria,
       [=](PurchaseAttempts purchaseAttempt) {
-        auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
-        auto &paystackApi = plugin->getPaystackApi();
+        auto dbClient = drogon::app().getDbClient();
+        Mapper<Users> userMapper(dbClient);
 
-        paystackApi.verify(
-            reference,
-            [callback, purchaseAttempt, purchaseAttemptMapper](
-                const gnp::dto::VerifyPayResponse &verifyPayResponse) {
-              dto::BaseApiResponse response;
+        userMapper.findByPrimaryKey(
+            purchaseAttempt.getValueOfUserId(),
+            [=](const Users &user) {
+              auto plugin =
+                  drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+              auto &paystackApi = plugin->getPaystackApi();
 
-              if (!verifyPayResponse.getStatus()) {
-                response.success = false;
-                response.message = !verifyPayResponse.getMessage().empty()
-                                       ? verifyPayResponse.getMessage()
-                                       : "Failed to verify payment";
-                callback(response);
-              }
+              paystackApi.verify(
+                  reference,
+                  [callback, purchaseAttempt,
+                   user](const gnp::dto::VerifyPayResponse &verifyPayResponse) {
+                    dto::BaseApiResponse response;
 
-              const auto &verifyData = verifyPayResponse.getData();
-              // Update the purchase_attempt status based on verification result
-              PurchaseAttempts updatedAttempt =
-                  purchaseAttempt; // Copy to modify
-
-              if (verifyData.status_ == "success") {
-                updatedAttempt.setStatus("Success");
-                updatedAttempt.setFailureReasonToNull();
-                response.success = true;
-                response.message = "Payment verified successfully. Access to Newspaper granted.";
-              } else {
-                updatedAttempt.setStatus("Failed");
-                updatedAttempt.setFailureReason(
-                    verifyData.message_); // or another appropriate field
-                response.success = false;
-                response.message = "Payment verification failed. Status: " +
-                                   verifyData.status_;
-              }
-
-              auto dbClient = drogon::app().getDbClient();
-              Mapper<PurchaseAttempts> paMapper(dbClient);
-              paMapper.update(updatedAttempt,[callback, response,purchaseAttempt](const size_t numRowsUpdated) {
-                    if (!response.success) {
+                    if (!verifyPayResponse.getStatus()) {
+                      response.success = false;
+                      response.message = !verifyPayResponse.getMessage().empty()
+                                             ? verifyPayResponse.getMessage()
+                                             : "Failed to verify payment";
                       callback(response);
+                      return;
+                    }
+
+                    const auto &verifyData = verifyPayResponse.getData();
+                    // Update the purchase_attempt status based on verification
+                    // result
+                    PurchaseAttempts updatedAttempt =
+                        purchaseAttempt; // Copy to modify
+
+                    if (verifyData.status_ == "success") {
+                      updatedAttempt.setStatus("Success");
+                      updatedAttempt.setFailureReasonToNull();
+                      response.success = true;
+                      response.message = "Payment verified successfully. "
+                                         "Access to Newspaper granted.";
+
+                      // Generate JWT
+                      auto &app = drogon::app();
+                      auto customConfig = app.getCustomConfig();
+                      std::string jwtSecurityKey =
+                          customConfig["JwtBearer"]["JwtSecurityKey"]
+                              .asString();
+                      std::string jwtIssuer =
+                          customConfig["JwtBearer"]["JwtIssuer"].asString();
+
+                      auto token =
+                          jwt::create()
+                              .set_issuer(jwtIssuer)
+                              .set_type("JWT")
+                              .set_issued_at(std::chrono::system_clock::now())
+                              .set_expires_at(std::chrono::system_clock::now() +
+                                              std::chrono::hours(24))
+                              .set_payload_claim(
+                                  "userId", jwt::claim(user.getValueOfId()))
+                              .set_payload_claim(
+                                  "firstName",
+                                  jwt::claim(user.getValueOfFirstName()))
+                              .set_payload_claim(
+                                  "surName",
+                                  jwt::claim(user.getValueOfLastName()))
+                              .set_payload_claim(
+                                  "username",
+                                  jwt::claim(user.getValueOfUsername()))
+                              .set_payload_claim(
+                                  "email", jwt::claim(user.getValueOfEmail()))
+                              .sign(jwt::algorithm::hs256{jwtSecurityKey});
+
+                      response.result = token;
+
+                    } else {
+                      updatedAttempt.setStatus("Failed");
+                      updatedAttempt.setFailureReason(
+                          verifyData.message_); // or another appropriate field
+                      response.success = false;
+                      response.message =
+                          "Payment verification failed. Status: " +
+                          verifyData.status_;
                     }
 
                     auto dbClient = drogon::app().getDbClient();
-                    Mapper<UserSubscriptions> subMapper(dbClient);
-                    Criteria subCriteria(UserSubscriptions::Cols::_user_id,CompareOperator::EQ,purchaseAttempt.getValueOfUserId());
+                    Mapper<PurchaseAttempts> paMapper(dbClient);
 
-                    subMapper.findOne(subCriteria,[callback, response, purchaseAttempt, dbClient](const UserSubscriptions &userSub) {
-                          // Parse existing entitlements
-                          Json::Value entitlements;
-                          std::string currentEntitlementsStr =
-                              userSub.getValueOfNewspaperEntitlements();
-
-                          if (currentEntitlementsStr.empty()) {
-                            entitlements = Json::arrayValue;
-                          } else {
-                            Json::CharReaderBuilder readerBuilder;
-                            std::string errs;
-                            std::istringstream s(currentEntitlementsStr);
-                            if (!Json::parseFromStream(readerBuilder, s,
-                                                       &entitlements, &errs)) {
-                              entitlements = Json::arrayValue;
-                            }
+                    paMapper.update(
+                        updatedAttempt,
+                        [callback, response,
+                         purchaseAttempt](const size_t numRowsUpdated) {
+                          if (!response.success) {
+                            callback(response);
+                            return;
                           }
 
-                          // Add new newspaper ID if not already present
-                          std::string newPaperId = purchaseAttempt.getValueOfNewspaperId();
-                          bool alreadyExists = false;
-                          for (const auto &ent : entitlements) {
-                            if (ent.asString() == newPaperId) {
-                              alreadyExists = true;
-                              break;
-                            }
-                          }
+                          auto dbClient = drogon::app().getDbClient();
+                          Mapper<UserSubscriptions> subMapper(dbClient);
+                          Criteria subCriteria(
+                              UserSubscriptions::Cols::_user_id,
+                              CompareOperator::EQ,
+                              purchaseAttempt.getValueOfUserId());
 
-                          if (!alreadyExists) {
-                            entitlements.append(newPaperId);
-                          }
+                          subMapper.findOne(
+                              subCriteria,
+                              [callback, response, purchaseAttempt,
+                               dbClient](const UserSubscriptions &userSub) {
+                                // Parse existing entitlements
+                                Json::Value entitlements;
+                                std::string currentEntitlementsStr =
+                                    userSub.getValueOfNewspaperEntitlements();
 
-                          // Serialize back to string
-                          Json::StreamWriterBuilder writerBuilder;
-                          writerBuilder["indentation"] = ""; // Compact
-                          std::string newEntitlementsStr = Json::writeString(writerBuilder, entitlements);
+                                if (currentEntitlementsStr.empty()) {
+                                  entitlements = Json::arrayValue;
+                                } else {
+                                  Json::CharReaderBuilder readerBuilder;
+                                  std::string errs;
+                                  std::istringstream s(currentEntitlementsStr);
+                                  if (!Json::parseFromStream(readerBuilder, s,
+                                                             &entitlements,
+                                                             &errs)) {
+                                    entitlements = Json::arrayValue;
+                                  }
+                                }
 
-                          // Update the record
-                          UserSubscriptions subToUpdate = userSub;
-                          subToUpdate.setNewspaperEntitlements(newEntitlementsStr);
-                          subToUpdate.setIsActive(true);
+                                // Add new newspaper ID if not already present
+                                std::string newPaperId =
+                                    purchaseAttempt.getValueOfNewspaperId();
+                                bool alreadyExists = false;
+                                for (const auto &ent : entitlements) {
+                                  if (ent.asString() == newPaperId) {
+                                    alreadyExists = true;
+                                    break;
+                                  }
+                                }
 
-                          Mapper<UserSubscriptions> updateMapper(dbClient);
-                          updateMapper.update(subToUpdate,[callback, response](const size_t count) { callback(response); },[callback](const DrogonDbException &e) {
+                                if (!alreadyExists) {
+                                  entitlements.append(newPaperId);
+                                }
+
+                                // Serialize back to string
+                                Json::StreamWriterBuilder writerBuilder;
+                                writerBuilder["indentation"] = ""; // Compact
+                                std::string newEntitlementsStr =
+                                    Json::writeString(writerBuilder,
+                                                      entitlements);
+
+                                // Update the record
+                                UserSubscriptions subToUpdate = userSub;
+                                subToUpdate.setNewspaperEntitlements(
+                                    newEntitlementsStr);
+                                subToUpdate.setIsActive(true);
+
+                                Mapper<UserSubscriptions> updateMapper(
+                                    dbClient);
+                                updateMapper.update(
+                                    subToUpdate,
+                                    [callback, response](const size_t count) {
+                                      callback(response);
+                                    },
+                                    [callback](const DrogonDbException &e) {
+                                      dto::BaseApiResponse errorResponse;
+                                      errorResponse.success = false;
+                                      errorResponse.message =
+                                          "Failed to update user subscription "
+                                          "entitlements";
+                                      errorResponse.error["code"] =
+                                          constants::ERR_DB_QUERY;
+                                      callback(errorResponse);
+                                    });
+                              },
+                              [callback](const DrogonDbException &e) {
                                 dto::BaseApiResponse errorResponse;
                                 errorResponse.success = false;
-                                errorResponse.message = "Failed to update user subscription entitlements";
-                                errorResponse.error["code"] = constants::ERR_DB_QUERY;
+                                errorResponse.message =
+                                    "Failed to find user subscription to "
+                                    "update.";
+                                errorResponse.error["code"] =
+                                    constants::ERR_DB_QUERY;
                                 callback(errorResponse);
-                          });
+                              });
                         },
                         [callback](const DrogonDbException &e) {
                           dto::BaseApiResponse errorResponse;
                           errorResponse.success = false;
-                          errorResponse.message = "Failed to find user subscription to update.";
+                          errorResponse.message =
+                              "Unable to update purchase attempt record";
                           errorResponse.error["code"] = constants::ERR_DB_QUERY;
                           callback(errorResponse);
                         });
-                  },
-                  [callback](const DrogonDbException &e) {
-                    dto::BaseApiResponse errorResponse;
-                    errorResponse.success = false;
-                    errorResponse.message = "Unable to update purchase attempt record";
-                    errorResponse.error["code"] = constants::ERR_DB_QUERY;
-                    callback(errorResponse);
                   });
+            },
+            [callback](const DrogonDbException &e) {
+              dto::BaseApiResponse errorResponse;
+              errorResponse.success = false;
+              errorResponse.message =
+                  "Unable to find user associated with this purchase";
+              errorResponse.error["code"] = constants::ERR_DB_QUERY;
+              callback(errorResponse);
             });
       },
       [callback](const DrogonDbException &e) {
         dto::BaseApiResponse errorResponse;
         errorResponse.success = false;
-        errorResponse.message = "Unable to find purchase attempt with provided reference";
+        errorResponse.message =
+            "Unable to find purchase attempt with provided reference";
         errorResponse.error["code"] = constants::ERR_DB_QUERY;
         callback(errorResponse);
       });
 }
 
+void SubscriptionService::validateNewsPaperEntitlement(
+    const std::string &newsPaperId, const std::string &authToken,
+    const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {
+
+  // 1. Decode JWT to get userId
+  std::string token = authToken;
+  if (token.rfind("Bearer ", 0) == 0) {
+    token = token.substr(7);
+  }
+
+  try {
+    // Get JWT config
+    auto &app = drogon::app();
+    auto customConfig = app.getCustomConfig();
+    std::string jwtSecurityKey =
+        customConfig["JwtBearer"]["JwtSecurityKey"].asString();
+    std::string jwtIssuer = customConfig["JwtBearer"]["JwtIssuer"].asString();
+
+    // Verify token
+    auto verifier = jwt::verify()
+                        .allow_algorithm(jwt::algorithm::hs256{jwtSecurityKey})
+                        .with_issuer(jwtIssuer);
+
+    auto decoded = jwt::decode(token);
+    verifier.verify(decoded);
+
+    if (!decoded.has_payload_claim("userId")) {
+      dto::BaseApiResponse response;
+      response.success = false;
+      response.message = "Invalid token: missing userId";
+      callback(response);
+      return;
+    }
+
+    auto userId = decoded.get_payload_claim("userId").as_string();
+
+    // 2. Check UserSubscription Table
+    auto dbClient = drogon::app().getDbClient();
+    Mapper<UserSubscriptions> subMapper(dbClient);
+    Criteria subCriteria(UserSubscriptions::Cols::_user_id, CompareOperator::EQ,
+                         userId);
+
+    subMapper.findOne(
+        subCriteria,
+        [callback, newsPaperId](const UserSubscriptions &userSub) {
+          // 3. Check newspaper_entitlements
+          std::string entitlementsStr =
+              userSub.getValueOfNewspaperEntitlements();
+          bool hasAccess = false;
+
+          if (!entitlementsStr.empty()) {
+            Json::Value entitlements;
+            Json::CharReaderBuilder readerBuilder;
+            std::string errs;
+            std::istringstream s(entitlementsStr);
+            if (Json::parseFromStream(readerBuilder, s, &entitlements, &errs)) {
+              for (const auto &ent : entitlements) {
+                if (ent.asString() == newsPaperId) {
+                  hasAccess = true;
+                  break;
+                }
+              }
+            }
+          }
+
+          dto::BaseApiResponse response;
+          response.success = true; // The check itself was successful
+          response.message = hasAccess ? "Access granted" : "Access denied";
+          response.result["hasAccess"] = hasAccess;
+          callback(response);
+        },
+        [callback](const DrogonDbException &e) {
+          dto::BaseApiResponse response;
+          response.success = false;
+          response.message = "User subscription not found or database error";
+          response.error["code"] = constants::ERR_DB_QUERY;
+          callback(response);
+        });
+
+  } catch (const std::exception &e) {
+    dto::BaseApiResponse response;
+    response.success = false;
+    response.message = std::string("Token validation failed: ") + e.what();
+    callback(response);
+  }
 }
+
+} // namespace gnp::services
