@@ -327,6 +327,13 @@
         "PayStackApi": {
             "BaseUrl" : "https://api.paystack.co",
             "SecretKey" : "sk_live_844f99e0b5acfff9b8b52bde395bb6fd39e4e346"
+        },
+        "MailConfiguration": {
+            "Host": "mail.graphicnewsplus.com",
+            "Port": 465,
+            "UserName": "account@graphicnewsplus.com",
+            "Password": "AEjdJ^%mh43Lm8f-",
+            "SenderName": "Graphic News Plus"
         }
     }
 }
