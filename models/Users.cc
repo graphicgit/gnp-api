@@ -29,6 +29,7 @@ const std::string Users::Cols::_is_locked_out = "\"is_locked_out\"";
 const std::string Users::Cols::_is_active = "\"is_active\"";
 const std::string Users::Cols::_created_at = "\"created_at\"";
 const std::string Users::Cols::_updated_at = "\"updated_at\"";
+const std::string Users::Cols::_is_admin_user = "\"is_admin_user\"";
 const std::string Users::primaryKeyName = "id";
 const bool Users::hasPrimaryKey = true;
 const std::string Users::tableName = "\"users\"";
@@ -49,7 +50,8 @@ const std::vector<typename Users::MetaData> Users::metaData_={
 {"is_locked_out","bool","boolean",1,0,0,1},
 {"is_active","bool","boolean",1,0,0,1},
 {"created_at","::trantor::Date","timestamp with time zone",0,0,0,1},
-{"updated_at","::trantor::Date","timestamp with time zone",0,0,0,0}
+{"updated_at","::trantor::Date","timestamp with time zone",0,0,0,0},
+{"is_admin_user","bool","boolean",1,0,0,1}
 };
 const std::string &Users::getColumnName(size_t index) noexcept(false)
 {
@@ -196,11 +198,15 @@ Users::Users(const Row &r, const ssize_t indexOffset) noexcept
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
+        if(!r["is_admin_user"].isNull())
+        {
+            isAdminUser_=std::make_shared<bool>(r["is_admin_user"].as<bool>());
+        }
     }
     else
     {
         size_t offset = (size_t)indexOffset;
-        if(offset + 16 > r.size())
+        if(offset + 17 > r.size())
         {
             LOG_FATAL << "Invalid SQL result for this model";
             return;
@@ -358,13 +364,18 @@ Users::Users(const Row &r, const ssize_t indexOffset) noexcept
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
+        index = offset + 16;
+        if(!r[index].isNull())
+        {
+            isAdminUser_=std::make_shared<bool>(r[index].as<bool>());
+        }
     }
 
 }
 
 Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 16)
+    if(pMasqueradingVector.size() != 17)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -567,6 +578,14 @@ Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasquera
                 }
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
+        }
+    }
+    if(!pMasqueradingVector[16].empty() && pJson.isMember(pMasqueradingVector[16]))
+    {
+        dirtyFlag_[16] = true;
+        if(!pJson[pMasqueradingVector[16]].isNull())
+        {
+            isAdminUser_=std::make_shared<bool>(pJson[pMasqueradingVector[16]].asBool());
         }
     }
 }
@@ -773,12 +792,20 @@ Users::Users(const Json::Value &pJson) noexcept(false)
             }
         }
     }
+    if(pJson.isMember("is_admin_user"))
+    {
+        dirtyFlag_[16]=true;
+        if(!pJson["is_admin_user"].isNull())
+        {
+            isAdminUser_=std::make_shared<bool>(pJson["is_admin_user"].asBool());
+        }
+    }
 }
 
 void Users::updateByMasqueradedJson(const Json::Value &pJson,
                                             const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 16)
+    if(pMasqueradingVector.size() != 17)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -982,6 +1009,14 @@ void Users::updateByMasqueradedJson(const Json::Value &pJson,
             }
         }
     }
+    if(!pMasqueradingVector[16].empty() && pJson.isMember(pMasqueradingVector[16]))
+    {
+        dirtyFlag_[16] = true;
+        if(!pJson[pMasqueradingVector[16]].isNull())
+        {
+            isAdminUser_=std::make_shared<bool>(pJson[pMasqueradingVector[16]].asBool());
+        }
+    }
 }
 
 void Users::updateByJson(const Json::Value &pJson) noexcept(false)
@@ -1183,6 +1218,14 @@ void Users::updateByJson(const Json::Value &pJson) noexcept(false)
                 }
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
+        }
+    }
+    if(pJson.isMember("is_admin_user"))
+    {
+        dirtyFlag_[16] = true;
+        if(!pJson["is_admin_user"].isNull())
+        {
+            isAdminUser_=std::make_shared<bool>(pJson["is_admin_user"].asBool());
         }
     }
 }
@@ -1569,6 +1612,23 @@ void Users::setUpdatedAtToNull() noexcept
     dirtyFlag_[15] = true;
 }
 
+const bool &Users::getValueOfIsAdminUser() const noexcept
+{
+    static const bool defaultValue = bool();
+    if(isAdminUser_)
+        return *isAdminUser_;
+    return defaultValue;
+}
+const std::shared_ptr<bool> &Users::getIsAdminUser() const noexcept
+{
+    return isAdminUser_;
+}
+void Users::setIsAdminUser(const bool &pIsAdminUser) noexcept
+{
+    isAdminUser_ = std::make_shared<bool>(pIsAdminUser);
+    dirtyFlag_[16] = true;
+}
+
 void Users::updateId(const uint64_t id)
 {
 }
@@ -1591,7 +1651,8 @@ const std::vector<std::string> &Users::insertColumns() noexcept
         "is_locked_out",
         "is_active",
         "created_at",
-        "updated_at"
+        "updated_at",
+        "is_admin_user"
     };
     return inCols;
 }
@@ -1774,6 +1835,17 @@ void Users::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[16])
+    {
+        if(getIsAdminUser())
+        {
+            binder << getValueOfIsAdminUser();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 
 const std::vector<std::string> Users::updateColumns() const
@@ -1842,6 +1914,10 @@ const std::vector<std::string> Users::updateColumns() const
     if(dirtyFlag_[15])
     {
         ret.push_back(getColumnName(15));
+    }
+    if(dirtyFlag_[16])
+    {
+        ret.push_back(getColumnName(16));
     }
     return ret;
 }
@@ -2024,6 +2100,17 @@ void Users::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[16])
+    {
+        if(getIsAdminUser())
+        {
+            binder << getValueOfIsAdminUser();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 Json::Value Users::toJson() const
 {
@@ -2156,6 +2243,14 @@ Json::Value Users::toJson() const
     {
         ret["updated_at"]=Json::Value();
     }
+    if(getIsAdminUser())
+    {
+        ret["is_admin_user"]=getValueOfIsAdminUser();
+    }
+    else
+    {
+        ret["is_admin_user"]=Json::Value();
+    }
     return ret;
 }
 
@@ -2168,7 +2263,7 @@ Json::Value Users::toMasqueradedJson(
     const std::vector<std::string> &pMasqueradingVector) const
 {
     Json::Value ret;
-    if(pMasqueradingVector.size() == 16)
+    if(pMasqueradingVector.size() == 17)
     {
         if(!pMasqueradingVector[0].empty())
         {
@@ -2346,6 +2441,17 @@ Json::Value Users::toMasqueradedJson(
                 ret[pMasqueradingVector[15]]=Json::Value();
             }
         }
+        if(!pMasqueradingVector[16].empty())
+        {
+            if(getIsAdminUser())
+            {
+                ret[pMasqueradingVector[16]]=getValueOfIsAdminUser();
+            }
+            else
+            {
+                ret[pMasqueradingVector[16]]=Json::Value();
+            }
+        }
         return ret;
     }
     LOG_ERROR << "Masquerade failed";
@@ -2477,6 +2583,14 @@ Json::Value Users::toMasqueradedJson(
     {
         ret["updated_at"]=Json::Value();
     }
+    if(getIsAdminUser())
+    {
+        ret["is_admin_user"]=getValueOfIsAdminUser();
+    }
+    else
+    {
+        ret["is_admin_user"]=Json::Value();
+    }
     return ret;
 }
 
@@ -2572,13 +2686,18 @@ bool Users::validateJsonForCreation(const Json::Value &pJson, std::string &err)
         if(!validJsonOfField(15, "updated_at", pJson["updated_at"], err, true))
             return false;
     }
+    if(pJson.isMember("is_admin_user"))
+    {
+        if(!validJsonOfField(16, "is_admin_user", pJson["is_admin_user"], err, true))
+            return false;
+    }
     return true;
 }
 bool Users::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                                                const std::vector<std::string> &pMasqueradingVector,
                                                std::string &err)
 {
-    if(pMasqueradingVector.size() != 16)
+    if(pMasqueradingVector.size() != 17)
     {
         err = "Bad masquerading vector";
         return false;
@@ -2722,6 +2841,14 @@ bool Users::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                   return false;
           }
       }
+      if(!pMasqueradingVector[16].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[16]))
+          {
+              if(!validJsonOfField(16, pMasqueradingVector[16], pJson[pMasqueradingVector[16]], err, true))
+                  return false;
+          }
+      }
     }
     catch(const Json::LogicError &e)
     {
@@ -2817,13 +2944,18 @@ bool Users::validateJsonForUpdate(const Json::Value &pJson, std::string &err)
         if(!validJsonOfField(15, "updated_at", pJson["updated_at"], err, false))
             return false;
     }
+    if(pJson.isMember("is_admin_user"))
+    {
+        if(!validJsonOfField(16, "is_admin_user", pJson["is_admin_user"], err, false))
+            return false;
+    }
     return true;
 }
 bool Users::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
                                              const std::vector<std::string> &pMasqueradingVector,
                                              std::string &err)
 {
-    if(pMasqueradingVector.size() != 16)
+    if(pMasqueradingVector.size() != 17)
     {
         err = "Bad masquerading vector";
         return false;
@@ -2912,6 +3044,11 @@ bool Users::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
       if(!pMasqueradingVector[15].empty() && pJson.isMember(pMasqueradingVector[15]))
       {
           if(!validJsonOfField(15, pMasqueradingVector[15], pJson[pMasqueradingVector[15]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[16].empty() && pJson.isMember(pMasqueradingVector[16]))
+      {
+          if(!validJsonOfField(16, pMasqueradingVector[16], pJson[pMasqueradingVector[16]], err, false))
               return false;
       }
     }
@@ -3170,6 +3307,18 @@ bool Users::validJsonOfField(size_t index,
                 return true;
             }
             if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 16:
+            if(pJson.isNull())
+            {
+                err="The " + fieldName + " column cannot be null";
+                return false;
+            }
+            if(!pJson.isBool())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;

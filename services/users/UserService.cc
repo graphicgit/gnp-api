@@ -224,9 +224,85 @@ void UserService::validateUserCredentials(
       });
 }
 
+
+  void UserService::validateAdminUserCredentials(
+    const dto::SigninDto &signin_dto,
+    const std::function<void(const dto::BaseApiResponse &)> &callback) {
+  auto dbClient = drogon::app().getDbClient();
+
+  Mapper<Users> mapper(dbClient);
+
+  Criteria criteria =
+      (Criteria(Users::Cols::_username, CompareOperator::EQ, signin_dto.getUsernameOrEmail()) ||
+       Criteria(Users::Cols::_email, CompareOperator::EQ,  signin_dto.getUsernameOrEmail())) &&
+      Criteria(Users::Cols::_is_active, CompareOperator::EQ, true) &&
+      Criteria(Users::Cols::_is_admin_user, CompareOperator::EQ, true) &&
+      Criteria(Users::Cols::_is_locked_out, CompareOperator::EQ, false);
+
+  mapper.findOne(
+      criteria,
+      [=](const Users &user) {
+        bool passwordMatches = bcrypt::validatePassword(
+            signin_dto.getPassword(), user.getValueOfPasswordHash());
+
+        if (passwordMatches) {
+          // Password is correct, generate JWT token
+          auto &app = drogon::app();
+          auto customConfig = app.getCustomConfig();
+          std::string jwtSecurityKey =
+              customConfig["JwtBearer"]["JwtSecurityKey"].asString();
+          std::string jwtIssuer =
+              customConfig["JwtBearer"]["JwtIssuer"].asString();
+
+          auto token =
+              jwt::create()
+                  .set_issuer(jwtIssuer)
+                  .set_type("JWT")
+                  .set_issued_at(std::chrono::system_clock::now())
+                  .set_expires_at(std::chrono::system_clock::now() +
+                                  std::chrono::hours(24*30))
+                  .set_payload_claim("userId", jwt::claim(user.getValueOfId()))
+                  .set_payload_claim("username",
+                                     jwt::claim(user.getValueOfUsername()))
+                  .set_payload_claim("email",
+                                     jwt::claim(user.getValueOfEmail()))
+                  .sign(jwt::algorithm::hs256{jwtSecurityKey});
+
+          gnp::dto::BaseApiResponse response;
+          response.success = true;
+          response.message = "Authentication successful";
+          response.result["token"] = token;
+          response.result["userId"] = user.getValueOfId();
+          response.result["username"] = user.getValueOfUsername();
+          response.result["fullName"] =
+              user.getValueOfFirstName() + " " + user.getValueOfLastName();
+          response.result["email"] = user.getValueOfEmail();
+
+          callback(response);
+        } else {
+          // Password is incorrect
+          gnp::dto::BaseApiResponse response;
+          response.success = false;
+          response.message = "Invalid credentials";
+          response.error["code"] = constants::ERR_AUTH_INVALID_CREDENTIALS;
+          callback(response);
+        }
+      },
+      [callback](const DrogonDbException &e) {
+        // Database error or user not found
+        gnp::dto::BaseApiResponse response;
+        response.success = false;
+        response.message = "User not found";
+        response.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+        response.error["message"] = "User not found";
+        callback(response);
+      });
+}
+
 void UserService::lockUserAccount(
     const std::string &userId,
     const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {
+
   auto dbClient = drogon::app().getDbClient();
   Mapper<Users> mp(dbClient);
 

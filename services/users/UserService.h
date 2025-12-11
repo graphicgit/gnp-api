@@ -49,6 +49,10 @@ public:
       const dto::SigninDto &signin_dto,
       const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
+    void validateAdminUserCredentials(
+     const dto::SigninDto &signin_dto,
+     const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+
   void checkAccountStatus(
       const std::string &identifier, const std::string &identifierType,
       const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
