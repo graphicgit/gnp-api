@@ -1,4 +1,7 @@
 #include "AdminController.h"
+#include "dto/CreateCampaignDto.h"
+#include "plugins/GnpServicePlugin.h"
+#include "services/campaigns/CampaignService.h"
 
 // news papers
 
@@ -156,4 +159,116 @@ void AdminController::renewUserSubscription(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) {
   // write your application logic here
+}
+
+// campaigns
+
+void AdminController::getAllCampaigns(
+    const HttpRequestPtr &req,
+    std::function<void(const HttpResponsePtr &)> &&callback) {
+
+
+  int pageSize = 10; // Default page size
+  int pageNo = 1;    //  Default page number
+
+  if (!req->getParameter("pageSize").empty()) {
+    try {
+      pageSize = std::stoi(req->getParameter("pageSize"));
+      pageSize = std::max(1, std::min(100, pageSize)); // Limit between 1-100
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  if (!req->getParameter("pageNo").empty()) {
+    try {
+      pageNo = std::stoi(req->getParameter("pageNo"));
+      pageNo = std::max(1, pageNo); // Ensure page number is at least 1
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  std::string query = req->getParameter("query");
+  if (query.empty()) {
+    query = "";
+  }
+
+  std::string channel = req->getParameter("channel");
+  if (channel.empty()) {
+    channel = "";
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto& campaignService = plugin->getCampaignService();
+
+  campaignService.getAll(pageNo, pageSize, query, channel, [callback](const gnp::dto::BaseApiResponse& result) {
+      auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+      callback(resp);
+  });
+
+}
+
+void AdminController::createCampaign(
+    const HttpRequestPtr &req,
+    std::function<void(const HttpResponsePtr &)> &&callback) {
+
+  auto jsonPtr = req->getJsonObject();
+  if (!jsonPtr) {
+    auto resp = HttpResponse::newHttpResponse();
+    resp->setStatusCode(k400BadRequest);
+    resp->setBody("Invalid JSON format");
+    callback(resp);
+    return;
+  }
+
+  gnp::dto::CreateCampaignDto dto;
+  dto.fromJson(*jsonPtr);
+
+  gnp::services::CampaignService service;
+  service.create(dto, [callback](const gnp::dto::BaseApiResponse &apiResp) {
+    auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+    callback(resp);
+  });
+}
+
+void AdminController::publishCampaign(
+    const HttpRequestPtr &req,
+    std::function<void(const HttpResponsePtr &)> &&callback) {
+
+  auto campaignId = req->getParameter("campaignId");
+  if (campaignId.empty()) {
+    auto resp = HttpResponse::newHttpResponse();
+    resp->setStatusCode(k400BadRequest);
+    resp->setBody("Missing required parameter: id");
+    callback(resp);
+    return;
+  }
+
+  gnp::services::CampaignService service;
+  service.publishCampaign(campaignId, [callback](const gnp::dto::BaseApiResponse &apiResp) {
+        auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+        callback(resp);
+      });
+}
+
+void AdminController::deleteCampaign(const HttpRequestPtr &req,
+    std::function<void(const HttpResponsePtr &)> &&callback) {
+
+  auto campaignId = req->getParameter("campaignId");
+
+  if (campaignId.empty()) {
+    auto resp = HttpResponse::newHttpResponse();
+    resp->setStatusCode(k400BadRequest);
+    resp->setBody("Missing required parameter: id");
+    callback(resp);
+    return;
+  }
+
+  gnp::services::CampaignService service;
+
+  service.deleteCampaign(campaignId, [callback](const gnp::dto::BaseApiResponse &apiResp) {
+        auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+        callback(resp);
+      });
 }

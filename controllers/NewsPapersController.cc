@@ -5,9 +5,7 @@
 
 #include "plugins/GnpServicePlugin.h"
 
-void NewsPapersController::getAll(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
+void NewsPapersController::getAll(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback) {
   int pageSize = 10; // Default page size
   int pageNo = 1;    //  Default page number
 

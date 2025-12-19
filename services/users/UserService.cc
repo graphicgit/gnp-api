@@ -19,9 +19,9 @@ using namespace drogon::orm;
 using drogon_model::Gnp::Users;
 
 namespace gnp::services {
-void UserService::getAll(
-    int pageNo, int pageSize, const std::string &query,
+void UserService::getAll(int pageNo, int pageSize, const std::string &query,
     const std::function<void(const dto::BaseApiResponse &)> &callback) {
+
   auto dbClient = drogon::app().getDbClient();
   auto mp = std::make_shared<Mapper<Users>>(dbClient);
 
@@ -530,6 +530,7 @@ void UserService::deactivateUserAccount(
 void UserService::deleteUser(
     const std::string &userId,
     const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {
+
   auto dbClient = drogon::app().getDbClient();
   Mapper<Users> mp(dbClient);
 

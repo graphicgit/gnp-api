@@ -14,14 +14,14 @@ public:
   void handleNewConnection(const HttpRequestPtr &,
                            const WebSocketConnectionPtr &) override;
   void handleConnectionClosed(const WebSocketConnectionPtr &) override;
-    void broadcastMessage(const std::string &msg);
+  static void broadcastMessage(const std::string &msg);
   WS_PATH_LIST_BEGIN
   // list path definitions here;
   // WS_PATH_ADD("/path", "filter1", "filter2", ...);
   WS_PATH_ADD("/notifications");
   WS_PATH_LIST_END
-    private:
-    std::mutex _connMutex;
-    std::unordered_set<WebSocketConnectionPtr> _connections;
+private:
+  static std::mutex _connMutex;
+  static std::unordered_set<WebSocketConnectionPtr> _connections;
 };
-} // namespace api
+} // namespace gnp::signalr

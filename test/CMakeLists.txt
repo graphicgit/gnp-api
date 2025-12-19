@@ -13,6 +13,8 @@ file(GLOB PUB_SVC "../services/publications/*.cc")
 file(GLOB EMAIL_SVC "../services/email/*.cc")
 file(GLOB PAYSTACK_SVC "../services/paystack/*.cc")
 file(GLOB HUBTEL_SVC "../services/hubtel_sms/*.cc")
+file(GLOB PAYMENT_SVC "../services/payments/*.cc")
+file(GLOB CAMPAIGN_SVC "../services/campaigns/*.cc")
 file(GLOB SUB_PLAN_SVC "../services/subscription_plans/*.cc")
 
 add_executable(${PROJECT_NAME} test_main.cc
@@ -29,6 +31,8 @@ add_executable(${PROJECT_NAME} test_main.cc
     ${PAYSTACK_SVC}
     ${HUBTEL_SVC}
     ${SUB_PLAN_SVC}
+    ${CAMPAIGN_SVC}
+    ${PAYMENT_SVC}
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE

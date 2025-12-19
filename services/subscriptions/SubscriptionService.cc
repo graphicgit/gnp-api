@@ -20,6 +20,7 @@
 #include "dto/SendEmailDto.h"
 #include "plugins/GnpServicePlugin.h"
 #include "services/email/EmailService.h"
+#include "services/payments/PaymentService.h"
 
 using namespace drogon::orm;
 using namespace drogon::orm;
@@ -195,8 +196,7 @@ void SubscriptionService::manageGuestOneTimeBuy(
               if (!users.empty()) {
                 dto::BaseApiResponse response;
                 response.success = false;
-                response.message =
-                    "User with this email or phone number already exists.";
+                response.message =  "User with this email or phone number already exists.";
                 callback(response);
                 return;
               }
@@ -222,8 +222,7 @@ void SubscriptionService::manageGuestOneTimeBuy(
 
                     UserSubscriptions newUserSubscription;
 
-                    newUserSubscription.setSubscriptionIdentifier(
-                        generateRandomSixDigit());
+                    newUserSubscription.setSubscriptionIdentifier(generateRandomSixDigit());
                     newUserSubscription.setUserId(user.getValueOfId());
                     newUserSubscription.setUserName(user.getValueOfUsername());
                     newUserSubscription.setEmail(user.getValueOfEmail());
@@ -231,8 +230,7 @@ void SubscriptionService::manageGuestOneTimeBuy(
                     newUserSubscription.setIsActive(false);
                     newUserSubscription.setCreatedAt(trantor::Date::now());
 
-                    mp.insert(
-                        newUserSubscription,
+                    mp.insert(newUserSubscription,
                         [callback, dbClient, user, guestOnetimeBuyDto,
                          paperCost, clientReference](
                             const UserSubscriptions &userSubscription) {
@@ -251,74 +249,62 @@ void SubscriptionService::manageGuestOneTimeBuy(
                           newPurchaseAttempt.setFailureReasonToNull();
                           newPurchaseAttempt.setCreatedAt(trantor::Date::now());
 
-                          pa_mapper.insert(
-                              newPurchaseAttempt,
-                              [callback, guestOnetimeBuyDto, paperCost,
-                               clientReference](
-                                  const PurchaseAttempts &purchaseAttempt) {
+                          pa_mapper.insert( newPurchaseAttempt,[callback, guestOnetimeBuyDto, paperCost,clientReference,user](const PurchaseAttempts &purchaseAttempt) {
                                 // use initialize checkout url
 
-                                auto plugin =
-                                    drogon::app()
-                                        .getPlugin<
-                                            gnp::plugins::GnpServicePlugin>();
-                                auto &paystackApi = plugin->getPaystackApi();
+                                auto paymentService = std::make_shared<gnp::services::PaymentService>();
+                                gnp::dto::CreatePaymentDto paymentDto;
+                                paymentDto.setUserId(user.getValueOfId());
+                                paymentDto.setUserName(user.getValueOfUsername());
+                                paymentDto.setAmountPaid(paperCost);
+                                paymentDto.setReceiptNo(*clientReference);
+                                paymentDto.setTransactionReference(*clientReference);
+                                paymentDto.setStatus("Initiated");
 
-                                // 1. Build InitializePaymentRequest
-                                gnp::dto::InitializePaymentRequest initReq;
-                                initReq.setAmount(paperCost);
-                                initReq.setPhone(
-                                    guestOnetimeBuyDto.getPhoneNumber());
+                                paymentService->createPayment(paymentDto,[callback, guestOnetimeBuyDto, paperCost, clientReference](const dto::BaseApiResponse&paymentResp) {
+                                      auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+                                      auto &paystackApi = plugin->getPaystackApi();
 
-                                initReq.setClientReference(*clientReference);
-                                initReq.setCallBackUrl(
-                                    "https://gnp-api.com/paystack/callback");
+                                      // 1. Build InitializePaymentRequest
+                                      gnp::dto::InitializePaymentRequest initReq;
+                                      initReq.setAmount(paperCost);
+                                      initReq.setPhone(guestOnetimeBuyDto.getPhoneNumber());
 
-                                paystackApi.initialize(
-                                    initReq,
-                                    [callback](const gnp::dto::
-                                                   InitializePaymentResponse
-                                                       &payResp) {
-                                      dto::BaseApiResponse response;
+                                      initReq.setClientReference(*clientReference);
+                                      initReq.setCallBackUrl("https://gnp-api.com/paystack/callback");
 
-                                      if (!payResp.getStatus()) {
-                                        response.success = false;
-                                        response.message =
-                                            payResp.getMessage().empty()
-                                                ? "Failed to initialize payment"
-                                                : payResp.getMessage();
-                                        callback(response);
-                                      }
+                                      paystackApi.initialize(initReq,[callback](const gnp::dto::InitializePaymentResponse &payResp) {
 
-                                      const auto &payData = payResp.getData();
-                                      response.success = true;
-                                      response.message =
-                                          "Subscription created successfully. "
-                                          "Payment initialized";
-                                      response.result["paymentUrl"] =
-                                          payData.getAuthorizationUrl();
-                                      response.result["reference"] =
-                                          payData.getReference();
-                                      callback(response);
+                                            dto::BaseApiResponse response;
+
+                                            if (!payResp.getStatus()) {
+                                              response.success = false;
+                                              response.message = payResp.getMessage().empty() ? "Failed to initialize payment" : payResp.getMessage();
+                                              callback(response);
+                                            }
+
+                                            const auto &payData =  payResp.getData();
+                                            response.success = true;
+                                            response.message =  "Subscription created successfully Payment initialized";
+                                            response.result["paymentUrl"] = payData.getAuthorizationUrl();
+                                            response.result["reference"] = payData.getReference();
+                                            callback(response);
+                                          });
                                     });
                               },
                               [callback](
                                   const drogon::orm::DrogonDbException &e) {
                                 dto::BaseApiResponse errorResponse;
                                 errorResponse.success = false;
-                                errorResponse.message =
-                                    "Database error while initializing user "
-                                    "subscription";
-                                errorResponse.error["code"] =
-                                    constants::ERR_DB_QUERY;
+                                errorResponse.message = "Database error while initializing user subscription";
+                                errorResponse.error["code"] = constants::ERR_DB_QUERY;
                                 callback(errorResponse);
                               });
                         },
                         [callback](const drogon::orm::DrogonDbException &e) {
                           dto::BaseApiResponse errorResponse;
                           errorResponse.success = false;
-                          errorResponse.message =
-                              "Unable to purchase newspaper";
+                          errorResponse.message = "Unable to purchase newspaper";
                           errorResponse.error["code"] = constants::ERR_DB_QUERY;
                           callback(errorResponse);
                         });
@@ -326,8 +312,7 @@ void SubscriptionService::manageGuestOneTimeBuy(
                   [callback](const drogon::orm::DrogonDbException &e) {
                     dto::BaseApiResponse errorResponse;
                     errorResponse.success = false;
-                    errorResponse.message =
-                        "Database error while creating User";
+                    errorResponse.message = "Database error while creating User";
                     errorResponse.error["code"] = constants::ERR_DB_QUERY;
                     callback(errorResponse);
                   });
@@ -335,8 +320,7 @@ void SubscriptionService::manageGuestOneTimeBuy(
             [callback](const DrogonDbException &e) {
               dto::BaseApiResponse errorResponse;
               errorResponse.success = false;
-              errorResponse.message =
-                  "Database error while checking for existing user";
+              errorResponse.message = "Database error while checking for existing user";
               errorResponse.error["code"] = constants::ERR_DB_QUERY;
               callback(errorResponse);
             });
@@ -361,31 +345,21 @@ void SubscriptionService::completeGuestOneTimeBuy(
   Criteria criteria = Criteria(PurchaseAttempts::Cols::_attempt_reference,
                                CompareOperator::EQ, reference);
 
-  purchaseAttemptMapper.findOne(
-      criteria,
-      [=](PurchaseAttempts purchaseAttempt) {
-        auto dbClient = drogon::app().getDbClient();
-        Mapper<Users> userMapper(dbClient);
+  purchaseAttemptMapper.findOne(criteria, [=](PurchaseAttempts purchaseAttempt) {
 
-        userMapper.findByPrimaryKey(
-            purchaseAttempt.getValueOfUserId(),
-            [=](const Users &user) {
-              auto plugin =
-                  drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+      auto dbClient = drogon::app().getDbClient();
+      Mapper<Users> userMapper(dbClient);
+
+      userMapper.findByPrimaryKey(purchaseAttempt.getValueOfUserId(), [=](const Users &user) {
+              auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
               auto &paystackApi = plugin->getPaystackApi();
 
-              paystackApi.verify(reference, [callback, purchaseAttempt, user,
-                                             dbClient](
-                                                const gnp::dto::
-                                                    VerifyPayResponse
-                                                        &verifyPayResponse) {
+              paystackApi.verify(reference, [callback, purchaseAttempt, reference, user, dbClient](const gnp::dto:: VerifyPayResponse &verifyPayResponse) {
                 dto::BaseApiResponse response;
 
                 if (!verifyPayResponse.getStatus()) {
                   response.success = false;
-                  response.message = !verifyPayResponse.getMessage().empty()
-                                         ? verifyPayResponse.getMessage()
-                                         : "Failed to verify payment";
+                  response.message = !verifyPayResponse.getMessage().empty()? verifyPayResponse.getMessage() : "Failed to verify payment";
                   callback(response);
                   return;
                 }
@@ -393,22 +367,25 @@ void SubscriptionService::completeGuestOneTimeBuy(
                 const auto &verifyData = verifyPayResponse.getData();
                 // Update the purchase_attempt status based on verification
                 // result
-                PurchaseAttempts updatedAttempt =
-                    purchaseAttempt; // Copy to modify
+                PurchaseAttempts updatedAttempt =  purchaseAttempt; // Copy to modify
 
                 if (verifyData.status_ == "success") {
                   updatedAttempt.setStatus("Success");
                   updatedAttempt.setFailureReasonToNull();
+
+                  auto paymentService = std::make_shared<gnp::services::PaymentService>();
+                  paymentService->updateStatus("Success", reference,[](const dto::BaseApiResponse &) {});
+
                   response.success = true;
-                  response.message = "Payment verified successfully. "
-                                     "Access to Newspaper granted.";
+                  response.message = "Payment verified successfully. Access to Newspaper granted.";
 
                   // Generate Password
                   std::string firstName = user.getValueOfFirstName();
                   std::string phoneNumber = user.getValueOfPhoneNumber();
                   std::string password;
                   if (phoneNumber.length() >= 4) {
-                    password = firstName + "@" + phoneNumber.substr(phoneNumber.length() - 4);
+                    password = firstName + "@" +
+                               phoneNumber.substr(phoneNumber.length() - 4);
                   } else {
                     password = firstName + "@" + phoneNumber;
                   }
@@ -421,16 +398,12 @@ void SubscriptionService::completeGuestOneTimeBuy(
                   userToUpdate.setPasswordHash(passwordHash);
 
                   Mapper<Users> userUpdateMapper(dbClient);
-                  userUpdateMapper.update(
-                      userToUpdate,
-                      [=](const size_t count) {
+                  userUpdateMapper.update(userToUpdate,[=](const size_t count) {
                         // Send Email
-                        auto emailService =
-                            std::make_shared<gnp::services::EmailService>();
+                        auto emailService = std::make_shared<gnp::services::EmailService>();
                         gnp::dto::SendEmailDto emailDto;
                         emailDto.setTo(user.getValueOfEmail());
-                        emailDto.setSubject(
-                            "Your Graphic News Plus Account Password");
+                        emailDto.setSubject("Your Graphic News Plus Account Password");
 
                         std::string emailBody =
                             R"(
@@ -471,9 +444,7 @@ void SubscriptionService::completeGuestOneTimeBuy(
 
                         emailDto.setBody(emailBody);
 
-                        emailService->sendEmail(
-                            emailDto,
-                            [](const gnp::dto::BaseApiResponse &resp) {
+                        emailService->sendEmail(emailDto, [](const gnp::dto::BaseApiResponse &resp) {
                               // Email sent (or failed), proceed with flow
                               // We don't block the main flow if email fails,
                               // but we log it (if we had a logger)
@@ -487,10 +458,8 @@ void SubscriptionService::completeGuestOneTimeBuy(
                   // Generate JWT
                   auto &app = drogon::app();
                   auto customConfig = app.getCustomConfig();
-                  std::string jwtSecurityKey =
-                      customConfig["JwtBearer"]["JwtSecurityKey"].asString();
-                  std::string jwtIssuer =
-                      customConfig["JwtBearer"]["JwtIssuer"].asString();
+                  std::string jwtSecurityKey = customConfig["JwtBearer"]["JwtSecurityKey"].asString();
+                  std::string jwtIssuer = customConfig["JwtBearer"]["JwtIssuer"].asString();
 
                   auto token =
                       jwt::create()
@@ -498,7 +467,7 @@ void SubscriptionService::completeGuestOneTimeBuy(
                           .set_type("JWT")
                           .set_issued_at(std::chrono::system_clock::now())
                           .set_expires_at(std::chrono::system_clock::now() +
-                                          std::chrono::hours(24*30))
+                                          std::chrono::hours(24 * 30))
                           .set_payload_claim("userId",
                                              jwt::claim(user.getValueOfId()))
                           .set_payload_claim(
@@ -516,20 +485,20 @@ void SubscriptionService::completeGuestOneTimeBuy(
 
                 } else {
                   updatedAttempt.setStatus("Failed");
-                  updatedAttempt.setFailureReason(
-                      verifyData.message_); // or another appropriate field
+                  updatedAttempt.setFailureReason(verifyData.message_); // or another appropriate field
+
+                  auto paymentService = std::make_shared<PaymentService>();
+                  paymentService->updateStatus("Failed", reference, [](const dto::BaseApiResponse &) {});
+
                   response.success = false;
-                  response.message = "Payment verification failed. Status: " +
-                                     verifyData.status_;
+                  response.message = "Payment verification failed. Status: " + verifyData.status_;
                 }
 
                 auto dbClient = drogon::app().getDbClient();
                 Mapper<PurchaseAttempts> paMapper(dbClient);
 
-                paMapper.update(
-                    updatedAttempt,
-                    [callback, response,
-                     purchaseAttempt](const size_t numRowsUpdated) {
+                paMapper.update(updatedAttempt, [callback, response, purchaseAttempt](const size_t numRowsUpdated) {
+
                       if (!response.success) {
                         callback(response);
                         return;
@@ -541,14 +510,10 @@ void SubscriptionService::completeGuestOneTimeBuy(
                                            CompareOperator::EQ,
                                            purchaseAttempt.getValueOfUserId());
 
-                      subMapper.findOne(
-                          subCriteria,
-                          [callback, response, purchaseAttempt,
-                           dbClient](const UserSubscriptions &userSub) {
+                      subMapper.findOne(subCriteria,[callback, response, purchaseAttempt, dbClient](const UserSubscriptions &userSub) {
                             // Parse existing entitlements
                             Json::Value entitlements;
-                            std::string currentEntitlementsStr =
-                                userSub.getValueOfNewspaperEntitlements();
+                            std::string currentEntitlementsStr = userSub.getValueOfNewspaperEntitlements();
 
                             if (currentEntitlementsStr.empty()) {
                               entitlements = Json::arrayValue;
@@ -563,8 +528,7 @@ void SubscriptionService::completeGuestOneTimeBuy(
                             }
 
                             // Add new newspaper ID if not already present
-                            std::string newPaperId =
-                                purchaseAttempt.getValueOfNewspaperId();
+                            std::string newPaperId = purchaseAttempt.getValueOfNewspaperId();
                             bool alreadyExists = false;
                             for (const auto &ent : entitlements) {
                               if (ent.asString() == newPaperId) {
@@ -580,47 +544,37 @@ void SubscriptionService::completeGuestOneTimeBuy(
                             // Serialize back to string
                             Json::StreamWriterBuilder writerBuilder;
                             writerBuilder["indentation"] = ""; // Compact
-                            std::string newEntitlementsStr =
-                                Json::writeString(writerBuilder, entitlements);
+                            std::string newEntitlementsStr = Json::writeString(writerBuilder, entitlements);
 
                             // Update the record
                             UserSubscriptions subToUpdate = userSub;
-                            subToUpdate.setNewspaperEntitlements(
-                                newEntitlementsStr);
+                            subToUpdate.setNewspaperEntitlements(newEntitlementsStr);
                             subToUpdate.setIsActive(true);
 
                             Mapper<UserSubscriptions> updateMapper(dbClient);
-                            updateMapper.update(
-                                subToUpdate,
-                                [callback, response](const size_t count) {
+                            updateMapper.update(subToUpdate, [callback, response](const size_t count) {
                                   callback(response);
                                 },
                                 [callback](const DrogonDbException &e) {
                                   dto::BaseApiResponse errorResponse;
                                   errorResponse.success = false;
-                                  errorResponse.message =
-                                      "Failed to update user subscription "
-                                      "entitlements";
-                                  errorResponse.error["code"] =
-                                      constants::ERR_DB_QUERY;
+                                  errorResponse.message = "Failed to update user subscription entitlements";
+                                  errorResponse.error["code"] = constants::ERR_DB_QUERY;
                                   callback(errorResponse);
                                 });
                           },
                           [callback](const DrogonDbException &e) {
                             dto::BaseApiResponse errorResponse;
                             errorResponse.success = false;
-                            errorResponse.message =
-                                "Failed to find user subscription to update.";
-                            errorResponse.error["code"] =
-                                constants::ERR_DB_QUERY;
+                            errorResponse.message = "Failed to find user subscription to update.";
+                            errorResponse.error["code"] = constants::ERR_DB_QUERY;
                             callback(errorResponse);
                           });
                     },
                     [callback](const DrogonDbException &e) {
                       dto::BaseApiResponse errorResponse;
                       errorResponse.success = false;
-                      errorResponse.message =
-                          "Unable to update purchase attempt record";
+                      errorResponse.message = "Unable to update purchase attempt record";
                       errorResponse.error["code"] = constants::ERR_DB_QUERY;
                       callback(errorResponse);
                     });
@@ -629,8 +583,7 @@ void SubscriptionService::completeGuestOneTimeBuy(
             [callback](const DrogonDbException &e) {
               dto::BaseApiResponse errorResponse;
               errorResponse.success = false;
-              errorResponse.message =
-                  "Unable to find user associated with this purchase";
+              errorResponse.message = "Unable to find user associated with this purchase";
               errorResponse.error["code"] = constants::ERR_DB_QUERY;
               callback(errorResponse);
             });
@@ -638,8 +591,7 @@ void SubscriptionService::completeGuestOneTimeBuy(
       [callback](const DrogonDbException &e) {
         dto::BaseApiResponse errorResponse;
         errorResponse.success = false;
-        errorResponse.message =
-            "Unable to find purchase attempt with provided reference";
+        errorResponse.message = "Unable to find purchase attempt with provided reference";
         errorResponse.error["code"] = constants::ERR_DB_QUERY;
         callback(errorResponse);
       });

@@ -51,6 +51,12 @@ add_executable(${PROJECT_NAME} main.cc
         dto/InitializePaymentResponse.h
         services/paystack/PaystackApi.cc
         dto/GuestOnetimeBuyDto.h
+        services/campaigns/CampaignService.h
+        services/payments/PaymentService.h
+        dto/CreateCampaignDto.h
+        dto/CreatePaymentDto.h
+        services/campaigns/CampaignService.cc
+        services/payments/PaymentService.cc
 )
 
 # ##############################################################################
@@ -85,7 +91,7 @@ endif ()
 aux_source_directory(controllers CTL_SRC)
 aux_source_directory(filters FILTER_SRC)
 aux_source_directory(plugins PLUGIN_SRC)
-aux_source_directory(constants PLUGIN_SRC)
+aux_source_directory(constants CONSTANTS_SRC)
 aux_source_directory(models MODEL_SRC)
 
 drogon_create_views(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/views

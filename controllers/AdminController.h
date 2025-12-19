@@ -45,6 +45,11 @@ class AdminController : public drogon::HttpController<AdminController>
   ADD_METHOD_TO(AdminController::getUserSubscriptionDetails, PREFIX + "/get-user-subscription-details", Get);
   ADD_METHOD_TO(AdminController::renewUserSubscription, PREFIX + "/renew-user-subscription", Post);
 
+  //campaigns
+  ADD_METHOD_TO(AdminController::getAllCampaigns, PREFIX + "/get-all-campaigns",Get, Options);
+  ADD_METHOD_TO(AdminController::createCampaign, PREFIX + "/create-campaign", Post, Options);
+  ADD_METHOD_TO(AdminController::publishCampaign, PREFIX + "/publish-campaign", Get, Options);
+  ADD_METHOD_TO(AdminController::deleteCampaign, PREFIX + "/delete-campaign", Get, Options);
 
   METHOD_LIST_END
 
@@ -80,4 +85,10 @@ class AdminController : public drogon::HttpController<AdminController>
   void getAllUserSubscriptions(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   void getUserSubscriptionDetails(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   void renewUserSubscription(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+
+  // campaigns
+  void getAllCampaigns(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+  void createCampaign(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+  void publishCampaign(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+  void deleteCampaign(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
 };
