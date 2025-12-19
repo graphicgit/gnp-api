@@ -35,11 +35,12 @@ class AdminController : public drogon::HttpController<AdminController>
     ADD_METHOD_TO(AdminController::deleteUser, PREFIX + "/delete", Delete);
 
   // subscription plans
-  ADD_METHOD_TO(AdminController::getAllSubscriptionPlans, PREFIX + "/get-all-subscription-plans", Get);
-  ADD_METHOD_TO(AdminController::getSubscriptionPlanDetails, PREFIX + "/get-subscription-plan-details", Get);
-  ADD_METHOD_TO(AdminController::createSubscriptionPlan, PREFIX + "/create", Post);
-  ADD_METHOD_TO(AdminController::updateSubscriptionPlan, PREFIX + "/update", Post);
-  ADD_METHOD_TO(AdminController::deleteSubscriptionPlan, PREFIX + "/delete", Delete);
+  ADD_METHOD_TO(AdminController::getAllSubscriptionPlans, PREFIX + "/get-all-subscription-plans", Get, Options);
+  ADD_METHOD_TO(AdminController::getSubscriptionPlanDetails, PREFIX + "/get-subscription-plan-details", Get, Options);
+  ADD_METHOD_TO(AdminController::createSubscriptionPlan, PREFIX + "/create-subscription-plan", Post, Options);
+  ADD_METHOD_TO(AdminController::updateSubscriptionPlan, PREFIX + "/update-subscription-plan", Post, Options);
+  ADD_METHOD_TO(AdminController::deleteSubscriptionPlan, PREFIX + "/delete-subscription-plan", Delete, Options);
+
   // user subscription
   ADD_METHOD_TO(AdminController::getAllUserSubscriptions, PREFIX + "/get-all-subscriptions",Get);
   ADD_METHOD_TO(AdminController::getUserSubscriptionDetails, PREFIX + "/get-user-subscription-details", Get);

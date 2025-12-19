@@ -61,6 +61,7 @@ namespace gnp::services {
                         response.result["totalPages"] = (int)((totalCount + pageSize - 1) / pageSize);
 
                         Json::Value data = Json::arrayValue;
+
                         for (const auto& subscriptionPlan : subscriptionPlans)
                         {
                             Json::Value roleJson = subscriptionPlan.toJson();
@@ -119,7 +120,7 @@ namespace gnp::services {
     }
 
 
-    void SubscriptionPlanService::create(
+    void SubscriptionPlanService::createPlan(
         const dto::CreateSubscriptionPlanDto& dto,
         const std::function<void(const dto::BaseApiResponse&)>& callback) {
 
@@ -159,7 +160,7 @@ namespace gnp::services {
     }
 
 
-    void SubscriptionPlanService::update(
+    void SubscriptionPlanService::updatePlan(
         const dto::UpdateSubscriptionPlanDto& dto,
         const std::function<void(const gnp::dto::BaseApiResponse&)>& callback)
     {

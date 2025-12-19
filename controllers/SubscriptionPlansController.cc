@@ -67,11 +67,10 @@ void SubscriptionPlansController::create(const HttpRequestPtr& req, std::functio
 
     dto.fromJson(*jsonBody);
 
-    // Get tenant service from plugin
     auto plugin = app().getPlugin<plugins::GnpServicePlugin>();
     auto& subscriptionPlanService = plugin->getSubscriptionPlanService();
 
-    subscriptionPlanService.create(dto, [callback](const dto::BaseApiResponse& result) {
+    subscriptionPlanService.createPlan(dto, [callback](const dto::BaseApiResponse& result) {
         auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
         callback(resp);
     });

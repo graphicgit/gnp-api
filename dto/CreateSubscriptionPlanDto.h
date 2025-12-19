@@ -45,8 +45,8 @@ namespace gnp::dto {
             name_ = json["name"].asString();
         }
 
-        if (json.isMember("plan_type") && !json["plan_type"].isNull()) {
-            plan_type_ = json["plan_type"].asString();
+        if (json.isMember("planType") && !json["planType"].isNull()) {
+            plan_type_ = json["planType"].asString();
         }
 
         if (json.isMember("description") && !json["description"].isNull()) {
