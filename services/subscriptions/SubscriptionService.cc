@@ -191,8 +191,7 @@ void SubscriptionService::manageGuestOneTimeBuy(
 
         userMapper.findBy(
             checkCriteria,
-            [callback, dbClient, guestOnetimeBuyDto, paperCost,
-             clientReference](const std::vector<Users> &users) {
+            [callback, dbClient, guestOnetimeBuyDto, paperCost, newspaper, clientReference](const std::vector<Users> &users) {
               if (!users.empty()) {
                 dto::BaseApiResponse response;
                 response.success = false;
@@ -214,8 +213,7 @@ void SubscriptionService::manageGuestOneTimeBuy(
 
               mp.insert(
                   newUser,
-                  [callback, dbClient, guestOnetimeBuyDto, paperCost,
-                   clientReference](const drogon_model::Gnp::Users &user) {
+                  [callback, dbClient, guestOnetimeBuyDto, paperCost, newspaper, clientReference](const drogon_model::Gnp::Users &user) {
                     // create an inactive user subscription.
 
                     Mapper<drogon_model::Gnp::UserSubscriptions> mp(dbClient);
@@ -231,8 +229,7 @@ void SubscriptionService::manageGuestOneTimeBuy(
                     newUserSubscription.setCreatedAt(trantor::Date::now());
 
                     mp.insert(newUserSubscription,
-                        [callback, dbClient, user, guestOnetimeBuyDto,
-                         paperCost, clientReference](
+                        [callback, dbClient, user, guestOnetimeBuyDto,newspaper, paperCost, clientReference](
                             const UserSubscriptions &userSubscription) {
                           // create purchase_attempt
                           Mapper<PurchaseAttempts> pa_mapper(dbClient);
@@ -240,22 +237,23 @@ void SubscriptionService::manageGuestOneTimeBuy(
                           PurchaseAttempts newPurchaseAttempt;
 
                           newPurchaseAttempt.setUserId(user.getValueOfId());
-                          newPurchaseAttempt.setNewspaperId(
-                              guestOnetimeBuyDto.getNewsPaperId());
-                          newPurchaseAttempt.setAttemptReference(
-                              *clientReference);
+                          newPurchaseAttempt.setNewspaperId(guestOnetimeBuyDto.getNewsPaperId());
+                          newPurchaseAttempt.setAttemptReference(*clientReference);
                           newPurchaseAttempt.setAmount(paperCost);
                           newPurchaseAttempt.setStatus("Initiated");
                           newPurchaseAttempt.setFailureReasonToNull();
                           newPurchaseAttempt.setCreatedAt(trantor::Date::now());
 
-                          pa_mapper.insert( newPurchaseAttempt,[callback, guestOnetimeBuyDto, paperCost,clientReference,user](const PurchaseAttempts &purchaseAttempt) {
+                          pa_mapper.insert( newPurchaseAttempt,[callback, guestOnetimeBuyDto, newspaper, paperCost,clientReference,user](const PurchaseAttempts &purchaseAttempt) {
                                 // use initialize checkout url
 
-                                auto paymentService = std::make_shared<gnp::services::PaymentService>();
+                                auto paymentService = std::make_shared<PaymentService>();
+
                                 gnp::dto::CreatePaymentDto paymentDto;
                                 paymentDto.setUserId(user.getValueOfId());
                                 paymentDto.setUserName(user.getValueOfUsername());
+                                paymentDto.setUserEmail(user.getValueOfEmail());
+                                paymentDto.setPackageName(*newspaper.getTitle());
                                 paymentDto.setAmountPaid(paperCost);
                                 paymentDto.setReceiptNo(*clientReference);
                                 paymentDto.setTransactionReference(*clientReference);

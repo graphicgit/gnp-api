@@ -47,6 +47,8 @@ class Payments
         static const std::string _id;
         static const std::string _user_id;
         static const std::string _user_name;
+        static const std::string _user_email;
+        static const std::string _package_name;
         static const std::string _amount_paid;
         static const std::string _receipt_no;
         static const std::string _transaction_reference;
@@ -132,6 +134,26 @@ class Payments
     void setUserName(std::string &&pUserName) noexcept;
     void setUserNameToNull() noexcept;
 
+    /**  For column user_email  */
+    ///Get the value of the column user_email, returns the default value if the column is null
+    const std::string &getValueOfUserEmail() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getUserEmail() const noexcept;
+    ///Set the value of the column user_email
+    void setUserEmail(const std::string &pUserEmail) noexcept;
+    void setUserEmail(std::string &&pUserEmail) noexcept;
+    void setUserEmailToNull() noexcept;
+
+    /**  For column package_name  */
+    ///Get the value of the column package_name, returns the default value if the column is null
+    const std::string &getValueOfPackageName() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getPackageName() const noexcept;
+    ///Set the value of the column package_name
+    void setPackageName(const std::string &pPackageName) noexcept;
+    void setPackageName(std::string &&pPackageName) noexcept;
+    void setPackageNameToNull() noexcept;
+
     /**  For column amount_paid  */
     ///Get the value of the column amount_paid, returns the default value if the column is null
     const std::string &getValueOfAmountPaid() const noexcept;
@@ -189,7 +211,7 @@ class Payments
     void setUpdatedAtToNull() noexcept;
 
 
-    static size_t getColumnNumber() noexcept {  return 9;  }
+    static size_t getColumnNumber() noexcept {  return 11;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -214,6 +236,8 @@ class Payments
     std::shared_ptr<std::string> id_;
     std::shared_ptr<std::string> userId_;
     std::shared_ptr<std::string> userName_;
+    std::shared_ptr<std::string> userEmail_;
+    std::shared_ptr<std::string> packageName_;
     std::shared_ptr<std::string> amountPaid_;
     std::shared_ptr<std::string> receiptNo_;
     std::shared_ptr<std::string> transactionReference_;
@@ -231,7 +255,7 @@ class Payments
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[9]={ false };
+    bool dirtyFlag_[11]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -267,31 +291,41 @@ class Payments
         }
         if(dirtyFlag_[3])
         {
-            sql += "amount_paid,";
+            sql += "user_email,";
             ++parametersCount;
         }
         if(dirtyFlag_[4])
         {
-            sql += "receipt_no,";
+            sql += "package_name,";
             ++parametersCount;
         }
         if(dirtyFlag_[5])
         {
-            sql += "transaction_reference,";
+            sql += "amount_paid,";
             ++parametersCount;
         }
         if(dirtyFlag_[6])
+        {
+            sql += "receipt_no,";
+            ++parametersCount;
+        }
+        if(dirtyFlag_[7])
+        {
+            sql += "transaction_reference,";
+            ++parametersCount;
+        }
+        if(dirtyFlag_[8])
         {
             sql += "status,";
             ++parametersCount;
         }
         sql += "created_at,";
         ++parametersCount;
-        if(!dirtyFlag_[7])
+        if(!dirtyFlag_[9])
         {
             needSelection=true;
         }
-        if(dirtyFlag_[8])
+        if(dirtyFlag_[10])
         {
             sql += "updated_at,";
             ++parametersCount;
@@ -351,11 +385,21 @@ class Payments
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
+        if(dirtyFlag_[8])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[9])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
         else
         {
             sql +="default,";
         }
-        if(dirtyFlag_[8])
+        if(dirtyFlag_[10])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);

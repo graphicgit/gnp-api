@@ -59,7 +59,6 @@ void CampaignService::getAll(
 
               auto totalPages = (totalCount + pageSize - 1) / pageSize;
 
-
               response.success = true;
               response.result["totalCount"] = (Json::UInt64)totalCount;
               response.result["pageNo"] = pageNo;

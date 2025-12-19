@@ -51,28 +51,34 @@ namespace gnp::services {
         mp->limit(pageSize).offset(offset).findBy(searchCriteria,[=](const std::vector<Payments> &payments) {
               // 4. Build the final response inside the callback
               dto::BaseApiResponse response;
+
+              auto totalPages = (totalCount + pageSize - 1) / pageSize;
+
               response.success = true;
               response.result["totalCount"] = (Json::UInt64)totalCount;
               response.result["pageNo"] = pageNo;
               response.result["pageSize"] = pageSize;
+              response.result["lowerBound"] = pageSize * (pageNo - 1) + 1;
+              response.result["upperBound"] = Json::Value((int)totalPages == pageNo ? (Json::UInt64)totalCount : (Json::UInt64)(pageNo * pageSize));
               response.result["totalPages"] = (int)((totalCount + pageSize - 1) / pageSize);
 
               Json::Value data = Json::arrayValue;
 
-              for (const auto &campaign : payments) {
-                Json::Value roleJson = campaign.toJson();
+              for (const auto &payment : payments) {
+                Json::Value campaignJson = payment.toJson();
 
                 // Convert snake_case to camelCase
                 Json::Value camelCaseRole;
-                camelCaseRole["id"] = roleJson["id"];
-                camelCaseRole["userId"] = roleJson["user_id"];
-                camelCaseRole["userName"] = roleJson["user_name"];
-                camelCaseRole["amountPaid"] = roleJson["amount_paid"];
-                camelCaseRole["receiptNo"] = roleJson["receipt_no"];
-                camelCaseRole["transactionReference"] = roleJson["transaction_reference"];
-                camelCaseRole["isActive"] = roleJson["status"];
-                camelCaseRole["createdAt"] = roleJson["created_at"];
-                camelCaseRole["updatedAt"] = roleJson["updated_at"];
+                camelCaseRole["id"] = campaignJson["id"];
+                camelCaseRole["userId"] = campaignJson["user_id"];
+                camelCaseRole["userName"] = campaignJson["user_name"];
+                camelCaseRole["userEmail"] = campaignJson["user_email"];
+                camelCaseRole["packageName"] = campaignJson["package_name"];
+                camelCaseRole["amountPaid"] = campaignJson["amount_paid"];
+                camelCaseRole["receiptNo"] = campaignJson["receipt_no"];
+                camelCaseRole["transactionReference"] = campaignJson["transaction_reference"];
+                camelCaseRole["isActive"] = campaignJson["status"];
+                camelCaseRole["createdAt"] = campaignJson["created_at"];
 
                 data.append(camelCaseRole);
               }
@@ -109,6 +115,10 @@ namespace gnp::services {
 
       Payments newPayment;
        newPayment.setUserId(dto.getUserId());
+       newPayment.setUserName(dto.getUserName());
+       newPayment.setUserEmail(dto.getUserEmail());
+       newPayment.setPackageName(dto.getPackageName());
+
        newPayment.setAmountPaid(dto.getAmountPaid());
        newPayment.setReceiptNo(dto.getReceiptNo());
        newPayment.setTransactionReference(dto.getTransactionReference());
