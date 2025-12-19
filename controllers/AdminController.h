@@ -51,6 +51,10 @@ class AdminController : public drogon::HttpController<AdminController>
   ADD_METHOD_TO(AdminController::publishCampaign, PREFIX + "/publish-campaign", Get, Options);
   ADD_METHOD_TO(AdminController::deleteCampaign, PREFIX + "/delete-campaign", Get, Options);
 
+  //payments
+  ADD_METHOD_TO(AdminController::getAllPayments, PREFIX + "/get-all-payments",Get, Options);
+
+
   METHOD_LIST_END
 
     // Newspapers
@@ -91,4 +95,8 @@ class AdminController : public drogon::HttpController<AdminController>
   void createCampaign(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   void publishCampaign(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   void deleteCampaign(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+
+  //payments
+  void getAllPayments(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+
 };

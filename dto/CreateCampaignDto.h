@@ -58,9 +58,9 @@ namespace gnp::dto {
         std::string status_;
         std::string campaign_type_;
         trantor::Date scheduled_time_;
-        int engagement_;
-        int reach_;
-        int clicks_;
+        int engagement_ = 0;
+        int reach_ = 0;
+        int clicks_ = 0;
 
     };
 

@@ -272,3 +272,44 @@ void AdminController::deleteCampaign(const HttpRequestPtr &req,
         callback(resp);
       });
 }
+
+void AdminController::getAllPayments(
+    const HttpRequestPtr &req,
+    std::function<void(const HttpResponsePtr &)> &&callback) {
+
+
+    int pageSize = 10; // Default page size
+    int pageNo = 1;    //  Default page number
+
+    if (!req->getParameter("pageSize").empty()) {
+      try {
+        pageSize = std::stoi(req->getParameter("pageSize"));
+        pageSize = std::max(1, std::min(100, pageSize)); // Limit between 1-100
+      } catch (...) {
+        // Keep default if conversion fails
+      }
+    }
+
+    if (!req->getParameter("pageNo").empty()) {
+      try {
+        pageNo = std::stoi(req->getParameter("pageNo"));
+        pageNo = std::max(1, pageNo); // Ensure page number is at least 1
+      } catch (...) {
+        // Keep default if conversion fails
+      }
+    }
+
+    std::string query = req->getParameter("query");
+    if (query.empty()) {
+      query = "";
+    }
+
+    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto& paymentService = plugin->getPaymentService();
+
+    paymentService.getAll(pageNo, pageSize, query, [callback](const gnp::dto::BaseApiResponse& result) {
+        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+        callback(resp);
+    });
+
+}

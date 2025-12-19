@@ -77,7 +77,7 @@ namespace gnp::services {
                 camelCaseRole["amountPaid"] = campaignJson["amount_paid"];
                 camelCaseRole["receiptNo"] = campaignJson["receipt_no"];
                 camelCaseRole["transactionReference"] = campaignJson["transaction_reference"];
-                camelCaseRole["isActive"] = campaignJson["status"];
+                camelCaseRole["status"] = campaignJson["status"];
                 camelCaseRole["createdAt"] = campaignJson["created_at"];
 
                 data.append(camelCaseRole);
