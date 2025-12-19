@@ -6,6 +6,7 @@
 #define CREATECAMPAIGNDTO_H
 #include <json/json.h>
 #include <trantor/utils/Date.h>
+#include <algorithm>
 
 namespace gnp::dto {
 
