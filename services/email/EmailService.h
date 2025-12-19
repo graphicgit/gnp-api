@@ -13,8 +13,11 @@ namespace gnp::services {
 
     class EmailService {
 
+    public:
         void sendEmail(const dto::SendEmailDto& dto,
                  const std::function<void(const dto::BaseApiResponse&)>& callback);
+
+
 
     };
 

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Notification Hub Test</title>
+</head>
+<body>
+    <h1>Notification Hub Test</h1>
+    <div id="status">Disconnected</div>
+    <ul id="messages"></ul>
+
+    <script>
+        const ws = new WebSocket('ws://localhost:5034/notifications');
+
+        ws.onopen = () => {
+            document.getElementById('status').innerText = 'Connected';
+            console.log('Connected to WebSocket');
+        };
+
+        ws.onmessage = (event) => {
+            const li = document.createElement('li');
+            li.innerText = event.data;
+            document.getElementById('messages').appendChild(li);
+            console.log('Message received:', event.data);
+        };
+
+        ws.onclose = () => {
+            document.getElementById('status').innerText = 'Disconnected';
+            console.log('Disconnected from WebSocket');
+        };
+
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+    </script>
+</body>
+</html>

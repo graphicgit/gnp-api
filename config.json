@@ -2,7 +2,7 @@
     "listeners": [
         {
             "address": "0.0.0.0",
-            "port": 5030,
+            "port": 5034,
             "https": false
         }
     ],
@@ -323,17 +323,17 @@
             "JwtAudience" : "Gnp_Users",
             "JwtExpirationTime" : 3600
         },
-        "RabbitMqBroker": {
-            "Url": "amqps://vedfplxy:ULj-Mt6eUZpfm4g489PQxAgHu6-iqJqJ@cow.rmq2.cloudamqp.com/vedfplxy",
-            "EmailNotificationQueue": "email_notification",
-            "ExchangeTypes": {
-                "AmqDirect": "amq.direct",
-                "AmqTopic": "amq.topic",
-                "AmqFanOut": "amq.fanout",
-                "AmqHeaders": "amq.headers",
-                "AmqMatch": "amq.match"
-            }
+        "PrivateKey": "ca11ca76-3876-4d45-9882-b9e365b81474",
+        "PayStackApi": {
+            "BaseUrl" : "https://api.paystack.co",
+            "SecretKey" : "sk_live_844f99e0b5acfff9b8b52bde395bb6fd39e4e346"
         },
-        "PrivateKey": "ca11ca76-3866-4d44-9881-d9e365b81474"
+        "MailConfiguration": {
+            "Host": "mail.graphicnewsplus.com",
+            "Port": 465,
+            "UserName": "account@graphicnewsplus.com",
+            "Password": "AEjdJ^%mh43Lm8f-",
+            "SenderName": "Graphic News Plus"
+        }
     }
 }

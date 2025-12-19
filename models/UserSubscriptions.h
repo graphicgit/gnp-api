@@ -49,13 +49,8 @@ class UserSubscriptions
         static const std::string _user_id;
         static const std::string _user_name;
         static const std::string _email;
-        static const std::string _current_subscription_plan_id;
-        static const std::string _start_date;
-        static const std::string _end_date;
-        static const std::string _current_billing_cycle;
+        static const std::string _newspaper_entitlements;
         static const std::string _is_active;
-        static const std::string _next_renewal_date;
-        static const std::string _fee;
         static const std::string _created_at;
         static const std::string _updated_at;
     };
@@ -156,40 +151,15 @@ class UserSubscriptions
     void setEmail(std::string &&pEmail) noexcept;
     void setEmailToNull() noexcept;
 
-    /**  For column current_subscription_plan_id  */
-    ///Get the value of the column current_subscription_plan_id, returns the default value if the column is null
-    const std::string &getValueOfCurrentSubscriptionPlanId() const noexcept;
+    /**  For column newspaper_entitlements  */
+    ///Get the value of the column newspaper_entitlements, returns the default value if the column is null
+    const std::string &getValueOfNewspaperEntitlements() const noexcept;
     ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<std::string> &getCurrentSubscriptionPlanId() const noexcept;
-    ///Set the value of the column current_subscription_plan_id
-    void setCurrentSubscriptionPlanId(const std::string &pCurrentSubscriptionPlanId) noexcept;
-    void setCurrentSubscriptionPlanId(std::string &&pCurrentSubscriptionPlanId) noexcept;
-
-    /**  For column start_date  */
-    ///Get the value of the column start_date, returns the default value if the column is null
-    const ::trantor::Date &getValueOfStartDate() const noexcept;
-    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<::trantor::Date> &getStartDate() const noexcept;
-    ///Set the value of the column start_date
-    void setStartDate(const ::trantor::Date &pStartDate) noexcept;
-
-    /**  For column end_date  */
-    ///Get the value of the column end_date, returns the default value if the column is null
-    const ::trantor::Date &getValueOfEndDate() const noexcept;
-    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<::trantor::Date> &getEndDate() const noexcept;
-    ///Set the value of the column end_date
-    void setEndDate(const ::trantor::Date &pEndDate) noexcept;
-
-    /**  For column current_billing_cycle  */
-    ///Get the value of the column current_billing_cycle, returns the default value if the column is null
-    const std::string &getValueOfCurrentBillingCycle() const noexcept;
-    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<std::string> &getCurrentBillingCycle() const noexcept;
-    ///Set the value of the column current_billing_cycle
-    void setCurrentBillingCycle(const std::string &pCurrentBillingCycle) noexcept;
-    void setCurrentBillingCycle(std::string &&pCurrentBillingCycle) noexcept;
-    void setCurrentBillingCycleToNull() noexcept;
+    const std::shared_ptr<std::string> &getNewspaperEntitlements() const noexcept;
+    ///Set the value of the column newspaper_entitlements
+    void setNewspaperEntitlements(const std::string &pNewspaperEntitlements) noexcept;
+    void setNewspaperEntitlements(std::string &&pNewspaperEntitlements) noexcept;
+    void setNewspaperEntitlementsToNull() noexcept;
 
     /**  For column is_active  */
     ///Get the value of the column is_active, returns the default value if the column is null
@@ -198,24 +168,6 @@ class UserSubscriptions
     const std::shared_ptr<bool> &getIsActive() const noexcept;
     ///Set the value of the column is_active
     void setIsActive(const bool &pIsActive) noexcept;
-
-    /**  For column next_renewal_date  */
-    ///Get the value of the column next_renewal_date, returns the default value if the column is null
-    const ::trantor::Date &getValueOfNextRenewalDate() const noexcept;
-    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<::trantor::Date> &getNextRenewalDate() const noexcept;
-    ///Set the value of the column next_renewal_date
-    void setNextRenewalDate(const ::trantor::Date &pNextRenewalDate) noexcept;
-    void setNextRenewalDateToNull() noexcept;
-
-    /**  For column fee  */
-    ///Get the value of the column fee, returns the default value if the column is null
-    const std::string &getValueOfFee() const noexcept;
-    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<std::string> &getFee() const noexcept;
-    ///Set the value of the column fee
-    void setFee(const std::string &pFee) noexcept;
-    void setFee(std::string &&pFee) noexcept;
 
     /**  For column created_at  */
     ///Get the value of the column created_at, returns the default value if the column is null
@@ -236,7 +188,7 @@ class UserSubscriptions
     void setUpdatedAtToNull() noexcept;
 
 
-    static size_t getColumnNumber() noexcept {  return 14;  }
+    static size_t getColumnNumber() noexcept {  return 9;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -263,13 +215,8 @@ class UserSubscriptions
     std::shared_ptr<std::string> userId_;
     std::shared_ptr<std::string> userName_;
     std::shared_ptr<std::string> email_;
-    std::shared_ptr<std::string> currentSubscriptionPlanId_;
-    std::shared_ptr<::trantor::Date> startDate_;
-    std::shared_ptr<::trantor::Date> endDate_;
-    std::shared_ptr<std::string> currentBillingCycle_;
+    std::shared_ptr<std::string> newspaperEntitlements_;
     std::shared_ptr<bool> isActive_;
-    std::shared_ptr<::trantor::Date> nextRenewalDate_;
-    std::shared_ptr<std::string> fee_;
     std::shared_ptr<::trantor::Date> createdAt_;
     std::shared_ptr<::trantor::Date> updatedAt_;
     struct MetaData
@@ -283,7 +230,7 @@ class UserSubscriptions
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[14]={ false };
+    bool dirtyFlag_[9]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -329,46 +276,21 @@ class UserSubscriptions
         }
         if(dirtyFlag_[5])
         {
-            sql += "current_subscription_plan_id,";
-            ++parametersCount;
-        }
-        if(dirtyFlag_[6])
-        {
-            sql += "start_date,";
-            ++parametersCount;
-        }
-        if(dirtyFlag_[7])
-        {
-            sql += "end_date,";
-            ++parametersCount;
-        }
-        if(dirtyFlag_[8])
-        {
-            sql += "current_billing_cycle,";
+            sql += "newspaper_entitlements,";
             ++parametersCount;
         }
         sql += "is_active,";
         ++parametersCount;
-        if(!dirtyFlag_[9])
+        if(!dirtyFlag_[6])
         {
             needSelection=true;
         }
-        if(dirtyFlag_[10])
-        {
-            sql += "next_renewal_date,";
-            ++parametersCount;
-        }
-        if(dirtyFlag_[11])
-        {
-            sql += "fee,";
-            ++parametersCount;
-        }
-        if(dirtyFlag_[12])
+        if(dirtyFlag_[7])
         {
             sql += "created_at,";
             ++parametersCount;
         }
-        if(dirtyFlag_[13])
+        if(dirtyFlag_[8])
         {
             sql += "updated_at,";
             ++parametersCount;
@@ -423,41 +345,16 @@ class UserSubscriptions
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
+        else
+        {
+            sql +="default,";
+        }
         if(dirtyFlag_[7])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
         if(dirtyFlag_[8])
-        {
-            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
-            sql.append(placeholderStr, n);
-        }
-        if(dirtyFlag_[9])
-        {
-            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
-            sql.append(placeholderStr, n);
-        }
-        else
-        {
-            sql +="default,";
-        }
-        if(dirtyFlag_[10])
-        {
-            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
-            sql.append(placeholderStr, n);
-        }
-        if(dirtyFlag_[11])
-        {
-            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
-            sql.append(placeholderStr, n);
-        }
-        if(dirtyFlag_[12])
-        {
-            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
-            sql.append(placeholderStr, n);
-        }
-        if(dirtyFlag_[13])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);

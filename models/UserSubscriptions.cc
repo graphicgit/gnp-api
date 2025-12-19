@@ -18,13 +18,8 @@ const std::string UserSubscriptions::Cols::_subscription_identifier = "\"subscri
 const std::string UserSubscriptions::Cols::_user_id = "\"user_id\"";
 const std::string UserSubscriptions::Cols::_user_name = "\"user_name\"";
 const std::string UserSubscriptions::Cols::_email = "\"email\"";
-const std::string UserSubscriptions::Cols::_current_subscription_plan_id = "\"current_subscription_plan_id\"";
-const std::string UserSubscriptions::Cols::_start_date = "\"start_date\"";
-const std::string UserSubscriptions::Cols::_end_date = "\"end_date\"";
-const std::string UserSubscriptions::Cols::_current_billing_cycle = "\"current_billing_cycle\"";
+const std::string UserSubscriptions::Cols::_newspaper_entitlements = "\"newspaper_entitlements\"";
 const std::string UserSubscriptions::Cols::_is_active = "\"is_active\"";
-const std::string UserSubscriptions::Cols::_next_renewal_date = "\"next_renewal_date\"";
-const std::string UserSubscriptions::Cols::_fee = "\"fee\"";
 const std::string UserSubscriptions::Cols::_created_at = "\"created_at\"";
 const std::string UserSubscriptions::Cols::_updated_at = "\"updated_at\"";
 const std::string UserSubscriptions::primaryKeyName = "id";
@@ -37,13 +32,8 @@ const std::vector<typename UserSubscriptions::MetaData> UserSubscriptions::metaD
 {"user_id","std::string","uuid",0,0,0,1},
 {"user_name","std::string","character varying",255,0,0,0},
 {"email","std::string","character varying",255,0,0,0},
-{"current_subscription_plan_id","std::string","uuid",0,0,0,1},
-{"start_date","::trantor::Date","timestamp without time zone",0,0,0,1},
-{"end_date","::trantor::Date","timestamp without time zone",0,0,0,1},
-{"current_billing_cycle","std::string","character varying",50,0,0,0},
+{"newspaper_entitlements","std::string","jsonb",0,0,0,0},
 {"is_active","bool","boolean",1,0,0,1},
-{"next_renewal_date","::trantor::Date","timestamp without time zone",0,0,0,0},
-{"fee","std::string","numeric",0,0,0,1},
 {"created_at","::trantor::Date","timestamp without time zone",0,0,0,0},
 {"updated_at","::trantor::Date","timestamp without time zone",0,0,0,0}
 };
@@ -76,87 +66,13 @@ UserSubscriptions::UserSubscriptions(const Row &r, const ssize_t indexOffset) no
         {
             email_=std::make_shared<std::string>(r["email"].as<std::string>());
         }
-        if(!r["current_subscription_plan_id"].isNull())
+        if(!r["newspaper_entitlements"].isNull())
         {
-            currentSubscriptionPlanId_=std::make_shared<std::string>(r["current_subscription_plan_id"].as<std::string>());
-        }
-        if(!r["start_date"].isNull())
-        {
-            auto timeStr = r["start_date"].as<std::string>();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                startDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
-        }
-        if(!r["end_date"].isNull())
-        {
-            auto timeStr = r["end_date"].as<std::string>();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                endDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
-        }
-        if(!r["current_billing_cycle"].isNull())
-        {
-            currentBillingCycle_=std::make_shared<std::string>(r["current_billing_cycle"].as<std::string>());
+            newspaperEntitlements_=std::make_shared<std::string>(r["newspaper_entitlements"].as<std::string>());
         }
         if(!r["is_active"].isNull())
         {
             isActive_=std::make_shared<bool>(r["is_active"].as<bool>());
-        }
-        if(!r["next_renewal_date"].isNull())
-        {
-            auto timeStr = r["next_renewal_date"].as<std::string>();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                nextRenewalDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
-        }
-        if(!r["fee"].isNull())
-        {
-            fee_=std::make_shared<std::string>(r["fee"].as<std::string>());
         }
         if(!r["created_at"].isNull())
         {
@@ -206,7 +122,7 @@ UserSubscriptions::UserSubscriptions(const Row &r, const ssize_t indexOffset) no
     else
     {
         size_t offset = (size_t)indexOffset;
-        if(offset + 14 > r.size())
+        if(offset + 9 > r.size())
         {
             LOG_FATAL << "Invalid SQL result for this model";
             return;
@@ -240,93 +156,14 @@ UserSubscriptions::UserSubscriptions(const Row &r, const ssize_t indexOffset) no
         index = offset + 5;
         if(!r[index].isNull())
         {
-            currentSubscriptionPlanId_=std::make_shared<std::string>(r[index].as<std::string>());
+            newspaperEntitlements_=std::make_shared<std::string>(r[index].as<std::string>());
         }
         index = offset + 6;
         if(!r[index].isNull())
         {
-            auto timeStr = r[index].as<std::string>();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                startDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
-        }
-        index = offset + 7;
-        if(!r[index].isNull())
-        {
-            auto timeStr = r[index].as<std::string>();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                endDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
-        }
-        index = offset + 8;
-        if(!r[index].isNull())
-        {
-            currentBillingCycle_=std::make_shared<std::string>(r[index].as<std::string>());
-        }
-        index = offset + 9;
-        if(!r[index].isNull())
-        {
             isActive_=std::make_shared<bool>(r[index].as<bool>());
         }
-        index = offset + 10;
-        if(!r[index].isNull())
-        {
-            auto timeStr = r[index].as<std::string>();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                nextRenewalDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
-        }
-        index = offset + 11;
-        if(!r[index].isNull())
-        {
-            fee_=std::make_shared<std::string>(r[index].as<std::string>());
-        }
-        index = offset + 12;
+        index = offset + 7;
         if(!r[index].isNull())
         {
             auto timeStr = r[index].as<std::string>();
@@ -349,7 +186,7 @@ UserSubscriptions::UserSubscriptions(const Row &r, const ssize_t indexOffset) no
                 createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
-        index = offset + 13;
+        index = offset + 8;
         if(!r[index].isNull())
         {
             auto timeStr = r[index].as<std::string>();
@@ -378,7 +215,7 @@ UserSubscriptions::UserSubscriptions(const Row &r, const ssize_t indexOffset) no
 
 UserSubscriptions::UserSubscriptions(const Json::Value &pJson, const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 14)
+    if(pMasqueradingVector.size() != 9)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -428,7 +265,7 @@ UserSubscriptions::UserSubscriptions(const Json::Value &pJson, const std::vector
         dirtyFlag_[5] = true;
         if(!pJson[pMasqueradingVector[5]].isNull())
         {
-            currentSubscriptionPlanId_=std::make_shared<std::string>(pJson[pMasqueradingVector[5]].asString());
+            newspaperEntitlements_=std::make_shared<std::string>(pJson[pMasqueradingVector[5]].asString());
         }
     }
     if(!pMasqueradingVector[6].empty() && pJson.isMember(pMasqueradingVector[6]))
@@ -436,25 +273,7 @@ UserSubscriptions::UserSubscriptions(const Json::Value &pJson, const std::vector
         dirtyFlag_[6] = true;
         if(!pJson[pMasqueradingVector[6]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[6]].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                startDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
+            isActive_=std::make_shared<bool>(pJson[pMasqueradingVector[6]].asBool());
         }
     }
     if(!pMasqueradingVector[7].empty() && pJson.isMember(pMasqueradingVector[7]))
@@ -479,7 +298,7 @@ UserSubscriptions::UserSubscriptions(const Json::Value &pJson, const std::vector
                     }
                     decimalNum = (size_t)atol(decimals.c_str());
                 }
-                endDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
     }
@@ -488,83 +307,7 @@ UserSubscriptions::UserSubscriptions(const Json::Value &pJson, const std::vector
         dirtyFlag_[8] = true;
         if(!pJson[pMasqueradingVector[8]].isNull())
         {
-            currentBillingCycle_=std::make_shared<std::string>(pJson[pMasqueradingVector[8]].asString());
-        }
-    }
-    if(!pMasqueradingVector[9].empty() && pJson.isMember(pMasqueradingVector[9]))
-    {
-        dirtyFlag_[9] = true;
-        if(!pJson[pMasqueradingVector[9]].isNull())
-        {
-            isActive_=std::make_shared<bool>(pJson[pMasqueradingVector[9]].asBool());
-        }
-    }
-    if(!pMasqueradingVector[10].empty() && pJson.isMember(pMasqueradingVector[10]))
-    {
-        dirtyFlag_[10] = true;
-        if(!pJson[pMasqueradingVector[10]].isNull())
-        {
-            auto timeStr = pJson[pMasqueradingVector[10]].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                nextRenewalDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
-        }
-    }
-    if(!pMasqueradingVector[11].empty() && pJson.isMember(pMasqueradingVector[11]))
-    {
-        dirtyFlag_[11] = true;
-        if(!pJson[pMasqueradingVector[11]].isNull())
-        {
-            fee_=std::make_shared<std::string>(pJson[pMasqueradingVector[11]].asString());
-        }
-    }
-    if(!pMasqueradingVector[12].empty() && pJson.isMember(pMasqueradingVector[12]))
-    {
-        dirtyFlag_[12] = true;
-        if(!pJson[pMasqueradingVector[12]].isNull())
-        {
-            auto timeStr = pJson[pMasqueradingVector[12]].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
-        }
-    }
-    if(!pMasqueradingVector[13].empty() && pJson.isMember(pMasqueradingVector[13]))
-    {
-        dirtyFlag_[13] = true;
-        if(!pJson[pMasqueradingVector[13]].isNull())
-        {
-            auto timeStr = pJson[pMasqueradingVector[13]].asString();
+            auto timeStr = pJson[pMasqueradingVector[8]].asString();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -629,119 +372,25 @@ UserSubscriptions::UserSubscriptions(const Json::Value &pJson) noexcept(false)
             email_=std::make_shared<std::string>(pJson["email"].asString());
         }
     }
-    if(pJson.isMember("current_subscription_plan_id"))
+    if(pJson.isMember("newspaper_entitlements"))
     {
         dirtyFlag_[5]=true;
-        if(!pJson["current_subscription_plan_id"].isNull())
+        if(!pJson["newspaper_entitlements"].isNull())
         {
-            currentSubscriptionPlanId_=std::make_shared<std::string>(pJson["current_subscription_plan_id"].asString());
-        }
-    }
-    if(pJson.isMember("start_date"))
-    {
-        dirtyFlag_[6]=true;
-        if(!pJson["start_date"].isNull())
-        {
-            auto timeStr = pJson["start_date"].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                startDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
-        }
-    }
-    if(pJson.isMember("end_date"))
-    {
-        dirtyFlag_[7]=true;
-        if(!pJson["end_date"].isNull())
-        {
-            auto timeStr = pJson["end_date"].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                endDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
-        }
-    }
-    if(pJson.isMember("current_billing_cycle"))
-    {
-        dirtyFlag_[8]=true;
-        if(!pJson["current_billing_cycle"].isNull())
-        {
-            currentBillingCycle_=std::make_shared<std::string>(pJson["current_billing_cycle"].asString());
+            newspaperEntitlements_=std::make_shared<std::string>(pJson["newspaper_entitlements"].asString());
         }
     }
     if(pJson.isMember("is_active"))
     {
-        dirtyFlag_[9]=true;
+        dirtyFlag_[6]=true;
         if(!pJson["is_active"].isNull())
         {
             isActive_=std::make_shared<bool>(pJson["is_active"].asBool());
         }
     }
-    if(pJson.isMember("next_renewal_date"))
-    {
-        dirtyFlag_[10]=true;
-        if(!pJson["next_renewal_date"].isNull())
-        {
-            auto timeStr = pJson["next_renewal_date"].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                nextRenewalDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
-        }
-    }
-    if(pJson.isMember("fee"))
-    {
-        dirtyFlag_[11]=true;
-        if(!pJson["fee"].isNull())
-        {
-            fee_=std::make_shared<std::string>(pJson["fee"].asString());
-        }
-    }
     if(pJson.isMember("created_at"))
     {
-        dirtyFlag_[12]=true;
+        dirtyFlag_[7]=true;
         if(!pJson["created_at"].isNull())
         {
             auto timeStr = pJson["created_at"].asString();
@@ -767,7 +416,7 @@ UserSubscriptions::UserSubscriptions(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("updated_at"))
     {
-        dirtyFlag_[13]=true;
+        dirtyFlag_[8]=true;
         if(!pJson["updated_at"].isNull())
         {
             auto timeStr = pJson["updated_at"].asString();
@@ -796,7 +445,7 @@ UserSubscriptions::UserSubscriptions(const Json::Value &pJson) noexcept(false)
 void UserSubscriptions::updateByMasqueradedJson(const Json::Value &pJson,
                                             const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 14)
+    if(pMasqueradingVector.size() != 9)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -845,7 +494,7 @@ void UserSubscriptions::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[5] = true;
         if(!pJson[pMasqueradingVector[5]].isNull())
         {
-            currentSubscriptionPlanId_=std::make_shared<std::string>(pJson[pMasqueradingVector[5]].asString());
+            newspaperEntitlements_=std::make_shared<std::string>(pJson[pMasqueradingVector[5]].asString());
         }
     }
     if(!pMasqueradingVector[6].empty() && pJson.isMember(pMasqueradingVector[6]))
@@ -853,25 +502,7 @@ void UserSubscriptions::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[6] = true;
         if(!pJson[pMasqueradingVector[6]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[6]].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                startDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
+            isActive_=std::make_shared<bool>(pJson[pMasqueradingVector[6]].asBool());
         }
     }
     if(!pMasqueradingVector[7].empty() && pJson.isMember(pMasqueradingVector[7]))
@@ -896,7 +527,7 @@ void UserSubscriptions::updateByMasqueradedJson(const Json::Value &pJson,
                     }
                     decimalNum = (size_t)atol(decimals.c_str());
                 }
-                endDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
     }
@@ -905,83 +536,7 @@ void UserSubscriptions::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[8] = true;
         if(!pJson[pMasqueradingVector[8]].isNull())
         {
-            currentBillingCycle_=std::make_shared<std::string>(pJson[pMasqueradingVector[8]].asString());
-        }
-    }
-    if(!pMasqueradingVector[9].empty() && pJson.isMember(pMasqueradingVector[9]))
-    {
-        dirtyFlag_[9] = true;
-        if(!pJson[pMasqueradingVector[9]].isNull())
-        {
-            isActive_=std::make_shared<bool>(pJson[pMasqueradingVector[9]].asBool());
-        }
-    }
-    if(!pMasqueradingVector[10].empty() && pJson.isMember(pMasqueradingVector[10]))
-    {
-        dirtyFlag_[10] = true;
-        if(!pJson[pMasqueradingVector[10]].isNull())
-        {
-            auto timeStr = pJson[pMasqueradingVector[10]].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                nextRenewalDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
-        }
-    }
-    if(!pMasqueradingVector[11].empty() && pJson.isMember(pMasqueradingVector[11]))
-    {
-        dirtyFlag_[11] = true;
-        if(!pJson[pMasqueradingVector[11]].isNull())
-        {
-            fee_=std::make_shared<std::string>(pJson[pMasqueradingVector[11]].asString());
-        }
-    }
-    if(!pMasqueradingVector[12].empty() && pJson.isMember(pMasqueradingVector[12]))
-    {
-        dirtyFlag_[12] = true;
-        if(!pJson[pMasqueradingVector[12]].isNull())
-        {
-            auto timeStr = pJson[pMasqueradingVector[12]].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
-        }
-    }
-    if(!pMasqueradingVector[13].empty() && pJson.isMember(pMasqueradingVector[13]))
-    {
-        dirtyFlag_[13] = true;
-        if(!pJson[pMasqueradingVector[13]].isNull())
-        {
-            auto timeStr = pJson[pMasqueradingVector[13]].asString();
+            auto timeStr = pJson[pMasqueradingVector[8]].asString();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -1045,119 +600,25 @@ void UserSubscriptions::updateByJson(const Json::Value &pJson) noexcept(false)
             email_=std::make_shared<std::string>(pJson["email"].asString());
         }
     }
-    if(pJson.isMember("current_subscription_plan_id"))
+    if(pJson.isMember("newspaper_entitlements"))
     {
         dirtyFlag_[5] = true;
-        if(!pJson["current_subscription_plan_id"].isNull())
+        if(!pJson["newspaper_entitlements"].isNull())
         {
-            currentSubscriptionPlanId_=std::make_shared<std::string>(pJson["current_subscription_plan_id"].asString());
-        }
-    }
-    if(pJson.isMember("start_date"))
-    {
-        dirtyFlag_[6] = true;
-        if(!pJson["start_date"].isNull())
-        {
-            auto timeStr = pJson["start_date"].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                startDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
-        }
-    }
-    if(pJson.isMember("end_date"))
-    {
-        dirtyFlag_[7] = true;
-        if(!pJson["end_date"].isNull())
-        {
-            auto timeStr = pJson["end_date"].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                endDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
-        }
-    }
-    if(pJson.isMember("current_billing_cycle"))
-    {
-        dirtyFlag_[8] = true;
-        if(!pJson["current_billing_cycle"].isNull())
-        {
-            currentBillingCycle_=std::make_shared<std::string>(pJson["current_billing_cycle"].asString());
+            newspaperEntitlements_=std::make_shared<std::string>(pJson["newspaper_entitlements"].asString());
         }
     }
     if(pJson.isMember("is_active"))
     {
-        dirtyFlag_[9] = true;
+        dirtyFlag_[6] = true;
         if(!pJson["is_active"].isNull())
         {
             isActive_=std::make_shared<bool>(pJson["is_active"].asBool());
         }
     }
-    if(pJson.isMember("next_renewal_date"))
-    {
-        dirtyFlag_[10] = true;
-        if(!pJson["next_renewal_date"].isNull())
-        {
-            auto timeStr = pJson["next_renewal_date"].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                nextRenewalDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
-        }
-    }
-    if(pJson.isMember("fee"))
-    {
-        dirtyFlag_[11] = true;
-        if(!pJson["fee"].isNull())
-        {
-            fee_=std::make_shared<std::string>(pJson["fee"].asString());
-        }
-    }
     if(pJson.isMember("created_at"))
     {
-        dirtyFlag_[12] = true;
+        dirtyFlag_[7] = true;
         if(!pJson["created_at"].isNull())
         {
             auto timeStr = pJson["created_at"].asString();
@@ -1183,7 +644,7 @@ void UserSubscriptions::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("updated_at"))
     {
-        dirtyFlag_[13] = true;
+        dirtyFlag_[8] = true;
         if(!pJson["updated_at"].isNull())
         {
             auto timeStr = pJson["updated_at"].asString();
@@ -1334,87 +795,31 @@ void UserSubscriptions::setEmailToNull() noexcept
     dirtyFlag_[4] = true;
 }
 
-const std::string &UserSubscriptions::getValueOfCurrentSubscriptionPlanId() const noexcept
+const std::string &UserSubscriptions::getValueOfNewspaperEntitlements() const noexcept
 {
     static const std::string defaultValue = std::string();
-    if(currentSubscriptionPlanId_)
-        return *currentSubscriptionPlanId_;
+    if(newspaperEntitlements_)
+        return *newspaperEntitlements_;
     return defaultValue;
 }
-const std::shared_ptr<std::string> &UserSubscriptions::getCurrentSubscriptionPlanId() const noexcept
+const std::shared_ptr<std::string> &UserSubscriptions::getNewspaperEntitlements() const noexcept
 {
-    return currentSubscriptionPlanId_;
+    return newspaperEntitlements_;
 }
-void UserSubscriptions::setCurrentSubscriptionPlanId(const std::string &pCurrentSubscriptionPlanId) noexcept
+void UserSubscriptions::setNewspaperEntitlements(const std::string &pNewspaperEntitlements) noexcept
 {
-    currentSubscriptionPlanId_ = std::make_shared<std::string>(pCurrentSubscriptionPlanId);
+    newspaperEntitlements_ = std::make_shared<std::string>(pNewspaperEntitlements);
     dirtyFlag_[5] = true;
 }
-void UserSubscriptions::setCurrentSubscriptionPlanId(std::string &&pCurrentSubscriptionPlanId) noexcept
+void UserSubscriptions::setNewspaperEntitlements(std::string &&pNewspaperEntitlements) noexcept
 {
-    currentSubscriptionPlanId_ = std::make_shared<std::string>(std::move(pCurrentSubscriptionPlanId));
+    newspaperEntitlements_ = std::make_shared<std::string>(std::move(pNewspaperEntitlements));
     dirtyFlag_[5] = true;
 }
-
-const ::trantor::Date &UserSubscriptions::getValueOfStartDate() const noexcept
+void UserSubscriptions::setNewspaperEntitlementsToNull() noexcept
 {
-    static const ::trantor::Date defaultValue = ::trantor::Date();
-    if(startDate_)
-        return *startDate_;
-    return defaultValue;
-}
-const std::shared_ptr<::trantor::Date> &UserSubscriptions::getStartDate() const noexcept
-{
-    return startDate_;
-}
-void UserSubscriptions::setStartDate(const ::trantor::Date &pStartDate) noexcept
-{
-    startDate_ = std::make_shared<::trantor::Date>(pStartDate);
-    dirtyFlag_[6] = true;
-}
-
-const ::trantor::Date &UserSubscriptions::getValueOfEndDate() const noexcept
-{
-    static const ::trantor::Date defaultValue = ::trantor::Date();
-    if(endDate_)
-        return *endDate_;
-    return defaultValue;
-}
-const std::shared_ptr<::trantor::Date> &UserSubscriptions::getEndDate() const noexcept
-{
-    return endDate_;
-}
-void UserSubscriptions::setEndDate(const ::trantor::Date &pEndDate) noexcept
-{
-    endDate_ = std::make_shared<::trantor::Date>(pEndDate);
-    dirtyFlag_[7] = true;
-}
-
-const std::string &UserSubscriptions::getValueOfCurrentBillingCycle() const noexcept
-{
-    static const std::string defaultValue = std::string();
-    if(currentBillingCycle_)
-        return *currentBillingCycle_;
-    return defaultValue;
-}
-const std::shared_ptr<std::string> &UserSubscriptions::getCurrentBillingCycle() const noexcept
-{
-    return currentBillingCycle_;
-}
-void UserSubscriptions::setCurrentBillingCycle(const std::string &pCurrentBillingCycle) noexcept
-{
-    currentBillingCycle_ = std::make_shared<std::string>(pCurrentBillingCycle);
-    dirtyFlag_[8] = true;
-}
-void UserSubscriptions::setCurrentBillingCycle(std::string &&pCurrentBillingCycle) noexcept
-{
-    currentBillingCycle_ = std::make_shared<std::string>(std::move(pCurrentBillingCycle));
-    dirtyFlag_[8] = true;
-}
-void UserSubscriptions::setCurrentBillingCycleToNull() noexcept
-{
-    currentBillingCycle_.reset();
-    dirtyFlag_[8] = true;
+    newspaperEntitlements_.reset();
+    dirtyFlag_[5] = true;
 }
 
 const bool &UserSubscriptions::getValueOfIsActive() const noexcept
@@ -1431,51 +836,7 @@ const std::shared_ptr<bool> &UserSubscriptions::getIsActive() const noexcept
 void UserSubscriptions::setIsActive(const bool &pIsActive) noexcept
 {
     isActive_ = std::make_shared<bool>(pIsActive);
-    dirtyFlag_[9] = true;
-}
-
-const ::trantor::Date &UserSubscriptions::getValueOfNextRenewalDate() const noexcept
-{
-    static const ::trantor::Date defaultValue = ::trantor::Date();
-    if(nextRenewalDate_)
-        return *nextRenewalDate_;
-    return defaultValue;
-}
-const std::shared_ptr<::trantor::Date> &UserSubscriptions::getNextRenewalDate() const noexcept
-{
-    return nextRenewalDate_;
-}
-void UserSubscriptions::setNextRenewalDate(const ::trantor::Date &pNextRenewalDate) noexcept
-{
-    nextRenewalDate_ = std::make_shared<::trantor::Date>(pNextRenewalDate);
-    dirtyFlag_[10] = true;
-}
-void UserSubscriptions::setNextRenewalDateToNull() noexcept
-{
-    nextRenewalDate_.reset();
-    dirtyFlag_[10] = true;
-}
-
-const std::string &UserSubscriptions::getValueOfFee() const noexcept
-{
-    static const std::string defaultValue = std::string();
-    if(fee_)
-        return *fee_;
-    return defaultValue;
-}
-const std::shared_ptr<std::string> &UserSubscriptions::getFee() const noexcept
-{
-    return fee_;
-}
-void UserSubscriptions::setFee(const std::string &pFee) noexcept
-{
-    fee_ = std::make_shared<std::string>(pFee);
-    dirtyFlag_[11] = true;
-}
-void UserSubscriptions::setFee(std::string &&pFee) noexcept
-{
-    fee_ = std::make_shared<std::string>(std::move(pFee));
-    dirtyFlag_[11] = true;
+    dirtyFlag_[6] = true;
 }
 
 const ::trantor::Date &UserSubscriptions::getValueOfCreatedAt() const noexcept
@@ -1492,12 +853,12 @@ const std::shared_ptr<::trantor::Date> &UserSubscriptions::getCreatedAt() const 
 void UserSubscriptions::setCreatedAt(const ::trantor::Date &pCreatedAt) noexcept
 {
     createdAt_ = std::make_shared<::trantor::Date>(pCreatedAt);
-    dirtyFlag_[12] = true;
+    dirtyFlag_[7] = true;
 }
 void UserSubscriptions::setCreatedAtToNull() noexcept
 {
     createdAt_.reset();
-    dirtyFlag_[12] = true;
+    dirtyFlag_[7] = true;
 }
 
 const ::trantor::Date &UserSubscriptions::getValueOfUpdatedAt() const noexcept
@@ -1514,12 +875,12 @@ const std::shared_ptr<::trantor::Date> &UserSubscriptions::getUpdatedAt() const 
 void UserSubscriptions::setUpdatedAt(const ::trantor::Date &pUpdatedAt) noexcept
 {
     updatedAt_ = std::make_shared<::trantor::Date>(pUpdatedAt);
-    dirtyFlag_[13] = true;
+    dirtyFlag_[8] = true;
 }
 void UserSubscriptions::setUpdatedAtToNull() noexcept
 {
     updatedAt_.reset();
-    dirtyFlag_[13] = true;
+    dirtyFlag_[8] = true;
 }
 
 void UserSubscriptions::updateId(const uint64_t id)
@@ -1534,13 +895,8 @@ const std::vector<std::string> &UserSubscriptions::insertColumns() noexcept
         "user_id",
         "user_name",
         "email",
-        "current_subscription_plan_id",
-        "start_date",
-        "end_date",
-        "current_billing_cycle",
+        "newspaper_entitlements",
         "is_active",
-        "next_renewal_date",
-        "fee",
         "created_at",
         "updated_at"
     };
@@ -1606,9 +962,9 @@ void UserSubscriptions::outputArgs(drogon::orm::internal::SqlBinder &binder) con
     }
     if(dirtyFlag_[5])
     {
-        if(getCurrentSubscriptionPlanId())
+        if(getNewspaperEntitlements())
         {
-            binder << getValueOfCurrentSubscriptionPlanId();
+            binder << getValueOfNewspaperEntitlements();
         }
         else
         {
@@ -1616,39 +972,6 @@ void UserSubscriptions::outputArgs(drogon::orm::internal::SqlBinder &binder) con
         }
     }
     if(dirtyFlag_[6])
-    {
-        if(getStartDate())
-        {
-            binder << getValueOfStartDate();
-        }
-        else
-        {
-            binder << nullptr;
-        }
-    }
-    if(dirtyFlag_[7])
-    {
-        if(getEndDate())
-        {
-            binder << getValueOfEndDate();
-        }
-        else
-        {
-            binder << nullptr;
-        }
-    }
-    if(dirtyFlag_[8])
-    {
-        if(getCurrentBillingCycle())
-        {
-            binder << getValueOfCurrentBillingCycle();
-        }
-        else
-        {
-            binder << nullptr;
-        }
-    }
-    if(dirtyFlag_[9])
     {
         if(getIsActive())
         {
@@ -1659,29 +982,7 @@ void UserSubscriptions::outputArgs(drogon::orm::internal::SqlBinder &binder) con
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[10])
-    {
-        if(getNextRenewalDate())
-        {
-            binder << getValueOfNextRenewalDate();
-        }
-        else
-        {
-            binder << nullptr;
-        }
-    }
-    if(dirtyFlag_[11])
-    {
-        if(getFee())
-        {
-            binder << getValueOfFee();
-        }
-        else
-        {
-            binder << nullptr;
-        }
-    }
-    if(dirtyFlag_[12])
+    if(dirtyFlag_[7])
     {
         if(getCreatedAt())
         {
@@ -1692,7 +993,7 @@ void UserSubscriptions::outputArgs(drogon::orm::internal::SqlBinder &binder) con
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[13])
+    if(dirtyFlag_[8])
     {
         if(getUpdatedAt())
         {
@@ -1743,26 +1044,6 @@ const std::vector<std::string> UserSubscriptions::updateColumns() const
     if(dirtyFlag_[8])
     {
         ret.push_back(getColumnName(8));
-    }
-    if(dirtyFlag_[9])
-    {
-        ret.push_back(getColumnName(9));
-    }
-    if(dirtyFlag_[10])
-    {
-        ret.push_back(getColumnName(10));
-    }
-    if(dirtyFlag_[11])
-    {
-        ret.push_back(getColumnName(11));
-    }
-    if(dirtyFlag_[12])
-    {
-        ret.push_back(getColumnName(12));
-    }
-    if(dirtyFlag_[13])
-    {
-        ret.push_back(getColumnName(13));
     }
     return ret;
 }
@@ -1826,9 +1107,9 @@ void UserSubscriptions::updateArgs(drogon::orm::internal::SqlBinder &binder) con
     }
     if(dirtyFlag_[5])
     {
-        if(getCurrentSubscriptionPlanId())
+        if(getNewspaperEntitlements())
         {
-            binder << getValueOfCurrentSubscriptionPlanId();
+            binder << getValueOfNewspaperEntitlements();
         }
         else
         {
@@ -1836,39 +1117,6 @@ void UserSubscriptions::updateArgs(drogon::orm::internal::SqlBinder &binder) con
         }
     }
     if(dirtyFlag_[6])
-    {
-        if(getStartDate())
-        {
-            binder << getValueOfStartDate();
-        }
-        else
-        {
-            binder << nullptr;
-        }
-    }
-    if(dirtyFlag_[7])
-    {
-        if(getEndDate())
-        {
-            binder << getValueOfEndDate();
-        }
-        else
-        {
-            binder << nullptr;
-        }
-    }
-    if(dirtyFlag_[8])
-    {
-        if(getCurrentBillingCycle())
-        {
-            binder << getValueOfCurrentBillingCycle();
-        }
-        else
-        {
-            binder << nullptr;
-        }
-    }
-    if(dirtyFlag_[9])
     {
         if(getIsActive())
         {
@@ -1879,29 +1127,7 @@ void UserSubscriptions::updateArgs(drogon::orm::internal::SqlBinder &binder) con
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[10])
-    {
-        if(getNextRenewalDate())
-        {
-            binder << getValueOfNextRenewalDate();
-        }
-        else
-        {
-            binder << nullptr;
-        }
-    }
-    if(dirtyFlag_[11])
-    {
-        if(getFee())
-        {
-            binder << getValueOfFee();
-        }
-        else
-        {
-            binder << nullptr;
-        }
-    }
-    if(dirtyFlag_[12])
+    if(dirtyFlag_[7])
     {
         if(getCreatedAt())
         {
@@ -1912,7 +1138,7 @@ void UserSubscriptions::updateArgs(drogon::orm::internal::SqlBinder &binder) con
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[13])
+    if(dirtyFlag_[8])
     {
         if(getUpdatedAt())
         {
@@ -1967,37 +1193,13 @@ Json::Value UserSubscriptions::toJson() const
     {
         ret["email"]=Json::Value();
     }
-    if(getCurrentSubscriptionPlanId())
+    if(getNewspaperEntitlements())
     {
-        ret["current_subscription_plan_id"]=getValueOfCurrentSubscriptionPlanId();
+        ret["newspaper_entitlements"]=getValueOfNewspaperEntitlements();
     }
     else
     {
-        ret["current_subscription_plan_id"]=Json::Value();
-    }
-    if(getStartDate())
-    {
-        ret["start_date"]=getStartDate()->toDbStringLocal();
-    }
-    else
-    {
-        ret["start_date"]=Json::Value();
-    }
-    if(getEndDate())
-    {
-        ret["end_date"]=getEndDate()->toDbStringLocal();
-    }
-    else
-    {
-        ret["end_date"]=Json::Value();
-    }
-    if(getCurrentBillingCycle())
-    {
-        ret["current_billing_cycle"]=getValueOfCurrentBillingCycle();
-    }
-    else
-    {
-        ret["current_billing_cycle"]=Json::Value();
+        ret["newspaper_entitlements"]=Json::Value();
     }
     if(getIsActive())
     {
@@ -2006,22 +1208,6 @@ Json::Value UserSubscriptions::toJson() const
     else
     {
         ret["is_active"]=Json::Value();
-    }
-    if(getNextRenewalDate())
-    {
-        ret["next_renewal_date"]=getNextRenewalDate()->toDbStringLocal();
-    }
-    else
-    {
-        ret["next_renewal_date"]=Json::Value();
-    }
-    if(getFee())
-    {
-        ret["fee"]=getValueOfFee();
-    }
-    else
-    {
-        ret["fee"]=Json::Value();
     }
     if(getCreatedAt())
     {
@@ -2051,7 +1237,7 @@ Json::Value UserSubscriptions::toMasqueradedJson(
     const std::vector<std::string> &pMasqueradingVector) const
 {
     Json::Value ret;
-    if(pMasqueradingVector.size() == 14)
+    if(pMasqueradingVector.size() == 9)
     {
         if(!pMasqueradingVector[0].empty())
         {
@@ -2110,9 +1296,9 @@ Json::Value UserSubscriptions::toMasqueradedJson(
         }
         if(!pMasqueradingVector[5].empty())
         {
-            if(getCurrentSubscriptionPlanId())
+            if(getNewspaperEntitlements())
             {
-                ret[pMasqueradingVector[5]]=getValueOfCurrentSubscriptionPlanId();
+                ret[pMasqueradingVector[5]]=getValueOfNewspaperEntitlements();
             }
             else
             {
@@ -2121,9 +1307,9 @@ Json::Value UserSubscriptions::toMasqueradedJson(
         }
         if(!pMasqueradingVector[6].empty())
         {
-            if(getStartDate())
+            if(getIsActive())
             {
-                ret[pMasqueradingVector[6]]=getStartDate()->toDbStringLocal();
+                ret[pMasqueradingVector[6]]=getValueOfIsActive();
             }
             else
             {
@@ -2132,9 +1318,9 @@ Json::Value UserSubscriptions::toMasqueradedJson(
         }
         if(!pMasqueradingVector[7].empty())
         {
-            if(getEndDate())
+            if(getCreatedAt())
             {
-                ret[pMasqueradingVector[7]]=getEndDate()->toDbStringLocal();
+                ret[pMasqueradingVector[7]]=getCreatedAt()->toDbStringLocal();
             }
             else
             {
@@ -2143,68 +1329,13 @@ Json::Value UserSubscriptions::toMasqueradedJson(
         }
         if(!pMasqueradingVector[8].empty())
         {
-            if(getCurrentBillingCycle())
+            if(getUpdatedAt())
             {
-                ret[pMasqueradingVector[8]]=getValueOfCurrentBillingCycle();
+                ret[pMasqueradingVector[8]]=getUpdatedAt()->toDbStringLocal();
             }
             else
             {
                 ret[pMasqueradingVector[8]]=Json::Value();
-            }
-        }
-        if(!pMasqueradingVector[9].empty())
-        {
-            if(getIsActive())
-            {
-                ret[pMasqueradingVector[9]]=getValueOfIsActive();
-            }
-            else
-            {
-                ret[pMasqueradingVector[9]]=Json::Value();
-            }
-        }
-        if(!pMasqueradingVector[10].empty())
-        {
-            if(getNextRenewalDate())
-            {
-                ret[pMasqueradingVector[10]]=getNextRenewalDate()->toDbStringLocal();
-            }
-            else
-            {
-                ret[pMasqueradingVector[10]]=Json::Value();
-            }
-        }
-        if(!pMasqueradingVector[11].empty())
-        {
-            if(getFee())
-            {
-                ret[pMasqueradingVector[11]]=getValueOfFee();
-            }
-            else
-            {
-                ret[pMasqueradingVector[11]]=Json::Value();
-            }
-        }
-        if(!pMasqueradingVector[12].empty())
-        {
-            if(getCreatedAt())
-            {
-                ret[pMasqueradingVector[12]]=getCreatedAt()->toDbStringLocal();
-            }
-            else
-            {
-                ret[pMasqueradingVector[12]]=Json::Value();
-            }
-        }
-        if(!pMasqueradingVector[13].empty())
-        {
-            if(getUpdatedAt())
-            {
-                ret[pMasqueradingVector[13]]=getUpdatedAt()->toDbStringLocal();
-            }
-            else
-            {
-                ret[pMasqueradingVector[13]]=Json::Value();
             }
         }
         return ret;
@@ -2250,37 +1381,13 @@ Json::Value UserSubscriptions::toMasqueradedJson(
     {
         ret["email"]=Json::Value();
     }
-    if(getCurrentSubscriptionPlanId())
+    if(getNewspaperEntitlements())
     {
-        ret["current_subscription_plan_id"]=getValueOfCurrentSubscriptionPlanId();
+        ret["newspaper_entitlements"]=getValueOfNewspaperEntitlements();
     }
     else
     {
-        ret["current_subscription_plan_id"]=Json::Value();
-    }
-    if(getStartDate())
-    {
-        ret["start_date"]=getStartDate()->toDbStringLocal();
-    }
-    else
-    {
-        ret["start_date"]=Json::Value();
-    }
-    if(getEndDate())
-    {
-        ret["end_date"]=getEndDate()->toDbStringLocal();
-    }
-    else
-    {
-        ret["end_date"]=Json::Value();
-    }
-    if(getCurrentBillingCycle())
-    {
-        ret["current_billing_cycle"]=getValueOfCurrentBillingCycle();
-    }
-    else
-    {
-        ret["current_billing_cycle"]=Json::Value();
+        ret["newspaper_entitlements"]=Json::Value();
     }
     if(getIsActive())
     {
@@ -2289,22 +1396,6 @@ Json::Value UserSubscriptions::toMasqueradedJson(
     else
     {
         ret["is_active"]=Json::Value();
-    }
-    if(getNextRenewalDate())
-    {
-        ret["next_renewal_date"]=getNextRenewalDate()->toDbStringLocal();
-    }
-    else
-    {
-        ret["next_renewal_date"]=Json::Value();
-    }
-    if(getFee())
-    {
-        ret["fee"]=getValueOfFee();
-    }
-    else
-    {
-        ret["fee"]=Json::Value();
     }
     if(getCreatedAt())
     {
@@ -2362,69 +1453,24 @@ bool UserSubscriptions::validateJsonForCreation(const Json::Value &pJson, std::s
         if(!validJsonOfField(4, "email", pJson["email"], err, true))
             return false;
     }
-    if(pJson.isMember("current_subscription_plan_id"))
+    if(pJson.isMember("newspaper_entitlements"))
     {
-        if(!validJsonOfField(5, "current_subscription_plan_id", pJson["current_subscription_plan_id"], err, true))
-            return false;
-    }
-    else
-    {
-        err="The current_subscription_plan_id column cannot be null";
-        return false;
-    }
-    if(pJson.isMember("start_date"))
-    {
-        if(!validJsonOfField(6, "start_date", pJson["start_date"], err, true))
-            return false;
-    }
-    else
-    {
-        err="The start_date column cannot be null";
-        return false;
-    }
-    if(pJson.isMember("end_date"))
-    {
-        if(!validJsonOfField(7, "end_date", pJson["end_date"], err, true))
-            return false;
-    }
-    else
-    {
-        err="The end_date column cannot be null";
-        return false;
-    }
-    if(pJson.isMember("current_billing_cycle"))
-    {
-        if(!validJsonOfField(8, "current_billing_cycle", pJson["current_billing_cycle"], err, true))
+        if(!validJsonOfField(5, "newspaper_entitlements", pJson["newspaper_entitlements"], err, true))
             return false;
     }
     if(pJson.isMember("is_active"))
     {
-        if(!validJsonOfField(9, "is_active", pJson["is_active"], err, true))
+        if(!validJsonOfField(6, "is_active", pJson["is_active"], err, true))
             return false;
-    }
-    if(pJson.isMember("next_renewal_date"))
-    {
-        if(!validJsonOfField(10, "next_renewal_date", pJson["next_renewal_date"], err, true))
-            return false;
-    }
-    if(pJson.isMember("fee"))
-    {
-        if(!validJsonOfField(11, "fee", pJson["fee"], err, true))
-            return false;
-    }
-    else
-    {
-        err="The fee column cannot be null";
-        return false;
     }
     if(pJson.isMember("created_at"))
     {
-        if(!validJsonOfField(12, "created_at", pJson["created_at"], err, true))
+        if(!validJsonOfField(7, "created_at", pJson["created_at"], err, true))
             return false;
     }
     if(pJson.isMember("updated_at"))
     {
-        if(!validJsonOfField(13, "updated_at", pJson["updated_at"], err, true))
+        if(!validJsonOfField(8, "updated_at", pJson["updated_at"], err, true))
             return false;
     }
     return true;
@@ -2433,7 +1479,7 @@ bool UserSubscriptions::validateMasqueradedJsonForCreation(const Json::Value &pJ
                                                            const std::vector<std::string> &pMasqueradingVector,
                                                            std::string &err)
 {
-    if(pMasqueradingVector.size() != 14)
+    if(pMasqueradingVector.size() != 9)
     {
         err = "Bad masquerading vector";
         return false;
@@ -2496,11 +1542,6 @@ bool UserSubscriptions::validateMasqueradedJsonForCreation(const Json::Value &pJ
               if(!validJsonOfField(5, pMasqueradingVector[5], pJson[pMasqueradingVector[5]], err, true))
                   return false;
           }
-        else
-        {
-            err="The " + pMasqueradingVector[5] + " column cannot be null";
-            return false;
-        }
       }
       if(!pMasqueradingVector[6].empty())
       {
@@ -2509,11 +1550,6 @@ bool UserSubscriptions::validateMasqueradedJsonForCreation(const Json::Value &pJ
               if(!validJsonOfField(6, pMasqueradingVector[6], pJson[pMasqueradingVector[6]], err, true))
                   return false;
           }
-        else
-        {
-            err="The " + pMasqueradingVector[6] + " column cannot be null";
-            return false;
-        }
       }
       if(!pMasqueradingVector[7].empty())
       {
@@ -2522,62 +1558,12 @@ bool UserSubscriptions::validateMasqueradedJsonForCreation(const Json::Value &pJ
               if(!validJsonOfField(7, pMasqueradingVector[7], pJson[pMasqueradingVector[7]], err, true))
                   return false;
           }
-        else
-        {
-            err="The " + pMasqueradingVector[7] + " column cannot be null";
-            return false;
-        }
       }
       if(!pMasqueradingVector[8].empty())
       {
           if(pJson.isMember(pMasqueradingVector[8]))
           {
               if(!validJsonOfField(8, pMasqueradingVector[8], pJson[pMasqueradingVector[8]], err, true))
-                  return false;
-          }
-      }
-      if(!pMasqueradingVector[9].empty())
-      {
-          if(pJson.isMember(pMasqueradingVector[9]))
-          {
-              if(!validJsonOfField(9, pMasqueradingVector[9], pJson[pMasqueradingVector[9]], err, true))
-                  return false;
-          }
-      }
-      if(!pMasqueradingVector[10].empty())
-      {
-          if(pJson.isMember(pMasqueradingVector[10]))
-          {
-              if(!validJsonOfField(10, pMasqueradingVector[10], pJson[pMasqueradingVector[10]], err, true))
-                  return false;
-          }
-      }
-      if(!pMasqueradingVector[11].empty())
-      {
-          if(pJson.isMember(pMasqueradingVector[11]))
-          {
-              if(!validJsonOfField(11, pMasqueradingVector[11], pJson[pMasqueradingVector[11]], err, true))
-                  return false;
-          }
-        else
-        {
-            err="The " + pMasqueradingVector[11] + " column cannot be null";
-            return false;
-        }
-      }
-      if(!pMasqueradingVector[12].empty())
-      {
-          if(pJson.isMember(pMasqueradingVector[12]))
-          {
-              if(!validJsonOfField(12, pMasqueradingVector[12], pJson[pMasqueradingVector[12]], err, true))
-                  return false;
-          }
-      }
-      if(!pMasqueradingVector[13].empty())
-      {
-          if(pJson.isMember(pMasqueradingVector[13]))
-          {
-              if(!validJsonOfField(13, pMasqueradingVector[13], pJson[pMasqueradingVector[13]], err, true))
                   return false;
           }
       }
@@ -2621,49 +1607,24 @@ bool UserSubscriptions::validateJsonForUpdate(const Json::Value &pJson, std::str
         if(!validJsonOfField(4, "email", pJson["email"], err, false))
             return false;
     }
-    if(pJson.isMember("current_subscription_plan_id"))
+    if(pJson.isMember("newspaper_entitlements"))
     {
-        if(!validJsonOfField(5, "current_subscription_plan_id", pJson["current_subscription_plan_id"], err, false))
-            return false;
-    }
-    if(pJson.isMember("start_date"))
-    {
-        if(!validJsonOfField(6, "start_date", pJson["start_date"], err, false))
-            return false;
-    }
-    if(pJson.isMember("end_date"))
-    {
-        if(!validJsonOfField(7, "end_date", pJson["end_date"], err, false))
-            return false;
-    }
-    if(pJson.isMember("current_billing_cycle"))
-    {
-        if(!validJsonOfField(8, "current_billing_cycle", pJson["current_billing_cycle"], err, false))
+        if(!validJsonOfField(5, "newspaper_entitlements", pJson["newspaper_entitlements"], err, false))
             return false;
     }
     if(pJson.isMember("is_active"))
     {
-        if(!validJsonOfField(9, "is_active", pJson["is_active"], err, false))
-            return false;
-    }
-    if(pJson.isMember("next_renewal_date"))
-    {
-        if(!validJsonOfField(10, "next_renewal_date", pJson["next_renewal_date"], err, false))
-            return false;
-    }
-    if(pJson.isMember("fee"))
-    {
-        if(!validJsonOfField(11, "fee", pJson["fee"], err, false))
+        if(!validJsonOfField(6, "is_active", pJson["is_active"], err, false))
             return false;
     }
     if(pJson.isMember("created_at"))
     {
-        if(!validJsonOfField(12, "created_at", pJson["created_at"], err, false))
+        if(!validJsonOfField(7, "created_at", pJson["created_at"], err, false))
             return false;
     }
     if(pJson.isMember("updated_at"))
     {
-        if(!validJsonOfField(13, "updated_at", pJson["updated_at"], err, false))
+        if(!validJsonOfField(8, "updated_at", pJson["updated_at"], err, false))
             return false;
     }
     return true;
@@ -2672,7 +1633,7 @@ bool UserSubscriptions::validateMasqueradedJsonForUpdate(const Json::Value &pJso
                                                          const std::vector<std::string> &pMasqueradingVector,
                                                          std::string &err)
 {
-    if(pMasqueradingVector.size() != 14)
+    if(pMasqueradingVector.size() != 9)
     {
         err = "Bad masquerading vector";
         return false;
@@ -2726,31 +1687,6 @@ bool UserSubscriptions::validateMasqueradedJsonForUpdate(const Json::Value &pJso
       if(!pMasqueradingVector[8].empty() && pJson.isMember(pMasqueradingVector[8]))
       {
           if(!validJsonOfField(8, pMasqueradingVector[8], pJson[pMasqueradingVector[8]], err, false))
-              return false;
-      }
-      if(!pMasqueradingVector[9].empty() && pJson.isMember(pMasqueradingVector[9]))
-      {
-          if(!validJsonOfField(9, pMasqueradingVector[9], pJson[pMasqueradingVector[9]], err, false))
-              return false;
-      }
-      if(!pMasqueradingVector[10].empty() && pJson.isMember(pMasqueradingVector[10]))
-      {
-          if(!validJsonOfField(10, pMasqueradingVector[10], pJson[pMasqueradingVector[10]], err, false))
-              return false;
-      }
-      if(!pMasqueradingVector[11].empty() && pJson.isMember(pMasqueradingVector[11]))
-      {
-          if(!validJsonOfField(11, pMasqueradingVector[11], pJson[pMasqueradingVector[11]], err, false))
-              return false;
-      }
-      if(!pMasqueradingVector[12].empty() && pJson.isMember(pMasqueradingVector[12]))
-      {
-          if(!validJsonOfField(12, pMasqueradingVector[12], pJson[pMasqueradingVector[12]], err, false))
-              return false;
-      }
-      if(!pMasqueradingVector[13].empty() && pJson.isMember(pMasqueradingVector[13]))
-      {
-          if(!validJsonOfField(13, pMasqueradingVector[13], pJson[pMasqueradingVector[13]], err, false))
               return false;
       }
     }
@@ -2854,8 +1790,7 @@ bool UserSubscriptions::validJsonOfField(size_t index,
         case 5:
             if(pJson.isNull())
             {
-                err="The " + fieldName + " column cannot be null";
-                return false;
+                return true;
             }
             if(!pJson.isString())
             {
@@ -2869,7 +1804,7 @@ bool UserSubscriptions::validJsonOfField(size_t index,
                 err="The " + fieldName + " column cannot be null";
                 return false;
             }
-            if(!pJson.isString())
+            if(!pJson.isBool())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;
@@ -2878,8 +1813,7 @@ bool UserSubscriptions::validJsonOfField(size_t index,
         case 7:
             if(pJson.isNull())
             {
-                err="The " + fieldName + " column cannot be null";
-                return false;
+                return true;
             }
             if(!pJson.isString())
             {
@@ -2888,71 +1822,6 @@ bool UserSubscriptions::validJsonOfField(size_t index,
             }
             break;
         case 8:
-            if(pJson.isNull())
-            {
-                return true;
-            }
-            if(!pJson.isString())
-            {
-                err="Type error in the "+fieldName+" field";
-                return false;
-            }
-            if(pJson.isString() && std::strlen(pJson.asCString()) > 50)
-            {
-                err="String length exceeds limit for the " +
-                    fieldName +
-                    " field (the maximum value is 50)";
-                return false;
-            }
-
-            break;
-        case 9:
-            if(pJson.isNull())
-            {
-                err="The " + fieldName + " column cannot be null";
-                return false;
-            }
-            if(!pJson.isBool())
-            {
-                err="Type error in the "+fieldName+" field";
-                return false;
-            }
-            break;
-        case 10:
-            if(pJson.isNull())
-            {
-                return true;
-            }
-            if(!pJson.isString())
-            {
-                err="Type error in the "+fieldName+" field";
-                return false;
-            }
-            break;
-        case 11:
-            if(pJson.isNull())
-            {
-                err="The " + fieldName + " column cannot be null";
-                return false;
-            }
-            if(!pJson.isString())
-            {
-                err="Type error in the "+fieldName+" field";
-                return false;
-            }
-            break;
-        case 12:
-            if(pJson.isNull())
-            {
-                return true;
-            }
-            if(!pJson.isString())
-            {
-                err="Type error in the "+fieldName+" field";
-                return false;
-            }
-            break;
-        case 13:
             if(pJson.isNull())
             {
                 return true;

@@ -1,40 +1,49 @@
 #pragma once
 
-
 #ifndef SUBSCRIPTIONSERVICE_H
 #define SUBSCRIPTIONSERVICE_H
 
 #include "dto/BaseApiResponse.h"
 #include <drogon/drogon.h>
+#include <string>
+
+#include "dto/GuestOnetimeBuyDto.h"
+#include "dto/GuestSubscriptionDto.h"
 
 namespace gnp::services {
 
-    class SubscriptionService {
+class SubscriptionService {
 
-    public:
+public:
+  /**
+   * @brief Retrieve a paginated list of users with optional filtering.
+   * @param pageNo The page number (0-based).
+   * @param pageSize The number of users per page.
+   * @param query Optional search query to filter users.
+   * @param callback The callback function to handle the response.
+   */
 
-        /**
-         * @brief Retrieve a paginated list of users with optional filtering.
-         * @param pageNo The page number (0-based).
-         * @param pageSize The number of users per page.
-         * @param query Optional search query to filter users.
-         * @param callback The callback function to handle the response.
-         */
+  void getAllSubscriptions(
+      int pageNo, int pageSize, const std::string &query,
+      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
-        void getAllSubscriptions(
-           int pageNo,
-           int pageSize,
-           const std::string& query,
-           const std::function<void(const gnp::dto::BaseApiResponse&)>& callback
-       );
+  void manageGuestSubscription(
+      const dto::GuestSubscriptionDto &dto,
+      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
+  void manageGuestOneTimeBuy(
+      const dto::GuestOnetimeBuyDto &dto,
+      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
+  void completeGuestOneTimeBuy(
+      const std::string &reference,
+      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
+  void validateNewsPaperEntitlement(
+      const std::string &newsPaperId, const std::string &authToken,
+      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+};
 
-    };
+} // namespace gnp::services
 
-
-}
-
-
-#endif //SUBSCRIPTIONSERVICE_H
+#endif // SUBSCRIPTIONSERVICE_H

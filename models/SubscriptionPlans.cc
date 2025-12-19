@@ -20,6 +20,7 @@ const std::string SubscriptionPlans::Cols::_description = "\"description\"";
 const std::string SubscriptionPlans::Cols::_pricing = "\"pricing\"";
 const std::string SubscriptionPlans::Cols::_created_at = "\"created_at\"";
 const std::string SubscriptionPlans::Cols::_updated_at = "\"updated_at\"";
+const std::string SubscriptionPlans::Cols::_target_publications = "\"target_publications\"";
 const std::string SubscriptionPlans::primaryKeyName = "id";
 const bool SubscriptionPlans::hasPrimaryKey = true;
 const std::string SubscriptionPlans::tableName = "\"subscription_plans\"";
@@ -31,7 +32,8 @@ const std::vector<typename SubscriptionPlans::MetaData> SubscriptionPlans::metaD
 {"description","std::string","text",0,0,0,0},
 {"pricing","std::string","jsonb",0,0,0,1},
 {"created_at","::trantor::Date","timestamp without time zone",0,0,0,1},
-{"updated_at","::trantor::Date","timestamp without time zone",0,0,0,0}
+{"updated_at","::trantor::Date","timestamp without time zone",0,0,0,0},
+{"target_publications","std::string","jsonb",0,0,0,0}
 };
 const std::string &SubscriptionPlans::getColumnName(size_t index) noexcept(false)
 {
@@ -106,11 +108,15 @@ SubscriptionPlans::SubscriptionPlans(const Row &r, const ssize_t indexOffset) no
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
+        if(!r["target_publications"].isNull())
+        {
+            targetPublications_=std::make_shared<std::string>(r["target_publications"].as<std::string>());
+        }
     }
     else
     {
         size_t offset = (size_t)indexOffset;
-        if(offset + 7 > r.size())
+        if(offset + 8 > r.size())
         {
             LOG_FATAL << "Invalid SQL result for this model";
             return;
@@ -187,13 +193,18 @@ SubscriptionPlans::SubscriptionPlans(const Row &r, const ssize_t indexOffset) no
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
+        index = offset + 7;
+        if(!r[index].isNull())
+        {
+            targetPublications_=std::make_shared<std::string>(r[index].as<std::string>());
+        }
     }
 
 }
 
 SubscriptionPlans::SubscriptionPlans(const Json::Value &pJson, const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 7)
+    if(pMasqueradingVector.size() != 8)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -288,6 +299,14 @@ SubscriptionPlans::SubscriptionPlans(const Json::Value &pJson, const std::vector
                 }
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
+        }
+    }
+    if(!pMasqueradingVector[7].empty() && pJson.isMember(pMasqueradingVector[7]))
+    {
+        dirtyFlag_[7] = true;
+        if(!pJson[pMasqueradingVector[7]].isNull())
+        {
+            targetPublications_=std::make_shared<std::string>(pJson[pMasqueradingVector[7]].asString());
         }
     }
 }
@@ -386,12 +405,20 @@ SubscriptionPlans::SubscriptionPlans(const Json::Value &pJson) noexcept(false)
             }
         }
     }
+    if(pJson.isMember("target_publications"))
+    {
+        dirtyFlag_[7]=true;
+        if(!pJson["target_publications"].isNull())
+        {
+            targetPublications_=std::make_shared<std::string>(pJson["target_publications"].asString());
+        }
+    }
 }
 
 void SubscriptionPlans::updateByMasqueradedJson(const Json::Value &pJson,
                                             const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 7)
+    if(pMasqueradingVector.size() != 8)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -487,6 +514,14 @@ void SubscriptionPlans::updateByMasqueradedJson(const Json::Value &pJson,
             }
         }
     }
+    if(!pMasqueradingVector[7].empty() && pJson.isMember(pMasqueradingVector[7]))
+    {
+        dirtyFlag_[7] = true;
+        if(!pJson[pMasqueradingVector[7]].isNull())
+        {
+            targetPublications_=std::make_shared<std::string>(pJson[pMasqueradingVector[7]].asString());
+        }
+    }
 }
 
 void SubscriptionPlans::updateByJson(const Json::Value &pJson) noexcept(false)
@@ -580,6 +615,14 @@ void SubscriptionPlans::updateByJson(const Json::Value &pJson) noexcept(false)
                 }
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
+        }
+    }
+    if(pJson.isMember("target_publications"))
+    {
+        dirtyFlag_[7] = true;
+        if(!pJson["target_publications"].isNull())
+        {
+            targetPublications_=std::make_shared<std::string>(pJson["target_publications"].asString());
         }
     }
 }
@@ -743,6 +786,33 @@ void SubscriptionPlans::setUpdatedAtToNull() noexcept
     dirtyFlag_[6] = true;
 }
 
+const std::string &SubscriptionPlans::getValueOfTargetPublications() const noexcept
+{
+    static const std::string defaultValue = std::string();
+    if(targetPublications_)
+        return *targetPublications_;
+    return defaultValue;
+}
+const std::shared_ptr<std::string> &SubscriptionPlans::getTargetPublications() const noexcept
+{
+    return targetPublications_;
+}
+void SubscriptionPlans::setTargetPublications(const std::string &pTargetPublications) noexcept
+{
+    targetPublications_ = std::make_shared<std::string>(pTargetPublications);
+    dirtyFlag_[7] = true;
+}
+void SubscriptionPlans::setTargetPublications(std::string &&pTargetPublications) noexcept
+{
+    targetPublications_ = std::make_shared<std::string>(std::move(pTargetPublications));
+    dirtyFlag_[7] = true;
+}
+void SubscriptionPlans::setTargetPublicationsToNull() noexcept
+{
+    targetPublications_.reset();
+    dirtyFlag_[7] = true;
+}
+
 void SubscriptionPlans::updateId(const uint64_t id)
 {
 }
@@ -756,7 +826,8 @@ const std::vector<std::string> &SubscriptionPlans::insertColumns() noexcept
         "description",
         "pricing",
         "created_at",
-        "updated_at"
+        "updated_at",
+        "target_publications"
     };
     return inCols;
 }
@@ -840,6 +911,17 @@ void SubscriptionPlans::outputArgs(drogon::orm::internal::SqlBinder &binder) con
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[7])
+    {
+        if(getTargetPublications())
+        {
+            binder << getValueOfTargetPublications();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 
 const std::vector<std::string> SubscriptionPlans::updateColumns() const
@@ -872,6 +954,10 @@ const std::vector<std::string> SubscriptionPlans::updateColumns() const
     if(dirtyFlag_[6])
     {
         ret.push_back(getColumnName(6));
+    }
+    if(dirtyFlag_[7])
+    {
+        ret.push_back(getColumnName(7));
     }
     return ret;
 }
@@ -955,6 +1041,17 @@ void SubscriptionPlans::updateArgs(drogon::orm::internal::SqlBinder &binder) con
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[7])
+    {
+        if(getTargetPublications())
+        {
+            binder << getValueOfTargetPublications();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 Json::Value SubscriptionPlans::toJson() const
 {
@@ -1015,6 +1112,14 @@ Json::Value SubscriptionPlans::toJson() const
     {
         ret["updated_at"]=Json::Value();
     }
+    if(getTargetPublications())
+    {
+        ret["target_publications"]=getValueOfTargetPublications();
+    }
+    else
+    {
+        ret["target_publications"]=Json::Value();
+    }
     return ret;
 }
 
@@ -1027,7 +1132,7 @@ Json::Value SubscriptionPlans::toMasqueradedJson(
     const std::vector<std::string> &pMasqueradingVector) const
 {
     Json::Value ret;
-    if(pMasqueradingVector.size() == 7)
+    if(pMasqueradingVector.size() == 8)
     {
         if(!pMasqueradingVector[0].empty())
         {
@@ -1106,6 +1211,17 @@ Json::Value SubscriptionPlans::toMasqueradedJson(
                 ret[pMasqueradingVector[6]]=Json::Value();
             }
         }
+        if(!pMasqueradingVector[7].empty())
+        {
+            if(getTargetPublications())
+            {
+                ret[pMasqueradingVector[7]]=getValueOfTargetPublications();
+            }
+            else
+            {
+                ret[pMasqueradingVector[7]]=Json::Value();
+            }
+        }
         return ret;
     }
     LOG_ERROR << "Masquerade failed";
@@ -1164,6 +1280,14 @@ Json::Value SubscriptionPlans::toMasqueradedJson(
     else
     {
         ret["updated_at"]=Json::Value();
+    }
+    if(getTargetPublications())
+    {
+        ret["target_publications"]=getValueOfTargetPublications();
+    }
+    else
+    {
+        ret["target_publications"]=Json::Value();
     }
     return ret;
 }
@@ -1225,13 +1349,18 @@ bool SubscriptionPlans::validateJsonForCreation(const Json::Value &pJson, std::s
         if(!validJsonOfField(6, "updated_at", pJson["updated_at"], err, true))
             return false;
     }
+    if(pJson.isMember("target_publications"))
+    {
+        if(!validJsonOfField(7, "target_publications", pJson["target_publications"], err, true))
+            return false;
+    }
     return true;
 }
 bool SubscriptionPlans::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                                                            const std::vector<std::string> &pMasqueradingVector,
                                                            std::string &err)
 {
-    if(pMasqueradingVector.size() != 7)
+    if(pMasqueradingVector.size() != 8)
     {
         err = "Bad masquerading vector";
         return false;
@@ -1313,6 +1442,14 @@ bool SubscriptionPlans::validateMasqueradedJsonForCreation(const Json::Value &pJ
                   return false;
           }
       }
+      if(!pMasqueradingVector[7].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[7]))
+          {
+              if(!validJsonOfField(7, pMasqueradingVector[7], pJson[pMasqueradingVector[7]], err, true))
+                  return false;
+          }
+      }
     }
     catch(const Json::LogicError &e)
     {
@@ -1363,13 +1500,18 @@ bool SubscriptionPlans::validateJsonForUpdate(const Json::Value &pJson, std::str
         if(!validJsonOfField(6, "updated_at", pJson["updated_at"], err, false))
             return false;
     }
+    if(pJson.isMember("target_publications"))
+    {
+        if(!validJsonOfField(7, "target_publications", pJson["target_publications"], err, false))
+            return false;
+    }
     return true;
 }
 bool SubscriptionPlans::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
                                                          const std::vector<std::string> &pMasqueradingVector,
                                                          std::string &err)
 {
-    if(pMasqueradingVector.size() != 7)
+    if(pMasqueradingVector.size() != 8)
     {
         err = "Bad masquerading vector";
         return false;
@@ -1413,6 +1555,11 @@ bool SubscriptionPlans::validateMasqueradedJsonForUpdate(const Json::Value &pJso
       if(!pMasqueradingVector[6].empty() && pJson.isMember(pMasqueradingVector[6]))
       {
           if(!validJsonOfField(6, pMasqueradingVector[6], pJson[pMasqueradingVector[6]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[7].empty() && pJson.isMember(pMasqueradingVector[7]))
+      {
+          if(!validJsonOfField(7, pMasqueradingVector[7], pJson[pMasqueradingVector[7]], err, false))
               return false;
       }
     }
@@ -1519,6 +1666,17 @@ bool SubscriptionPlans::validJsonOfField(size_t index,
             }
             break;
         case 6:
+            if(pJson.isNull())
+            {
+                return true;
+            }
+            if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 7:
             if(pJson.isNull())
             {
                 return true;

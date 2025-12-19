@@ -14,8 +14,9 @@ class NewsPapersController : public drogon::HttpController<NewsPapersController>
   public:
 
   METHOD_LIST_BEGIN
-      ADD_METHOD_TO(NewsPapersController::getAll, PREFIX + "/get-all", Get);
-      ADD_METHOD_TO(NewsPapersController::getPaperDetails, PREFIX + "/get-paper-details", Get);
+      ADD_METHOD_TO(NewsPapersController::getAll, PREFIX + "/get-all", Get, Options);
+      ADD_METHOD_TO(NewsPapersController::getReductedDetails, PREFIX + "/get-reducted-details", Get, Options);
+      ADD_METHOD_TO(NewsPapersController::getFullDetails, PREFIX + "/get-full-details", Get);
       ADD_METHOD_TO(NewsPapersController::publish, PREFIX + "/publish", Get);
       ADD_METHOD_TO(NewsPapersController::unPublish, PREFIX + "/unpublish", Get);
       ADD_METHOD_TO(NewsPapersController::Ingest, PREFIX + "/ingest", Post);
@@ -26,7 +27,8 @@ class NewsPapersController : public drogon::HttpController<NewsPapersController>
 
     //handler methods
       void getAll(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
-      void getPaperDetails(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+      void getReductedDetails(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+      void getFullDetails(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
       void publish(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
       void unPublish(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
       void Ingest(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);

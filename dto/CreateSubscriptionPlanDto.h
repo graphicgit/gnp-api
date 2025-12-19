@@ -21,12 +21,14 @@ namespace gnp::dto {
         [[nodiscard]] const std::string& getPlanType() const { return plan_type_; }
         [[nodiscard]] const std::string& getDescription() const { return description_; }
         [[nodiscard]] const std::string&  getPricing() const { return pricing_; }
+        [[nodiscard]] const std::string&  getTargetPublications() const { return target_publications_; }
 
         // Setters
         void setName(const std::string& name) { name_ = name; }
         void setPlanType(const std::string& plan_type) { plan_type_ = plan_type; }
         void setDescription(const std::string& description) { description_ = description; }
         void setPricing(const std::string& pricing) { pricing_ = pricing; }
+        void setTargetPublications(const std::string& target_publications) { target_publications_ = target_publications; }
 
     private:
 
@@ -34,6 +36,7 @@ namespace gnp::dto {
         std::string plan_type_;
         std::string description_;
         std::string pricing_;
+        std::string target_publications_;
     };
 
     inline void CreateSubscriptionPlanDto::fromJson(const Json::Value& json) {
@@ -58,6 +61,15 @@ namespace gnp::dto {
             pricing_ = Json::writeString(builder, json["pricing"]);
         } else {
             pricing_ = "[]";  // Default empty array
+        }
+
+        if (json.isMember("targetPublications") && json["targetPublications"].isArray()) {
+            Json::StreamWriterBuilder builder;
+            builder["commentStyle"] = "None";
+            builder["indentation"] = "";  // Compact JSON
+            target_publications_ = Json::writeString(builder, json["targetPublications"]);
+        } else {
+            target_publications_ = "[]";  // Default empty array
         }
 
     }

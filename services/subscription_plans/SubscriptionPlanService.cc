@@ -33,7 +33,6 @@ namespace gnp::services {
                 Criteria(SubscriptionPlans::Cols::_name, CompareOperator::Like, likeQuery) ||
                 Criteria(SubscriptionPlans::Cols::_description, CompareOperator::Like, likeQuery);
 
-
         }
 
         // 2. Asynchronously get the total count matching the criteria
@@ -134,6 +133,7 @@ namespace gnp::services {
         newSubscriptionPlan.setDescription(dto.getDescription());
         newSubscriptionPlan.setPricing(dto.getPricing());
         newSubscriptionPlan.setPlanType(dto.getPlanType());
+        newSubscriptionPlan.setTargetPublications(dto.getTargetPublications());
         newSubscriptionPlan.setCreatedAt(trantor::Date::now());
 
 
@@ -157,7 +157,6 @@ namespace gnp::services {
         });
 
     }
-
 
 
     void SubscriptionPlanService::update(
@@ -201,6 +200,7 @@ namespace gnp::services {
             }
         );
     }
+
 
     void SubscriptionPlanService::deletePlan(
             const std::string& publicationId,

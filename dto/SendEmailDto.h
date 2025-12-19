@@ -18,13 +18,6 @@ namespace gnp::dto {
         [[nodiscard]] const std::string& getTo() const { return to_; }
         [[nodiscard]] const std::string& getSubject() const { return subject_; }
         [[nodiscard]] const std::string& getBody() const { return body_; }
-        [[nodiscard]] const std::string& getHost() const { return host_; }
-        [[nodiscard]] int getPort() const { return port_; }
-        [[nodiscard]] bool getEnableSsl() const { return enableSsl_; }
-        [[nodiscard]] const std::string& getUsername() const { return userName_; }
-        [[nodiscard]] const std::string& getPassword() const { return password_; }
-        [[nodiscard]] const std::string& getSenderName() const { return senderName_; }
-        [[nodiscard]] bool getIsBodyHtml() const { return isBodyHtml_; }
 
         // Setters
         void setTo(const std::string& to) { to_ = to; }
@@ -36,13 +29,6 @@ namespace gnp::dto {
         std::string to_;
         std::string subject_;
         std::string body_;
-        std::string host_;
-        int port_;
-        bool enableSsl_;
-        std::string userName_;
-        std::string password_;
-        std::string senderName_;
-        bool isBodyHtml_;
 
     };
 
