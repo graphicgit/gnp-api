@@ -313,3 +313,93 @@ void AdminController::getAllPayments(
     });
 
 }
+
+void AdminController::getAllIngestionJobs(
+    const HttpRequestPtr &req,
+    std::function<void(const HttpResponsePtr &)> &&callback) {
+
+
+  int pageSize = 10; // Default page size
+  int pageNo = 1;    //  Default page number
+
+  if (!req->getParameter("pageSize").empty()) {
+    try {
+      pageSize = std::stoi(req->getParameter("pageSize"));
+      pageSize = std::max(1, std::min(100, pageSize)); // Limit between 1-100
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  if (!req->getParameter("pageNo").empty()) {
+    try {
+      pageNo = std::stoi(req->getParameter("pageNo"));
+      pageNo = std::max(1, pageNo); // Ensure page number is at least 1
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  std::string query = req->getParameter("query");
+  if (query.empty()) {
+    query = "";
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto& ingestionJobService = plugin->getIngestionJobService();
+
+  ingestionJobService.getAll(pageNo, pageSize, query, [callback](const gnp::dto::BaseApiResponse& result) {
+      auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+      callback(resp);
+  });
+
+}
+
+void AdminController::createIngestionJob(
+    const HttpRequestPtr &req,
+    std::function<void(const HttpResponsePtr &)> &&callback) {
+
+    auto jsonPtr = req->getJsonObject();
+    if (!jsonPtr) {
+      auto resp = HttpResponse::newHttpResponse();
+      resp->setStatusCode(k400BadRequest);
+      resp->setBody("Invalid JSON format");
+      callback(resp);
+      return;
+    }
+
+    gnp::dto::IngestJobDto dto;
+    dto.fromJson(*jsonPtr);
+
+    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto &ingestionJobService = plugin->getIngestionJobService();
+
+    ingestionJobService.createJob(dto, [callback](const gnp::dto::BaseApiResponse &apiResp) {
+      auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+      callback(resp);
+    });
+
+}
+
+
+void AdminController::deleteIngestionJob(const HttpRequestPtr &req,
+    std::function<void(const HttpResponsePtr &)> &&callback) {
+
+    auto jobId = req->getParameter("jobId");
+
+    if (jobId.empty()) {
+      auto resp = HttpResponse::newHttpResponse();
+      resp->setStatusCode(k400BadRequest);
+      resp->setBody("Missing required parameter: id");
+      callback(resp);
+      return;
+    }
+
+    gnp::services::IngestionJobService service;
+
+    service.deleteJob(jobId, [callback](const gnp::dto::BaseApiResponse &apiResp) {
+          auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+          callback(resp);
+        });
+}
+

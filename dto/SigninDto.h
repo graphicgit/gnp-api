@@ -42,4 +42,5 @@ namespace gnp::dto {
     }
 
 }
+
 #endif //SIGNINDTO_H

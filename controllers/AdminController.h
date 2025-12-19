@@ -54,6 +54,11 @@ class AdminController : public drogon::HttpController<AdminController>
   //payments
   ADD_METHOD_TO(AdminController::getAllPayments, PREFIX + "/get-all-payments",Get, Options);
 
+  //ingestion jobs
+  ADD_METHOD_TO(AdminController::getAllIngestionJobs, PREFIX + "/get-all-ingestion-jobs",Get, Options);
+  ADD_METHOD_TO(AdminController::createIngestionJob, PREFIX + "/create-ingestion-job",Post, Options);
+  ADD_METHOD_TO(AdminController::deleteIngestionJob, PREFIX + "/delete-ingestion-job",Get, Options);
+
 
   METHOD_LIST_END
 
@@ -90,7 +95,7 @@ class AdminController : public drogon::HttpController<AdminController>
   void getUserSubscriptionDetails(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   void renewUserSubscription(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
 
-  // campaigns
+  // campaigns ...
   void getAllCampaigns(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   void createCampaign(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   void publishCampaign(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
@@ -98,5 +103,11 @@ class AdminController : public drogon::HttpController<AdminController>
 
   //payments
   void getAllPayments(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+
+  //ingestion Jobs
+  void getAllIngestionJobs(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+  void createIngestionJob(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+  void deleteIngestionJob(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+
 
 };

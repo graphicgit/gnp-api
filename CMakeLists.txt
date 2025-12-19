@@ -57,6 +57,9 @@ add_executable(${PROJECT_NAME} main.cc
         dto/CreatePaymentDto.h
         services/campaigns/CampaignService.cc
         services/payments/PaymentService.cc
+        services/ingestion_jobs/IngestionJobService.h
+        dto/IngestJobDto.h
+        services/ingestion_jobs/IngestionJobService.cc
 )
 
 # ##############################################################################
