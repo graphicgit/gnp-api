@@ -14,7 +14,7 @@ using drogon_model::Gnp::Newspapers;
 
 namespace gnp::services {
 
-
+    //reduced information
     void NewspaperService::getAll(
         int pageNo,
         int pageSize,
@@ -36,8 +36,7 @@ namespace gnp::services {
             std::string likeQuery = "%" + query + "%";
             searchCriteria =
                 Criteria(Newspapers::Cols::_title, CompareOperator::Like, likeQuery) ||
-                Criteria(Newspapers::Cols::_full_description, CompareOperator::Like, likeQuery) ||
-                Criteria(Newspapers::Cols::_short_description, CompareOperator::Like, likeQuery);
+                Criteria(Newspapers::Cols::_full_description, CompareOperator::Like, likeQuery);
         }
 
 
@@ -78,11 +77,16 @@ namespace gnp::services {
                     [=](const std::vector<Newspapers>& publications) {
                         // 4. Build the final response inside the callback
                         dto::BaseApiResponse response;
-                        response.success = true;
-                        response.result["totalCount"] = (Json::UInt64)totalCount;
-                        response.result["pageNo"] = pageNo;
-                        response.result["pageSize"] = pageSize;
-                        response.result["totalPages"] = (int)((totalCount + pageSize - 1) / pageSize);
+
+                        auto totalPages = (totalCount + pageSize - 1) / pageSize;
+
+                      response.success = true;
+                      response.result["totalCount"] = (Json::UInt64)totalCount;
+                      response.result["pageNo"] = pageNo;
+                      response.result["pageSize"] = pageSize;
+                      response.result["lowerBound"] = pageSize * (pageNo - 1) + 1;
+                      response.result["upperBound"] = Json::Value((int)totalPages == pageNo ? (Json::UInt64)totalCount : (Json::UInt64)(pageNo * pageSize));
+                      response.result["totalPages"] =  (int)totalPages;
 
                         Json::Value data = Json::arrayValue;
                         for (const auto& newspaper : publications)
@@ -312,8 +316,7 @@ namespace gnp::services {
             std::string likeQuery = "%" + query + "%";
             searchCriteria =
                 Criteria(Newspapers::Cols::_title, CompareOperator::Like, likeQuery) ||
-                Criteria(Newspapers::Cols::_full_description, CompareOperator::Like, likeQuery) ||
-                Criteria(Newspapers::Cols::_short_description, CompareOperator::Like, likeQuery);
+                Criteria(Newspapers::Cols::_full_description, CompareOperator::Like, likeQuery);
         }
         else
         {
@@ -375,16 +378,15 @@ namespace gnp::services {
                             camelCaseRole["slug"] = roleJson["slug"];
                             camelCaseRole["price"] = roleJson["price"];
                             camelCaseRole["editionNumber"] = roleJson["edition_number"];
-                            camelCaseRole["shortDescription"] = roleJson["short_description"];
-                            camelCaseRole["description"] = roleJson["description"];
-                            camelCaseRole["thumbnailImage"] = roleJson["thumbnail_image"];
-                            camelCaseRole["coverImage"] = roleJson["cover_image"];
-                            camelCaseRole["fileType"] = roleJson["file_type"];
-                            camelCaseRole["previewUrl"] = roleJson["preview_url"];
-                            camelCaseRole["documentUrl"] = roleJson["document_url"];
+                            camelCaseRole["views"] = roleJson["views"];
+                            camelCaseRole["sales"] = roleJson["sales"];
+                            camelCaseRole["fullDescription"] = roleJson["full_description"];
+                            camelCaseRole["thumbnailId"] = roleJson["thumbnail_id"];
+                            camelCaseRole["documentId"] = roleJson["document_id"];
                             camelCaseRole["isPublished"] = roleJson["is_published"];
+                            camelCaseRole["publicationId"] = roleJson["publication_id"];
+                            camelCaseRole["publicationName"] = roleJson["publication_name"];
                             camelCaseRole["publishedDate"] = roleJson["published_date"];
-
                             camelCaseRole["createdAt"] = roleJson["created_at"];
                             camelCaseRole["updatedAt"] = roleJson["updated_at"];
 
@@ -416,15 +418,9 @@ namespace gnp::services {
         );
     }
 
-    void NewspaperService::ingest(const dto::IngestNewsPaperDto& dto,
-           const std::function<void(const dto::BaseApiResponse&)>& callback) {
 
 
-    }
-
-
-    void NewspaperService::partialIngest(const dto::IngestNewsPaperDto& dto,
-           const std::function<void(const dto::BaseApiResponse&)>& callback)
+    void NewspaperService::ingest(const dto::IngestNewsPaperDto& dto, const std::function<void(const dto::BaseApiResponse&)>& callback)
     {
 
         auto dbClient = drogon::app().getDbClient();
@@ -438,28 +434,26 @@ namespace gnp::services {
         newspaper.setSlug(dto.getSlug());
         newspaper.setPrice(std::to_string(dto.getPrice()));
         newspaper.setIsFree(dto.isFree());
-        newspaper.setCategoryId(dto.getCategoryId());
-        newspaper.setCategoryName(dto.getCategoryName());
         newspaper.setPublicationId(dto.getPublicationId());
         newspaper.setPublicationName(dto.getPublicationName());
         newspaper.setPublishedDateToNull();
 
         // Optional fields
-        newspaper.setCopyrightOwner(dto.getCopyrightOwner());
+        newspaper.setCopyrightOwner("Graphic Communications Group");
         newspaper.setEditionNumber(dto.getEditionNumber());
         newspaper.setIsPopular(dto.getIsPopular());
-        newspaper.setShortDescription(dto.getShortDescription());
         newspaper.setFullDescription(dto.getFullDescription());
         newspaper.setThumbnailId(dto.getThumbnailId());
-        newspaper.setFileType(dto.getFileType());
-        newspaper.setStorageType(dto.getStorageType());
+        newspaper.setFileType("pdf");
+        newspaper.setStorageService(dto.getStorageService());
         newspaper.setDocumentId(dto.getDocumentId());
         newspaper.setIsPublished(false);
         newspaper.setCreatedAt(trantor::Date::now());
         newspaper.setFeaturedStories(dto.getFeaturedStories());
 
         mp.insert(newspaper, [callback](const drogon_model::Gnp::Newspapers& newspaper) {
-            // 5. Prepare success response
+
+
             dto::BaseApiResponse successResponse;
             successResponse.success = true;
             successResponse.message = "Newspaper created successfully";
@@ -479,6 +473,7 @@ namespace gnp::services {
 
 
     }
+
 
     void NewspaperService::publish(
         const std::string& id,
@@ -658,9 +653,6 @@ namespace gnp::services {
 
 
     }
-
-
-
 
 
 

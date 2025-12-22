@@ -13,12 +13,12 @@ class PublicationsController : public HttpController<PublicationsController>
 {
   public:
     METHOD_LIST_BEGIN
-        ADD_METHOD_TO(PublicationsController::getPublications, PREFIX + "/get-all", Get);
-        ADD_METHOD_TO(PublicationsController::activate, PREFIX + "/activate", Get);
-        ADD_METHOD_TO(PublicationsController::deactivate, PREFIX + "/deactivate", Get);
-        ADD_METHOD_TO(PublicationsController::createPublication, PREFIX + "/create", Post);
-        ADD_METHOD_TO(PublicationsController::updatePublication, PREFIX + "/update", Post);
-        ADD_METHOD_TO(PublicationsController::deletePublication, PREFIX + "/delete", Delete);
+        ADD_METHOD_TO(PublicationsController::getPublications, PREFIX + "/get-all", Get, Options);
+        ADD_METHOD_TO(PublicationsController::activate, PREFIX + "/activate", Get, Options);
+        ADD_METHOD_TO(PublicationsController::deactivate, PREFIX + "/deactivate", Get, Options);
+        ADD_METHOD_TO(PublicationsController::createPublication, PREFIX + "/create", Post, Options);
+        ADD_METHOD_TO(PublicationsController::updatePublication, PREFIX + "/update", Post, Options);
+        ADD_METHOD_TO(PublicationsController::deletePublication, PREFIX + "/delete", Delete, Options);
     METHOD_LIST_END
 
     //handler methods

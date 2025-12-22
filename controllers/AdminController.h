@@ -14,12 +14,13 @@ class AdminController : public drogon::HttpController<AdminController>
   public:
 
   METHOD_LIST_BEGIN
-      ADD_METHOD_TO(AdminController::getAllNewsPapers, PREFIX + "/get-all-newspapers", Get);
-      ADD_METHOD_TO(AdminController::getNewsPaperFullDetails, PREFIX + "/get-full-details", Get);
-      ADD_METHOD_TO(AdminController::publishNewsPaper, PREFIX + "/publish-newspaper", Get);
-      ADD_METHOD_TO(AdminController::unPublishNewsPaper, PREFIX + "/unpublish-newspaper", Get);
-      ADD_METHOD_TO(AdminController::IngestNewsPaper, PREFIX + "/ingest-newspaper", Post);
-      ADD_METHOD_TO(AdminController::PartialIngestionNewsPaper, PREFIX + "/partial-ingest-newspaper", Post);
+      //newspaper
+      ADD_METHOD_TO(AdminController::getAllNewsPapers, PREFIX + "/get-all-newspapers", Get, Options);
+      ADD_METHOD_TO(AdminController::getNewsPaperFullDetails, PREFIX + "/get-full-details", Get, Options);
+      ADD_METHOD_TO(AdminController::publishNewsPaper, PREFIX + "/publish-newspaper", Get, Options);
+      ADD_METHOD_TO(AdminController::unPublishNewsPaper, PREFIX + "/unpublish-newspaper", Get, Options);
+      ADD_METHOD_TO(AdminController::IngestNewsPaper, PREFIX + "/ingest-newspaper", Post, Options);
+
       ADD_METHOD_TO(AdminController::updateNewsPaper, PREFIX + "/update-newspaper", Post);
       ADD_METHOD_TO(AdminController::deleteNewsPaper, PREFIX + "/delete-newspaper", Delete);
     //users
@@ -69,7 +70,6 @@ class AdminController : public drogon::HttpController<AdminController>
   void publishNewsPaper(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   void unPublishNewsPaper(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   void IngestNewsPaper(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
-  void PartialIngestionNewsPaper(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   void updateNewsPaper(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   void deleteNewsPaper(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
 

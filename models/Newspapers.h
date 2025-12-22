@@ -49,24 +49,23 @@ class Newspapers
         static const std::string _slug;
         static const std::string _price;
         static const std::string _is_free;
-        static const std::string _category_id;
-        static const std::string _category_name;
         static const std::string _publication_id;
         static const std::string _publication_name;
         static const std::string _copyright_owner;
         static const std::string _edition_number;
         static const std::string _is_popular;
-        static const std::string _short_description;
         static const std::string _full_description;
         static const std::string _thumbnail_id;
         static const std::string _document_id;
         static const std::string _file_type;
-        static const std::string _storage_type;
+        static const std::string _storage_service;
         static const std::string _is_published;
         static const std::string _published_date;
         static const std::string _created_at;
         static const std::string _updated_at;
         static const std::string _featured_stories;
+        static const std::string _views;
+        static const std::string _sales;
     };
 
     static const int primaryKeyNumber;
@@ -162,25 +161,6 @@ class Newspapers
     ///Set the value of the column is_free
     void setIsFree(const bool &pIsFree) noexcept;
 
-    /**  For column category_id  */
-    ///Get the value of the column category_id, returns the default value if the column is null
-    const std::string &getValueOfCategoryId() const noexcept;
-    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<std::string> &getCategoryId() const noexcept;
-    ///Set the value of the column category_id
-    void setCategoryId(const std::string &pCategoryId) noexcept;
-    void setCategoryId(std::string &&pCategoryId) noexcept;
-
-    /**  For column category_name  */
-    ///Get the value of the column category_name, returns the default value if the column is null
-    const std::string &getValueOfCategoryName() const noexcept;
-    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<std::string> &getCategoryName() const noexcept;
-    ///Set the value of the column category_name
-    void setCategoryName(const std::string &pCategoryName) noexcept;
-    void setCategoryName(std::string &&pCategoryName) noexcept;
-    void setCategoryNameToNull() noexcept;
-
     /**  For column publication_id  */
     ///Get the value of the column publication_id, returns the default value if the column is null
     const std::string &getValueOfPublicationId() const noexcept;
@@ -228,15 +208,6 @@ class Newspapers
     ///Set the value of the column is_popular
     void setIsPopular(const bool &pIsPopular) noexcept;
 
-    /**  For column short_description  */
-    ///Get the value of the column short_description, returns the default value if the column is null
-    const std::string &getValueOfShortDescription() const noexcept;
-    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<std::string> &getShortDescription() const noexcept;
-    ///Set the value of the column short_description
-    void setShortDescription(const std::string &pShortDescription) noexcept;
-    void setShortDescription(std::string &&pShortDescription) noexcept;
-
     /**  For column full_description  */
     ///Get the value of the column full_description, returns the default value if the column is null
     const std::string &getValueOfFullDescription() const noexcept;
@@ -276,15 +247,15 @@ class Newspapers
     void setFileType(std::string &&pFileType) noexcept;
     void setFileTypeToNull() noexcept;
 
-    /**  For column storage_type  */
-    ///Get the value of the column storage_type, returns the default value if the column is null
-    const std::string &getValueOfStorageType() const noexcept;
+    /**  For column storage_service  */
+    ///Get the value of the column storage_service, returns the default value if the column is null
+    const std::string &getValueOfStorageService() const noexcept;
     ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<std::string> &getStorageType() const noexcept;
-    ///Set the value of the column storage_type
-    void setStorageType(const std::string &pStorageType) noexcept;
-    void setStorageType(std::string &&pStorageType) noexcept;
-    void setStorageTypeToNull() noexcept;
+    const std::shared_ptr<std::string> &getStorageService() const noexcept;
+    ///Set the value of the column storage_service
+    void setStorageService(const std::string &pStorageService) noexcept;
+    void setStorageService(std::string &&pStorageService) noexcept;
+    void setStorageServiceToNull() noexcept;
 
     /**  For column is_published  */
     ///Get the value of the column is_published, returns the default value if the column is null
@@ -331,8 +302,25 @@ class Newspapers
     void setFeaturedStories(std::string &&pFeaturedStories) noexcept;
     void setFeaturedStoriesToNull() noexcept;
 
+    /**  For column views  */
+    ///Get the value of the column views, returns the default value if the column is null
+    const int32_t &getValueOfViews() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<int32_t> &getViews() const noexcept;
+    ///Set the value of the column views
+    void setViews(const int32_t &pViews) noexcept;
 
-    static size_t getColumnNumber() noexcept {  return 23;  }
+    /**  For column sales  */
+    ///Get the value of the column sales, returns the default value if the column is null
+    const std::string &getValueOfSales() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getSales() const noexcept;
+    ///Set the value of the column sales
+    void setSales(const std::string &pSales) noexcept;
+    void setSales(std::string &&pSales) noexcept;
+
+
+    static size_t getColumnNumber() noexcept {  return 22;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -359,24 +347,23 @@ class Newspapers
     std::shared_ptr<std::string> slug_;
     std::shared_ptr<std::string> price_;
     std::shared_ptr<bool> isFree_;
-    std::shared_ptr<std::string> categoryId_;
-    std::shared_ptr<std::string> categoryName_;
     std::shared_ptr<std::string> publicationId_;
     std::shared_ptr<std::string> publicationName_;
     std::shared_ptr<std::string> copyrightOwner_;
     std::shared_ptr<std::string> editionNumber_;
     std::shared_ptr<bool> isPopular_;
-    std::shared_ptr<std::string> shortDescription_;
     std::shared_ptr<std::string> fullDescription_;
     std::shared_ptr<std::string> thumbnailId_;
     std::shared_ptr<std::string> documentId_;
     std::shared_ptr<std::string> fileType_;
-    std::shared_ptr<std::string> storageType_;
+    std::shared_ptr<std::string> storageService_;
     std::shared_ptr<bool> isPublished_;
     std::shared_ptr<::trantor::Date> publishedDate_;
     std::shared_ptr<::trantor::Date> createdAt_;
     std::shared_ptr<::trantor::Date> updatedAt_;
     std::shared_ptr<std::string> featuredStories_;
+    std::shared_ptr<int32_t> views_;
+    std::shared_ptr<std::string> sales_;
     struct MetaData
     {
         const std::string colName_;
@@ -388,7 +375,7 @@ class Newspapers
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[23]={ false };
+    bool dirtyFlag_[22]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -435,95 +422,92 @@ class Newspapers
         }
         if(dirtyFlag_[5])
         {
-            sql += "category_id,";
+            sql += "publication_id,";
             ++parametersCount;
         }
         if(dirtyFlag_[6])
         {
-            sql += "category_name,";
+            sql += "publication_name,";
             ++parametersCount;
         }
         if(dirtyFlag_[7])
         {
-            sql += "publication_id,";
-            ++parametersCount;
-        }
-        if(dirtyFlag_[8])
-        {
-            sql += "publication_name,";
-            ++parametersCount;
-        }
-        if(dirtyFlag_[9])
-        {
             sql += "copyright_owner,";
             ++parametersCount;
         }
-        if(dirtyFlag_[10])
+        if(dirtyFlag_[8])
         {
             sql += "edition_number,";
             ++parametersCount;
         }
         sql += "is_popular,";
         ++parametersCount;
-        if(!dirtyFlag_[11])
+        if(!dirtyFlag_[9])
         {
             needSelection=true;
         }
-        if(dirtyFlag_[12])
-        {
-            sql += "short_description,";
-            ++parametersCount;
-        }
-        if(dirtyFlag_[13])
+        if(dirtyFlag_[10])
         {
             sql += "full_description,";
             ++parametersCount;
         }
-        if(dirtyFlag_[14])
+        if(dirtyFlag_[11])
         {
             sql += "thumbnail_id,";
             ++parametersCount;
         }
-        if(dirtyFlag_[15])
+        if(dirtyFlag_[12])
         {
             sql += "document_id,";
             ++parametersCount;
         }
-        if(dirtyFlag_[16])
+        if(dirtyFlag_[13])
         {
             sql += "file_type,";
             ++parametersCount;
         }
-        if(dirtyFlag_[17])
+        if(dirtyFlag_[14])
         {
-            sql += "storage_type,";
+            sql += "storage_service,";
             ++parametersCount;
         }
         sql += "is_published,";
         ++parametersCount;
-        if(!dirtyFlag_[18])
+        if(!dirtyFlag_[15])
         {
             needSelection=true;
         }
-        if(dirtyFlag_[19])
+        if(dirtyFlag_[16])
         {
             sql += "published_date,";
             ++parametersCount;
         }
-        if(dirtyFlag_[20])
+        if(dirtyFlag_[17])
         {
             sql += "created_at,";
             ++parametersCount;
         }
-        if(dirtyFlag_[21])
+        if(dirtyFlag_[18])
         {
             sql += "updated_at,";
             ++parametersCount;
         }
-        if(dirtyFlag_[22])
+        if(dirtyFlag_[19])
         {
             sql += "featured_stories,";
             ++parametersCount;
+        }
+        sql += "views,";
+        ++parametersCount;
+        if(!dirtyFlag_[20])
+        {
+            needSelection=true;
+        }
+        sql += "sales,";
+        ++parametersCount;
+        if(!dirtyFlag_[21])
+        {
+            needSelection=true;
         }
         if(parametersCount > 0)
         {
@@ -594,6 +578,10 @@ class Newspapers
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
+        else
+        {
+            sql +="default,";
+        }
         if(dirtyFlag_[10])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
@@ -603,10 +591,6 @@ class Newspapers
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
-        }
-        else
-        {
-            sql +="default,";
         }
         if(dirtyFlag_[12])
         {
@@ -628,6 +612,10 @@ class Newspapers
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
+        else
+        {
+            sql +="default,";
+        }
         if(dirtyFlag_[16])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
@@ -643,10 +631,6 @@ class Newspapers
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
-        else
-        {
-            sql +="default,";
-        }
         if(dirtyFlag_[19])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
@@ -657,15 +641,18 @@ class Newspapers
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
+        else
+        {
+            sql +="default,";
+        }
         if(dirtyFlag_[21])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
-        if(dirtyFlag_[22])
+        else
         {
-            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
-            sql.append(placeholderStr, n);
+            sql +="default,";
         }
         if(parametersCount > 0)
         {

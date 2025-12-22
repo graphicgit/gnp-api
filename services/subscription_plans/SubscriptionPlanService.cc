@@ -53,12 +53,18 @@ namespace gnp::services {
                 mp->limit(pageSize).offset(offset).findBy(searchCriteria,
                     [=](const std::vector<SubscriptionPlans>& subscriptionPlans) {
                         // 4. Build the final response inside the callback
-                        dto::BaseApiResponse response;
-                        response.success = true;
-                        response.result["totalCount"] = (Json::UInt64)totalCount;
-                        response.result["pageNo"] = pageNo;
-                        response.result["pageSize"] = pageSize;
-                        response.result["totalPages"] = (int)((totalCount + pageSize - 1) / pageSize);
+
+                            dto::BaseApiResponse response;
+
+                          auto totalPages = (totalCount + pageSize - 1) / pageSize;
+
+                          response.success = true;
+                          response.result["totalCount"] = (Json::UInt64)totalCount;
+                          response.result["pageNo"] = pageNo;
+                          response.result["pageSize"] = pageSize;
+                          response.result["lowerBound"] = pageSize * (pageNo - 1) + 1;
+                          response.result["upperBound"] = Json::Value((int)totalPages == pageNo ? (Json::UInt64)totalCount : (Json::UInt64)(pageNo * pageSize));
+                          response.result["totalPages"] =  (int)totalPages;
 
                         Json::Value data = Json::arrayValue;
 

@@ -19,8 +19,7 @@ class NewsPapersController : public drogon::HttpController<NewsPapersController>
       ADD_METHOD_TO(NewsPapersController::getFullDetails, PREFIX + "/get-full-details", Get);
       ADD_METHOD_TO(NewsPapersController::publish, PREFIX + "/publish", Get);
       ADD_METHOD_TO(NewsPapersController::unPublish, PREFIX + "/unpublish", Get);
-      ADD_METHOD_TO(NewsPapersController::Ingest, PREFIX + "/ingest", Post);
-      ADD_METHOD_TO(NewsPapersController::PartialIngestion, PREFIX + "/partial-ingest", Post);
+      ADD_METHOD_TO(NewsPapersController::ingestPublication, PREFIX + "/ingest", Post);
       ADD_METHOD_TO(NewsPapersController::update, PREFIX + "/update", Post);
       ADD_METHOD_TO(NewsPapersController::deleteNewsPaper, PREFIX + "/delete", Delete);
   METHOD_LIST_END
@@ -31,8 +30,7 @@ class NewsPapersController : public drogon::HttpController<NewsPapersController>
       void getFullDetails(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
       void publish(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
       void unPublish(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
-      void Ingest(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
-      void PartialIngestion(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+      void ingestPublication(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
       void update(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
       void deleteNewsPaper(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
 };
