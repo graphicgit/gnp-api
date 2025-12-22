@@ -51,6 +51,7 @@ class Publications
         static const std::string _created_at;
         static const std::string _updated_at;
         static const std::string _description;
+        static const std::string _price;
     };
 
     static const int primaryKeyNumber;
@@ -164,8 +165,17 @@ class Publications
     void setDescription(std::string &&pDescription) noexcept;
     void setDescriptionToNull() noexcept;
 
+    /**  For column price  */
+    ///Get the value of the column price, returns the default value if the column is null
+    const std::string &getValueOfPrice() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getPrice() const noexcept;
+    ///Set the value of the column price
+    void setPrice(const std::string &pPrice) noexcept;
+    void setPrice(std::string &&pPrice) noexcept;
 
-    static size_t getColumnNumber() noexcept {  return 7;  }
+
+    static size_t getColumnNumber() noexcept {  return 8;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -194,6 +204,7 @@ class Publications
     std::shared_ptr<::trantor::Date> createdAt_;
     std::shared_ptr<::trantor::Date> updatedAt_;
     std::shared_ptr<std::string> description_;
+    std::shared_ptr<std::string> price_;
     struct MetaData
     {
         const std::string colName_;
@@ -205,7 +216,7 @@ class Publications
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[7]={ false };
+    bool dirtyFlag_[8]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -260,6 +271,12 @@ class Publications
         {
             sql += "description,";
             ++parametersCount;
+        }
+        sql += "price,";
+        ++parametersCount;
+        if(!dirtyFlag_[7])
+        {
+            needSelection=true;
         }
         if(parametersCount > 0)
         {
@@ -318,6 +335,15 @@ class Publications
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[7])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
         }
         if(parametersCount > 0)
         {

@@ -22,17 +22,20 @@ namespace gnp::dto {
         [[nodiscard]] const std::string& getId() const { return id_; }
         [[nodiscard]] const std::string& getName() const { return name_; }
         [[nodiscard]] const std::string& getDescription() const { return description_; }
+        [[nodiscard]] const std::string& getPrice() const { return price_; }
 
         // Setters
         void setId(const std::string& id) { id_ = id; }
         void setName(const std::string& name) { name_ = name; }
         void setDescription(const std::string& description) { description_ = description; }
+        void setPrice(const std::string& price) { price_ = price; }
 
     private:
 
         std::string id_;
         std::string name_;
         std::string description_;
+        std::string price_;
 
     };
 
@@ -49,6 +52,10 @@ namespace gnp::dto {
 
         if (json.isMember("description") && !json["description"].isNull()) {
             description_ = json["description"].asString();
+        }
+
+        if (json.isMember("price") && !json["price"].isNull()) {
+            price_ = json["price"].asString();
         }
 
     }

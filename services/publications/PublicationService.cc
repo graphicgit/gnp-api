@@ -49,9 +49,8 @@ namespace gnp::services {
 
                 // 3. Asynchronously find the paginated data
                 int offset = (pageNo - 1) * pageSize;
-                mp->limit(pageSize).offset(offset).findBy(searchCriteria,
-                    [=](const std::vector<Publications>& publications) {
-                        // 4. Build the final response inside the callback
+                mp->limit(pageSize).offset(offset).findBy(searchCriteria,[=](const std::vector<Publications>& publications) {
+
                         dto::BaseApiResponse response;
                         response.success = true;
                         response.result["totalCount"] = (Json::UInt64)totalCount;
@@ -60,20 +59,21 @@ namespace gnp::services {
                         response.result["totalPages"] = (int)((totalCount + pageSize - 1) / pageSize);
 
                         Json::Value data = Json::arrayValue;
-                        for (const auto& role : publications)
+                        for (const auto& publication : publications)
                         {
-                            Json::Value roleJson = role.toJson();
+                            Json::Value publicationJson = publication.toJson();
 
                             // Convert snake_case to camelCase
-                            Json::Value camelCaseRole;
-                            camelCaseRole["id"] = roleJson["id"];
-                            camelCaseRole["name"] = roleJson["name"];
-                            camelCaseRole["isActive"] = roleJson["is_active"];
-                            camelCaseRole["description"] = roleJson["description"];
-                            camelCaseRole["createdAt"] = roleJson["created_at"];
-                            camelCaseRole["updatedAt"] = roleJson["updated_at"];
+                            Json::Value camelCasePublication;
+                            camelCasePublication["id"] = publicationJson["id"];
+                            camelCasePublication["name"] = publicationJson["name"];
+                            camelCasePublication["isActive"] = publicationJson["is_active"];
+                            camelCasePublication["description"] = publicationJson["description"];
+                            camelCasePublication["price"] = publicationJson["price"];
+                            camelCasePublication["createdAt"] = publicationJson["created_at"];
+                            camelCasePublication["updatedAt"] = publicationJson["updated_at"];
 
-                            data.append(camelCaseRole);
+                            data.append(camelCasePublication);
                         }
                         response.result["data"] = data;
                         callback(response);
@@ -114,6 +114,7 @@ namespace gnp::services {
         newPublication.setName(publicationData.getName());
         newPublication.setDescription(publicationData.getDescription());
         newPublication.setType(publicationData.getType());
+        newPublication.setPrice(publicationData.getPrice());
         newPublication.setIsActive(true);
 
         mp.insert(newPublication, [callback](const drogon_model::Gnp::Publications& publication) {
@@ -151,6 +152,8 @@ namespace gnp::services {
             [mp, publicationData, callback](drogon_model::Gnp::Publications publication) {
                 if (!publicationData.getName().empty()) publication.setName(publicationData.getName());
                 if (!publicationData.getDescription().empty()) publication.setDescription(publicationData.getDescription());
+                if (!publicationData.getPrice().empty()) publication.setPrice(publicationData.getPrice());
+
 
                 mp->update(publication, [callback](const size_t count) {
                     dto::BaseApiResponse response;

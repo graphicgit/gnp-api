@@ -20,6 +20,7 @@ const std::string Publications::Cols::_is_active = "\"is_active\"";
 const std::string Publications::Cols::_created_at = "\"created_at\"";
 const std::string Publications::Cols::_updated_at = "\"updated_at\"";
 const std::string Publications::Cols::_description = "\"description\"";
+const std::string Publications::Cols::_price = "\"price\"";
 const std::string Publications::primaryKeyName = "id";
 const bool Publications::hasPrimaryKey = true;
 const std::string Publications::tableName = "\"publications\"";
@@ -31,7 +32,8 @@ const std::vector<typename Publications::MetaData> Publications::metaData_={
 {"is_active","bool","boolean",1,0,0,1},
 {"created_at","::trantor::Date","timestamp with time zone",0,0,0,1},
 {"updated_at","::trantor::Date","timestamp without time zone",0,0,0,0},
-{"description","std::string","character varying",350,0,0,0}
+{"description","std::string","character varying",350,0,0,0},
+{"price","std::string","numeric",0,0,0,1}
 };
 const std::string &Publications::getColumnName(size_t index) noexcept(false)
 {
@@ -106,11 +108,15 @@ Publications::Publications(const Row &r, const ssize_t indexOffset) noexcept
         {
             description_=std::make_shared<std::string>(r["description"].as<std::string>());
         }
+        if(!r["price"].isNull())
+        {
+            price_=std::make_shared<std::string>(r["price"].as<std::string>());
+        }
     }
     else
     {
         size_t offset = (size_t)indexOffset;
-        if(offset + 7 > r.size())
+        if(offset + 8 > r.size())
         {
             LOG_FATAL << "Invalid SQL result for this model";
             return;
@@ -187,13 +193,18 @@ Publications::Publications(const Row &r, const ssize_t indexOffset) noexcept
         {
             description_=std::make_shared<std::string>(r[index].as<std::string>());
         }
+        index = offset + 7;
+        if(!r[index].isNull())
+        {
+            price_=std::make_shared<std::string>(r[index].as<std::string>());
+        }
     }
 
 }
 
 Publications::Publications(const Json::Value &pJson, const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 7)
+    if(pMasqueradingVector.size() != 8)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -288,6 +299,14 @@ Publications::Publications(const Json::Value &pJson, const std::vector<std::stri
         if(!pJson[pMasqueradingVector[6]].isNull())
         {
             description_=std::make_shared<std::string>(pJson[pMasqueradingVector[6]].asString());
+        }
+    }
+    if(!pMasqueradingVector[7].empty() && pJson.isMember(pMasqueradingVector[7]))
+    {
+        dirtyFlag_[7] = true;
+        if(!pJson[pMasqueradingVector[7]].isNull())
+        {
+            price_=std::make_shared<std::string>(pJson[pMasqueradingVector[7]].asString());
         }
     }
 }
@@ -386,12 +405,20 @@ Publications::Publications(const Json::Value &pJson) noexcept(false)
             description_=std::make_shared<std::string>(pJson["description"].asString());
         }
     }
+    if(pJson.isMember("price"))
+    {
+        dirtyFlag_[7]=true;
+        if(!pJson["price"].isNull())
+        {
+            price_=std::make_shared<std::string>(pJson["price"].asString());
+        }
+    }
 }
 
 void Publications::updateByMasqueradedJson(const Json::Value &pJson,
                                             const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 7)
+    if(pMasqueradingVector.size() != 8)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -487,6 +514,14 @@ void Publications::updateByMasqueradedJson(const Json::Value &pJson,
             description_=std::make_shared<std::string>(pJson[pMasqueradingVector[6]].asString());
         }
     }
+    if(!pMasqueradingVector[7].empty() && pJson.isMember(pMasqueradingVector[7]))
+    {
+        dirtyFlag_[7] = true;
+        if(!pJson[pMasqueradingVector[7]].isNull())
+        {
+            price_=std::make_shared<std::string>(pJson[pMasqueradingVector[7]].asString());
+        }
+    }
 }
 
 void Publications::updateByJson(const Json::Value &pJson) noexcept(false)
@@ -580,6 +615,14 @@ void Publications::updateByJson(const Json::Value &pJson) noexcept(false)
         if(!pJson["description"].isNull())
         {
             description_=std::make_shared<std::string>(pJson["description"].asString());
+        }
+    }
+    if(pJson.isMember("price"))
+    {
+        dirtyFlag_[7] = true;
+        if(!pJson["price"].isNull())
+        {
+            price_=std::make_shared<std::string>(pJson["price"].asString());
         }
     }
 }
@@ -738,6 +781,28 @@ void Publications::setDescriptionToNull() noexcept
     dirtyFlag_[6] = true;
 }
 
+const std::string &Publications::getValueOfPrice() const noexcept
+{
+    static const std::string defaultValue = std::string();
+    if(price_)
+        return *price_;
+    return defaultValue;
+}
+const std::shared_ptr<std::string> &Publications::getPrice() const noexcept
+{
+    return price_;
+}
+void Publications::setPrice(const std::string &pPrice) noexcept
+{
+    price_ = std::make_shared<std::string>(pPrice);
+    dirtyFlag_[7] = true;
+}
+void Publications::setPrice(std::string &&pPrice) noexcept
+{
+    price_ = std::make_shared<std::string>(std::move(pPrice));
+    dirtyFlag_[7] = true;
+}
+
 void Publications::updateId(const uint64_t id)
 {
 }
@@ -751,7 +816,8 @@ const std::vector<std::string> &Publications::insertColumns() noexcept
         "is_active",
         "created_at",
         "updated_at",
-        "description"
+        "description",
+        "price"
     };
     return inCols;
 }
@@ -835,6 +901,17 @@ void Publications::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[7])
+    {
+        if(getPrice())
+        {
+            binder << getValueOfPrice();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 
 const std::vector<std::string> Publications::updateColumns() const
@@ -867,6 +944,10 @@ const std::vector<std::string> Publications::updateColumns() const
     if(dirtyFlag_[6])
     {
         ret.push_back(getColumnName(6));
+    }
+    if(dirtyFlag_[7])
+    {
+        ret.push_back(getColumnName(7));
     }
     return ret;
 }
@@ -950,6 +1031,17 @@ void Publications::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[7])
+    {
+        if(getPrice())
+        {
+            binder << getValueOfPrice();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 Json::Value Publications::toJson() const
 {
@@ -1010,6 +1102,14 @@ Json::Value Publications::toJson() const
     {
         ret["description"]=Json::Value();
     }
+    if(getPrice())
+    {
+        ret["price"]=getValueOfPrice();
+    }
+    else
+    {
+        ret["price"]=Json::Value();
+    }
     return ret;
 }
 
@@ -1022,7 +1122,7 @@ Json::Value Publications::toMasqueradedJson(
     const std::vector<std::string> &pMasqueradingVector) const
 {
     Json::Value ret;
-    if(pMasqueradingVector.size() == 7)
+    if(pMasqueradingVector.size() == 8)
     {
         if(!pMasqueradingVector[0].empty())
         {
@@ -1101,6 +1201,17 @@ Json::Value Publications::toMasqueradedJson(
                 ret[pMasqueradingVector[6]]=Json::Value();
             }
         }
+        if(!pMasqueradingVector[7].empty())
+        {
+            if(getPrice())
+            {
+                ret[pMasqueradingVector[7]]=getValueOfPrice();
+            }
+            else
+            {
+                ret[pMasqueradingVector[7]]=Json::Value();
+            }
+        }
         return ret;
     }
     LOG_ERROR << "Masquerade failed";
@@ -1160,6 +1271,14 @@ Json::Value Publications::toMasqueradedJson(
     {
         ret["description"]=Json::Value();
     }
+    if(getPrice())
+    {
+        ret["price"]=getValueOfPrice();
+    }
+    else
+    {
+        ret["price"]=Json::Value();
+    }
     return ret;
 }
 
@@ -1205,13 +1324,18 @@ bool Publications::validateJsonForCreation(const Json::Value &pJson, std::string
         if(!validJsonOfField(6, "description", pJson["description"], err, true))
             return false;
     }
+    if(pJson.isMember("price"))
+    {
+        if(!validJsonOfField(7, "price", pJson["price"], err, true))
+            return false;
+    }
     return true;
 }
 bool Publications::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                                                       const std::vector<std::string> &pMasqueradingVector,
                                                       std::string &err)
 {
-    if(pMasqueradingVector.size() != 7)
+    if(pMasqueradingVector.size() != 8)
     {
         err = "Bad masquerading vector";
         return false;
@@ -1278,6 +1402,14 @@ bool Publications::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                   return false;
           }
       }
+      if(!pMasqueradingVector[7].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[7]))
+          {
+              if(!validJsonOfField(7, pMasqueradingVector[7], pJson[pMasqueradingVector[7]], err, true))
+                  return false;
+          }
+      }
     }
     catch(const Json::LogicError &e)
     {
@@ -1328,13 +1460,18 @@ bool Publications::validateJsonForUpdate(const Json::Value &pJson, std::string &
         if(!validJsonOfField(6, "description", pJson["description"], err, false))
             return false;
     }
+    if(pJson.isMember("price"))
+    {
+        if(!validJsonOfField(7, "price", pJson["price"], err, false))
+            return false;
+    }
     return true;
 }
 bool Publications::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
                                                     const std::vector<std::string> &pMasqueradingVector,
                                                     std::string &err)
 {
-    if(pMasqueradingVector.size() != 7)
+    if(pMasqueradingVector.size() != 8)
     {
         err = "Bad masquerading vector";
         return false;
@@ -1378,6 +1515,11 @@ bool Publications::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
       if(!pMasqueradingVector[6].empty() && pJson.isMember(pMasqueradingVector[6]))
       {
           if(!validJsonOfField(6, pMasqueradingVector[6], pJson[pMasqueradingVector[6]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[7].empty() && pJson.isMember(pMasqueradingVector[7]))
+      {
+          if(!validJsonOfField(7, pMasqueradingVector[7], pJson[pMasqueradingVector[7]], err, false))
               return false;
       }
     }
@@ -1492,6 +1634,18 @@ bool Publications::validJsonOfField(size_t index,
                 return false;
             }
 
+            break;
+        case 7:
+            if(pJson.isNull())
+            {
+                err="The " + fieldName + " column cannot be null";
+                return false;
+            }
+            if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
             break;
         default:
             err="Internal error in the server";
