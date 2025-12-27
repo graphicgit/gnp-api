@@ -22,10 +22,10 @@ namespace gnp::services {
            const std::function<void(const dto::BaseApiResponse&)>& callback
        );
 
-        void create(const dto::CreateSubscriptionPlanDto& userData,
+        void createPlan(const dto::CreateSubscriptionPlanDto& userData,
                     const std::function<void(const dto::BaseApiResponse&)>& callback);
 
-        void update(const dto::UpdateSubscriptionPlanDto& userData,
+        void updatePlan(const dto::UpdateSubscriptionPlanDto& userData,
                     const std::function<void(const dto::BaseApiResponse&)>& callback);
 
         void deletePlan(

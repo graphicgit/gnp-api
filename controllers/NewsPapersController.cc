@@ -212,40 +212,10 @@ void NewsPapersController::unPublish(
       });
 }
 
-void NewsPapersController::Ingest(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
 
-  // 1. Prepare your payload
-  Json::Value payload;
-  payload["To"] = "rhyoliteprime@gmail.com";
-  payload["Subject"] = "Testing High Speed Rabbit Mq Client";
-  payload["Body"] = "<p> Testing High Speed Rabbit Mq Client </p>";
-  payload["Host"] = "mail.graphicnewsplus.com";
-  payload["Port"] = 465;
-  payload["EnableSsl"] = true;
-  payload["UserName"] = "account@graphicnewsplus.com";
-  payload["Password"] = "AEjdJ^%mh43Lm8f-";
-  payload["SenderName"] = "Graphic News Plus";
-  payload["IsBodyHtml"] = true;
 
-  Json::StreamWriterBuilder w;
-  std::string jsonStr = Json::writeString(w, payload);
+void NewsPapersController::ingestPublication(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback) {
 
-  // 4. Respond to the client immediately without waiting for the publish to
-  // complete
-  auto resp = drogon::HttpResponse::newHttpResponse();
-  resp->setStatusCode(
-      drogon::HttpStatusCode::k202Accepted); // Use 202 Accepted for
-                                             // fire-and-forget tasks
-  resp->setBody("Request accepted for processing.");
-  resp->setContentTypeCode(drogon::CT_TEXT_PLAIN);
-  callback(resp);
-}
-
-void NewsPapersController::PartialIngestion(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
   auto jsonBody = req->getJsonObject();
 
   if (!jsonBody) {
@@ -266,8 +236,7 @@ void NewsPapersController::PartialIngestion(
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
-  newsPaperService.partialIngest(
-      dto, [callback](const gnp::dto::BaseApiResponse &result) {
+  newsPaperService.ingest(dto, [callback](const gnp::dto::BaseApiResponse &result) {
         auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
         callback(resp);
       });

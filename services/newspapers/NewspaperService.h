@@ -44,10 +44,6 @@ namespace gnp::services {
        );
 
         void ingest(const dto::IngestNewsPaperDto& dto,
-           const std::function<void(const dto::BaseApiResponse&)>& callback);
-
-
-        void partialIngest(const dto::IngestNewsPaperDto& dto,
           const std::function<void(const dto::BaseApiResponse&)>& callback);
 
 

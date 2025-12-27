@@ -8,7 +8,59 @@
 void AdminController::getAllNewsPapers(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) {
-  // write your application logic here
+
+
+    int pageSize = 10; // Default page size
+    int pageNo = 1;    //  Default page number
+
+    if (!req->getParameter("pageSize").empty()) {
+      try {
+        pageSize = std::stoi(req->getParameter("pageSize"));
+        pageSize = std::max(1, std::min(100, pageSize)); // Limit between 1-100
+      } catch (...) {
+        // Keep default if conversion fails
+      }
+    }
+
+    if (!req->getParameter("pageNo").empty()) {
+      try {
+        pageNo = std::stoi(req->getParameter("pageNo"));
+        pageNo = std::max(1, pageNo); // Ensure page number is at least 1
+      } catch (...) {
+        // Keep default if conversion fails
+      }
+    }
+
+    std::string query = req->getParameter("query");
+    if (query.empty()) {
+      query = ""; // Default to empty string if not specified
+    }
+
+    std::string publicationId = req->getParameter("publicationId");
+    if (publicationId.empty()) {
+      publicationId = ""; //
+    }
+
+    std::string startDate = req->getParameter("startDate");
+    if (startDate.empty()) {
+      startDate = ""; //
+    }
+
+    std::string endDate = req->getParameter("endDate");
+    if (endDate.empty()) {
+      endDate = ""; //
+    }
+
+    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto &newsPaperService = plugin->getNewsPaperService();
+
+    newsPaperService.listAll(pageNo, pageSize, publicationId, startDate, endDate, query,
+        [callback](const gnp::dto::BaseApiResponse &result) {
+          auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+          callback(resp);
+        });
+
+
 }
 
 void AdminController::getNewsPaperFullDetails(
@@ -20,25 +72,91 @@ void AdminController::getNewsPaperFullDetails(
 void AdminController::publishNewsPaper(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) {
-  // write your application logic here
+
+  if (req->getParameter("id").empty()) {
+    // Missing tenant ID - return early
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Missing required parameter: id";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    callback(resp);
+    return;
+  }
+
+  std::string id = req->getParameter("id");
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &newsPaperService = plugin->getNewsPaperService();
+
+  // Call service method to delete the tenant
+  newsPaperService.publish(id, [callback](const gnp::dto::BaseApiResponse &result) {
+        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+        callback(resp);
+
+      });
+
 }
 
 void AdminController::unPublishNewsPaper(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) {
-  // write your application logic here
+
+
+    if (req->getParameter("id").empty()) {
+      // Missing tenant ID - return early
+      gnp::dto::BaseApiResponse response;
+      response.success = false;
+      response.error["message"] = "Missing required parameter: id";
+      auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+      resp->setStatusCode(k400BadRequest);
+      callback(resp);
+      return;
+    }
+
+    std::string id = req->getParameter("id");
+
+    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto &newsPaperService = plugin->getNewsPaperService();
+
+    // Call service method to delete the tenant
+    newsPaperService.unPublish( id, [callback](const gnp::dto::BaseApiResponse &result) {
+          auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+          callback(resp);
+        });
+
 }
 
 void AdminController::IngestNewsPaper(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) {
-  // write your application logic here
-}
 
-void AdminController::PartialIngestionNewsPaper(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
-  // write your application logic here
+
+  auto jsonBody = req->getJsonObject();
+
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    callback(resp);
+    return;
+  }
+
+  gnp::dto::IngestNewsPaperDto dto;
+
+  dto.fromJson(*jsonBody);
+
+  // Get tenant service from plugin
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &newsPaperService = plugin->getNewsPaperService();
+
+  newsPaperService.ingest(dto, [callback](const gnp::dto::BaseApiResponse &result) {
+        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+        callback(resp);
+      });
+
 }
 
 void AdminController::updateNewsPaper(
@@ -114,7 +232,45 @@ void AdminController::deleteUser(
 void AdminController::getAllSubscriptionPlans(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) {
-  // write your application logic here
+
+    int pageSize = 10; // Default page size
+    int pageNo = 1;    //  Default page number
+
+    if (!req->getParameter("pageSize").empty()) {
+      try {
+        pageSize = std::stoi(req->getParameter("pageSize"));
+        pageSize = std::max(1, std::min(100, pageSize)); // Limit between 1-100
+      } catch (...) {
+        // Keep default if conversion fails
+      }
+    }
+
+    if (!req->getParameter("pageNo").empty()) {
+      try {
+        pageNo = std::stoi(req->getParameter("pageNo"));
+        pageNo = std::max(1, pageNo); // Ensure page number is at least 1
+      } catch (...) {
+        // Keep default if conversion fails
+      }
+    }
+
+    std::string query = req->getParameter("query");
+    if (query.empty()) {
+      query = "";
+    }
+
+
+    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto& subscriptionPlanService = plugin->getSubscriptionPlanService();
+
+    subscriptionPlanService.getAll(pageNo, pageSize, query, [callback](const gnp::dto::BaseApiResponse& result) {
+        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+        callback(resp);
+    });
+
+
+
+
 }
 
 void AdminController::getSubscriptionPlanDetails(
@@ -126,7 +282,32 @@ void AdminController::getSubscriptionPlanDetails(
 void AdminController::createSubscriptionPlan(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) {
-  // write your application logic here
+
+    auto jsonBody = req->getJsonObject();
+
+    if (!jsonBody) {
+      gnp::dto::BaseApiResponse response;
+      response.success = false;
+      response.error["message"] = "Invalid JSON body";
+      auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+      resp->setStatusCode(k400BadRequest);
+      callback(resp);
+      return;
+    }
+
+    gnp::dto::CreateSubscriptionPlanDto dto;
+
+    dto.fromJson(*jsonBody);
+
+    auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto& subscriptionPlanService = plugin->getSubscriptionPlanService();
+
+    subscriptionPlanService.createPlan(dto, [callback](const gnp::dto::BaseApiResponse& result) {
+        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+        callback(resp);
+    });
+
+
 }
 
 void AdminController::updateSubscriptionPlan(
@@ -138,7 +319,25 @@ void AdminController::updateSubscriptionPlan(
 void AdminController::deleteSubscriptionPlan(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) {
-  // write your application logic here
+
+
+  auto id = req->getParameter("id");
+
+  if (id.empty()) {
+    auto resp = HttpResponse::newHttpResponse();
+    resp->setStatusCode(k400BadRequest);
+    resp->setBody("Missing required parameter: id");
+    callback(resp);
+    return;
+  }
+
+  gnp::services::SubscriptionPlanService service;
+
+  service.deletePlan(id, [callback](const gnp::dto::BaseApiResponse &apiResp) {
+      auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+      callback(resp);
+  });
+
 }
 
 // user subscription
