@@ -60,6 +60,10 @@ add_executable(${PROJECT_NAME} main.cc
         services/ingestion_jobs/IngestionJobService.h
         dto/IngestJobDto.h
         services/ingestion_jobs/IngestionJobService.cc
+        services/partners/CommercialPartnerService.h
+        services/partners/CommercialPartnerService.cc
+        dto/CreatePartnerDto.h
+        dto/UpdatePartnerDto.h
 )
 
 # ##############################################################################

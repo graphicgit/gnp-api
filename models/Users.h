@@ -61,6 +61,8 @@ class Users
         static const std::string _created_at;
         static const std::string _updated_at;
         static const std::string _is_admin_user;
+        static const std::string _is_partner_user;
+        static const std::string _partner_id;
     };
 
     static const int primaryKeyNumber;
@@ -269,8 +271,26 @@ class Users
     ///Set the value of the column is_admin_user
     void setIsAdminUser(const bool &pIsAdminUser) noexcept;
 
+    /**  For column is_partner_user  */
+    ///Get the value of the column is_partner_user, returns the default value if the column is null
+    const bool &getValueOfIsPartnerUser() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<bool> &getIsPartnerUser() const noexcept;
+    ///Set the value of the column is_partner_user
+    void setIsPartnerUser(const bool &pIsPartnerUser) noexcept;
 
-    static size_t getColumnNumber() noexcept {  return 17;  }
+    /**  For column partner_id  */
+    ///Get the value of the column partner_id, returns the default value if the column is null
+    const std::string &getValueOfPartnerId() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getPartnerId() const noexcept;
+    ///Set the value of the column partner_id
+    void setPartnerId(const std::string &pPartnerId) noexcept;
+    void setPartnerId(std::string &&pPartnerId) noexcept;
+    void setPartnerIdToNull() noexcept;
+
+
+    static size_t getColumnNumber() noexcept {  return 19;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -309,6 +329,8 @@ class Users
     std::shared_ptr<::trantor::Date> createdAt_;
     std::shared_ptr<::trantor::Date> updatedAt_;
     std::shared_ptr<bool> isAdminUser_;
+    std::shared_ptr<bool> isPartnerUser_;
+    std::shared_ptr<std::string> partnerId_;
     struct MetaData
     {
         const std::string colName_;
@@ -320,7 +342,7 @@ class Users
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[17]={ false };
+    bool dirtyFlag_[19]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -425,6 +447,18 @@ class Users
         sql += "is_admin_user,";
         ++parametersCount;
         if(!dirtyFlag_[16])
+        {
+            needSelection=true;
+        }
+        sql += "is_partner_user,";
+        ++parametersCount;
+        if(!dirtyFlag_[17])
+        {
+            needSelection=true;
+        }
+        sql += "partner_id,";
+        ++parametersCount;
+        if(!dirtyFlag_[18])
         {
             needSelection=true;
         }
@@ -536,6 +570,24 @@ class Users
             sql.append(placeholderStr, n);
         }
         if(dirtyFlag_[16])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
+        }
+        if(dirtyFlag_[17])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
+        }
+        if(dirtyFlag_[18])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);

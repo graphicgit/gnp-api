@@ -18,8 +18,7 @@ int main() {
             // Add more origins as needed
         };
 
-        // Get the Origin header from the request
-        const std::string &origin = req->getHeader("Origin");
+
 
         // Check if the origin is in our allowed list
         // For development, allow all origins

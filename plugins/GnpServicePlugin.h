@@ -14,6 +14,7 @@
 #include "services/publications/PublicationService.h"
 #include "services/email/EmailService.h"
 #include "services/ingestion_jobs/IngestionJobService.h"
+#include "services/partners/CommercialPartnerService.h"
 #include "services/payments/PaymentService.h"
 #include "services/paystack/PaystackApi.h"
 #include "services/subscriptions/SubscriptionService.h"
@@ -38,6 +39,7 @@ namespace gnp::plugins {
         services::UserService& getUserService() { return userService_; }
         services::EmailService& getEmailService() { return emailService_; }
         services::NewspaperService& getNewsPaperService() { return newspaperService_ ; }
+        services::CommercialPartnerService& getCommercialPartnerService() { return commercialPartnerService_ ; }
         services::PaymentService& getPaymentService() { return paymentService_ ; }
         services::IngestionJobService& getIngestionJobService() { return ingestionJobService_ ; }
         services::CampaignService& getCampaignService() { return campaignService_ ; }
@@ -51,6 +53,7 @@ namespace gnp::plugins {
         services::UserService userService_;
         services::EmailService emailService_;
         services::NewspaperService newspaperService_ ;
+        services::CommercialPartnerService commercialPartnerService_ ;
         services::IngestionJobService ingestionJobService_;
         services::PaymentService  paymentService_;
         services::CampaignService  campaignService_;
