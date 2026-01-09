@@ -244,7 +244,7 @@ void SubscriptionService::manageGuestOneTimeBuy(
                           newPurchaseAttempt.setFailureReasonToNull();
                           newPurchaseAttempt.setCreatedAt(trantor::Date::now());
 
-                          pa_mapper.insert( newPurchaseAttempt,[callback, guestOnetimeBuyDto, newspaper, paperCost,clientReference,user](const PurchaseAttempts &purchaseAttempt) {
+                          pa_mapper.insert( newPurchaseAttempt,[callback, guestOnetimeBuyDto, newspaper, paperCost, clientReference, user](const PurchaseAttempts &purchaseAttempt) {
                                 // use initialize checkout url
 
                                 auto paymentService = std::make_shared<PaymentService>();
@@ -259,7 +259,7 @@ void SubscriptionService::manageGuestOneTimeBuy(
                                 paymentDto.setTransactionReference(*clientReference);
                                 paymentDto.setStatus("Initiated");
 
-                                paymentService->createPayment(paymentDto,[callback, guestOnetimeBuyDto, paperCost, clientReference](const dto::BaseApiResponse&paymentResp) {
+                                paymentService->createPayment(paymentDto,[callback, guestOnetimeBuyDto, paperCost, clientReference, user](const dto::BaseApiResponse&paymentResp) {
                                       auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
                                       auto &paystackApi = plugin->getPaystackApi();
 
@@ -271,7 +271,7 @@ void SubscriptionService::manageGuestOneTimeBuy(
                                       initReq.setClientReference(*clientReference);
                                       initReq.setCallBackUrl("https://gnp-api.com/paystack/callback");
 
-                                      paystackApi.initialize(initReq,[callback](const gnp::dto::InitializePaymentResponse &payResp) {
+                                      paystackApi.initialize(initReq,[callback, user](const gnp::dto::InitializePaymentResponse &payResp) {
 
                                             dto::BaseApiResponse response;
 
@@ -286,6 +286,7 @@ void SubscriptionService::manageGuestOneTimeBuy(
                                             response.message =  "Subscription created successfully Payment initialized";
                                             response.result["paymentUrl"] = payData.getAuthorizationUrl();
                                             response.result["reference"] = payData.getReference();
+                                            response.result["userId"] = user.getValueOfId();
                                             callback(response);
                                           });
                                     });

@@ -11,6 +11,9 @@
 #include "constants/ErrorCodes.h"
 #include "dto/SigninDto.h"
 #include <jwt-cpp/jwt.h>
+#include <openssl/evp.h>
+#include <openssl/pem.h>
+#include <openssl/sha.h>
 
 #include "dto/SendEmailDto.h"
 #include "services/email/EmailService.h"
@@ -19,7 +22,8 @@ using namespace drogon::orm;
 using drogon_model::Gnp::Users;
 
 namespace gnp::services {
-void UserService::getAll(int pageNo, int pageSize, const std::string &query,
+void UserService::getAll(
+    int pageNo, int pageSize, const std::string &query,
     const std::function<void(const dto::BaseApiResponse &)> &callback) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -149,6 +153,425 @@ void UserService::create(
       });
 }
 
+void UserService::registerUserPasskeys(
+    const dto::RegisterUserPasskeysDto &passKeysDto,
+    const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {
+
+  auto dbClient = drogon::app().getDbClient();
+  Mapper<Users> mp(dbClient);
+
+  mp.findOne(
+      Criteria(Users::Cols::_id, CompareOperator::EQ, passKeysDto.getUserId()),
+      [=](const Users &foundUser) {
+        Users user = foundUser;
+
+        // Helper to ensure Base64 is standard (url-safe replacement)
+        auto toStandardBase64 = [](std::string s) {
+          for (char &c : s) {
+            if (c == '-')
+              c = '+';
+            else if (c == '_')
+              c = '/';
+          }
+          while (s.length() % 4 != 0)
+            s += '=';
+          return s;
+        };
+
+        std::string credIdStr = toStandardBase64(passKeysDto.getCredentialId());
+        std::string pubKeyStr = toStandardBase64(passKeysDto.getPublicKey());
+
+        user.setCredentialId(drogon::utils::base64DecodeToVector(credIdStr));
+        user.setPublicKey(drogon::utils::base64DecodeToVector(pubKeyStr));
+        user.setPublicKeyAlgorithm(passKeysDto.getPublicKeyAlgorithm());
+
+        // Passkey fields
+        // Extract signCount from attestationObject (CBOR map) if available
+        int64_t initialSignCount = 0;
+
+        try {
+
+          std::string attObjStr =
+              toStandardBase64(passKeysDto.getAttestationObject());
+          std::vector<char> attObjBytes =
+              drogon::utils::base64DecodeToVector(attObjStr);
+
+          // Simple CBOR 'authData' finder
+          // Search for key "authData" string: 0x68 'a' 'u' 't' 'h' 'D' 'a' 't'
+          // 'a'
+          const std::string authDataKey = "authData";
+          const char authDataKeyHeader =
+              0x60 | (char)authDataKey.length(); // 0x68
+
+          auto it = std::search(attObjBytes.begin(), attObjBytes.end(),
+                                authDataKey.begin(), authDataKey.end());
+
+          if (it != attObjBytes.end() && it != attObjBytes.begin()) {
+            // Check if preceded by string header 0x68
+            if (*(it - 1) == authDataKeyHeader) {
+              LOG_DEBUG << "Found authData key in attestationObject";
+              auto valueStart = it + authDataKey.length();
+              if (valueStart < attObjBytes.end()) {
+                // Decode byte string header
+                size_t dataLen = 0;
+                auto dataIt = valueStart;
+                uint8_t head = (uint8_t)*dataIt;
+                dataIt++;
+
+                if (head >= 0x40 && head <= 0x57) {
+                  dataLen = head - 0x40;
+                } else if (head == 0x58) {
+                  if (dataIt < attObjBytes.end()) {
+                    dataLen = (uint8_t)*dataIt;
+                    dataIt++;
+                  }
+                } else if (head == 0x59) {
+                  if (dataIt + 1 < attObjBytes.end()) {
+                    dataLen =
+                        ((uint8_t)*dataIt << 8) | (uint8_t) * (dataIt + 1);
+                    dataIt += 2;
+                  }
+                }
+                LOG_DEBUG << "authData length: " << dataLen;
+
+                // authData structure:
+                // 32 bytes rpIdHash
+                // 1 byte flags
+                // 4 bytes signCount (big endian)
+                if (dataLen >= 37 &&
+                    (size_t)std::distance(dataIt, attObjBytes.end()) >=
+                        dataLen) {
+                  auto scIt = dataIt + 32 + 1; // start of signCount
+                  uint32_t sc =
+                      ((uint8_t)*scIt << 24) | ((uint8_t) * (scIt + 1) << 16) |
+                      ((uint8_t) * (scIt + 2) << 8) | (uint8_t) * (scIt + 3);
+                  initialSignCount = sc;
+                  LOG_DEBUG << "Extracted signCount: " << sc;
+                } else {
+                  LOG_WARN << "authData too short to contain signCount";
+                }
+              }
+            } else {
+              LOG_DEBUG << "Found 'authData' string but header mismatch. Byte "
+                           "before: "
+                        << (int)(*(it - 1));
+            }
+          } else {
+            LOG_WARN << "Could not find 'authData' key in attestationObject";
+          }
+        } catch (const std::exception &e) {
+          LOG_ERROR << "Failed to parse attestationObject for signCount: "
+                    << e.what();
+        } catch (...) {
+          LOG_ERROR << "Unknown error parsing attestationObject";
+        }
+
+        user.setSignCount(initialSignCount);
+        user.setCredentialType(passKeysDto.getCredentialType());
+        user.setTransports(passKeysDto.getTransports());
+        user.setUpdatedAt(trantor::Date::now());
+
+        // Use userId as userHandle (convert string to char vector)
+        std::string uId = user.getValueOfId();
+        std::vector<char> handleVec(uId.begin(), uId.end());
+        user.setUserHandle(handleVec);
+
+        Mapper<Users> updateMp(dbClient);
+        updateMp.update(
+            user,
+            [callback](const size_t count) {
+              gnp::dto::BaseApiResponse response;
+              response.success = true;
+              response.message = "Passkeys registered successfully";
+              callback(response);
+            },
+            [callback](const DrogonDbException &e) {
+              gnp::dto::BaseApiResponse response;
+              response.success = false;
+              response.message = "Database error updating passkeys";
+              response.error["code"] = constants::ERR_DB_QUERY;
+              response.error["detail"] = e.base().what();
+              callback(response);
+            });
+      },
+      [callback](const DrogonDbException &e) {
+        gnp::dto::BaseApiResponse response;
+        response.success = false;
+        response.message = "User not found";
+        response.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+        response.error["detail"] = e.base().what();
+        callback(response);
+      });
+}
+
+void UserService::validateUserPasskeys(
+    const dto::LoginUserPasskeyDto &passkeyDto,
+    const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {
+
+  auto dbClient = drogon::app().getDbClient();
+  Mapper<Users> mp(dbClient);
+
+  // Find user by credential ID
+  // DTO credentialId is likely base64url or plain string depending on client.
+  // In DB we store as bytea. DTO has string.
+  // If client sends base64url, we need to convert to standard base64 then
+  // decode to bytes However, findBy expects us to query against the column
+  // type.
+
+  // To be safe, we'll try to match against encoded version or decoded version?
+  // The DB column `credential_id` is defined as `bytea` in postgres but
+  // `vector<char>` in model. And `toStandardBase64` logic is available inside
+  // the function scope? No, we should duplicate helper or move it.
+
+  auto toStandardBase64 = [](std::string s) {
+    for (char &c : s) {
+      if (c == '-')
+        c = '+';
+      else if (c == '_')
+        c = '/';
+    }
+    while (s.length() % 4 != 0)
+      s += '=';
+    return s;
+  };
+
+  std::string credIdStr = toStandardBase64(passkeyDto.getCredentialId());
+  std::vector<char> credIdBytes =
+      drogon::utils::base64DecodeToVector(credIdStr);
+
+  // Need to use findOne with criteria checking byte comparison
+  // But `Users` model uses `vector<char>` for `credential_id`.
+  // We can iterate or use a criteria that supports byte comparison?
+  // Drogon ORM `Criteria` with `EQ` on vector<char> should work if supported,
+  // otherwise manually. Actually, `Users::Cols::_credential_id` is the column
+  // name.
+
+  // Using a custom SQL query might be safer for bytea comparison if ORM is
+  // tricky with vectors, but let's try ORM first. Wait, ORM `createdAt` etc are
+  // strings in `Criteria` usually? Let's rely on `findOne` with strict
+  // matching.
+
+  // Actually, simpler: The `register` flow stored it as bytes.
+  // `credIdBytes` is what we expect to be in DB.
+
+  // IMPORTANT: ORM Criteria with binary data is tricky.
+  // Let's use `findBy` with a custom valid criteria or just use `findOne` with
+  // encoded string? No, `bytea` in postgres matches binary.
+
+  // Let's try `findOne` passing the vector. If it fails to compile or run, we
+  // fallback. Note: `Criteria` constructor for `std::vector` might not exist.
+  // We'll trust Drogon ORM supports it or we use `find` by primary key if we
+  // had it, but we don't.
+
+  // ALTERNATIVE: Use `userHandle` if provided to find user first, then check
+  // credential ID? `userHandle` in our case IS the `userId` (UUID).
+
+  std::string userId = passkeyDto.getUserHandle();
+  // If userHandle is empty/missing, we must rely on credentialId.
+  // But `userHandle` is recommended for this flow.
+  // Let's try to use userHandle first if it looks like a UUID.
+
+  Criteria userCriteria;
+  bool hasUserHandle = !userId.empty();
+
+  if (hasUserHandle) {
+    // Maybe userId is base64 encoded if it came from arraybuffer?
+    // Our register logic: `user.setUserHandle(handleVec)` where handleVec was
+    // chars of UUID string. So client `userHandle` (ArrayBuffer) -> Base64 ->
+    // DTO string. We decode base64 -> string (UUID).
+
+    // Check if userId looks like uuid or base64
+    if (userId.length() > 36) { // rudimentary check
+      std::string handleStr = toStandardBase64(userId);
+      auto handleBytes = drogon::utils::base64DecodeToVector(handleStr);
+      userId = std::string(handleBytes.begin(), handleBytes.end());
+    }
+    userCriteria = Criteria(Users::Cols::_id, CompareOperator::EQ, userId);
+  } else {
+    // Fallback or error? Spec says userHandle should be present for "resident
+    // keys" (discoverable credentials). For non-discoverable, we use
+    // credentialId list allowed. Let's assume userHandle is present for
+    // simplicity as per our register implementation. If not, we'd need to
+    // implementing lookup by credential_id which is `bytea`. Let's try looking
+    // up by credential_id encoded? No, ORM.
+
+    // For now, let's assume we can fetch by Credential ID if UserHandle is
+    // missing Converting byte vector to string for the sake of Criteria? No
+    // that matches text. We will return error if no userHandle for now to stay
+    // safe with ORM.
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.message = "User Handle is required for passkey login.";
+    callback(response);
+    return;
+  }
+
+  mp.findOne(
+      userCriteria,
+      [=](const Users &user) {
+        // Found user. Now verify passkey.
+
+        // 1. Verify Credential ID matches (if we found by userHandle)
+        auto storedCredId = user.getValueOfCredentialId();
+        if (credIdBytes != storedCredId) {
+          // Passkey doesn't belong to this user or changed
+          gnp::dto::BaseApiResponse response;
+          response.success = false;
+          response.message = "Invalid credential ID.";
+          callback(response);
+          return;
+        }
+
+        // 2. Cryptographic Verification
+        // SignedData = authenticatorData + sha256(clientDataJSON)
+
+        std::string authDataStr =
+            toStandardBase64(passkeyDto.getAuthenticatorData());
+        std::vector<char> authData =
+            drogon::utils::base64DecodeToVector(authDataStr);
+
+        std::string clientDataStr =
+            toStandardBase64(passkeyDto.getClientDataJSON());
+        std::vector<char> clientData =
+            drogon::utils::base64DecodeToVector(clientDataStr);
+
+        unsigned char clientDataHash[SHA256_DIGEST_LENGTH];
+        SHA256((const unsigned char *)clientData.data(), clientData.size(),
+               clientDataHash);
+
+        std::vector<unsigned char> signedData;
+        signedData.reserve(authData.size() + SHA256_DIGEST_LENGTH);
+        signedData.insert(signedData.end(), authData.begin(), authData.end());
+        signedData.insert(signedData.end(), clientDataHash,
+                          clientDataHash + SHA256_DIGEST_LENGTH);
+
+        // Public Key from DB
+        auto pubKeyBytes = user.getValueOfPublicKey();
+        // It's in COSE format or raw?
+        // In register:
+        // `user.setPublicKey(drogon::utils::base64DecodeToVector(pubKeyStr));`
+        // The client sent `credential.response.publicKey` which usually is SPKI
+        // (DER) or COSE. WebAuthn API `getPublicKey()` returns SPKI DER. If it
+        // is SPKI DER, `d2i_PUBKEY` can read it.
+
+        const unsigned char *p = (const unsigned char *)pubKeyBytes.data();
+        EVP_PKEY *pkey = d2i_PUBKEY(NULL, &p, pubKeyBytes.size());
+
+        if (!pkey) {
+          gnp::dto::BaseApiResponse response;
+          response.success = false;
+          response.message = "Failed to load stored public key.";
+          callback(response);
+          return;
+        }
+
+        EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+        EVP_DigestVerifyInit(ctx, NULL, EVP_sha256(), NULL, pkey);
+
+        // Verification
+        // signature from DTO
+        std::string sigStr = toStandardBase64(passkeyDto.getSignature());
+        std::vector<char> sigBytes =
+            drogon::utils::base64DecodeToVector(sigStr);
+
+        int verifyResult = EVP_DigestVerify(
+            ctx, (const unsigned char *)sigBytes.data(), sigBytes.size(),
+            signedData.data(), signedData.size());
+
+        EVP_MD_CTX_free(ctx);
+        EVP_PKEY_free(pkey);
+
+        if (verifyResult != 1) {
+          gnp::dto::BaseApiResponse response;
+          response.success = false;
+          response.message = "Signature verification failed.";
+          callback(response);
+          return;
+        }
+
+        // 3. Clone Check (Sign Count)
+        // Extract signCount from authData (bytes 33-36)
+        if (authData.size() < 37) {
+          gnp::dto::BaseApiResponse response;
+          response.success = false;
+          response.message = "Authenticator data too short.";
+          callback(response);
+          return;
+        }
+
+        uint32_t newSignCount =
+            ((uint8_t)authData[33] << 24) | ((uint8_t)authData[34] << 16) |
+            ((uint8_t)authData[35] << 8) | (uint8_t)authData[36];
+
+        int64_t storedCount = user.getValueOfSignCount();
+
+        if (newSignCount > 0 && newSignCount <= storedCount) {
+          // Potential clone attack!
+          gnp::dto::BaseApiResponse response;
+          response.success = false;
+          response.message = "Invalid sign count (possible clone detected).";
+          callback(response);
+          return;
+        }
+
+        // 4. Update Sign Count & Issue Token
+        Users userToUpdate = user;
+        userToUpdate.setSignCount(newSignCount);
+
+        Mapper<Users> updateMp(dbClient);
+        updateMp.update(
+            userToUpdate,
+            [=](const size_t count) {
+              // Issue Token (Reuse logic from validateUserCredentials usually,
+              // but copying here for scope)
+              auto &app = drogon::app();
+              auto customConfig = app.getCustomConfig();
+              std::string jwtSecurityKey =
+                  customConfig["JwtBearer"]["JwtSecurityKey"].asString();
+              std::string jwtIssuer =
+                  customConfig["JwtBearer"]["JwtIssuer"].asString();
+
+              auto token =
+                  jwt::create()
+                      .set_issuer(jwtIssuer)
+                      .set_type("JWT")
+                      .set_issued_at(std::chrono::system_clock::now())
+                      .set_expires_at(std::chrono::system_clock::now() +
+                                      std::chrono::hours(24 * 30))
+                      .set_payload_claim("userId",
+                                         jwt::claim(user.getValueOfId()))
+                      .set_payload_claim("username",
+                                         jwt::claim(user.getValueOfUsername()))
+                      .set_payload_claim("email",
+                                         jwt::claim(user.getValueOfEmail()))
+                      .sign(jwt::algorithm::hs256{jwtSecurityKey});
+
+              gnp::dto::BaseApiResponse response;
+              response.success = true;
+              response.message = "Authentication successful";
+              response.result["token"] = token;
+              response.result["userId"] = user.getValueOfId();
+              response.result["username"] = user.getValueOfUsername();
+              response.result["fullName"] =
+                  user.getValueOfFirstName() + " " + user.getValueOfLastName();
+              response.result["email"] = user.getValueOfEmail();
+              callback(response);
+            },
+            [callback](const DrogonDbException &e) {
+              gnp::dto::BaseApiResponse response;
+              response.success = false;
+              response.message = "Database error updating sign count.";
+              callback(response);
+            });
+      },
+      [callback](const DrogonDbException &e) {
+        gnp::dto::BaseApiResponse response;
+        response.success = false;
+        response.message = "User not found or invalid credentials.";
+        callback(response);
+      });
+}
+
 void UserService::validateUserCredentials(
     const dto::SigninDto &signin_dto,
     const std::function<void(const dto::BaseApiResponse &)> &callback) {
@@ -185,7 +608,7 @@ void UserService::validateUserCredentials(
                   .set_type("JWT")
                   .set_issued_at(std::chrono::system_clock::now())
                   .set_expires_at(std::chrono::system_clock::now() +
-                                  std::chrono::hours(24*30))
+                                  std::chrono::hours(24 * 30))
                   .set_payload_claim("userId", jwt::claim(user.getValueOfId()))
                   .set_payload_claim("username",
                                      jwt::claim(user.getValueOfUsername()))
@@ -224,8 +647,7 @@ void UserService::validateUserCredentials(
       });
 }
 
-
-  void UserService::validateAdminUserCredentials(
+void UserService::validateAdminUserCredentials(
     const dto::SigninDto &signin_dto,
     const std::function<void(const dto::BaseApiResponse &)> &callback) {
   auto dbClient = drogon::app().getDbClient();
@@ -233,8 +655,10 @@ void UserService::validateUserCredentials(
   Mapper<Users> mapper(dbClient);
 
   Criteria criteria =
-      (Criteria(Users::Cols::_username, CompareOperator::EQ, signin_dto.getUsernameOrEmail()) ||
-       Criteria(Users::Cols::_email, CompareOperator::EQ,  signin_dto.getUsernameOrEmail())) &&
+      (Criteria(Users::Cols::_username, CompareOperator::EQ,
+                signin_dto.getUsernameOrEmail()) ||
+       Criteria(Users::Cols::_email, CompareOperator::EQ,
+                signin_dto.getUsernameOrEmail())) &&
       Criteria(Users::Cols::_is_active, CompareOperator::EQ, true) &&
       Criteria(Users::Cols::_is_admin_user, CompareOperator::EQ, true) &&
       Criteria(Users::Cols::_is_locked_out, CompareOperator::EQ, false);
@@ -260,7 +684,7 @@ void UserService::validateUserCredentials(
                   .set_type("JWT")
                   .set_issued_at(std::chrono::system_clock::now())
                   .set_expires_at(std::chrono::system_clock::now() +
-                                  std::chrono::hours(24*30))
+                                  std::chrono::hours(24 * 30))
                   .set_payload_claim("userId", jwt::claim(user.getValueOfId()))
                   .set_payload_claim("username",
                                      jwt::claim(user.getValueOfUsername()))

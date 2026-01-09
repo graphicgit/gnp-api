@@ -61,6 +61,15 @@ class Users
         static const std::string _created_at;
         static const std::string _updated_at;
         static const std::string _is_admin_user;
+        static const std::string _is_partner_user;
+        static const std::string _partner_id;
+        static const std::string _credential_id;
+        static const std::string _public_key;
+        static const std::string _public_key_algorithm;
+        static const std::string _sign_count;
+        static const std::string _user_handle;
+        static const std::string _transports;
+        static const std::string _credential_type;
     };
 
     static const int primaryKeyNumber;
@@ -269,8 +278,100 @@ class Users
     ///Set the value of the column is_admin_user
     void setIsAdminUser(const bool &pIsAdminUser) noexcept;
 
+    /**  For column is_partner_user  */
+    ///Get the value of the column is_partner_user, returns the default value if the column is null
+    const bool &getValueOfIsPartnerUser() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<bool> &getIsPartnerUser() const noexcept;
+    ///Set the value of the column is_partner_user
+    void setIsPartnerUser(const bool &pIsPartnerUser) noexcept;
 
-    static size_t getColumnNumber() noexcept {  return 17;  }
+    /**  For column partner_id  */
+    ///Get the value of the column partner_id, returns the default value if the column is null
+    const std::string &getValueOfPartnerId() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getPartnerId() const noexcept;
+    ///Set the value of the column partner_id
+    void setPartnerId(const std::string &pPartnerId) noexcept;
+    void setPartnerId(std::string &&pPartnerId) noexcept;
+    void setPartnerIdToNull() noexcept;
+
+    /**  For column credential_id  */
+    ///Get the value of the column credential_id, returns the default value if the column is null
+    const std::vector<char> &getValueOfCredentialId() const noexcept;
+    ///Return the column value by std::string with binary data
+    std::string getValueOfCredentialIdAsString() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::vector<char>> &getCredentialId() const noexcept;
+    ///Set the value of the column credential_id
+    void setCredentialId(const std::vector<char> &pCredentialId) noexcept;
+    void setCredentialId(const std::string &pCredentialId) noexcept;
+    void setCredentialIdToNull() noexcept;
+
+    /**  For column public_key  */
+    ///Get the value of the column public_key, returns the default value if the column is null
+    const std::vector<char> &getValueOfPublicKey() const noexcept;
+    ///Return the column value by std::string with binary data
+    std::string getValueOfPublicKeyAsString() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::vector<char>> &getPublicKey() const noexcept;
+    ///Set the value of the column public_key
+    void setPublicKey(const std::vector<char> &pPublicKey) noexcept;
+    void setPublicKey(const std::string &pPublicKey) noexcept;
+    void setPublicKeyToNull() noexcept;
+
+    /**  For column public_key_algorithm  */
+    ///Get the value of the column public_key_algorithm, returns the default value if the column is null
+    const int32_t &getValueOfPublicKeyAlgorithm() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<int32_t> &getPublicKeyAlgorithm() const noexcept;
+    ///Set the value of the column public_key_algorithm
+    void setPublicKeyAlgorithm(const int32_t &pPublicKeyAlgorithm) noexcept;
+    void setPublicKeyAlgorithmToNull() noexcept;
+
+    /**  For column sign_count  */
+    ///Get the value of the column sign_count, returns the default value if the column is null
+    const int64_t &getValueOfSignCount() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<int64_t> &getSignCount() const noexcept;
+    ///Set the value of the column sign_count
+    void setSignCount(const int64_t &pSignCount) noexcept;
+    void setSignCountToNull() noexcept;
+
+    /**  For column user_handle  */
+    ///Get the value of the column user_handle, returns the default value if the column is null
+    const std::vector<char> &getValueOfUserHandle() const noexcept;
+    ///Return the column value by std::string with binary data
+    std::string getValueOfUserHandleAsString() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::vector<char>> &getUserHandle() const noexcept;
+    ///Set the value of the column user_handle
+    void setUserHandle(const std::vector<char> &pUserHandle) noexcept;
+    void setUserHandle(const std::string &pUserHandle) noexcept;
+    void setUserHandleToNull() noexcept;
+
+    /**  For column transports  */
+    ///Get the value of the column transports, returns the default value if the column is null
+    const std::string &getValueOfTransports() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getTransports() const noexcept;
+    ///Set the value of the column transports
+    void setTransports(const std::string &pTransports) noexcept;
+    void setTransports(std::string &&pTransports) noexcept;
+    void setTransportsToNull() noexcept;
+
+    /**  For column credential_type  */
+    ///Get the value of the column credential_type, returns the default value if the column is null
+    const std::string &getValueOfCredentialType() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getCredentialType() const noexcept;
+    ///Set the value of the column credential_type
+    void setCredentialType(const std::string &pCredentialType) noexcept;
+    void setCredentialType(std::string &&pCredentialType) noexcept;
+    void setCredentialTypeToNull() noexcept;
+
+
+    static size_t getColumnNumber() noexcept {  return 26;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -309,6 +410,15 @@ class Users
     std::shared_ptr<::trantor::Date> createdAt_;
     std::shared_ptr<::trantor::Date> updatedAt_;
     std::shared_ptr<bool> isAdminUser_;
+    std::shared_ptr<bool> isPartnerUser_;
+    std::shared_ptr<std::string> partnerId_;
+    std::shared_ptr<std::vector<char>> credentialId_;
+    std::shared_ptr<std::vector<char>> publicKey_;
+    std::shared_ptr<int32_t> publicKeyAlgorithm_;
+    std::shared_ptr<int64_t> signCount_;
+    std::shared_ptr<std::vector<char>> userHandle_;
+    std::shared_ptr<std::string> transports_;
+    std::shared_ptr<std::string> credentialType_;
     struct MetaData
     {
         const std::string colName_;
@@ -320,7 +430,7 @@ class Users
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[17]={ false };
+    bool dirtyFlag_[26]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -427,6 +537,54 @@ class Users
         if(!dirtyFlag_[16])
         {
             needSelection=true;
+        }
+        sql += "is_partner_user,";
+        ++parametersCount;
+        if(!dirtyFlag_[17])
+        {
+            needSelection=true;
+        }
+        sql += "partner_id,";
+        ++parametersCount;
+        if(!dirtyFlag_[18])
+        {
+            needSelection=true;
+        }
+        if(dirtyFlag_[19])
+        {
+            sql += "credential_id,";
+            ++parametersCount;
+        }
+        if(dirtyFlag_[20])
+        {
+            sql += "public_key,";
+            ++parametersCount;
+        }
+        if(dirtyFlag_[21])
+        {
+            sql += "public_key_algorithm,";
+            ++parametersCount;
+        }
+        sql += "sign_count,";
+        ++parametersCount;
+        if(!dirtyFlag_[22])
+        {
+            needSelection=true;
+        }
+        if(dirtyFlag_[23])
+        {
+            sql += "user_handle,";
+            ++parametersCount;
+        }
+        if(dirtyFlag_[24])
+        {
+            sql += "transports,";
+            ++parametersCount;
+        }
+        if(dirtyFlag_[25])
+        {
+            sql += "credential_type,";
+            ++parametersCount;
         }
         if(parametersCount > 0)
         {
@@ -543,6 +701,63 @@ class Users
         else
         {
             sql +="default,";
+        }
+        if(dirtyFlag_[17])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
+        }
+        if(dirtyFlag_[18])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
+        }
+        if(dirtyFlag_[19])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[20])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[21])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[22])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
+        }
+        if(dirtyFlag_[23])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[24])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[25])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
         }
         if(parametersCount > 0)
         {

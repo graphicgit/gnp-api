@@ -8,6 +8,9 @@
 #include "dto/SigninDto.h"
 #include <drogon/drogon.h>
 
+#include "dto/LoginUserPasskeyDto.h"
+#include "dto/RegisterUserPasskeysDto.h"
+
 namespace gnp::services {
 
 class UserService {
@@ -18,6 +21,10 @@ public:
 
   void create(
       const dto::CreateUserDto &userDto,
+      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+
+  void registerUserPasskeys(
+      const dto::RegisterUserPasskeysDto &userDto,
       const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
   void updateProfileImage(
@@ -49,9 +56,13 @@ public:
       const dto::SigninDto &signin_dto,
       const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
-    void validateAdminUserCredentials(
-     const dto::SigninDto &signin_dto,
-     const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  void validateUserPasskeys(
+      const dto::LoginUserPasskeyDto &passkeyDto,
+      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+
+  void validateAdminUserCredentials(
+      const dto::SigninDto &signin_dto,
+      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
   void checkAccountStatus(
       const std::string &identifier, const std::string &identifierType,
