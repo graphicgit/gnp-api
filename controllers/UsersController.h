@@ -21,8 +21,7 @@ class UsersController : public drogon::HttpController<UsersController>
       ADD_METHOD_TO(UsersController::activate, PREFIX + "/activate", Get);
       ADD_METHOD_TO(UsersController::deactivate, PREFIX + "/deactivate", Get);
       ADD_METHOD_TO(UsersController::createUser, PREFIX + "/create", Post);
-      ADD_METHOD_TO(UsersController::registerPasskeys, PREFIX + "/register-pass-keys", Post);
-
+      ADD_METHOD_TO(UsersController::registerPasskeys, PREFIX + "/register-pass-keys", Post, Options);
       ADD_METHOD_TO(UsersController::updateUser, PREFIX + "/update", Post);
       ADD_METHOD_TO(UsersController::updateUser, PREFIX + "/update-profile-image", Post);
       ADD_METHOD_TO(UsersController::deleteUser, PREFIX + "/delete", Delete);

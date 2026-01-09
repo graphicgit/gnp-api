@@ -214,6 +214,36 @@ void AuthController::signIn(
       });
 }
 
+void AuthController::registerPasskeys(const HttpRequestPtr& req, std::function<void (const HttpResponsePtr &)> &&callback)
+{
+
+  auto jsonBody = req->getJsonObject();
+
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    callback(resp);
+    return;
+  }
+
+  gnp::dto::RegisterUserPasskeysDto dto;
+
+  dto.fromJson(*jsonBody);
+
+  // Get tenant service from plugin
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto& userService = plugin->getUserService();
+
+  userService.registerUserPasskeys(dto, [callback](const gnp::dto::BaseApiResponse& result) {
+      auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+      callback(resp);
+  });
+
+}
+
 void AuthController::loginViaPasskeys(const HttpRequestPtr& req, std::function<void (const HttpResponsePtr &)> &&callback)
 {
 

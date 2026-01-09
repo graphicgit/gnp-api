@@ -76,17 +76,23 @@ inline void RegisterUserPasskeysDto::fromJson(const Json::Value &json) {
 
   if (json.isMember("transports") && !json["transports"].isNull()) {
     if (json["transports"].isArray()) {
-      std::string t_str = "{";
-      for (const auto &t : json["transports"]) {
-        t_str += t.asString() + ",";
+      if (json["transports"].empty()) {
+        transports_ = "{}";
+      } else {
+        std::string t_str = "{";
+        for (const auto &t : json["transports"]) {
+          t_str += t.asString() + ",";
+        }
+        if (t_str.length() > 1)
+          t_str.pop_back();
+        t_str += "}";
+        transports_ = t_str;
       }
-      if (t_str.length() > 1)
-        t_str.pop_back();
-      t_str += "}";
-      transports_ = t_str;
     } else {
       transports_ = json["transports"].asString();
     }
+  } else {
+    transports_ = "{}";
   }
 
   if (json.isMember("credentialType") && !json["credentialType"].isNull()) {
