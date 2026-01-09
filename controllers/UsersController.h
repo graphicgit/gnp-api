@@ -21,6 +21,8 @@ class UsersController : public drogon::HttpController<UsersController>
       ADD_METHOD_TO(UsersController::activate, PREFIX + "/activate", Get);
       ADD_METHOD_TO(UsersController::deactivate, PREFIX + "/deactivate", Get);
       ADD_METHOD_TO(UsersController::createUser, PREFIX + "/create", Post);
+      ADD_METHOD_TO(UsersController::registerPasskeys, PREFIX + "/register-pass-keys", Post);
+
       ADD_METHOD_TO(UsersController::updateUser, PREFIX + "/update", Post);
       ADD_METHOD_TO(UsersController::updateUser, PREFIX + "/update-profile-image", Post);
       ADD_METHOD_TO(UsersController::deleteUser, PREFIX + "/delete", Delete);
@@ -29,7 +31,9 @@ class UsersController : public drogon::HttpController<UsersController>
       //handler methods
       void getUsers(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
       void createUser(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+      void registerPasskeys(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
       void generateAuthToken(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+      void loginViaPasskeys(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
       void lockUserAccount(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
       void unLockUserAccount(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
       void updateUser(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);

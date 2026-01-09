@@ -64,6 +64,7 @@ add_executable(${PROJECT_NAME} main.cc
         services/partners/CommercialPartnerService.cc
         dto/CreatePartnerDto.h
         dto/UpdatePartnerDto.h
+        dto/RegisterUserPasskeysDto.h
 )
 
 # ##############################################################################

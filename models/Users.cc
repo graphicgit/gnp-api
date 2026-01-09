@@ -32,6 +32,13 @@ const std::string Users::Cols::_updated_at = "\"updated_at\"";
 const std::string Users::Cols::_is_admin_user = "\"is_admin_user\"";
 const std::string Users::Cols::_is_partner_user = "\"is_partner_user\"";
 const std::string Users::Cols::_partner_id = "\"partner_id\"";
+const std::string Users::Cols::_credential_id = "\"credential_id\"";
+const std::string Users::Cols::_public_key = "\"public_key\"";
+const std::string Users::Cols::_public_key_algorithm = "\"public_key_algorithm\"";
+const std::string Users::Cols::_sign_count = "\"sign_count\"";
+const std::string Users::Cols::_user_handle = "\"user_handle\"";
+const std::string Users::Cols::_transports = "\"transports\"";
+const std::string Users::Cols::_credential_type = "\"credential_type\"";
 const std::string Users::primaryKeyName = "id";
 const bool Users::hasPrimaryKey = true;
 const std::string Users::tableName = "\"users\"";
@@ -55,7 +62,14 @@ const std::vector<typename Users::MetaData> Users::metaData_={
 {"updated_at","::trantor::Date","timestamp with time zone",0,0,0,0},
 {"is_admin_user","bool","boolean",1,0,0,1},
 {"is_partner_user","bool","boolean",1,0,0,1},
-{"partner_id","std::string","uuid",0,0,0,0}
+{"partner_id","std::string","uuid",0,0,0,0},
+{"credential_id","std::vector<char>","bytea",0,0,0,0},
+{"public_key","std::vector<char>","bytea",0,0,0,0},
+{"public_key_algorithm","int32_t","integer",4,0,0,0},
+{"sign_count","int64_t","bigint",8,0,0,0},
+{"user_handle","std::vector<char>","bytea",0,0,0,0},
+{"transports","std::string","ARRAY",0,0,0,0},
+{"credential_type","std::string","text",0,0,0,0}
 };
 const std::string &Users::getColumnName(size_t index) noexcept(false)
 {
@@ -214,11 +228,54 @@ Users::Users(const Row &r, const ssize_t indexOffset) noexcept
         {
             partnerId_=std::make_shared<std::string>(r["partner_id"].as<std::string>());
         }
+        if(!r["credential_id"].isNull())
+        {
+            auto str = r["credential_id"].as<std::string_view>();
+            if(str.length()>=2&&
+                str[0]=='\\'&&str[1]=='x')
+            {
+                credentialId_=std::make_shared<std::vector<char>>(drogon::utils::hexToBinaryVector(str.data()+2,str.length()-2));
+            }
+        }
+        if(!r["public_key"].isNull())
+        {
+            auto str = r["public_key"].as<std::string_view>();
+            if(str.length()>=2&&
+                str[0]=='\\'&&str[1]=='x')
+            {
+                publicKey_=std::make_shared<std::vector<char>>(drogon::utils::hexToBinaryVector(str.data()+2,str.length()-2));
+            }
+        }
+        if(!r["public_key_algorithm"].isNull())
+        {
+            publicKeyAlgorithm_=std::make_shared<int32_t>(r["public_key_algorithm"].as<int32_t>());
+        }
+        if(!r["sign_count"].isNull())
+        {
+            signCount_=std::make_shared<int64_t>(r["sign_count"].as<int64_t>());
+        }
+        if(!r["user_handle"].isNull())
+        {
+            auto str = r["user_handle"].as<std::string_view>();
+            if(str.length()>=2&&
+                str[0]=='\\'&&str[1]=='x')
+            {
+                userHandle_=std::make_shared<std::vector<char>>(drogon::utils::hexToBinaryVector(str.data()+2,str.length()-2));
+            }
+        }
+        if(!r["transports"].isNull())
+        {
+            transports_=std::make_shared<std::string>(r["transports"].as<std::string>());
+        }
+        if(!r["credential_type"].isNull())
+        {
+            credentialType_=std::make_shared<std::string>(r["credential_type"].as<std::string>());
+        }
     }
     else
     {
         size_t offset = (size_t)indexOffset;
-        if(offset + 19 > r.size())
+        if(offset + 26 > r.size())
         {
             LOG_FATAL << "Invalid SQL result for this model";
             return;
@@ -391,13 +448,63 @@ Users::Users(const Row &r, const ssize_t indexOffset) noexcept
         {
             partnerId_=std::make_shared<std::string>(r[index].as<std::string>());
         }
+        index = offset + 19;
+        if(!r[index].isNull())
+        {
+            auto str = r[index].as<std::string_view>();
+            if(str.length()>=2&&
+                str[0]=='\\'&&str[1]=='x')
+            {
+                credentialId_=std::make_shared<std::vector<char>>(drogon::utils::hexToBinaryVector(str.data()+2,str.length()-2));
+            }
+        }
+        index = offset + 20;
+        if(!r[index].isNull())
+        {
+            auto str = r[index].as<std::string_view>();
+            if(str.length()>=2&&
+                str[0]=='\\'&&str[1]=='x')
+            {
+                publicKey_=std::make_shared<std::vector<char>>(drogon::utils::hexToBinaryVector(str.data()+2,str.length()-2));
+            }
+        }
+        index = offset + 21;
+        if(!r[index].isNull())
+        {
+            publicKeyAlgorithm_=std::make_shared<int32_t>(r[index].as<int32_t>());
+        }
+        index = offset + 22;
+        if(!r[index].isNull())
+        {
+            signCount_=std::make_shared<int64_t>(r[index].as<int64_t>());
+        }
+        index = offset + 23;
+        if(!r[index].isNull())
+        {
+            auto str = r[index].as<std::string_view>();
+            if(str.length()>=2&&
+                str[0]=='\\'&&str[1]=='x')
+            {
+                userHandle_=std::make_shared<std::vector<char>>(drogon::utils::hexToBinaryVector(str.data()+2,str.length()-2));
+            }
+        }
+        index = offset + 24;
+        if(!r[index].isNull())
+        {
+            transports_=std::make_shared<std::string>(r[index].as<std::string>());
+        }
+        index = offset + 25;
+        if(!r[index].isNull())
+        {
+            credentialType_=std::make_shared<std::string>(r[index].as<std::string>());
+        }
     }
 
 }
 
 Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 19)
+    if(pMasqueradingVector.size() != 26)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -624,6 +731,65 @@ Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasquera
         if(!pJson[pMasqueradingVector[18]].isNull())
         {
             partnerId_=std::make_shared<std::string>(pJson[pMasqueradingVector[18]].asString());
+        }
+    }
+    if(!pMasqueradingVector[19].empty() && pJson.isMember(pMasqueradingVector[19]))
+    {
+        dirtyFlag_[19] = true;
+        if(!pJson[pMasqueradingVector[19]].isNull())
+        {
+            auto str = pJson[pMasqueradingVector[19]].asString();
+            credentialId_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
+        }
+    }
+    if(!pMasqueradingVector[20].empty() && pJson.isMember(pMasqueradingVector[20]))
+    {
+        dirtyFlag_[20] = true;
+        if(!pJson[pMasqueradingVector[20]].isNull())
+        {
+            auto str = pJson[pMasqueradingVector[20]].asString();
+            publicKey_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
+        }
+    }
+    if(!pMasqueradingVector[21].empty() && pJson.isMember(pMasqueradingVector[21]))
+    {
+        dirtyFlag_[21] = true;
+        if(!pJson[pMasqueradingVector[21]].isNull())
+        {
+            publicKeyAlgorithm_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[21]].asInt64());
+        }
+    }
+    if(!pMasqueradingVector[22].empty() && pJson.isMember(pMasqueradingVector[22]))
+    {
+        dirtyFlag_[22] = true;
+        if(!pJson[pMasqueradingVector[22]].isNull())
+        {
+            signCount_=std::make_shared<int64_t>((int64_t)pJson[pMasqueradingVector[22]].asInt64());
+        }
+    }
+    if(!pMasqueradingVector[23].empty() && pJson.isMember(pMasqueradingVector[23]))
+    {
+        dirtyFlag_[23] = true;
+        if(!pJson[pMasqueradingVector[23]].isNull())
+        {
+            auto str = pJson[pMasqueradingVector[23]].asString();
+            userHandle_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
+        }
+    }
+    if(!pMasqueradingVector[24].empty() && pJson.isMember(pMasqueradingVector[24]))
+    {
+        dirtyFlag_[24] = true;
+        if(!pJson[pMasqueradingVector[24]].isNull())
+        {
+            transports_=std::make_shared<std::string>(pJson[pMasqueradingVector[24]].asString());
+        }
+    }
+    if(!pMasqueradingVector[25].empty() && pJson.isMember(pMasqueradingVector[25]))
+    {
+        dirtyFlag_[25] = true;
+        if(!pJson[pMasqueradingVector[25]].isNull())
+        {
+            credentialType_=std::make_shared<std::string>(pJson[pMasqueradingVector[25]].asString());
         }
     }
 }
@@ -854,12 +1020,71 @@ Users::Users(const Json::Value &pJson) noexcept(false)
             partnerId_=std::make_shared<std::string>(pJson["partner_id"].asString());
         }
     }
+    if(pJson.isMember("credential_id"))
+    {
+        dirtyFlag_[19]=true;
+        if(!pJson["credential_id"].isNull())
+        {
+            auto str = pJson["credential_id"].asString();
+            credentialId_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
+        }
+    }
+    if(pJson.isMember("public_key"))
+    {
+        dirtyFlag_[20]=true;
+        if(!pJson["public_key"].isNull())
+        {
+            auto str = pJson["public_key"].asString();
+            publicKey_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
+        }
+    }
+    if(pJson.isMember("public_key_algorithm"))
+    {
+        dirtyFlag_[21]=true;
+        if(!pJson["public_key_algorithm"].isNull())
+        {
+            publicKeyAlgorithm_=std::make_shared<int32_t>((int32_t)pJson["public_key_algorithm"].asInt64());
+        }
+    }
+    if(pJson.isMember("sign_count"))
+    {
+        dirtyFlag_[22]=true;
+        if(!pJson["sign_count"].isNull())
+        {
+            signCount_=std::make_shared<int64_t>((int64_t)pJson["sign_count"].asInt64());
+        }
+    }
+    if(pJson.isMember("user_handle"))
+    {
+        dirtyFlag_[23]=true;
+        if(!pJson["user_handle"].isNull())
+        {
+            auto str = pJson["user_handle"].asString();
+            userHandle_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
+        }
+    }
+    if(pJson.isMember("transports"))
+    {
+        dirtyFlag_[24]=true;
+        if(!pJson["transports"].isNull())
+        {
+            transports_=std::make_shared<std::string>(pJson["transports"].asString());
+        }
+    }
+    if(pJson.isMember("credential_type"))
+    {
+        dirtyFlag_[25]=true;
+        if(!pJson["credential_type"].isNull())
+        {
+            credentialType_=std::make_shared<std::string>(pJson["credential_type"].asString());
+        }
+    }
 }
 
 void Users::updateByMasqueradedJson(const Json::Value &pJson,
                                             const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 19)
+    if(pMasqueradingVector.size() != 26)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -1087,6 +1312,65 @@ void Users::updateByMasqueradedJson(const Json::Value &pJson,
             partnerId_=std::make_shared<std::string>(pJson[pMasqueradingVector[18]].asString());
         }
     }
+    if(!pMasqueradingVector[19].empty() && pJson.isMember(pMasqueradingVector[19]))
+    {
+        dirtyFlag_[19] = true;
+        if(!pJson[pMasqueradingVector[19]].isNull())
+        {
+            auto str = pJson[pMasqueradingVector[19]].asString();
+            credentialId_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
+        }
+    }
+    if(!pMasqueradingVector[20].empty() && pJson.isMember(pMasqueradingVector[20]))
+    {
+        dirtyFlag_[20] = true;
+        if(!pJson[pMasqueradingVector[20]].isNull())
+        {
+            auto str = pJson[pMasqueradingVector[20]].asString();
+            publicKey_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
+        }
+    }
+    if(!pMasqueradingVector[21].empty() && pJson.isMember(pMasqueradingVector[21]))
+    {
+        dirtyFlag_[21] = true;
+        if(!pJson[pMasqueradingVector[21]].isNull())
+        {
+            publicKeyAlgorithm_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[21]].asInt64());
+        }
+    }
+    if(!pMasqueradingVector[22].empty() && pJson.isMember(pMasqueradingVector[22]))
+    {
+        dirtyFlag_[22] = true;
+        if(!pJson[pMasqueradingVector[22]].isNull())
+        {
+            signCount_=std::make_shared<int64_t>((int64_t)pJson[pMasqueradingVector[22]].asInt64());
+        }
+    }
+    if(!pMasqueradingVector[23].empty() && pJson.isMember(pMasqueradingVector[23]))
+    {
+        dirtyFlag_[23] = true;
+        if(!pJson[pMasqueradingVector[23]].isNull())
+        {
+            auto str = pJson[pMasqueradingVector[23]].asString();
+            userHandle_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
+        }
+    }
+    if(!pMasqueradingVector[24].empty() && pJson.isMember(pMasqueradingVector[24]))
+    {
+        dirtyFlag_[24] = true;
+        if(!pJson[pMasqueradingVector[24]].isNull())
+        {
+            transports_=std::make_shared<std::string>(pJson[pMasqueradingVector[24]].asString());
+        }
+    }
+    if(!pMasqueradingVector[25].empty() && pJson.isMember(pMasqueradingVector[25]))
+    {
+        dirtyFlag_[25] = true;
+        if(!pJson[pMasqueradingVector[25]].isNull())
+        {
+            credentialType_=std::make_shared<std::string>(pJson[pMasqueradingVector[25]].asString());
+        }
+    }
 }
 
 void Users::updateByJson(const Json::Value &pJson) noexcept(false)
@@ -1312,6 +1596,65 @@ void Users::updateByJson(const Json::Value &pJson) noexcept(false)
         if(!pJson["partner_id"].isNull())
         {
             partnerId_=std::make_shared<std::string>(pJson["partner_id"].asString());
+        }
+    }
+    if(pJson.isMember("credential_id"))
+    {
+        dirtyFlag_[19] = true;
+        if(!pJson["credential_id"].isNull())
+        {
+            auto str = pJson["credential_id"].asString();
+            credentialId_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
+        }
+    }
+    if(pJson.isMember("public_key"))
+    {
+        dirtyFlag_[20] = true;
+        if(!pJson["public_key"].isNull())
+        {
+            auto str = pJson["public_key"].asString();
+            publicKey_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
+        }
+    }
+    if(pJson.isMember("public_key_algorithm"))
+    {
+        dirtyFlag_[21] = true;
+        if(!pJson["public_key_algorithm"].isNull())
+        {
+            publicKeyAlgorithm_=std::make_shared<int32_t>((int32_t)pJson["public_key_algorithm"].asInt64());
+        }
+    }
+    if(pJson.isMember("sign_count"))
+    {
+        dirtyFlag_[22] = true;
+        if(!pJson["sign_count"].isNull())
+        {
+            signCount_=std::make_shared<int64_t>((int64_t)pJson["sign_count"].asInt64());
+        }
+    }
+    if(pJson.isMember("user_handle"))
+    {
+        dirtyFlag_[23] = true;
+        if(!pJson["user_handle"].isNull())
+        {
+            auto str = pJson["user_handle"].asString();
+            userHandle_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
+        }
+    }
+    if(pJson.isMember("transports"))
+    {
+        dirtyFlag_[24] = true;
+        if(!pJson["transports"].isNull())
+        {
+            transports_=std::make_shared<std::string>(pJson["transports"].asString());
+        }
+    }
+    if(pJson.isMember("credential_type"))
+    {
+        dirtyFlag_[25] = true;
+        if(!pJson["credential_type"].isNull())
+        {
+            credentialType_=std::make_shared<std::string>(pJson["credential_type"].asString());
         }
     }
 }
@@ -1759,6 +2102,206 @@ void Users::setPartnerIdToNull() noexcept
     dirtyFlag_[18] = true;
 }
 
+const std::vector<char> &Users::getValueOfCredentialId() const noexcept
+{
+    static const std::vector<char> defaultValue = std::vector<char>();
+    if(credentialId_)
+        return *credentialId_;
+    return defaultValue;
+}
+std::string Users::getValueOfCredentialIdAsString() const noexcept
+{
+    static const std::string defaultValue = std::string();
+    if(credentialId_)
+        return std::string(credentialId_->data(),credentialId_->size());
+    return defaultValue;
+}
+const std::shared_ptr<std::vector<char>> &Users::getCredentialId() const noexcept
+{
+    return credentialId_;
+}
+void Users::setCredentialId(const std::vector<char> &pCredentialId) noexcept
+{
+    credentialId_ = std::make_shared<std::vector<char>>(pCredentialId);
+    dirtyFlag_[19] = true;
+}
+void Users::setCredentialId(const std::string &pCredentialId) noexcept
+{
+    credentialId_ = std::make_shared<std::vector<char>>(pCredentialId.c_str(),pCredentialId.c_str()+pCredentialId.length());
+    dirtyFlag_[19] = true;
+}
+void Users::setCredentialIdToNull() noexcept
+{
+    credentialId_.reset();
+    dirtyFlag_[19] = true;
+}
+
+const std::vector<char> &Users::getValueOfPublicKey() const noexcept
+{
+    static const std::vector<char> defaultValue = std::vector<char>();
+    if(publicKey_)
+        return *publicKey_;
+    return defaultValue;
+}
+std::string Users::getValueOfPublicKeyAsString() const noexcept
+{
+    static const std::string defaultValue = std::string();
+    if(publicKey_)
+        return std::string(publicKey_->data(),publicKey_->size());
+    return defaultValue;
+}
+const std::shared_ptr<std::vector<char>> &Users::getPublicKey() const noexcept
+{
+    return publicKey_;
+}
+void Users::setPublicKey(const std::vector<char> &pPublicKey) noexcept
+{
+    publicKey_ = std::make_shared<std::vector<char>>(pPublicKey);
+    dirtyFlag_[20] = true;
+}
+void Users::setPublicKey(const std::string &pPublicKey) noexcept
+{
+    publicKey_ = std::make_shared<std::vector<char>>(pPublicKey.c_str(),pPublicKey.c_str()+pPublicKey.length());
+    dirtyFlag_[20] = true;
+}
+void Users::setPublicKeyToNull() noexcept
+{
+    publicKey_.reset();
+    dirtyFlag_[20] = true;
+}
+
+const int32_t &Users::getValueOfPublicKeyAlgorithm() const noexcept
+{
+    static const int32_t defaultValue = int32_t();
+    if(publicKeyAlgorithm_)
+        return *publicKeyAlgorithm_;
+    return defaultValue;
+}
+const std::shared_ptr<int32_t> &Users::getPublicKeyAlgorithm() const noexcept
+{
+    return publicKeyAlgorithm_;
+}
+void Users::setPublicKeyAlgorithm(const int32_t &pPublicKeyAlgorithm) noexcept
+{
+    publicKeyAlgorithm_ = std::make_shared<int32_t>(pPublicKeyAlgorithm);
+    dirtyFlag_[21] = true;
+}
+void Users::setPublicKeyAlgorithmToNull() noexcept
+{
+    publicKeyAlgorithm_.reset();
+    dirtyFlag_[21] = true;
+}
+
+const int64_t &Users::getValueOfSignCount() const noexcept
+{
+    static const int64_t defaultValue = int64_t();
+    if(signCount_)
+        return *signCount_;
+    return defaultValue;
+}
+const std::shared_ptr<int64_t> &Users::getSignCount() const noexcept
+{
+    return signCount_;
+}
+void Users::setSignCount(const int64_t &pSignCount) noexcept
+{
+    signCount_ = std::make_shared<int64_t>(pSignCount);
+    dirtyFlag_[22] = true;
+}
+void Users::setSignCountToNull() noexcept
+{
+    signCount_.reset();
+    dirtyFlag_[22] = true;
+}
+
+const std::vector<char> &Users::getValueOfUserHandle() const noexcept
+{
+    static const std::vector<char> defaultValue = std::vector<char>();
+    if(userHandle_)
+        return *userHandle_;
+    return defaultValue;
+}
+std::string Users::getValueOfUserHandleAsString() const noexcept
+{
+    static const std::string defaultValue = std::string();
+    if(userHandle_)
+        return std::string(userHandle_->data(),userHandle_->size());
+    return defaultValue;
+}
+const std::shared_ptr<std::vector<char>> &Users::getUserHandle() const noexcept
+{
+    return userHandle_;
+}
+void Users::setUserHandle(const std::vector<char> &pUserHandle) noexcept
+{
+    userHandle_ = std::make_shared<std::vector<char>>(pUserHandle);
+    dirtyFlag_[23] = true;
+}
+void Users::setUserHandle(const std::string &pUserHandle) noexcept
+{
+    userHandle_ = std::make_shared<std::vector<char>>(pUserHandle.c_str(),pUserHandle.c_str()+pUserHandle.length());
+    dirtyFlag_[23] = true;
+}
+void Users::setUserHandleToNull() noexcept
+{
+    userHandle_.reset();
+    dirtyFlag_[23] = true;
+}
+
+const std::string &Users::getValueOfTransports() const noexcept
+{
+    static const std::string defaultValue = std::string();
+    if(transports_)
+        return *transports_;
+    return defaultValue;
+}
+const std::shared_ptr<std::string> &Users::getTransports() const noexcept
+{
+    return transports_;
+}
+void Users::setTransports(const std::string &pTransports) noexcept
+{
+    transports_ = std::make_shared<std::string>(pTransports);
+    dirtyFlag_[24] = true;
+}
+void Users::setTransports(std::string &&pTransports) noexcept
+{
+    transports_ = std::make_shared<std::string>(std::move(pTransports));
+    dirtyFlag_[24] = true;
+}
+void Users::setTransportsToNull() noexcept
+{
+    transports_.reset();
+    dirtyFlag_[24] = true;
+}
+
+const std::string &Users::getValueOfCredentialType() const noexcept
+{
+    static const std::string defaultValue = std::string();
+    if(credentialType_)
+        return *credentialType_;
+    return defaultValue;
+}
+const std::shared_ptr<std::string> &Users::getCredentialType() const noexcept
+{
+    return credentialType_;
+}
+void Users::setCredentialType(const std::string &pCredentialType) noexcept
+{
+    credentialType_ = std::make_shared<std::string>(pCredentialType);
+    dirtyFlag_[25] = true;
+}
+void Users::setCredentialType(std::string &&pCredentialType) noexcept
+{
+    credentialType_ = std::make_shared<std::string>(std::move(pCredentialType));
+    dirtyFlag_[25] = true;
+}
+void Users::setCredentialTypeToNull() noexcept
+{
+    credentialType_.reset();
+    dirtyFlag_[25] = true;
+}
+
 void Users::updateId(const uint64_t id)
 {
 }
@@ -1784,7 +2327,14 @@ const std::vector<std::string> &Users::insertColumns() noexcept
         "updated_at",
         "is_admin_user",
         "is_partner_user",
-        "partner_id"
+        "partner_id",
+        "credential_id",
+        "public_key",
+        "public_key_algorithm",
+        "sign_count",
+        "user_handle",
+        "transports",
+        "credential_type"
     };
     return inCols;
 }
@@ -2000,6 +2550,83 @@ void Users::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[19])
+    {
+        if(getCredentialId())
+        {
+            binder << getValueOfCredentialId();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[20])
+    {
+        if(getPublicKey())
+        {
+            binder << getValueOfPublicKey();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[21])
+    {
+        if(getPublicKeyAlgorithm())
+        {
+            binder << getValueOfPublicKeyAlgorithm();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[22])
+    {
+        if(getSignCount())
+        {
+            binder << getValueOfSignCount();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[23])
+    {
+        if(getUserHandle())
+        {
+            binder << getValueOfUserHandle();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[24])
+    {
+        if(getTransports())
+        {
+            binder << getValueOfTransports();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[25])
+    {
+        if(getCredentialType())
+        {
+            binder << getValueOfCredentialType();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 
 const std::vector<std::string> Users::updateColumns() const
@@ -2080,6 +2707,34 @@ const std::vector<std::string> Users::updateColumns() const
     if(dirtyFlag_[18])
     {
         ret.push_back(getColumnName(18));
+    }
+    if(dirtyFlag_[19])
+    {
+        ret.push_back(getColumnName(19));
+    }
+    if(dirtyFlag_[20])
+    {
+        ret.push_back(getColumnName(20));
+    }
+    if(dirtyFlag_[21])
+    {
+        ret.push_back(getColumnName(21));
+    }
+    if(dirtyFlag_[22])
+    {
+        ret.push_back(getColumnName(22));
+    }
+    if(dirtyFlag_[23])
+    {
+        ret.push_back(getColumnName(23));
+    }
+    if(dirtyFlag_[24])
+    {
+        ret.push_back(getColumnName(24));
+    }
+    if(dirtyFlag_[25])
+    {
+        ret.push_back(getColumnName(25));
     }
     return ret;
 }
@@ -2295,6 +2950,83 @@ void Users::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[19])
+    {
+        if(getCredentialId())
+        {
+            binder << getValueOfCredentialId();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[20])
+    {
+        if(getPublicKey())
+        {
+            binder << getValueOfPublicKey();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[21])
+    {
+        if(getPublicKeyAlgorithm())
+        {
+            binder << getValueOfPublicKeyAlgorithm();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[22])
+    {
+        if(getSignCount())
+        {
+            binder << getValueOfSignCount();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[23])
+    {
+        if(getUserHandle())
+        {
+            binder << getValueOfUserHandle();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[24])
+    {
+        if(getTransports())
+        {
+            binder << getValueOfTransports();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[25])
+    {
+        if(getCredentialType())
+        {
+            binder << getValueOfCredentialType();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 Json::Value Users::toJson() const
 {
@@ -2451,6 +3183,62 @@ Json::Value Users::toJson() const
     {
         ret["partner_id"]=Json::Value();
     }
+    if(getCredentialId())
+    {
+        ret["credential_id"]=drogon::utils::base64Encode((const unsigned char *)getCredentialId()->data(),getCredentialId()->size());
+    }
+    else
+    {
+        ret["credential_id"]=Json::Value();
+    }
+    if(getPublicKey())
+    {
+        ret["public_key"]=drogon::utils::base64Encode((const unsigned char *)getPublicKey()->data(),getPublicKey()->size());
+    }
+    else
+    {
+        ret["public_key"]=Json::Value();
+    }
+    if(getPublicKeyAlgorithm())
+    {
+        ret["public_key_algorithm"]=getValueOfPublicKeyAlgorithm();
+    }
+    else
+    {
+        ret["public_key_algorithm"]=Json::Value();
+    }
+    if(getSignCount())
+    {
+        ret["sign_count"]=(Json::Int64)getValueOfSignCount();
+    }
+    else
+    {
+        ret["sign_count"]=Json::Value();
+    }
+    if(getUserHandle())
+    {
+        ret["user_handle"]=drogon::utils::base64Encode((const unsigned char *)getUserHandle()->data(),getUserHandle()->size());
+    }
+    else
+    {
+        ret["user_handle"]=Json::Value();
+    }
+    if(getTransports())
+    {
+        ret["transports"]=getValueOfTransports();
+    }
+    else
+    {
+        ret["transports"]=Json::Value();
+    }
+    if(getCredentialType())
+    {
+        ret["credential_type"]=getValueOfCredentialType();
+    }
+    else
+    {
+        ret["credential_type"]=Json::Value();
+    }
     return ret;
 }
 
@@ -2463,7 +3251,7 @@ Json::Value Users::toMasqueradedJson(
     const std::vector<std::string> &pMasqueradingVector) const
 {
     Json::Value ret;
-    if(pMasqueradingVector.size() == 19)
+    if(pMasqueradingVector.size() == 26)
     {
         if(!pMasqueradingVector[0].empty())
         {
@@ -2674,6 +3462,83 @@ Json::Value Users::toMasqueradedJson(
                 ret[pMasqueradingVector[18]]=Json::Value();
             }
         }
+        if(!pMasqueradingVector[19].empty())
+        {
+            if(getCredentialId())
+            {
+                ret[pMasqueradingVector[19]]=drogon::utils::base64Encode((const unsigned char *)getCredentialId()->data(),getCredentialId()->size());
+            }
+            else
+            {
+                ret[pMasqueradingVector[19]]=Json::Value();
+            }
+        }
+        if(!pMasqueradingVector[20].empty())
+        {
+            if(getPublicKey())
+            {
+                ret[pMasqueradingVector[20]]=drogon::utils::base64Encode((const unsigned char *)getPublicKey()->data(),getPublicKey()->size());
+            }
+            else
+            {
+                ret[pMasqueradingVector[20]]=Json::Value();
+            }
+        }
+        if(!pMasqueradingVector[21].empty())
+        {
+            if(getPublicKeyAlgorithm())
+            {
+                ret[pMasqueradingVector[21]]=getValueOfPublicKeyAlgorithm();
+            }
+            else
+            {
+                ret[pMasqueradingVector[21]]=Json::Value();
+            }
+        }
+        if(!pMasqueradingVector[22].empty())
+        {
+            if(getSignCount())
+            {
+                ret[pMasqueradingVector[22]]=(Json::Int64)getValueOfSignCount();
+            }
+            else
+            {
+                ret[pMasqueradingVector[22]]=Json::Value();
+            }
+        }
+        if(!pMasqueradingVector[23].empty())
+        {
+            if(getUserHandle())
+            {
+                ret[pMasqueradingVector[23]]=drogon::utils::base64Encode((const unsigned char *)getUserHandle()->data(),getUserHandle()->size());
+            }
+            else
+            {
+                ret[pMasqueradingVector[23]]=Json::Value();
+            }
+        }
+        if(!pMasqueradingVector[24].empty())
+        {
+            if(getTransports())
+            {
+                ret[pMasqueradingVector[24]]=getValueOfTransports();
+            }
+            else
+            {
+                ret[pMasqueradingVector[24]]=Json::Value();
+            }
+        }
+        if(!pMasqueradingVector[25].empty())
+        {
+            if(getCredentialType())
+            {
+                ret[pMasqueradingVector[25]]=getValueOfCredentialType();
+            }
+            else
+            {
+                ret[pMasqueradingVector[25]]=Json::Value();
+            }
+        }
         return ret;
     }
     LOG_ERROR << "Masquerade failed";
@@ -2829,6 +3694,62 @@ Json::Value Users::toMasqueradedJson(
     {
         ret["partner_id"]=Json::Value();
     }
+    if(getCredentialId())
+    {
+        ret["credential_id"]=drogon::utils::base64Encode((const unsigned char *)getCredentialId()->data(),getCredentialId()->size());
+    }
+    else
+    {
+        ret["credential_id"]=Json::Value();
+    }
+    if(getPublicKey())
+    {
+        ret["public_key"]=drogon::utils::base64Encode((const unsigned char *)getPublicKey()->data(),getPublicKey()->size());
+    }
+    else
+    {
+        ret["public_key"]=Json::Value();
+    }
+    if(getPublicKeyAlgorithm())
+    {
+        ret["public_key_algorithm"]=getValueOfPublicKeyAlgorithm();
+    }
+    else
+    {
+        ret["public_key_algorithm"]=Json::Value();
+    }
+    if(getSignCount())
+    {
+        ret["sign_count"]=(Json::Int64)getValueOfSignCount();
+    }
+    else
+    {
+        ret["sign_count"]=Json::Value();
+    }
+    if(getUserHandle())
+    {
+        ret["user_handle"]=drogon::utils::base64Encode((const unsigned char *)getUserHandle()->data(),getUserHandle()->size());
+    }
+    else
+    {
+        ret["user_handle"]=Json::Value();
+    }
+    if(getTransports())
+    {
+        ret["transports"]=getValueOfTransports();
+    }
+    else
+    {
+        ret["transports"]=Json::Value();
+    }
+    if(getCredentialType())
+    {
+        ret["credential_type"]=getValueOfCredentialType();
+    }
+    else
+    {
+        ret["credential_type"]=Json::Value();
+    }
     return ret;
 }
 
@@ -2939,13 +3860,48 @@ bool Users::validateJsonForCreation(const Json::Value &pJson, std::string &err)
         if(!validJsonOfField(18, "partner_id", pJson["partner_id"], err, true))
             return false;
     }
+    if(pJson.isMember("credential_id"))
+    {
+        if(!validJsonOfField(19, "credential_id", pJson["credential_id"], err, true))
+            return false;
+    }
+    if(pJson.isMember("public_key"))
+    {
+        if(!validJsonOfField(20, "public_key", pJson["public_key"], err, true))
+            return false;
+    }
+    if(pJson.isMember("public_key_algorithm"))
+    {
+        if(!validJsonOfField(21, "public_key_algorithm", pJson["public_key_algorithm"], err, true))
+            return false;
+    }
+    if(pJson.isMember("sign_count"))
+    {
+        if(!validJsonOfField(22, "sign_count", pJson["sign_count"], err, true))
+            return false;
+    }
+    if(pJson.isMember("user_handle"))
+    {
+        if(!validJsonOfField(23, "user_handle", pJson["user_handle"], err, true))
+            return false;
+    }
+    if(pJson.isMember("transports"))
+    {
+        if(!validJsonOfField(24, "transports", pJson["transports"], err, true))
+            return false;
+    }
+    if(pJson.isMember("credential_type"))
+    {
+        if(!validJsonOfField(25, "credential_type", pJson["credential_type"], err, true))
+            return false;
+    }
     return true;
 }
 bool Users::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                                                const std::vector<std::string> &pMasqueradingVector,
                                                std::string &err)
 {
-    if(pMasqueradingVector.size() != 19)
+    if(pMasqueradingVector.size() != 26)
     {
         err = "Bad masquerading vector";
         return false;
@@ -3113,6 +4069,62 @@ bool Users::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                   return false;
           }
       }
+      if(!pMasqueradingVector[19].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[19]))
+          {
+              if(!validJsonOfField(19, pMasqueradingVector[19], pJson[pMasqueradingVector[19]], err, true))
+                  return false;
+          }
+      }
+      if(!pMasqueradingVector[20].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[20]))
+          {
+              if(!validJsonOfField(20, pMasqueradingVector[20], pJson[pMasqueradingVector[20]], err, true))
+                  return false;
+          }
+      }
+      if(!pMasqueradingVector[21].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[21]))
+          {
+              if(!validJsonOfField(21, pMasqueradingVector[21], pJson[pMasqueradingVector[21]], err, true))
+                  return false;
+          }
+      }
+      if(!pMasqueradingVector[22].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[22]))
+          {
+              if(!validJsonOfField(22, pMasqueradingVector[22], pJson[pMasqueradingVector[22]], err, true))
+                  return false;
+          }
+      }
+      if(!pMasqueradingVector[23].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[23]))
+          {
+              if(!validJsonOfField(23, pMasqueradingVector[23], pJson[pMasqueradingVector[23]], err, true))
+                  return false;
+          }
+      }
+      if(!pMasqueradingVector[24].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[24]))
+          {
+              if(!validJsonOfField(24, pMasqueradingVector[24], pJson[pMasqueradingVector[24]], err, true))
+                  return false;
+          }
+      }
+      if(!pMasqueradingVector[25].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[25]))
+          {
+              if(!validJsonOfField(25, pMasqueradingVector[25], pJson[pMasqueradingVector[25]], err, true))
+                  return false;
+          }
+      }
     }
     catch(const Json::LogicError &e)
     {
@@ -3223,13 +4235,48 @@ bool Users::validateJsonForUpdate(const Json::Value &pJson, std::string &err)
         if(!validJsonOfField(18, "partner_id", pJson["partner_id"], err, false))
             return false;
     }
+    if(pJson.isMember("credential_id"))
+    {
+        if(!validJsonOfField(19, "credential_id", pJson["credential_id"], err, false))
+            return false;
+    }
+    if(pJson.isMember("public_key"))
+    {
+        if(!validJsonOfField(20, "public_key", pJson["public_key"], err, false))
+            return false;
+    }
+    if(pJson.isMember("public_key_algorithm"))
+    {
+        if(!validJsonOfField(21, "public_key_algorithm", pJson["public_key_algorithm"], err, false))
+            return false;
+    }
+    if(pJson.isMember("sign_count"))
+    {
+        if(!validJsonOfField(22, "sign_count", pJson["sign_count"], err, false))
+            return false;
+    }
+    if(pJson.isMember("user_handle"))
+    {
+        if(!validJsonOfField(23, "user_handle", pJson["user_handle"], err, false))
+            return false;
+    }
+    if(pJson.isMember("transports"))
+    {
+        if(!validJsonOfField(24, "transports", pJson["transports"], err, false))
+            return false;
+    }
+    if(pJson.isMember("credential_type"))
+    {
+        if(!validJsonOfField(25, "credential_type", pJson["credential_type"], err, false))
+            return false;
+    }
     return true;
 }
 bool Users::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
                                              const std::vector<std::string> &pMasqueradingVector,
                                              std::string &err)
 {
-    if(pMasqueradingVector.size() != 19)
+    if(pMasqueradingVector.size() != 26)
     {
         err = "Bad masquerading vector";
         return false;
@@ -3333,6 +4380,41 @@ bool Users::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
       if(!pMasqueradingVector[18].empty() && pJson.isMember(pMasqueradingVector[18]))
       {
           if(!validJsonOfField(18, pMasqueradingVector[18], pJson[pMasqueradingVector[18]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[19].empty() && pJson.isMember(pMasqueradingVector[19]))
+      {
+          if(!validJsonOfField(19, pMasqueradingVector[19], pJson[pMasqueradingVector[19]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[20].empty() && pJson.isMember(pMasqueradingVector[20]))
+      {
+          if(!validJsonOfField(20, pMasqueradingVector[20], pJson[pMasqueradingVector[20]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[21].empty() && pJson.isMember(pMasqueradingVector[21]))
+      {
+          if(!validJsonOfField(21, pMasqueradingVector[21], pJson[pMasqueradingVector[21]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[22].empty() && pJson.isMember(pMasqueradingVector[22]))
+      {
+          if(!validJsonOfField(22, pMasqueradingVector[22], pJson[pMasqueradingVector[22]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[23].empty() && pJson.isMember(pMasqueradingVector[23]))
+      {
+          if(!validJsonOfField(23, pMasqueradingVector[23], pJson[pMasqueradingVector[23]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[24].empty() && pJson.isMember(pMasqueradingVector[24]))
+      {
+          if(!validJsonOfField(24, pMasqueradingVector[24], pJson[pMasqueradingVector[24]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[25].empty() && pJson.isMember(pMasqueradingVector[25]))
+      {
+          if(!validJsonOfField(25, pMasqueradingVector[25], pJson[pMasqueradingVector[25]], err, false))
               return false;
       }
     }
@@ -3621,6 +4703,83 @@ bool Users::validJsonOfField(size_t index,
             }
             break;
         case 18:
+            if(pJson.isNull())
+            {
+                return true;
+            }
+            if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 19:
+            if(pJson.isNull())
+            {
+                return true;
+            }
+            if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 20:
+            if(pJson.isNull())
+            {
+                return true;
+            }
+            if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 21:
+            if(pJson.isNull())
+            {
+                return true;
+            }
+            if(!pJson.isInt())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 22:
+            if(pJson.isNull())
+            {
+                return true;
+            }
+            if(!pJson.isInt64())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 23:
+            if(pJson.isNull())
+            {
+                return true;
+            }
+            if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 24:
+            if(pJson.isNull())
+            {
+                return true;
+            }
+            if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 25:
             if(pJson.isNull())
             {
                 return true;

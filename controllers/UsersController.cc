@@ -1,6 +1,7 @@
 #include "UsersController.h"
 #include "plugins/GnpServicePlugin.h"
 #include "constants/ErrorCodes.h"
+#include "dto/RegisterUserPasskeysDto.h"
 
 using namespace gnp;
 
@@ -70,6 +71,66 @@ void UsersController::createUser(const HttpRequestPtr& req, std::function<void (
         callback(resp);
     });
 
+}
+
+
+void UsersController::registerPasskeys(const HttpRequestPtr& req, std::function<void (const HttpResponsePtr &)> &&callback)
+{
+
+    auto jsonBody = req->getJsonObject();
+
+    if (!jsonBody) {
+        dto::BaseApiResponse response;
+        response.success = false;
+        response.error["message"] = "Invalid JSON body";
+        auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+        resp->setStatusCode(k400BadRequest);
+        callback(resp);
+        return;
+    }
+
+    dto::RegisterUserPasskeysDto dto;
+
+    dto.fromJson(*jsonBody);
+
+    // Get tenant service from plugin
+    auto plugin = app().getPlugin<plugins::GnpServicePlugin>();
+    auto& userService = plugin->getUserService();
+
+    userService.registerUserPasskeys(dto, [callback](const dto::BaseApiResponse& result) {
+        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+        callback(resp);
+    });
+
+}
+
+
+void UsersController::loginViaPasskeys(const HttpRequestPtr& req, std::function<void (const HttpResponsePtr &)> &&callback)
+{
+
+    auto jsonBody = req->getJsonObject();
+
+    if (!jsonBody) {
+        dto::BaseApiResponse response;
+        response.success = false;
+        response.error["message"] = "Invalid JSON body";
+        auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+        resp->setStatusCode(k400BadRequest);
+        callback(resp);
+        return;
+    }
+
+    dto::LoginUserPasskeyDto dto;
+
+    dto.fromJson(*jsonBody);
+
+    auto plugin = app().getPlugin<plugins::GnpServicePlugin>();
+    auto& userService = plugin->getUserService();
+
+    userService.validateUserPasskeys(dto, [callback](const dto::BaseApiResponse& result) {
+        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+        callback(resp);
+    });
 
 }
 

@@ -18,6 +18,7 @@ class AuthController : public drogon::HttpController<AuthController>
     ADD_METHOD_TO(AuthController::verifyOtp, PREFIX + "/verify-otp", Post, Options);
     ADD_METHOD_TO(AuthController::setPassword, PREFIX + "/set-password", Post, Options);
     ADD_METHOD_TO(AuthController::signIn, PREFIX + "/login", Post, Options);
+    ADD_METHOD_TO(AuthController::loginViaPasskeys, PREFIX + "/login-via-pass-keys", Post, Options);
     ADD_METHOD_TO(AuthController::adminSignIn, PREFIX + "/admin-login", Post, Options);
   METHOD_LIST_END
 
@@ -27,5 +28,6 @@ class AuthController : public drogon::HttpController<AuthController>
   void verifyOtp(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   void setPassword(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   void signIn(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+  void loginViaPasskeys(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   void adminSignIn(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
 };
