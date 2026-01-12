@@ -61,7 +61,7 @@ class Users
         static const std::string _created_at;
         static const std::string _updated_at;
         static const std::string _is_admin_user;
-        static const std::string _is_partner_user;
+        static const std::string _is_partner_admin_user;
         static const std::string _partner_id;
         static const std::string _credential_id;
         static const std::string _public_key;
@@ -278,13 +278,13 @@ class Users
     ///Set the value of the column is_admin_user
     void setIsAdminUser(const bool &pIsAdminUser) noexcept;
 
-    /**  For column is_partner_user  */
-    ///Get the value of the column is_partner_user, returns the default value if the column is null
-    const bool &getValueOfIsPartnerUser() const noexcept;
+    /**  For column is_partner_admin_user  */
+    ///Get the value of the column is_partner_admin_user, returns the default value if the column is null
+    const bool &getValueOfIsPartnerAdminUser() const noexcept;
     ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<bool> &getIsPartnerUser() const noexcept;
-    ///Set the value of the column is_partner_user
-    void setIsPartnerUser(const bool &pIsPartnerUser) noexcept;
+    const std::shared_ptr<bool> &getIsPartnerAdminUser() const noexcept;
+    ///Set the value of the column is_partner_admin_user
+    void setIsPartnerAdminUser(const bool &pIsPartnerAdminUser) noexcept;
 
     /**  For column partner_id  */
     ///Get the value of the column partner_id, returns the default value if the column is null
@@ -410,7 +410,7 @@ class Users
     std::shared_ptr<::trantor::Date> createdAt_;
     std::shared_ptr<::trantor::Date> updatedAt_;
     std::shared_ptr<bool> isAdminUser_;
-    std::shared_ptr<bool> isPartnerUser_;
+    std::shared_ptr<bool> isPartnerAdminUser_;
     std::shared_ptr<std::string> partnerId_;
     std::shared_ptr<std::vector<char>> credentialId_;
     std::shared_ptr<std::vector<char>> publicKey_;
@@ -538,7 +538,7 @@ class Users
         {
             needSelection=true;
         }
-        sql += "is_partner_user,";
+        sql += "is_partner_admin_user,";
         ++parametersCount;
         if(!dirtyFlag_[17])
         {

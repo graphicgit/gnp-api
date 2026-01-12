@@ -783,6 +783,7 @@ void UserService::lockUserAccount(
 void UserService::unlockUserAccount(
     const std::string &userId,
     const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {
+
   auto dbClient = drogon::app().getDbClient();
   Mapper<Users> mp(dbClient);
 

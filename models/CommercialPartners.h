@@ -46,6 +46,7 @@ class CommercialPartners
     {
         static const std::string _id;
         static const std::string _name;
+        static const std::string _identifier;
         static const std::string _contact_name;
         static const std::string _contact_email;
         static const std::string _contact_phone;
@@ -54,6 +55,7 @@ class CommercialPartners
         static const std::string _currency;
         static const std::string _status;
         static const std::string _sub_account_enabled;
+        static const std::string _subscriber_quota;
         static const std::string _created_at;
         static const std::string _updated_at;
     };
@@ -124,6 +126,15 @@ class CommercialPartners
     ///Set the value of the column name
     void setName(const std::string &pName) noexcept;
     void setName(std::string &&pName) noexcept;
+
+    /**  For column identifier  */
+    ///Get the value of the column identifier, returns the default value if the column is null
+    const std::string &getValueOfIdentifier() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getIdentifier() const noexcept;
+    ///Set the value of the column identifier
+    void setIdentifier(const std::string &pIdentifier) noexcept;
+    void setIdentifier(std::string &&pIdentifier) noexcept;
 
     /**  For column contact_name  */
     ///Get the value of the column contact_name, returns the default value if the column is null
@@ -204,6 +215,15 @@ class CommercialPartners
     void setSubAccountEnabled(const bool &pSubAccountEnabled) noexcept;
     void setSubAccountEnabledToNull() noexcept;
 
+    /**  For column subscriber_quota  */
+    ///Get the value of the column subscriber_quota, returns the default value if the column is null
+    const int32_t &getValueOfSubscriberQuota() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<int32_t> &getSubscriberQuota() const noexcept;
+    ///Set the value of the column subscriber_quota
+    void setSubscriberQuota(const int32_t &pSubscriberQuota) noexcept;
+    void setSubscriberQuotaToNull() noexcept;
+
     /**  For column created_at  */
     ///Get the value of the column created_at, returns the default value if the column is null
     const ::trantor::Date &getValueOfCreatedAt() const noexcept;
@@ -222,7 +242,7 @@ class CommercialPartners
     void setUpdatedAtToNull() noexcept;
 
 
-    static size_t getColumnNumber() noexcept {  return 12;  }
+    static size_t getColumnNumber() noexcept {  return 14;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -246,6 +266,7 @@ class CommercialPartners
     void updateId(const uint64_t id);
     std::shared_ptr<std::string> id_;
     std::shared_ptr<std::string> name_;
+    std::shared_ptr<std::string> identifier_;
     std::shared_ptr<std::string> contactName_;
     std::shared_ptr<std::string> contactEmail_;
     std::shared_ptr<std::string> contactPhone_;
@@ -254,6 +275,7 @@ class CommercialPartners
     std::shared_ptr<std::string> currency_;
     std::shared_ptr<std::string> status_;
     std::shared_ptr<bool> subAccountEnabled_;
+    std::shared_ptr<int32_t> subscriberQuota_;
     std::shared_ptr<::trantor::Date> createdAt_;
     std::shared_ptr<::trantor::Date> updatedAt_;
     struct MetaData
@@ -267,7 +289,7 @@ class CommercialPartners
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[12]={ false };
+    bool dirtyFlag_[14]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -298,55 +320,65 @@ class CommercialPartners
         }
         if(dirtyFlag_[2])
         {
-            sql += "contact_name,";
+            sql += "identifier,";
             ++parametersCount;
         }
         if(dirtyFlag_[3])
         {
-            sql += "contact_email,";
+            sql += "contact_name,";
             ++parametersCount;
         }
         if(dirtyFlag_[4])
         {
-            sql += "contact_phone,";
+            sql += "contact_email,";
             ++parametersCount;
         }
         if(dirtyFlag_[5])
+        {
+            sql += "contact_phone,";
+            ++parametersCount;
+        }
+        if(dirtyFlag_[6])
         {
             sql += "billing_email,";
             ++parametersCount;
         }
         sql += "billing_cycle,";
         ++parametersCount;
-        if(!dirtyFlag_[6])
+        if(!dirtyFlag_[7])
         {
             needSelection=true;
         }
         sql += "currency,";
         ++parametersCount;
-        if(!dirtyFlag_[7])
+        if(!dirtyFlag_[8])
         {
             needSelection=true;
         }
         sql += "status,";
         ++parametersCount;
-        if(!dirtyFlag_[8])
-        {
-            needSelection=true;
-        }
-        sql += "sub_account_enabled,";
-        ++parametersCount;
         if(!dirtyFlag_[9])
         {
             needSelection=true;
         }
-        sql += "created_at,";
+        sql += "sub_account_enabled,";
         ++parametersCount;
         if(!dirtyFlag_[10])
         {
             needSelection=true;
         }
         if(dirtyFlag_[11])
+        {
+            sql += "subscriber_quota,";
+            ++parametersCount;
+        }
+        sql += "created_at,";
+        ++parametersCount;
+        if(!dirtyFlag_[12])
+        {
+            needSelection=true;
+        }
+        if(dirtyFlag_[13])
         {
             sql += "updated_at,";
             ++parametersCount;
@@ -401,10 +433,6 @@ class CommercialPartners
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
-        else
-        {
-            sql +="default,";
-        }
         if(dirtyFlag_[7])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
@@ -442,6 +470,20 @@ class CommercialPartners
             sql +="default,";
         }
         if(dirtyFlag_[11])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[12])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
+        }
+        if(dirtyFlag_[13])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);

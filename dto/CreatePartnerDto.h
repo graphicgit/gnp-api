@@ -23,6 +23,7 @@ namespace gnp::dto {
         [[nodiscard]] const std::string& getBillingEmail() const { return billing_email_; }
         [[nodiscard]] const std::string& getBillingCycle() const { return billing_cycle_; }
         [[nodiscard]] const std::string& getCurrency() const { return currency_; }
+        [[nodiscard]] int getSubscriberQuota() const { return subscriber_quota_; }
         [[nodiscard]] bool getSubaccountEnabled() const { return sub_account_enabled_; }
 
 
@@ -34,6 +35,7 @@ namespace gnp::dto {
         void setBillingEmail(const std::string& value) { billing_email_ = value; }
         void setBillingCycle(const std::string& value) { billing_cycle_ = value; }
         void setCurrency(const std::string& value) { currency_ = value; }
+        void setSubscriberQuota(int value) { subscriber_quota_ = value; }
         void setSubaccountEnabled(bool value) { sub_account_enabled_ = value; }
 
 
@@ -46,6 +48,7 @@ namespace gnp::dto {
         std::string billing_email_;
         std::string billing_cycle_;
         std::string currency_;
+        int subscriber_quota_;
         bool sub_account_enabled_ = false;
 
     };
@@ -80,8 +83,12 @@ namespace gnp::dto {
             currency_ = json["currency"].asString();
         }
 
-        if (json.isMember("subaccountEnabled") && !json["username"].isNull()) {
-            sub_account_enabled_ = json["subaccountEnabled"].asBool();
+        if (json.isMember("subscriberQuota") && !json["subscriberQuota"].isNull()) {
+            subscriber_quota_ = json["subscriberQuota"].asInt();
+        }
+
+        if (json.isMember("subAccountEnabled") && !json["subAccountEnabled"].isNull()) {
+            sub_account_enabled_ = json["subAccountEnabled"].asBool();
         }
 
     }
