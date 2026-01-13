@@ -19,6 +19,14 @@ public:
       int pageNo, int pageSize, const std::string &query,
       const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
+    void getAdminUsers(
+      int pageNo, int pageSize, const std::string &query,
+      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+
+    void getPartnerSubscribers(const std::string &partnerId,
+      int pageNo, int pageSize, const std::string &query,
+      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+
   void create(
       const dto::CreateUserDto &userDto,
       const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);

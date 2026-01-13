@@ -4,6 +4,7 @@
 
 #ifndef CREATEPARTNERDTO_H
 #define CREATEPARTNERDTO_H
+#include <json/json.h>
 
 namespace gnp::dto {
 
@@ -48,7 +49,7 @@ namespace gnp::dto {
         std::string billing_email_;
         std::string billing_cycle_;
         std::string currency_;
-        int subscriber_quota_;
+        int subscriber_quota_ = 0;
         bool sub_account_enabled_ = false;
 
     };

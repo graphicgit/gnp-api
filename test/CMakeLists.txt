@@ -18,6 +18,8 @@ file(GLOB CAMPAIGN_SVC "../services/campaigns/*.cc")
 file(GLOB INGESTION_JOB_SVC "../services/ingestion_jobs/*.cc")
 file(GLOB SUB_PLAN_SVC "../services/subscription_plans/*.cc")
 file(GLOB PARTNER_SVC "../services/partners/*.cc")
+file(GLOB UTILS_SVC "../utils/*.cc")
+
 
 add_executable(${PROJECT_NAME} test_main.cc
         ${CTL_SRC}
@@ -37,6 +39,7 @@ add_executable(${PROJECT_NAME} test_main.cc
     ${INGESTION_JOB_SVC}
     ${PAYMENT_SVC}
     ${PARTNER_SVC}
+    ${UTILS_SVC}
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE

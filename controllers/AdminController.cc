@@ -1,4 +1,6 @@
 #include "AdminController.h"
+
+#include "dto/AssignPartnerSubscriberPlanDto.h"
 #include "dto/CreateCampaignDto.h"
 #include "plugins/GnpServicePlugin.h"
 #include "services/campaigns/CampaignService.h"
@@ -171,11 +173,49 @@ void AdminController::deleteNewsPaper(
 void AdminController::getAllUsers(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) {
-  // write your application logic here
+
+
+  int pageSize = 10; // Default page size
+  int pageNo = 1;    //  Default page number
+
+  if (!req->getParameter("pageSize").empty()) {
+    try {
+      pageSize = std::stoi(req->getParameter("pageSize"));
+      pageSize = std::max(1, std::min(100, pageSize)); // Limit between 1-100
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  if (!req->getParameter("pageNo").empty()) {
+    try {
+      pageNo = std::stoi(req->getParameter("pageNo"));
+      pageNo = std::max(1, pageNo); // Ensure page number is at least 1
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  std::string query = req->getParameter("query");
+  if (query.empty()) {
+    query = "";
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &userService = plugin->getUserService();
+
+  userService.getAdminUsers(pageNo, pageSize, query,[callback](const gnp::dto::BaseApiResponse &result) {
+        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+        callback(resp);
+      });
+
+
+
+
+
 }
 
-void AdminController::createUser(
-    const HttpRequestPtr &req,
+void AdminController::createUser(const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) {
   // write your application logic here
 }
@@ -223,7 +263,6 @@ void AdminController::deleteUser(
 }
 
 // subscription plans
-
 void AdminController::getAllSubscriptionPlans(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) {
@@ -264,6 +303,7 @@ void AdminController::getAllSubscriptionPlans(
         callback(resp);
       });
 }
+
 
 void AdminController::getSubscriptionPlanDetails(
     const HttpRequestPtr &req,
@@ -389,13 +429,12 @@ void AdminController::getAllCampaigns(
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &campaignService = plugin->getCampaignService();
 
-  campaignService.getAll(pageNo, pageSize, query, channel,
-                         [callback](const gnp::dto::BaseApiResponse &result) {
-                           auto resp = HttpResponse::newHttpJsonResponse(
-                               result.toJson());
-                           callback(resp);
-                         });
+  campaignService.getAll(pageNo, pageSize, query, channel,[callback](const gnp::dto::BaseApiResponse &result) {
+         auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+         callback(resp);
+  });
 }
+
 
 void AdminController::createCampaign(
     const HttpRequestPtr &req,
@@ -413,8 +452,10 @@ void AdminController::createCampaign(
   gnp::dto::CreateCampaignDto dto;
   dto.fromJson(*jsonPtr);
 
-  gnp::services::CampaignService service;
-  service.create(dto, [callback](const gnp::dto::BaseApiResponse &apiResp) {
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &campaignService = plugin->getCampaignService();
+
+  campaignService.create(dto, [callback](const gnp::dto::BaseApiResponse &apiResp) {
     auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
     callback(resp);
   });
@@ -433,8 +474,10 @@ void AdminController::publishCampaign(
     return;
   }
 
-  gnp::services::CampaignService service;
-  service.publishCampaign(
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &campaignService = plugin->getCampaignService();
+
+  campaignService.publishCampaign(
       campaignId, [callback](const gnp::dto::BaseApiResponse &apiResp) {
         auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
         callback(resp);
@@ -455,16 +498,15 @@ void AdminController::deleteCampaign(
     return;
   }
 
-  gnp::services::CampaignService service;
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &campaignService = plugin->getCampaignService();
 
-  service.deleteCampaign(
+  campaignService.deleteCampaign(
       campaignId, [callback](const gnp::dto::BaseApiResponse &apiResp) {
         auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
         callback(resp);
       });
 }
-
-// commercial partners
 
 // commercial partners
 
@@ -480,6 +522,34 @@ void AdminController::getPartnerStats(
         auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
         callback(resp);
       });
+}
+
+
+void AdminController::getPartnerDetails(const HttpRequestPtr &req,
+    std::function<void(const HttpResponsePtr &)> &&callback) {
+
+
+  auto partnerId = req->getParameter("partnerId");
+
+  if (partnerId.empty()) {
+    auto resp = HttpResponse::newHttpResponse();
+    resp->setStatusCode(k400BadRequest);
+    resp->setBody("Missing required parameter: id");
+    callback(resp);
+    return;
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &commercialPartnerService = plugin->getCommercialPartnerService();
+
+  commercialPartnerService.getPartnerDetails(partnerId, [callback](const gnp::dto::BaseApiResponse &apiResp) {
+        auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+        callback(resp);
+      });
+
+
+
+
 }
 
 void AdminController::getAllPartners(
@@ -524,6 +594,49 @@ void AdminController::getAllPartners(
       });
 }
 
+
+void AdminController::getPartnerSubscribers(
+    const HttpRequestPtr &req,
+    std::function<void(const HttpResponsePtr &)> &&callback) {
+
+  int pageSize = 10; // Default page size
+  int pageNo = 1;    //  Default page number
+
+  if (!req->getParameter("pageSize").empty()) {
+    try {
+      pageSize = std::stoi(req->getParameter("pageSize"));
+      pageSize = std::max(1, std::min(1000, pageSize)); // Limit between 1-1000
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  if (!req->getParameter("pageNo").empty()) {
+    try {
+      pageNo = std::stoi(req->getParameter("pageNo"));
+      pageNo = std::max(1, pageNo); // Ensure page number is at least 1
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  std::string query = req->getParameter("query");
+  std::string partnerId = req->getParameter("partnerId");
+
+  if (query.empty()) {
+    query = "";
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &userService = plugin->getUserService();
+
+  userService.getPartnerSubscribers(partnerId, pageNo, pageSize, query,[callback](const gnp::dto::BaseApiResponse &result) {
+        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+        callback(resp);
+      });
+}
+
+
 void AdminController::createPartner(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) {
@@ -544,6 +657,56 @@ void AdminController::createPartner(
   auto &commercialPartnerService = plugin->getCommercialPartnerService();
 
   commercialPartnerService.createPartner(dto, [callback](const gnp::dto::BaseApiResponse &apiResp) {
+        auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+        callback(resp);
+      });
+}
+
+
+void AdminController::createPartnerSubscriber(const HttpRequestPtr &req,
+    std::function<void(const HttpResponsePtr &)> &&callback) {
+
+  auto jsonPtr = req->getJsonObject();
+  if (!jsonPtr) {
+    auto resp = HttpResponse::newHttpResponse();
+    resp->setStatusCode(k400BadRequest);
+    resp->setBody("Invalid JSON format");
+    callback(resp);
+    return;
+  }
+
+  gnp::dto::CreatePartnerSubscriberDto dto;
+  dto.fromJson(*jsonPtr);
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &commercialPartnerService = plugin->getCommercialPartnerService();
+
+  commercialPartnerService.createPartnerSubscriber(dto, [callback](const gnp::dto::BaseApiResponse &apiResp) {
+        auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+        callback(resp);
+      });
+}
+
+
+void AdminController::assignPartnerSubscribersPlan(const HttpRequestPtr &req,
+    std::function<void(const HttpResponsePtr &)> &&callback) {
+
+  auto jsonPtr = req->getJsonObject();
+  if (!jsonPtr) {
+    auto resp = HttpResponse::newHttpResponse();
+    resp->setStatusCode(k400BadRequest);
+    resp->setBody("Invalid JSON format");
+    callback(resp);
+    return;
+  }
+
+  gnp::dto::AssignPartnerSubscriberPlanDto dto;
+  dto.fromJson(*jsonPtr);
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &commercialPartnerService = plugin->getCommercialPartnerService();
+
+  commercialPartnerService.assignPartnerSubscribersToPlan(dto, [callback](const gnp::dto::BaseApiResponse &apiResp) {
         auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
         callback(resp);
       });

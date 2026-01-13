@@ -12,9 +12,7 @@
 #include "dto/SigninDto.h"
 #include <jwt-cpp/jwt.h>
 #include <openssl/evp.h>
-#include <openssl/pem.h>
 #include <openssl/sha.h>
-
 #include "dto/SendEmailDto.h"
 #include "services/email/EmailService.h"
 
@@ -22,6 +20,7 @@ using namespace drogon::orm;
 using drogon_model::Gnp::Users;
 
 namespace gnp::services {
+
 void UserService::getAll(
     int pageNo, int pageSize, const std::string &query,
     const std::function<void(const dto::BaseApiResponse &)> &callback) {
@@ -79,9 +78,192 @@ void UserService::getAll(
                 camelCaseRole["email"] = roleJson["email"];
                 camelCaseRole["phoneNumber"] = roleJson["phone_number"];
                 camelCaseRole["country"] = roleJson["country"];
-                camelCaseRole["profileImageUrl"] =
-                    roleJson["profile_image_url"];
+                camelCaseRole["profileImageUrl"] =  roleJson["profile_image_url"];
                 camelCaseRole["isLockedOut"] = roleJson["is_locked_out"];
+                camelCaseRole["isActive"] = roleJson["is_active"];
+                camelCaseRole["createdAt"] = roleJson["created_at"];
+                camelCaseRole["updatedAt"] = roleJson["updated_at"];
+
+                data.append(camelCaseRole);
+              }
+              response.result["data"] = data;
+              callback(response);
+            },
+            [callback](const DrogonDbException &e) {
+              // Handle find error
+              dto::BaseApiResponse errorResponse;
+              errorResponse.success = false;
+              errorResponse.error["message"] =
+                  "Database error while fetching users.";
+              errorResponse.error["detail"] = e.base().what();
+              callback(errorResponse);
+            });
+      },
+      [callback](const DrogonDbException &e) {
+        // Handle count error
+        dto::BaseApiResponse errorResponse;
+        errorResponse.success = false;
+        errorResponse.error["code"] = constants::ERR_DB_QUERY;
+        errorResponse.error["message"] = "Database error while fetching users.";
+        errorResponse.error["detail"] = e.base().what();
+        callback(errorResponse);
+      });
+}
+
+
+void UserService::getAdminUsers(
+    int pageNo, int pageSize, const std::string &query,
+    const std::function<void(const dto::BaseApiResponse &)> &callback) {
+
+  auto dbClient = drogon::app().getDbClient();
+
+  auto mp = std::make_shared<Mapper<Users>>(dbClient);
+
+  // 1. Build the search criteria
+  Criteria criteria(Users::Cols::_is_admin_user, CompareOperator::EQ, true);
+
+  if (!query.empty()) {
+
+    std::string likeQuery = "%" + query + "%";
+
+   Criteria searchCriteria = Criteria(Users::Cols::_first_name, CompareOperator::Like, likeQuery) ||
+        Criteria(Users::Cols::_email, CompareOperator::Like, likeQuery) ||
+        Criteria(Users::Cols::_last_name, CompareOperator::Like, likeQuery);
+
+    criteria = criteria && searchCriteria;
+  }
+
+  // 2. Asynchronously get the total count matching the criteria
+  mp->count(
+      criteria,
+      [=](const size_t totalCount) {
+        if (totalCount == 0) {
+          dto::BaseApiResponse response;
+          response.success = true;
+          response.result["data"] = Json::arrayValue;
+          response.result["totalCount"] = 0;
+          callback(response);
+          return;
+        }
+
+        // 3. Asynchronously find the paginated data
+        int offset = (pageNo - 1) * pageSize;
+        mp->limit(pageSize).offset(offset).findBy(criteria, [=](const std::vector<Users> &users) {
+              // 4. Build the final response inside the callback
+              dto::BaseApiResponse response;
+              response.success = true;
+              response.result["totalCount"] = (Json::UInt64)totalCount;
+              response.result["pageNo"] = pageNo;
+              response.result["pageSize"] = pageSize;
+              response.result["totalPages"] =
+                  (int)((totalCount + pageSize - 1) / pageSize);
+
+              Json::Value data = Json::arrayValue;
+              for (const auto &role : users) {
+                Json::Value roleJson = role.toJson();
+
+                // Convert snake_case to camelCase
+                Json::Value camelCaseRole;
+                camelCaseRole["id"] = roleJson["id"];
+                camelCaseRole["firstName"] = roleJson["first_name"];
+                camelCaseRole["lastName"] = roleJson["last_name"];
+                camelCaseRole["email"] = roleJson["email"];
+                camelCaseRole["phoneNumber"] = roleJson["phone_number"];
+                camelCaseRole["country"] = roleJson["country"];
+                camelCaseRole["profileImageUrl"] =  roleJson["profile_image_url"];
+                camelCaseRole["isLockedOut"] = roleJson["is_locked_out"];
+                camelCaseRole["isActive"] = roleJson["is_active"];
+                camelCaseRole["createdAt"] = roleJson["created_at"];
+                camelCaseRole["updatedAt"] = roleJson["updated_at"];
+
+                data.append(camelCaseRole);
+              }
+              response.result["data"] = data;
+              callback(response);
+            },
+            [callback](const DrogonDbException &e) {
+              // Handle find error
+              dto::BaseApiResponse errorResponse;
+              errorResponse.success = false;
+              errorResponse.error["message"] =
+                  "Database error while fetching users.";
+              errorResponse.error["detail"] = e.base().what();
+              callback(errorResponse);
+            });
+      },
+      [callback](const DrogonDbException &e) {
+        // Handle count error
+        dto::BaseApiResponse errorResponse;
+        errorResponse.success = false;
+        errorResponse.error["code"] = constants::ERR_DB_QUERY;
+        errorResponse.error["message"] = "Database error while fetching users.";
+        errorResponse.error["detail"] = e.base().what();
+        callback(errorResponse);
+      });
+}
+
+  void UserService::getPartnerSubscribers(const std::string &partnerId,
+    int pageNo, int pageSize, const std::string &query,
+    const std::function<void(const dto::BaseApiResponse &)> &callback) {
+
+  auto dbClient = drogon::app().getDbClient();
+  auto mp = std::make_shared<Mapper<Users>>(dbClient);
+
+  // 1. Build the search criteria
+  Criteria criteria(Users::Cols::_partner_id, CompareOperator::EQ, partnerId);
+
+  if (!query.empty()) {
+    std::string likeQuery = "%" + query + "%";
+
+    Criteria searchCriteria =
+        Criteria(Users::Cols::_first_name, CompareOperator::Like, likeQuery) ||
+        Criteria(Users::Cols::_email, CompareOperator::Like, likeQuery) ||
+        Criteria(Users::Cols::_last_name, CompareOperator::Like, likeQuery);
+
+    criteria = criteria && searchCriteria;
+  }
+
+  // 2. Asynchronously get the total count matching the criteria
+  mp->count(
+      criteria,
+      [=](const size_t totalCount) {
+        if (totalCount == 0) {
+          dto::BaseApiResponse response;
+          response.success = true;
+          response.result["data"] = Json::arrayValue;
+          response.result["totalCount"] = 0;
+          callback(response);
+          return;
+        }
+
+        // 3. Asynchronously find the paginated data
+        int offset = (pageNo - 1) * pageSize;
+        mp->limit(pageSize).offset(offset).findBy(
+            criteria,
+            [=](const std::vector<Users> &users) {
+              // 4. Build the final response inside the callback
+              dto::BaseApiResponse response;
+              response.success = true;
+              response.result["totalCount"] = (Json::UInt64)totalCount;
+              response.result["pageNo"] = pageNo;
+              response.result["pageSize"] = pageSize;
+              response.result["totalPages"] =
+                  (int)((totalCount + pageSize - 1) / pageSize);
+
+              Json::Value data = Json::arrayValue;
+              for (const auto &role : users) {
+                Json::Value roleJson = role.toJson();
+
+                // Convert snake_case to camelCase
+                Json::Value camelCaseRole;
+                camelCaseRole["id"] = roleJson["id"];
+                camelCaseRole["firstName"] = roleJson["first_name"];
+                camelCaseRole["lastName"] = roleJson["last_name"];
+                camelCaseRole["email"] = roleJson["email"];
+                camelCaseRole["phoneNumber"] = roleJson["phone_number"];
+                camelCaseRole["country"] = roleJson["country"];
+                camelCaseRole["profileImageUrl"] =  roleJson["profile_image_url"];
+                camelCaseRole["partnerId"] = roleJson["partner_id"];
                 camelCaseRole["isActive"] = roleJson["is_active"];
                 camelCaseRole["createdAt"] = roleJson["created_at"];
                 camelCaseRole["updatedAt"] = roleJson["updated_at"];
@@ -147,7 +329,7 @@ void UserService::create(
       [callback](const drogon::orm::DrogonDbException &e) {
         dto::BaseApiResponse errorResponse;
         errorResponse.success = false;
-        errorResponse.message = "Database error while creating Publication";
+        errorResponse.message = "Database error while creating user";
         errorResponse.error["code"] = constants::ERR_DB_QUERY;
         callback(errorResponse);
       });
@@ -471,12 +653,9 @@ void UserService::validateUserPasskeys(
         // Verification
         // signature from DTO
         std::string sigStr = toStandardBase64(passkeyDto.getSignature());
-        std::vector<char> sigBytes =
-            drogon::utils::base64DecodeToVector(sigStr);
+        std::vector<char> sigBytes = drogon::utils::base64DecodeToVector(sigStr);
 
-        int verifyResult = EVP_DigestVerify(
-            ctx, (const unsigned char *)sigBytes.data(), sigBytes.size(),
-            signedData.data(), signedData.size());
+        int verifyResult = EVP_DigestVerify(ctx, (const unsigned char *)sigBytes.data(), sigBytes.size(),signedData.data(), signedData.size());
 
         EVP_MD_CTX_free(ctx);
         EVP_PKEY_free(pkey);
@@ -499,9 +678,7 @@ void UserService::validateUserPasskeys(
           return;
         }
 
-        uint32_t newSignCount =
-            ((uint8_t)authData[33] << 24) | ((uint8_t)authData[34] << 16) |
-            ((uint8_t)authData[35] << 8) | (uint8_t)authData[36];
+        uint32_t newSignCount = ((uint8_t)authData[33] << 24) | ((uint8_t)authData[34] << 16) | ((uint8_t)authData[35] << 8) | (uint8_t)authData[36];
 
         int64_t storedCount = user.getValueOfSignCount();
 

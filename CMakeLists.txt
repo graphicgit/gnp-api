@@ -65,6 +65,12 @@ add_executable(${PROJECT_NAME} main.cc
         dto/CreatePartnerDto.h
         dto/UpdatePartnerDto.h
         dto/RegisterUserPasskeysDto.h
+        dto/CreatePartnerSubscriberDto.h
+        utils/PasswordUtils.h
+        utils/PasswordUtils.cc
+        utils/IdGeneratorUtils.h
+        utils/IdGeneratorUtils.cc
+        dto/AssignPartnerSubscriberPlanDto.h
 )
 
 # ##############################################################################
@@ -101,6 +107,7 @@ aux_source_directory(filters FILTER_SRC)
 aux_source_directory(plugins PLUGIN_SRC)
 aux_source_directory(constants CONSTANTS_SRC)
 aux_source_directory(models MODEL_SRC)
+aux_source_directory(utils UTILS_SRC)
 
 drogon_create_views(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/views
                     ${CMAKE_CURRENT_BINARY_DIR})
@@ -129,7 +136,8 @@ target_sources(${PROJECT_NAME}
                ${PLUGIN_SRC}
                ${CONSTANTS_SRC}
                ${SERVICE_SRC}
-               ${MODEL_SRC})
+               ${MODEL_SRC}
+               ${UTILS_SRC})
 # ##############################################################################
 # uncomment the following line for dynamically loading views 
 # set_property(TARGET ${PROJECT_NAME} PROPERTY ENABLE_EXPORTS ON)

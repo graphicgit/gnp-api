@@ -58,6 +58,7 @@ class CommercialPartners
         static const std::string _subscriber_quota;
         static const std::string _created_at;
         static const std::string _updated_at;
+        static const std::string _remaining_quota;
     };
 
     static const int primaryKeyNumber;
@@ -241,8 +242,16 @@ class CommercialPartners
     void setUpdatedAt(const ::trantor::Date &pUpdatedAt) noexcept;
     void setUpdatedAtToNull() noexcept;
 
+    /**  For column remaining_quota  */
+    ///Get the value of the column remaining_quota, returns the default value if the column is null
+    const int32_t &getValueOfRemainingQuota() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<int32_t> &getRemainingQuota() const noexcept;
+    ///Set the value of the column remaining_quota
+    void setRemainingQuota(const int32_t &pRemainingQuota) noexcept;
 
-    static size_t getColumnNumber() noexcept {  return 14;  }
+
+    static size_t getColumnNumber() noexcept {  return 15;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -278,6 +287,7 @@ class CommercialPartners
     std::shared_ptr<int32_t> subscriberQuota_;
     std::shared_ptr<::trantor::Date> createdAt_;
     std::shared_ptr<::trantor::Date> updatedAt_;
+    std::shared_ptr<int32_t> remainingQuota_;
     struct MetaData
     {
         const std::string colName_;
@@ -289,7 +299,7 @@ class CommercialPartners
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[14]={ false };
+    bool dirtyFlag_[15]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -318,10 +328,11 @@ class CommercialPartners
             sql += "name,";
             ++parametersCount;
         }
-        if(dirtyFlag_[2])
+        sql += "identifier,";
+        ++parametersCount;
+        if(!dirtyFlag_[2])
         {
-            sql += "identifier,";
-            ++parametersCount;
+            needSelection=true;
         }
         if(dirtyFlag_[3])
         {
@@ -383,6 +394,12 @@ class CommercialPartners
             sql += "updated_at,";
             ++parametersCount;
         }
+        sql += "remaining_quota,";
+        ++parametersCount;
+        if(!dirtyFlag_[14])
+        {
+            needSelection=true;
+        }
         if(parametersCount > 0)
         {
             sql[sql.length()-1]=')';
@@ -412,6 +429,10 @@ class CommercialPartners
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
         }
         if(dirtyFlag_[3])
         {
@@ -487,6 +508,15 @@ class CommercialPartners
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[14])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
         }
         if(parametersCount > 0)
         {

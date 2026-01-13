@@ -19,6 +19,7 @@
 #include "services/paystack/PaystackApi.h"
 #include "services/subscriptions/SubscriptionService.h"
 #include "services/subscription_plans/SubscriptionPlanService.h"
+#include "utils/PasswordUtils.h"
 
 namespace gnp::plugins {
 

@@ -27,6 +27,7 @@ const std::string CommercialPartners::Cols::_sub_account_enabled = "\"sub_accoun
 const std::string CommercialPartners::Cols::_subscriber_quota = "\"subscriber_quota\"";
 const std::string CommercialPartners::Cols::_created_at = "\"created_at\"";
 const std::string CommercialPartners::Cols::_updated_at = "\"updated_at\"";
+const std::string CommercialPartners::Cols::_remaining_quota = "\"remaining_quota\"";
 const std::string CommercialPartners::primaryKeyName = "id";
 const bool CommercialPartners::hasPrimaryKey = true;
 const std::string CommercialPartners::tableName = "\"commercial_partners\"";
@@ -34,7 +35,7 @@ const std::string CommercialPartners::tableName = "\"commercial_partners\"";
 const std::vector<typename CommercialPartners::MetaData> CommercialPartners::metaData_={
 {"id","std::string","uuid",0,0,1,1},
 {"name","std::string","character varying",255,0,0,1},
-{"identifier","std::string","character varying",2,0,0,1},
+{"identifier","std::string","character varying",10,0,0,1},
 {"contact_name","std::string","character varying",100,0,0,0},
 {"contact_email","std::string","character varying",150,0,0,0},
 {"contact_phone","std::string","character varying",30,0,0,0},
@@ -45,7 +46,8 @@ const std::vector<typename CommercialPartners::MetaData> CommercialPartners::met
 {"sub_account_enabled","bool","boolean",1,0,0,0},
 {"subscriber_quota","int32_t","integer",4,0,0,0},
 {"created_at","::trantor::Date","timestamp with time zone",0,0,0,1},
-{"updated_at","::trantor::Date","timestamp without time zone",0,0,0,0}
+{"updated_at","::trantor::Date","timestamp without time zone",0,0,0,0},
+{"remaining_quota","int32_t","integer",4,0,0,1}
 };
 const std::string &CommercialPartners::getColumnName(size_t index) noexcept(false)
 {
@@ -148,11 +150,15 @@ CommercialPartners::CommercialPartners(const Row &r, const ssize_t indexOffset) 
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
+        if(!r["remaining_quota"].isNull())
+        {
+            remainingQuota_=std::make_shared<int32_t>(r["remaining_quota"].as<int32_t>());
+        }
     }
     else
     {
         size_t offset = (size_t)indexOffset;
-        if(offset + 14 > r.size())
+        if(offset + 15 > r.size())
         {
             LOG_FATAL << "Invalid SQL result for this model";
             return;
@@ -264,13 +270,18 @@ CommercialPartners::CommercialPartners(const Row &r, const ssize_t indexOffset) 
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
+        index = offset + 14;
+        if(!r[index].isNull())
+        {
+            remainingQuota_=std::make_shared<int32_t>(r[index].as<int32_t>());
+        }
     }
 
 }
 
 CommercialPartners::CommercialPartners(const Json::Value &pJson, const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 14)
+    if(pMasqueradingVector.size() != 15)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -421,6 +432,14 @@ CommercialPartners::CommercialPartners(const Json::Value &pJson, const std::vect
                 }
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
+        }
+    }
+    if(!pMasqueradingVector[14].empty() && pJson.isMember(pMasqueradingVector[14]))
+    {
+        dirtyFlag_[14] = true;
+        if(!pJson[pMasqueradingVector[14]].isNull())
+        {
+            remainingQuota_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[14]].asInt64());
         }
     }
 }
@@ -575,12 +594,20 @@ CommercialPartners::CommercialPartners(const Json::Value &pJson) noexcept(false)
             }
         }
     }
+    if(pJson.isMember("remaining_quota"))
+    {
+        dirtyFlag_[14]=true;
+        if(!pJson["remaining_quota"].isNull())
+        {
+            remainingQuota_=std::make_shared<int32_t>((int32_t)pJson["remaining_quota"].asInt64());
+        }
+    }
 }
 
 void CommercialPartners::updateByMasqueradedJson(const Json::Value &pJson,
                                             const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 14)
+    if(pMasqueradingVector.size() != 15)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -732,6 +759,14 @@ void CommercialPartners::updateByMasqueradedJson(const Json::Value &pJson,
             }
         }
     }
+    if(!pMasqueradingVector[14].empty() && pJson.isMember(pMasqueradingVector[14]))
+    {
+        dirtyFlag_[14] = true;
+        if(!pJson[pMasqueradingVector[14]].isNull())
+        {
+            remainingQuota_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[14]].asInt64());
+        }
+    }
 }
 
 void CommercialPartners::updateByJson(const Json::Value &pJson) noexcept(false)
@@ -881,6 +916,14 @@ void CommercialPartners::updateByJson(const Json::Value &pJson) noexcept(false)
                 }
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
+        }
+    }
+    if(pJson.isMember("remaining_quota"))
+    {
+        dirtyFlag_[14] = true;
+        if(!pJson["remaining_quota"].isNull())
+        {
+            remainingQuota_=std::make_shared<int32_t>((int32_t)pJson["remaining_quota"].asInt64());
         }
     }
 }
@@ -1228,6 +1271,23 @@ void CommercialPartners::setUpdatedAtToNull() noexcept
     dirtyFlag_[13] = true;
 }
 
+const int32_t &CommercialPartners::getValueOfRemainingQuota() const noexcept
+{
+    static const int32_t defaultValue = int32_t();
+    if(remainingQuota_)
+        return *remainingQuota_;
+    return defaultValue;
+}
+const std::shared_ptr<int32_t> &CommercialPartners::getRemainingQuota() const noexcept
+{
+    return remainingQuota_;
+}
+void CommercialPartners::setRemainingQuota(const int32_t &pRemainingQuota) noexcept
+{
+    remainingQuota_ = std::make_shared<int32_t>(pRemainingQuota);
+    dirtyFlag_[14] = true;
+}
+
 void CommercialPartners::updateId(const uint64_t id)
 {
 }
@@ -1248,7 +1308,8 @@ const std::vector<std::string> &CommercialPartners::insertColumns() noexcept
         "sub_account_enabled",
         "subscriber_quota",
         "created_at",
-        "updated_at"
+        "updated_at",
+        "remaining_quota"
     };
     return inCols;
 }
@@ -1409,6 +1470,17 @@ void CommercialPartners::outputArgs(drogon::orm::internal::SqlBinder &binder) co
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[14])
+    {
+        if(getRemainingQuota())
+        {
+            binder << getValueOfRemainingQuota();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 
 const std::vector<std::string> CommercialPartners::updateColumns() const
@@ -1469,6 +1541,10 @@ const std::vector<std::string> CommercialPartners::updateColumns() const
     if(dirtyFlag_[13])
     {
         ret.push_back(getColumnName(13));
+    }
+    if(dirtyFlag_[14])
+    {
+        ret.push_back(getColumnName(14));
     }
     return ret;
 }
@@ -1629,6 +1705,17 @@ void CommercialPartners::updateArgs(drogon::orm::internal::SqlBinder &binder) co
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[14])
+    {
+        if(getRemainingQuota())
+        {
+            binder << getValueOfRemainingQuota();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 Json::Value CommercialPartners::toJson() const
 {
@@ -1745,6 +1832,14 @@ Json::Value CommercialPartners::toJson() const
     {
         ret["updated_at"]=Json::Value();
     }
+    if(getRemainingQuota())
+    {
+        ret["remaining_quota"]=getValueOfRemainingQuota();
+    }
+    else
+    {
+        ret["remaining_quota"]=Json::Value();
+    }
     return ret;
 }
 
@@ -1757,7 +1852,7 @@ Json::Value CommercialPartners::toMasqueradedJson(
     const std::vector<std::string> &pMasqueradingVector) const
 {
     Json::Value ret;
-    if(pMasqueradingVector.size() == 14)
+    if(pMasqueradingVector.size() == 15)
     {
         if(!pMasqueradingVector[0].empty())
         {
@@ -1913,6 +2008,17 @@ Json::Value CommercialPartners::toMasqueradedJson(
                 ret[pMasqueradingVector[13]]=Json::Value();
             }
         }
+        if(!pMasqueradingVector[14].empty())
+        {
+            if(getRemainingQuota())
+            {
+                ret[pMasqueradingVector[14]]=getValueOfRemainingQuota();
+            }
+            else
+            {
+                ret[pMasqueradingVector[14]]=Json::Value();
+            }
+        }
         return ret;
     }
     LOG_ERROR << "Masquerade failed";
@@ -2028,6 +2134,14 @@ Json::Value CommercialPartners::toMasqueradedJson(
     {
         ret["updated_at"]=Json::Value();
     }
+    if(getRemainingQuota())
+    {
+        ret["remaining_quota"]=getValueOfRemainingQuota();
+    }
+    else
+    {
+        ret["remaining_quota"]=Json::Value();
+    }
     return ret;
 }
 
@@ -2052,11 +2166,6 @@ bool CommercialPartners::validateJsonForCreation(const Json::Value &pJson, std::
     {
         if(!validJsonOfField(2, "identifier", pJson["identifier"], err, true))
             return false;
-    }
-    else
-    {
-        err="The identifier column cannot be null";
-        return false;
     }
     if(pJson.isMember("contact_name"))
     {
@@ -2113,13 +2222,18 @@ bool CommercialPartners::validateJsonForCreation(const Json::Value &pJson, std::
         if(!validJsonOfField(13, "updated_at", pJson["updated_at"], err, true))
             return false;
     }
+    if(pJson.isMember("remaining_quota"))
+    {
+        if(!validJsonOfField(14, "remaining_quota", pJson["remaining_quota"], err, true))
+            return false;
+    }
     return true;
 }
 bool CommercialPartners::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                                                             const std::vector<std::string> &pMasqueradingVector,
                                                             std::string &err)
 {
-    if(pMasqueradingVector.size() != 14)
+    if(pMasqueradingVector.size() != 15)
     {
         err = "Bad masquerading vector";
         return false;
@@ -2153,11 +2267,6 @@ bool CommercialPartners::validateMasqueradedJsonForCreation(const Json::Value &p
               if(!validJsonOfField(2, pMasqueradingVector[2], pJson[pMasqueradingVector[2]], err, true))
                   return false;
           }
-        else
-        {
-            err="The " + pMasqueradingVector[2] + " column cannot be null";
-            return false;
-        }
       }
       if(!pMasqueradingVector[3].empty())
       {
@@ -2247,6 +2356,14 @@ bool CommercialPartners::validateMasqueradedJsonForCreation(const Json::Value &p
                   return false;
           }
       }
+      if(!pMasqueradingVector[14].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[14]))
+          {
+              if(!validJsonOfField(14, pMasqueradingVector[14], pJson[pMasqueradingVector[14]], err, true))
+                  return false;
+          }
+      }
     }
     catch(const Json::LogicError &e)
     {
@@ -2332,13 +2449,18 @@ bool CommercialPartners::validateJsonForUpdate(const Json::Value &pJson, std::st
         if(!validJsonOfField(13, "updated_at", pJson["updated_at"], err, false))
             return false;
     }
+    if(pJson.isMember("remaining_quota"))
+    {
+        if(!validJsonOfField(14, "remaining_quota", pJson["remaining_quota"], err, false))
+            return false;
+    }
     return true;
 }
 bool CommercialPartners::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
                                                           const std::vector<std::string> &pMasqueradingVector,
                                                           std::string &err)
 {
-    if(pMasqueradingVector.size() != 14)
+    if(pMasqueradingVector.size() != 15)
     {
         err = "Bad masquerading vector";
         return false;
@@ -2419,6 +2541,11 @@ bool CommercialPartners::validateMasqueradedJsonForUpdate(const Json::Value &pJs
           if(!validJsonOfField(13, pMasqueradingVector[13], pJson[pMasqueradingVector[13]], err, false))
               return false;
       }
+      if(!pMasqueradingVector[14].empty() && pJson.isMember(pMasqueradingVector[14]))
+      {
+          if(!validJsonOfField(14, pMasqueradingVector[14], pJson[pMasqueradingVector[14]], err, false))
+              return false;
+      }
     }
     catch(const Json::LogicError &e)
     {
@@ -2478,11 +2605,11 @@ bool CommercialPartners::validJsonOfField(size_t index,
                 err="Type error in the "+fieldName+" field";
                 return false;
             }
-            if(pJson.isString() && std::strlen(pJson.asCString()) > 2)
+            if(pJson.isString() && std::strlen(pJson.asCString()) > 10)
             {
                 err="String length exceeds limit for the " +
                     fieldName +
-                    " field (the maximum value is 2)";
+                    " field (the maximum value is 10)";
                 return false;
             }
 
@@ -2660,6 +2787,18 @@ bool CommercialPartners::validJsonOfField(size_t index,
                 return true;
             }
             if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 14:
+            if(pJson.isNull())
+            {
+                err="The " + fieldName + " column cannot be null";
+                return false;
+            }
+            if(!pJson.isInt())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;

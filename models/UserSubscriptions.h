@@ -47,7 +47,9 @@ class UserSubscriptions
         static const std::string _id;
         static const std::string _subscription_identifier;
         static const std::string _user_id;
-        static const std::string _user_name;
+        static const std::string _partner_id;
+        static const std::string _subscription_plan_id;
+        static const std::string _billingcycle;
         static const std::string _email;
         static const std::string _newspaper_entitlements;
         static const std::string _is_active;
@@ -131,15 +133,35 @@ class UserSubscriptions
     void setUserId(const std::string &pUserId) noexcept;
     void setUserId(std::string &&pUserId) noexcept;
 
-    /**  For column user_name  */
-    ///Get the value of the column user_name, returns the default value if the column is null
-    const std::string &getValueOfUserName() const noexcept;
+    /**  For column partner_id  */
+    ///Get the value of the column partner_id, returns the default value if the column is null
+    const std::string &getValueOfPartnerId() const noexcept;
     ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<std::string> &getUserName() const noexcept;
-    ///Set the value of the column user_name
-    void setUserName(const std::string &pUserName) noexcept;
-    void setUserName(std::string &&pUserName) noexcept;
-    void setUserNameToNull() noexcept;
+    const std::shared_ptr<std::string> &getPartnerId() const noexcept;
+    ///Set the value of the column partner_id
+    void setPartnerId(const std::string &pPartnerId) noexcept;
+    void setPartnerId(std::string &&pPartnerId) noexcept;
+    void setPartnerIdToNull() noexcept;
+
+    /**  For column subscription_plan_id  */
+    ///Get the value of the column subscription_plan_id, returns the default value if the column is null
+    const std::string &getValueOfSubscriptionPlanId() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getSubscriptionPlanId() const noexcept;
+    ///Set the value of the column subscription_plan_id
+    void setSubscriptionPlanId(const std::string &pSubscriptionPlanId) noexcept;
+    void setSubscriptionPlanId(std::string &&pSubscriptionPlanId) noexcept;
+    void setSubscriptionPlanIdToNull() noexcept;
+
+    /**  For column billingcycle  */
+    ///Get the value of the column billingcycle, returns the default value if the column is null
+    const std::string &getValueOfBillingcycle() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getBillingcycle() const noexcept;
+    ///Set the value of the column billingcycle
+    void setBillingcycle(const std::string &pBillingcycle) noexcept;
+    void setBillingcycle(std::string &&pBillingcycle) noexcept;
+    void setBillingcycleToNull() noexcept;
 
     /**  For column email  */
     ///Get the value of the column email, returns the default value if the column is null
@@ -188,7 +210,7 @@ class UserSubscriptions
     void setUpdatedAtToNull() noexcept;
 
 
-    static size_t getColumnNumber() noexcept {  return 9;  }
+    static size_t getColumnNumber() noexcept {  return 11;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -213,7 +235,9 @@ class UserSubscriptions
     std::shared_ptr<std::string> id_;
     std::shared_ptr<std::string> subscriptionIdentifier_;
     std::shared_ptr<std::string> userId_;
-    std::shared_ptr<std::string> userName_;
+    std::shared_ptr<std::string> partnerId_;
+    std::shared_ptr<std::string> subscriptionPlanId_;
+    std::shared_ptr<std::string> billingcycle_;
     std::shared_ptr<std::string> email_;
     std::shared_ptr<std::string> newspaperEntitlements_;
     std::shared_ptr<bool> isActive_;
@@ -230,7 +254,7 @@ class UserSubscriptions
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[9]={ false };
+    bool dirtyFlag_[11]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -264,33 +288,45 @@ class UserSubscriptions
             sql += "user_id,";
             ++parametersCount;
         }
-        if(dirtyFlag_[3])
+        sql += "partner_id,";
+        ++parametersCount;
+        if(!dirtyFlag_[3])
         {
-            sql += "user_name,";
+            needSelection=true;
+        }
+        sql += "subscription_plan_id,";
+        ++parametersCount;
+        if(!dirtyFlag_[4])
+        {
+            needSelection=true;
+        }
+        if(dirtyFlag_[5])
+        {
+            sql += "billingcycle,";
             ++parametersCount;
         }
-        if(dirtyFlag_[4])
+        if(dirtyFlag_[6])
         {
             sql += "email,";
             ++parametersCount;
         }
-        if(dirtyFlag_[5])
+        if(dirtyFlag_[7])
         {
             sql += "newspaper_entitlements,";
             ++parametersCount;
         }
         sql += "is_active,";
         ++parametersCount;
-        if(!dirtyFlag_[6])
+        if(!dirtyFlag_[8])
         {
             needSelection=true;
         }
-        if(dirtyFlag_[7])
+        if(dirtyFlag_[9])
         {
             sql += "created_at,";
             ++parametersCount;
         }
-        if(dirtyFlag_[8])
+        if(dirtyFlag_[10])
         {
             sql += "updated_at,";
             ++parametersCount;
@@ -330,10 +366,18 @@ class UserSubscriptions
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
+        else
+        {
+            sql +="default,";
+        }
         if(dirtyFlag_[4])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
         }
         if(dirtyFlag_[5])
         {
@@ -345,16 +389,26 @@ class UserSubscriptions
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
-        else
-        {
-            sql +="default,";
-        }
         if(dirtyFlag_[7])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
         if(dirtyFlag_[8])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
+        }
+        if(dirtyFlag_[9])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[10])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);

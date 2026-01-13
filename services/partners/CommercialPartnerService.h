@@ -7,10 +7,12 @@
 #include "dto/BaseApiResponse.h"
 #include "dto/CreatePartnerDto.h"
 #include "dto/UpdatePartnerDto.h"
-#include <drogon/drogon.h>
+#include "dto/CreatePartnerSubscriberDto.h"
 #include <functional>
 #include <string>
-#include <vector>
+
+#include "dto/AssignPartnerSubscriberPlanDto.h"
+
 
 namespace gnp::services {
 
@@ -25,6 +27,14 @@ public:
       const dto::CreatePartnerDto &dto,
       const std::function<void(const dto::BaseApiResponse &)> &callback);
 
+    void createPartnerSubscriber(
+      const dto::CreatePartnerSubscriberDto &dto,
+      const std::function<void(const dto::BaseApiResponse &)> &callback);
+
+  void assignPartnerSubscribersToPlan(
+      const dto::AssignPartnerSubscriberPlanDto &dto,
+      const std::function<void(const dto::BaseApiResponse &)> &callback);
+
   void updatePartner(
       const dto::UpdatePartnerDto &dto,
       const std::function<void(const dto::BaseApiResponse &)> &callback);
@@ -34,6 +44,10 @@ public:
       const std::function<void(const dto::BaseApiResponse &)> &callback);
 
     void enableSubaccount(
+      const std::string &id,
+      const std::function<void(const dto::BaseApiResponse &)> &callback);
+
+    void getPartnerDetails(
       const std::string &id,
       const std::function<void(const dto::BaseApiResponse &)> &callback);
 
