@@ -780,7 +780,7 @@ void UserService::validateUserPasskeys(
                       .set_type("JWT")
                       .set_issued_at(std::chrono::system_clock::now())
                       .set_expires_at(std::chrono::system_clock::now() +
-                                      std::chrono::hours(24 * 30))
+                                      std::chrono::hours(24 * 120))
                       .set_payload_claim("userId",
                                          jwt::claim(user.getValueOfId()))
                       .set_payload_claim("username",
@@ -851,7 +851,7 @@ void UserService::validateUserCredentials(
                   .set_type("JWT")
                   .set_issued_at(std::chrono::system_clock::now())
                   .set_expires_at(std::chrono::system_clock::now() +
-                                  std::chrono::hours(24 * 30))
+                                  std::chrono::hours(24 * 120))
                   .set_payload_claim("userId", jwt::claim(user.getValueOfId()))
                   .set_payload_claim("username",
                                      jwt::claim(user.getValueOfUsername()))

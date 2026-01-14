@@ -705,9 +705,10 @@ void SubscriptionService::validateNewsPaperEntitlement(
         subCriteria,
         [callback, newsPaperId](const UserSubscriptions &userSub) {
           // 3. Check newspaper_entitlements
-          std::string entitlementsStr =
-              userSub.getValueOfNewspaperEntitlements();
+          std::string entitlementsStr =  userSub.getValueOfNewspaperEntitlements();
           bool hasAccess = false;
+
+          std::string uniqueId = "";
 
           if (!entitlementsStr.empty()) {
             Json::Value entitlements;
@@ -718,7 +719,13 @@ void SubscriptionService::validateNewsPaperEntitlement(
               for (const auto &ent : entitlements) {
                 if (ent.isObject() && ent.isMember("id")) {
                   if (ent["id"].asString() == newsPaperId) {
+
                     hasAccess = true;
+
+                    if (ent.isMember("uniqueId")) {
+                      uniqueId = ent["uniqueId"].asString();
+                    }
+
                     break;
                   }
                 } else if (ent.asString() == newsPaperId) {
@@ -734,6 +741,7 @@ void SubscriptionService::validateNewsPaperEntitlement(
           response.message = hasAccess ? "Access granted" : "Access denied";
           response.result["hasAccess"] = hasAccess;
           response.result["newsPaperId"] = newsPaperId;
+          response.result["uniqueId"] = uniqueId;
           callback(response);
         },
         [callback](const DrogonDbException &e) {
