@@ -15,13 +15,14 @@
 #include "utils/IdGeneratorUtils.h"
 #include "utils/PasswordUtils.h"
 
+#include <drogon/orm/CoroMapper.h>
+
 using namespace drogon::orm;
 
-using drogon_model::Gnp::CommercialPartners;
-using drogon_model::Gnp::SubscriptionPlans;
-using drogon_model::Gnp::UserSubscriptions;
-
-using drogon_model::Gnp::Users;
+using ::drogon_model::Gnp::CommercialPartners;
+using ::drogon_model::Gnp::SubscriptionPlans;
+using ::drogon_model::Gnp::Users;
+using ::drogon_model::Gnp::UserSubscriptions;
 
 namespace gnp::services {
 
@@ -382,6 +383,29 @@ void CommercialPartnerService::createPartnerSubscriber(
         successResponse.message = "Subscriber created successfully";
         successResponse.result["id"] = user.getValueOfId();
 
+        // 6. Reduce subscriber slots for commercial partner
+        auto dbClient = drogon::app().getDbClient();
+        Mapper<CommercialPartners> partnerMapper(dbClient);
+        partnerMapper.findOne(
+            Criteria(CommercialPartners::Cols::_id, CompareOperator::EQ,
+                     userDto.getPartnerId()),
+            [partnerMapper](CommercialPartners partner) mutable {
+              auto remainingQuota = partner.getValueOfRemainingQuota();
+              if (remainingQuota > 0) {
+                partner.setRemainingQuota(remainingQuota - 1);
+                partnerMapper.update(
+                    partner, [](const size_t count) {},
+                    [](const DrogonDbException &e) {
+                      LOG_ERROR << "Failed to update partner quota: "
+                                << e.base().what();
+                    });
+              }
+            },
+            [](const DrogonDbException &e) {
+              LOG_ERROR << "Failed to find partner for quota update: "
+                        << e.base().what();
+            });
+
         callback(successResponse);
       },
       [callback](const drogon::orm::DrogonDbException &e) {
@@ -401,14 +425,16 @@ void CommercialPartnerService::assignPartnerSubscribersToPlan(
 
   // 1. Validate that the partner exists
   Mapper<CommercialPartners> partnerMapper(dbClient);
-  Criteria partnerCriteria = Criteria(CommercialPartners::Cols::_id,CompareOperator::EQ, dto.getPartnerId());
+  Criteria partnerCriteria = Criteria(CommercialPartners::Cols::_id,
+                                      CompareOperator::EQ, dto.getPartnerId());
 
   partnerMapper.findOne(
       partnerCriteria,
       [dbClient, dto, callback](const CommercialPartners &partner) {
         // 2. Validate that the subscription plan exists
         Mapper<SubscriptionPlans> planMapper(dbClient);
-        Criteria planCriteria = Criteria(SubscriptionPlans::Cols::_id,CompareOperator::EQ, dto.getPlanId());
+        Criteria planCriteria = Criteria(SubscriptionPlans::Cols::_id,
+                                         CompareOperator::EQ, dto.getPlanId());
 
         planMapper.findOne(
             planCriteria,
@@ -435,35 +461,46 @@ void CommercialPartnerService::assignPartnerSubscribersToPlan(
                 Mapper<Users> userMapper(dbClient);
                 Criteria userCriteria =
                     Criteria(Users::Cols::_id, CompareOperator::EQ, userId) &&
-                    Criteria(Users::Cols::_partner_id, CompareOperator::EQ,dto.getPartnerId());
+                    Criteria(Users::Cols::_partner_id, CompareOperator::EQ,
+                             dto.getPartnerId());
 
-                userMapper.findOne(userCriteria,
-                    [dbClient, dto, callback, successCount, failureCount, totalCount, failedUsers, plan, userId](const Users &user) {
+                userMapper.findOne(
+                    userCriteria,
+                    [dbClient, dto, callback, successCount, failureCount,
+                     totalCount, failedUsers, plan, userId](const Users &user) {
                       // Create subscription record
                       UserSubscriptions subscription;
                       subscription.setUserId(userId);
-                        subscription.setSubscriptionPlanDescription(dto.getSubscriptionPlanDescription());
+                      subscription.setSubscriptionPlanDescription(
+                          dto.getSubscriptionPlanDescription());
                       subscription.setEmail(user.getValueOfEmail());
                       subscription.setIsActive(true);
                       subscription.setCreatedAt(trantor::Date::now());
 
                       // Get newspaper entitlements from plan's
                       // target_publications
-                      //subscription.setNewspaperEntitlements();
-                        subscription.setPartnerId(dto.getPartnerId());
-                        subscription.setBillingCycle(dto.getBillingCycle());
-                        subscription.setSubscriptionIdentifier(gnp::utils::IdGeneratorUtils::generateRandomSixDigit());
-                        subscription.setSubscriptionPlanId(dto.getPlanId());
+                      // subscription.setNewspaperEntitlements();
+                      subscription.setPartnerId(dto.getPartnerId());
+                      subscription.setBillingCycle(dto.getBillingCycle());
+                      subscription.setSubscriptionIdentifier(
+                          gnp::utils::IdGeneratorUtils::
+                              generateRandomSixDigit());
+                      subscription.setSubscriptionPlanId(dto.getPlanId());
 
                       Mapper<UserSubscriptions> subscriptionMapper(dbClient);
-                      subscriptionMapper.insert(subscription,[successCount, failureCount, totalCount, callback, failedUsers](const UserSubscriptions &inserted) {
+                      subscriptionMapper.insert(
+                          subscription,
+                          [successCount, failureCount, totalCount, callback,
+                           failedUsers](const UserSubscriptions &inserted) {
                             (*successCount)++;
 
                             // Check if all subscribers have been processed
-                            if ((*successCount + *failureCount) >= *totalCount) {
+                            if ((*successCount + *failureCount) >=
+                                *totalCount) {
                               dto::BaseApiResponse response;
                               response.success = true;
-                              response.message = "Subscriber assignment completed";
+                              response.message =
+                                  "Subscriber assignment completed";
                               response.result["successCount"] = *successCount;
                               response.result["failureCount"] = *failureCount;
 
@@ -475,10 +512,12 @@ void CommercialPartnerService::assignPartnerSubscribersToPlan(
                                 response.result["failedUsers"] = failedArray;
                               }
 
-                                //produce payload to a background processor to set news paper entitlements for the subscription plan based on the date purchased
+                              // produce payload to a background processor to
+                              // set news paper entitlements for the
+                              // subscription plan based on the date purchased
 
-                                //payload -> subscriberIds, subscriptionPlanId, billingCycle
-
+                              // payload -> subscriberIds, subscriptionPlanId,
+                              // billingCycle
 
                               callback(response);
                             }
@@ -489,10 +528,12 @@ void CommercialPartnerService::assignPartnerSubscribersToPlan(
                             failedUsers->push_back(userId);
 
                             // Check if all subscribers have been processed
-                            if ((*successCount + *failureCount) >= *totalCount) {
+                            if ((*successCount + *failureCount) >=
+                                *totalCount) {
                               dto::BaseApiResponse response;
                               response.success = *failureCount < *totalCount;
-                              response.message =  "Subscriber assignment completed with errors";
+                              response.message =
+                                  "Subscriber assignment completed with errors";
                               response.result["successCount"] = *successCount;
                               response.result["failureCount"] = *failureCount;
 
@@ -518,7 +559,8 @@ void CommercialPartnerService::assignPartnerSubscribersToPlan(
                       if ((*successCount + *failureCount) >= *totalCount) {
                         dto::BaseApiResponse response;
                         response.success = *failureCount < *totalCount;
-                        response.message = "Subscriber assignment completed with errors";
+                        response.message =
+                            "Subscriber assignment completed with errors";
                         response.result["successCount"] = *successCount;
                         response.result["failureCount"] = *failureCount;
 
@@ -554,6 +596,51 @@ void CommercialPartnerService::assignPartnerSubscribersToPlan(
         errorResponse.error["detail"] = e.base().what();
         callback(errorResponse);
       });
+}
+
+void CommercialPartnerService::getPartnerSubscriptionSummary(
+    const std::string &partnerId,
+    const std::function<void(const dto::BaseApiResponse &)> &callback) {
+
+  auto dbClient = drogon::app().getDbClient();
+
+  std::string sql = "SELECT subscription_plan_description, COUNT(*) as "
+                    "subscriber_count FROM user_subscriptions "
+                    "WHERE partner_id = $1 GROUP BY "
+                    "subscription_plan_description";
+
+  dbClient->execSqlAsync(
+      sql,
+      [callback](const drogon::orm::Result &result) {
+        dto::BaseApiResponse response;
+        response.success = true;
+        response.message = "Partner subscription summary fetched successfully";
+
+        Json::Value data = Json::arrayValue;
+        for (const auto &row : result) {
+          Json::Value item;
+          item["subscriptionPlanDescription"] =
+              row["subscription_plan_description"].isNull()
+                  ? "No Description"
+                  : row["subscription_plan_description"].as<std::string>();
+          item["subscriberCount"] =
+              (Json::Int64)row["subscriber_count"].as<long>();
+
+          data.append(item);
+        }
+
+        response.result = data;
+        callback(response);
+      },
+      [callback](const drogon::orm::DrogonDbException &e) {
+        dto::BaseApiResponse errorResponse;
+        errorResponse.success = false;
+        errorResponse.message = "Failed to fetch partner subscription summary";
+        errorResponse.error["code"] = constants::ERR_DB_QUERY;
+        errorResponse.error["detail"] = e.base().what();
+        callback(errorResponse);
+      },
+      partnerId);
 }
 
 void CommercialPartnerService::updatePartner(
@@ -1079,6 +1166,47 @@ void CommercialPartnerService::updateStatus(
         errorResponse.error["detail"] = e.base().what();
         callback(errorResponse);
       });
+}
+
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::deletePartnerSubscriberAsync(
+    const std::string &partnerId, const std::string &subscriberId) {
+
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<::drogon_model::Gnp::Users> userMapper(dbClient);
+  CoroMapper<::drogon_model::Gnp::CommercialPartners> partnerMapper(dbClient);
+
+  try {
+    // 1. Fetch user to verify ownership
+    auto user = co_await userMapper.findByPrimaryKey(subscriberId);
+    if (user.getValueOfPartnerId() != partnerId) {
+      ::gnp::dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.message = "User does not belong to this partner";
+      errorResponse.error["code"] = constants::ERR_UNAUTHORIZED;
+      co_return errorResponse;
+    }
+
+    // 2. Delete user
+    co_await userMapper.deleteByPrimaryKey(subscriberId);
+
+    // 3. Update partner quota
+    auto partner = co_await partnerMapper.findByPrimaryKey(partnerId);
+    partner.setRemainingQuota(partner.getValueOfRemainingQuota() + 1);
+    co_await partnerMapper.update(partner);
+
+    ::gnp::dto::BaseApiResponse successResponse;
+    successResponse.success = true;
+    successResponse.message = "Subscriber deleted successfully, quota recovered";
+    co_return successResponse;
+
+  } catch (const DrogonDbException &e) {
+    ::gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Database error during subscriber deletion";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
 }
 
 } // namespace gnp::services
