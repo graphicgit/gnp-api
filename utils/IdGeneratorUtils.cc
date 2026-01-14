@@ -6,7 +6,8 @@
 #include <random>
 #include <sstream>
 
-namespace gnp::utils {
+namespace gnp {
+namespace utils {
 
 std::string IdGeneratorUtils::generateGuid() {
   std::random_device rd;
@@ -42,4 +43,21 @@ std::string IdGeneratorUtils::generateRandomSixDigit() {
   return std::to_string(num);
 }
 
-} // namespace gnp::utils
+std::string IdGeneratorUtils::generateAlphanumericId(size_t length) {
+  static const char charset[] = "0123456789"
+                                "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                "abcdefghijklmnopqrstuvwxyz";
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<> dist(0, sizeof(charset) - 2);
+
+  std::string id;
+  id.reserve(length);
+  for (size_t i = 0; i < length; ++i) {
+    id += charset[dist(gen)];
+  }
+  return id;
+}
+
+} // namespace utils
+} // namespace gnp

@@ -58,7 +58,8 @@ void SubscriptionService::manageGuestSubscription(
 
         UserSubscriptions newUserSubscription;
 
-        newUserSubscription.setSubscriptionIdentifier(gnp::utils::IdGeneratorUtils::generateRandomSixDigit());
+        newUserSubscription.setSubscriptionIdentifier(
+            gnp::utils::IdGeneratorUtils::generateRandomSixDigit());
         newUserSubscription.setUserId(user.getValueOfId());
         newUserSubscription.setEmail(user.getValueOfEmail());
         newUserSubscription.setNewspaperEntitlementsToNull();
@@ -81,7 +82,8 @@ void SubscriptionService::manageGuestSubscription(
               gnp::dto::InitializePaymentRequest initReq;
               initReq.setAmount("0.1");
               initReq.setPhone(guestSubscriptionDto.getPhoneNumber());
-              std::string clientReference = gnp::utils::IdGeneratorUtils::generateGuid();
+              std::string clientReference =
+                  gnp::utils::IdGeneratorUtils::generateGuid();
 
               initReq.setClientReference(clientReference);
               initReq.setCallBackUrl("https://gnp-api.com/paystack/callback");
@@ -144,7 +146,8 @@ void SubscriptionService::manageGuestOneTimeBuy(
         const auto &pricePtr = newspaper.getPrice();
         const std::string &paperCost = *pricePtr;
         std::shared_ptr<std::string> clientReference =
-            std::make_shared<std::string>(gnp::utils::IdGeneratorUtils::generateGuid());
+            std::make_shared<std::string>(
+                gnp::utils::IdGeneratorUtils::generateGuid());
 
         Mapper<Users> userMapper(dbClient);
         Criteria checkCriteria =
@@ -187,7 +190,8 @@ void SubscriptionService::manageGuestOneTimeBuy(
 
                     UserSubscriptions newUserSubscription;
 
-                    newUserSubscription.setSubscriptionIdentifier(gnp::utils::IdGeneratorUtils::generateRandomSixDigit());
+                    newUserSubscription.setSubscriptionIdentifier(
+                        gnp::utils::IdGeneratorUtils::generateRandomSixDigit());
                     newUserSubscription.setUserId(user.getValueOfId());
                     newUserSubscription.setEmail(user.getValueOfEmail());
 
@@ -578,42 +582,43 @@ void SubscriptionService::completeGuestOneTimeBuy(
                                 purchaseAttempt.getValueOfNewspaperId();
                             bool alreadyExists = false;
                             for (const auto &ent : entitlements) {
-                              if (ent.asString() == newPaperId) {
+                              if (ent.isObject() && ent.isMember("id") &&
+                                  ent["id"].asString() == newPaperId) {
+                                alreadyExists = true;
+                                break;
+                              } else if (ent.asString() == newPaperId) {
+                                // Fallback for old string-based structure
                                 alreadyExists = true;
                                 break;
                               }
                             }
 
                             if (!alreadyExists) {
-                              entitlements.append(newPaperId);
+                              Json::Value newEnt;
+                              newEnt["id"] = newPaperId;
+                              newEnt["uniqueId"] = gnp::utils::IdGeneratorUtils::generateAlphanumericId();
+                              entitlements.append(newEnt);
                             }
 
                             // Serialize back to string
                             Json::StreamWriterBuilder writerBuilder;
                             writerBuilder["indentation"] = ""; // Compact
-                            std::string newEntitlementsStr =
-                                Json::writeString(writerBuilder, entitlements);
+                            std::string newEntitlementsStr = Json::writeString(writerBuilder, entitlements);
 
                             // Update the record
                             UserSubscriptions subToUpdate = userSub;
-                            subToUpdate.setNewspaperEntitlements(
-                                newEntitlementsStr);
+                            subToUpdate.setNewspaperEntitlements(newEntitlementsStr);
                             subToUpdate.setIsActive(true);
 
                             Mapper<UserSubscriptions> updateMapper(dbClient);
-                            updateMapper.update(
-                                subToUpdate,
-                                [callback, response](const size_t count) {
+                            updateMapper.update(subToUpdate, [callback, response](const size_t count) {
                                   callback(response);
                                 },
                                 [callback](const DrogonDbException &e) {
                                   dto::BaseApiResponse errorResponse;
                                   errorResponse.success = false;
-                                  errorResponse.message =
-                                      "Failed to update user subscription "
-                                      "entitlements";
-                                  errorResponse.error["code"] =
-                                      constants::ERR_DB_QUERY;
+                                  errorResponse.message = "Failed to update user subscription entitlements";
+                                  errorResponse.error["code"] = constants::ERR_DB_QUERY;
                                   callback(errorResponse);
                                 });
                           },
@@ -630,8 +635,7 @@ void SubscriptionService::completeGuestOneTimeBuy(
                     [callback](const DrogonDbException &e) {
                       dto::BaseApiResponse errorResponse;
                       errorResponse.success = false;
-                      errorResponse.message =
-                          "Unable to update purchase attempt record";
+                      errorResponse.message = "Unable to update purchase attempt record";
                       errorResponse.error["code"] = constants::ERR_DB_QUERY;
                       callback(errorResponse);
                     });
@@ -640,8 +644,7 @@ void SubscriptionService::completeGuestOneTimeBuy(
             [callback](const DrogonDbException &e) {
               dto::BaseApiResponse errorResponse;
               errorResponse.success = false;
-              errorResponse.message =
-                  "Unable to find user associated with this purchase";
+              errorResponse.message = "Unable to find user associated with this purchase";
               errorResponse.error["code"] = constants::ERR_DB_QUERY;
               callback(errorResponse);
             });
@@ -713,7 +716,12 @@ void SubscriptionService::validateNewsPaperEntitlement(
             std::istringstream s(entitlementsStr);
             if (Json::parseFromStream(readerBuilder, s, &entitlements, &errs)) {
               for (const auto &ent : entitlements) {
-                if (ent.asString() == newsPaperId) {
+                if (ent.isObject() && ent.isMember("id")) {
+                  if (ent["id"].asString() == newsPaperId) {
+                    hasAccess = true;
+                    break;
+                  }
+                } else if (ent.asString() == newsPaperId) {
                   hasAccess = true;
                   break;
                 }

@@ -442,6 +442,7 @@ void CommercialPartnerService::assignPartnerSubscribersToPlan(
                       // Create subscription record
                       UserSubscriptions subscription;
                       subscription.setUserId(userId);
+                        subscription.setSubscriptionPlanDescription(dto.getSubscriptionPlanDescription());
                       subscription.setEmail(user.getValueOfEmail());
                       subscription.setIsActive(true);
                       subscription.setCreatedAt(trantor::Date::now());
@@ -450,7 +451,7 @@ void CommercialPartnerService::assignPartnerSubscribersToPlan(
                       // target_publications
                       //subscription.setNewspaperEntitlements();
                         subscription.setPartnerId(dto.getPartnerId());
-                        subscription.setBillingcycle(dto.getBillingCycle());
+                        subscription.setBillingCycle(dto.getBillingCycle());
                         subscription.setSubscriptionIdentifier(gnp::utils::IdGeneratorUtils::generateRandomSixDigit());
                         subscription.setSubscriptionPlanId(dto.getPlanId());
 
@@ -473,6 +474,11 @@ void CommercialPartnerService::assignPartnerSubscribersToPlan(
                                 }
                                 response.result["failedUsers"] = failedArray;
                               }
+
+                                //produce payload to a background processor to set news paper entitlements for the subscription plan based on the date purchased
+
+                                //payload -> subscriberIds, subscriptionPlanId, billingCycle
+
 
                               callback(response);
                             }
