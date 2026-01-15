@@ -145,6 +145,50 @@ void SubscriptionsController::validateNewsPaperEntitlement(
   });
 }
 
+
+void SubscriptionsController::getNewsPaperRedactedDetailsViaUniqueId(
+    const HttpRequestPtr &req,
+    std::function<void(const HttpResponsePtr &)> &&callback) {
+
+  auto uniqueId = req->getParameter("id");
+
+  if (uniqueId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "News Paper Reference is required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    callback(resp);
+  }
+
+  // extract the authorization headers to get the user token: Authorization:
+  // `Bearer ${authToken}`
+  auto authHeader = req->getHeader("Authorization");
+
+  if (authHeader.empty() || authHeader.substr(0, 7) != "Bearer ") {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Authorization header is missing or invalid";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k401Unauthorized);
+    callback(resp);
+  }
+
+  std::string authToken = authHeader.substr(7);
+
+
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &subscriptionService = plugin->getSubscriptionService();
+
+  subscriptionService.getNewsPaperRedactedDetailsWithUniqueId(uniqueId, authToken, [callback](const gnp::dto::BaseApiResponse &result) {
+      auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+      callback(resp);
+  });
+}
+
+
+
+
 void SubscriptionsController::grantNewsPaperAccess(const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) {
 

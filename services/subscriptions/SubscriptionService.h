@@ -47,6 +47,11 @@ public:
     void grantNewsPaperAccessToRequester(const dto::GrantNewsPaperAccessDto &dto,
       const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
+    void getNewsPaperRedactedDetailsWithUniqueId(
+        const std::string &uniqueId, const std::string &authToken,
+      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+
+
 
 
 
