@@ -135,16 +135,16 @@ void SubscriptionsController::validateNewsPaperEntitlement(
 
   std::string authToken = authHeader.substr(7);
 
-
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &subscriptionService = plugin->getSubscriptionService();
 
-  subscriptionService.validateNewsPaperEntitlement(newsPaperId, authToken, [callback](const gnp::dto::BaseApiResponse &result) {
-      auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-      callback(resp);
-  });
+  subscriptionService.validateNewsPaperEntitlement(
+      newsPaperId, authToken,
+      [callback](const gnp::dto::BaseApiResponse &result) {
+        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+        callback(resp);
+      });
 }
-
 
 void SubscriptionsController::getNewsPaperRedactedDetailsViaUniqueId(
     const HttpRequestPtr &req,
@@ -176,20 +176,18 @@ void SubscriptionsController::getNewsPaperRedactedDetailsViaUniqueId(
 
   std::string authToken = authHeader.substr(7);
 
-
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &subscriptionService = plugin->getSubscriptionService();
 
-  subscriptionService.getNewsPaperRedactedDetailsWithUniqueId(uniqueId, authToken, [callback](const gnp::dto::BaseApiResponse &result) {
-      auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-      callback(resp);
-  });
+  subscriptionService.getNewsPaperRedactedDetailsWithUniqueId(
+      uniqueId, authToken, [callback](const gnp::dto::BaseApiResponse &result) {
+        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+        callback(resp);
+      });
 }
 
-
-
-
-void SubscriptionsController::grantNewsPaperAccess(const HttpRequestPtr &req,
+void SubscriptionsController::grantNewsPaperAccess(
+    const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) {
 
   auto jsonBody = req->getJsonObject();
@@ -203,25 +201,59 @@ void SubscriptionsController::grantNewsPaperAccess(const HttpRequestPtr &req,
     callback(resp);
   }
 
-
   gnp::dto::GrantNewsPaperAccessDto grantNewsPaperAccessDto;
   grantNewsPaperAccessDto.fromJson(*jsonBody);
 
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &subscriptionService = plugin->getSubscriptionService();
 
-  subscriptionService.grantNewsPaperAccessToRequester(grantNewsPaperAccessDto, [callback](const gnp::dto::BaseApiResponse &result) {
+  subscriptionService.grantNewsPaperAccessToRequester(
+      grantNewsPaperAccessDto,
+      [callback](const gnp::dto::BaseApiResponse &result) {
         auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
         callback(resp);
       });
+}
 
+Task<HttpResponsePtr> SubscriptionsController::findNewsPaperByDateAndPublication(
+    const HttpRequestPtr req) {
+  auto publicationId = req->getParameter("publicationId");
+  auto publicationDate = req->getParameter("publicationDate");
+
+  if (publicationId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Publication ID is required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto authHeader = req->getHeader("Authorization");
+  if (authHeader.empty() || authHeader.substr(0, 7) != "Bearer ") {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Authorization header is missing or invalid";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k401Unauthorized);
+    co_return resp;
+  }
+
+  std::string authToken = authHeader.substr(7);
+
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &subscriptionService = plugin->getSubscriptionService();
+
+  auto result =  co_await subscriptionService.readNewsPaperByDateAndPublicationAsync(publicationId, publicationDate, authToken);
+
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
 }
 
 void SubscriptionsController::manageUserSubscription(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) {
   // write your application logic here
-
 }
 
 void SubscriptionsController::renew(
