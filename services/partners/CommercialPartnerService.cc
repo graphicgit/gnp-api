@@ -343,20 +343,17 @@ void CommercialPartnerService::createPartnerSubscriber(
                         <h1>Graphic News Plus</h1>
                       </div>
                       <div class="content">
-                        <p>Hello )" +
-            userDto.getFirstName() + R"(,</p>
-                        <p>Welcome to Graphic News Plus! Your account has been created successfully.</p>
+                        <p>Hello )" + userDto.getFirstName() + R"(,</p>
+                        <p>Welcome to Graphic News Plus! Your corporate account has been created successfully.</p>
                         <p>Below are your login credentials:</p>
                         <div class="credentials">
                           <div class="credential-item">
                             <div class="credential-label">Username (Email):</div>
-                            <div class="credential-value">)" +
-            userDto.getEmail() + R"(</div>
+                            <div class="credential-value">)" +  userDto.getEmail() + R"(</div>
                           </div>
                           <div class="credential-item">
                             <div class="credential-label">Password:</div>
-                            <div class="credential-value">)" +
-            password + R"(</div>
+                            <div class="credential-value">)" +  password + R"(</div>
                           </div>
                         </div>
                         <p>Please keep these credentials secure and change your password after your first login.</p>

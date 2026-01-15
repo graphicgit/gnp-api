@@ -778,7 +778,10 @@ void SubscriptionService::grantNewsPaperAccessToRequester(
   auto dbClient = drogon::app().getDbClient();
   Mapper<UserSubscriptions> subMapper(dbClient);
 
-  Criteria criteria = Criteria(UserSubscriptions::Cols::_user_id, CompareOperator::EQ, dto.getUserId()) && Criteria(UserSubscriptions::Cols::_email, CompareOperator::EQ, dto.getEmail());
+  Criteria criteria = Criteria(UserSubscriptions::Cols::_user_id,
+                               CompareOperator::EQ, dto.getUserId()) &&
+                      Criteria(UserSubscriptions::Cols::_email,
+                               CompareOperator::EQ, dto.getEmail());
 
   subMapper.findOne(
       criteria,
@@ -817,7 +820,8 @@ void SubscriptionService::grantNewsPaperAccessToRequester(
         if (newspaperId.empty()) {
           dto::BaseApiResponse response;
           response.success = false;
-          response.message = "Newspaper with provided uniqueId not found in entitlements";
+          response.message =
+              "Newspaper with provided uniqueId not found in entitlements";
           callback(response);
           return;
         }
@@ -831,56 +835,56 @@ void SubscriptionService::grantNewsPaperAccessToRequester(
               response.success = true;
               response.message = "Newspaper access granted";
 
-                Json::Value src = newspaper.toJson();
-                Json::Value data;
+              Json::Value src = newspaper.toJson();
+              Json::Value data;
 
-                // Basic fields
-                data["id"] = src["id"];
-                data["title"] = src["title"];
-                data["slug"] = src["slug"];
-                data["price"] = src["price"];
-                data["editionNumber"] = src["edition_number"];
-                data["shortDescription"] = src["short_description"];
-                data["fullDescription"] = src["full_description"];
-                data["thumbnailId"] = src["thumbnail_id"];
-                data["fileType"] = src["file_type"];
-                data["storageType"] = src["storage_type"];
-                data["documentId"] = src["document_id"];
-                data["isFree"] = src["is_free"];
-                data["isPopular"] = src["is_popular"];
-                data["publishedDate"] = src["published_date"];
-                data["isPublished"] = src["is_published"];
+              // Basic fields
+              data["id"] = src["id"];
+              data["title"] = src["title"];
+              data["slug"] = src["slug"];
+              data["price"] = src["price"];
+              data["editionNumber"] = src["edition_number"];
+              data["shortDescription"] = src["short_description"];
+              data["fullDescription"] = src["full_description"];
+              data["thumbnailId"] = src["thumbnail_id"];
+              data["fileType"] = src["file_type"];
+              data["storageType"] = src["storage_type"];
+              data["documentId"] = src["document_id"];
+              data["isFree"] = src["is_free"];
+              data["isPopular"] = src["is_popular"];
+              data["publishedDate"] = src["published_date"];
+              data["isPublished"] = src["is_published"];
 
-                // Category / publication info
-                data["categoryId"] = src["category_id"];
-                data["categoryName"] = src["category_name"];
-                data["publicationId"] = src["publication_id"];
-                data["publicationName"] = src["publication_name"];
+              // Category / publication info
+              data["categoryId"] = src["category_id"];
+              data["categoryName"] = src["category_name"];
+              data["publicationId"] = src["publication_id"];
+              data["publicationName"] = src["publication_name"];
 
-                // Copyright
-                data["copyrightOwner"] = src["copyright_owner"];
+              // Copyright
+              data["copyrightOwner"] = src["copyright_owner"];
 
-                // Featured stories (stored as JSON string)
-                std::string featuredStoriesStr = newspaper.getValueOfFeaturedStories();
-                Json::Value featuredStoriesJson;
-                Json::Reader reader;
-                if (!featuredStoriesStr.empty() && reader.parse(featuredStoriesStr, featuredStoriesJson))
-                {
-                    data["featuredStories"] = featuredStoriesJson;
-                }
-                else
-                {
-                    data["featuredStories"] = Json::arrayValue;
-                }
+              // Featured stories (stored as JSON string)
+              std::string featuredStoriesStr =
+                  newspaper.getValueOfFeaturedStories();
+              Json::Value featuredStoriesJson;
+              Json::Reader reader;
+              if (!featuredStoriesStr.empty() &&
+                  reader.parse(featuredStoriesStr, featuredStoriesJson)) {
+                data["featuredStories"] = featuredStoriesJson;
+              } else {
+                data["featuredStories"] = Json::arrayValue;
+              }
 
-                response.result = data;
+              response.result = data;
 
               callback(response);
             },
             [callback](const DrogonDbException &e) {
               dto::BaseApiResponse response;
               response.success = false;
-              response.message = "Database error while fetching newspaper details";
+              response.message =
+                  "Database error while fetching newspaper details";
               response.error["code"] = constants::ERR_DB_QUERY;
               callback(response);
             });
@@ -892,6 +896,413 @@ void SubscriptionService::grantNewsPaperAccessToRequester(
         response.error["code"] = constants::ERR_DB_QUERY;
         callback(response);
       });
+}
+
+void SubscriptionService::getNewsPaperRedactedDetailsWithUniqueId(
+    const std::string &uniqueId, const std::string &authToken,
+    const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {
+
+  // 1. Decode JWT to get userId
+  std::string token = authToken;
+  if (token.rfind("Bearer ", 0) == 0) {
+    token = token.substr(7);
+  }
+
+  try {
+    // Get JWT config
+    auto &app = drogon::app();
+    auto customConfig = app.getCustomConfig();
+    std::string jwtSecurityKey =
+        customConfig["JwtBearer"]["JwtSecurityKey"].asString();
+    std::string jwtIssuer = customConfig["JwtBearer"]["JwtIssuer"].asString();
+
+    // Verify token
+    auto verifier = jwt::verify()
+                        .allow_algorithm(jwt::algorithm::hs256{jwtSecurityKey})
+                        .with_issuer(jwtIssuer);
+
+    auto decoded = jwt::decode(token);
+    verifier.verify(decoded);
+
+    if (!decoded.has_payload_claim("userId") ||
+        !decoded.has_payload_claim("email")) {
+      dto::BaseApiResponse response;
+      response.success = false;
+      response.message = "Invalid token: missing userId";
+      callback(response);
+    }
+
+    auto userId = decoded.get_payload_claim("userId").as_string();
+    auto email = decoded.get_payload_claim("email").as_string();
+
+    auto dbClient = drogon::app().getDbClient();
+    Mapper<UserSubscriptions> subMapper(dbClient);
+
+    Criteria criteria =
+        Criteria(UserSubscriptions::Cols::_user_id, CompareOperator::EQ,
+                 userId) &&
+        Criteria(UserSubscriptions::Cols::_email, CompareOperator::EQ, email);
+
+    subMapper.findOne(
+        criteria,
+        [callback, uniqueId, dbClient](const UserSubscriptions &userSub) {
+          std::string entitlementsStr =
+              userSub.getValueOfNewspaperEntitlements();
+          if (entitlementsStr.empty()) {
+            dto::BaseApiResponse response;
+            response.success = false;
+            response.message = "No newspaper entitlements found for this user";
+            callback(response);
+            return;
+          }
+
+          Json::Value entitlements;
+          Json::CharReaderBuilder readerBuilder;
+          std::string errs;
+          std::istringstream s(entitlementsStr);
+
+          if (!Json::parseFromStream(readerBuilder, s, &entitlements, &errs)) {
+            dto::BaseApiResponse response;
+            response.success = false;
+            response.message = "Failed to parse newspaper entitlements";
+            callback(response);
+            return;
+          }
+
+          std::string newspaperId = "";
+          for (const auto &ent : entitlements) {
+            if (ent.isObject() && ent.isMember("uniqueId") &&
+                ent["uniqueId"].asString() == uniqueId) {
+              newspaperId = ent["id"].asString();
+              break;
+            }
+          }
+
+          if (newspaperId.empty()) {
+            dto::BaseApiResponse response;
+            response.success = false;
+            response.message =
+                "Newspaper with provided uniqueId not found in entitlements";
+            callback(response);
+            return;
+          }
+
+          // Fetch newspaper details
+          Mapper<drogon_model::Gnp::Newspapers> newspaperMapper(dbClient);
+          newspaperMapper.findByPrimaryKey(newspaperId, [callback](const drogon_model::Gnp::Newspapers &newspaper) {
+                dto::BaseApiResponse response;
+                response.success = true;
+                response.message = "Newspaper access granted";
+
+                Json::Value src = newspaper.toJson();
+                Json::Value data;
+
+                // Basic fields
+                data["id"] = src["id"];
+                data["title"] = src["title"];
+                data["slug"] = src["slug"];
+                data["publishedDate"] = src["published_date"];
+                data["publicationId"] = src["publication_id"];
+
+                response.result = data;
+
+                callback(response);
+              },
+              [callback](const DrogonDbException &e) {
+                dto::BaseApiResponse response;
+                response.success = false;
+                response.message =
+                    "Database error while fetching newspaper details";
+                response.error["code"] = constants::ERR_DB_QUERY;
+                callback(response);
+              });
+        },
+        [callback](const DrogonDbException &e) {
+          dto::BaseApiResponse response;
+          response.success = false;
+          response.message = "User subscription not found";
+          response.error["code"] = constants::ERR_DB_QUERY;
+          callback(response);
+        });
+
+  } catch (const std::exception &e) {
+    dto::BaseApiResponse response;
+    response.success = false;
+    response.message = std::string("Token validation failed: ") + e.what();
+    callback(response);
+  }
+}
+
+void SubscriptionService::readNewsPaperByDateAndPublication(
+    const std::string &publicationId, const std::string &publicationDate,
+    const std::string &authToken,
+    const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {
+
+  // 1. Decode JWT to get userId
+  std::string token = authToken;
+  if (token.rfind("Bearer ", 0) == 0) {
+    token = token.substr(7);
+  }
+
+  try {
+    // Get JWT config
+    auto &app = drogon::app();
+    auto customConfig = app.getCustomConfig();
+    std::string jwtSecurityKey =
+        customConfig["JwtBearer"]["JwtSecurityKey"].asString();
+    std::string jwtIssuer = customConfig["JwtBearer"]["JwtIssuer"].asString();
+
+    // Verify token
+    auto verifier = jwt::verify()
+                        .allow_algorithm(jwt::algorithm::hs256{jwtSecurityKey})
+                        .with_issuer(jwtIssuer);
+
+    auto decoded = jwt::decode(token);
+    verifier.verify(decoded);
+
+    if (!decoded.has_payload_claim("userId") ||
+        !decoded.has_payload_claim("email")) {
+      dto::BaseApiResponse response;
+      response.success = false;
+      response.message = "Invalid token: missing userId or email";
+      callback(response);
+      return;
+    }
+
+    std::string userId = decoded.get_payload_claim("userId").as_string();
+    std::string email = decoded.get_payload_claim("email").as_string();
+
+    auto dbClient = drogon::app().getDbClient();
+
+    // 2. Find Newspaper ID by publicationId and date
+    Mapper<drogon_model::Gnp::Newspapers> newspaperMapper(dbClient);
+    Criteria newsCriteria =
+        Criteria(drogon_model::Gnp::Newspapers::Cols::_publication_id,
+                 CompareOperator::EQ, publicationId) &&
+        Criteria(drogon_model::Gnp::Newspapers::Cols::_published_date,
+                 CompareOperator::EQ, publicationDate);
+
+    newspaperMapper.findOne(
+        newsCriteria,
+        [callback, userId, email,
+         dbClient](const drogon_model::Gnp::Newspapers &newspaper) {
+          std::string newspaperId = newspaper.getValueOfId();
+          std::string slug = newspaper.getValueOfSlug();
+          std::string title = *newspaper.getTitle();
+          std::string pubDate =
+              newspaper.getValueOfPublishedDate().toDbStringLocal();
+
+          // 3. Check User Entitlements
+          Mapper<UserSubscriptions> subMapper(dbClient);
+          Criteria subCriteria = Criteria(UserSubscriptions::Cols::_user_id,
+                                          CompareOperator::EQ, userId) &&
+                                 Criteria(UserSubscriptions::Cols::_email,
+                                          CompareOperator::EQ, email);
+
+          subMapper.findOne(
+              subCriteria,
+              [callback, newspaperId, slug, title,
+               pubDate](const UserSubscriptions &userSub) {
+                std::string entitlementsStr =
+                    userSub.getValueOfNewspaperEntitlements();
+                if (entitlementsStr.empty()) {
+                  dto::BaseApiResponse response;
+                  response.success = false;
+                  response.message =
+                      "No newspaper entitlements found for this user";
+                  callback(response);
+                  return;
+                }
+
+                Json::Value entitlements;
+                Json::CharReaderBuilder readerBuilder;
+                std::string errs;
+                std::istringstream s(entitlementsStr);
+
+                if (!Json::parseFromStream(readerBuilder, s, &entitlements,
+                                           &errs)) {
+                  dto::BaseApiResponse response;
+                  response.success = false;
+                  response.message = "Failed to parse newspaper entitlements";
+                  callback(response);
+                  return;
+                }
+
+                std::string uniqueId = "";
+                bool hasAccess = false;
+                for (const auto &ent : entitlements) {
+                  if (ent.isObject() && ent.isMember("id") &&
+                      ent["id"].asString() == newspaperId) {
+                    hasAccess = true;
+                    if (ent.isMember("uniqueId")) {
+                      uniqueId = ent["uniqueId"].asString();
+                    }
+                    break;
+                  }
+                }
+
+                if (!hasAccess) {
+                  dto::BaseApiResponse response;
+                  response.success = false;
+                  response.message = "Access denied for this newspaper";
+                  callback(response);
+                  return;
+                }
+
+                dto::BaseApiResponse response;
+                response.success = true;
+                response.message = "Access verified";
+                response.result["uniqueId"] = uniqueId;
+                response.result["slug"] = slug;
+                response.result["title"] = title;
+                response.result["publicationDate"] = pubDate;
+                callback(response);
+              },
+              [callback](const DrogonDbException &e) {
+                dto::BaseApiResponse response;
+                response.success = false;
+                response.message = "User subscription not found";
+                response.error["code"] = constants::ERR_DB_QUERY;
+                callback(response);
+              });
+        },
+        [callback](const DrogonDbException &e) {
+          dto::BaseApiResponse response;
+          response.success = false;
+          response.message =
+              "Newspaper not found for provided date and publication";
+          response.error["code"] = constants::ERR_DB_QUERY;
+          callback(response);
+        });
+
+  } catch (const std::exception &e) {
+    dto::BaseApiResponse response;
+    response.success = false;
+    response.message = std::string("Token validation failed: ") + e.what();
+    callback(response);
+  }
+}
+
+drogon::Task<gnp::dto::BaseApiResponse>
+SubscriptionService::readNewsPaperByDateAndPublicationAsync(
+    const std::string &publicationId, const std::string &publicationDate,
+    const std::string &authToken) {
+
+      // 1. Decode JWT to get userId and email
+      std::string token = authToken;
+      if (token.rfind("Bearer ", 0) == 0) {
+        token = token.substr(7);
+      }
+
+      try {
+        auto &app = drogon::app();
+        auto customConfig = app.getCustomConfig();
+        std::string jwtSecurityKey =
+            customConfig["JwtBearer"]["JwtSecurityKey"].asString();
+        std::string jwtIssuer = customConfig["JwtBearer"]["JwtIssuer"].asString();
+
+        auto verifier = jwt::verify()
+                            .allow_algorithm(jwt::algorithm::hs256{jwtSecurityKey})
+                            .with_issuer(jwtIssuer);
+
+        auto decoded = jwt::decode(token);
+        verifier.verify(decoded);
+
+        if (!decoded.has_payload_claim("userId") ||
+            !decoded.has_payload_claim("email")) {
+          gnp::dto::BaseApiResponse response;
+          response.success = false;
+          response.message = "Invalid token: missing userId or email";
+          co_return response;
+        }
+
+        std::string userId = decoded.get_payload_claim("userId").as_string();
+        std::string email = decoded.get_payload_claim("email").as_string();
+
+        auto dbClient = drogon::app().getDbClient();
+
+        // 2. Find Newspaper ID by publicationId and date
+        CoroMapper<drogon_model::Gnp::Newspapers> newspaperMapper(dbClient);
+        Criteria newsCriteria = Criteria(drogon_model::Gnp::Newspapers::Cols::_publication_id, CompareOperator::EQ, publicationId) &&
+            Criteria(drogon_model::Gnp::Newspapers::Cols::_published_date,CompareOperator::EQ, publicationDate);
+
+        auto newspaper = co_await newspaperMapper.findOne(newsCriteria);
+        std::string newspaperId = newspaper.getValueOfId();
+        std::string slug = newspaper.getValueOfSlug();
+        std::string title = *newspaper.getTitle();
+        std::string publicationId = newspaper.getValueOfPublicationId();
+        std::string pubDate = newspaper.getValueOfPublishedDate().toDbStringLocal();
+
+        // 3. Check User Entitlements
+        CoroMapper<UserSubscriptions> subMapper(dbClient);
+        Criteria subCriteria = Criteria(UserSubscriptions::Cols::_user_id, CompareOperator::EQ, userId) &&
+            Criteria(UserSubscriptions::Cols::_email, CompareOperator::EQ, email);
+
+        auto userSub = co_await subMapper.findOne(subCriteria);
+        std::string entitlementsStr = userSub.getValueOfNewspaperEntitlements();
+
+        if (entitlementsStr.empty()) {
+          gnp::dto::BaseApiResponse response;
+          response.success = false;
+          response.message = "No newspaper entitlements found for this user";
+          co_return response;
+        }
+
+        Json::Value entitlements;
+        Json::CharReaderBuilder readerBuilder;
+        std::string errs;
+        std::istringstream s(entitlementsStr);
+
+        if (!Json::parseFromStream(readerBuilder, s, &entitlements, &errs)) {
+          gnp::dto::BaseApiResponse response;
+          response.success = false;
+          response.message = "Failed to parse newspaper entitlements";
+          co_return response;
+        }
+
+        std::string uniqueId = "";
+        bool hasAccess = false;
+        for (const auto &ent : entitlements) {
+          if (ent.isObject() && ent.isMember("id") &&
+              ent["id"].asString() == newspaperId) {
+            hasAccess = true;
+            if (ent.isMember("uniqueId")) {
+              uniqueId = ent["uniqueId"].asString();
+            }
+            break;
+          }
+        }
+
+        if (!hasAccess) {
+          gnp::dto::BaseApiResponse response;
+          response.success = false;
+          response.message = "Access denied for this newspaper";
+          co_return response;
+        }
+
+        gnp::dto::BaseApiResponse response;
+        response.success = true;
+        response.message = "Access verified";
+        response.result["uniqueId"] = uniqueId;
+        response.result["slug"] = slug;
+        response.result["title"] = title;
+        response.result["publicationDate"] = pubDate;
+
+        co_return response;
+
+      } catch (const DrogonDbException &e) {
+        gnp::dto::BaseApiResponse response;
+        response.success = false;
+        response.message = "Database error or resource not found";
+        response.error["code"] = constants::ERR_DB_QUERY;
+        response.error["detail"] = e.base().what();
+        co_return response;
+      } catch (const std::exception &e) {
+        gnp::dto::BaseApiResponse response;
+        response.success = false;
+        response.message = std::string("Operation failed: ") + e.what();
+        co_return response;
+      }
 }
 
 } // namespace gnp::services
