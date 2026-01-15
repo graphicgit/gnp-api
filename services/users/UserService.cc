@@ -1578,4 +1578,6 @@ void UserService::setPassword(
       },
       "GET %s", sessionId.c_str());
 }
+
+
 } // namespace gnp::services

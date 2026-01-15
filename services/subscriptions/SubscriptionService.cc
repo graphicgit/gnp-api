@@ -596,29 +596,37 @@ void SubscriptionService::completeGuestOneTimeBuy(
                             if (!alreadyExists) {
                               Json::Value newEnt;
                               newEnt["id"] = newPaperId;
-                              newEnt["uniqueId"] = gnp::utils::IdGeneratorUtils::generateAlphanumericId();
+                              newEnt["uniqueId"] = gnp::utils::
+                                  IdGeneratorUtils::generateAlphanumericId();
                               entitlements.append(newEnt);
                             }
 
                             // Serialize back to string
                             Json::StreamWriterBuilder writerBuilder;
                             writerBuilder["indentation"] = ""; // Compact
-                            std::string newEntitlementsStr = Json::writeString(writerBuilder, entitlements);
+                            std::string newEntitlementsStr =
+                                Json::writeString(writerBuilder, entitlements);
 
                             // Update the record
                             UserSubscriptions subToUpdate = userSub;
-                            subToUpdate.setNewspaperEntitlements(newEntitlementsStr);
+                            subToUpdate.setNewspaperEntitlements(
+                                newEntitlementsStr);
                             subToUpdate.setIsActive(true);
 
                             Mapper<UserSubscriptions> updateMapper(dbClient);
-                            updateMapper.update(subToUpdate, [callback, response](const size_t count) {
+                            updateMapper.update(
+                                subToUpdate,
+                                [callback, response](const size_t count) {
                                   callback(response);
                                 },
                                 [callback](const DrogonDbException &e) {
                                   dto::BaseApiResponse errorResponse;
                                   errorResponse.success = false;
-                                  errorResponse.message = "Failed to update user subscription entitlements";
-                                  errorResponse.error["code"] = constants::ERR_DB_QUERY;
+                                  errorResponse.message =
+                                      "Failed to update user subscription "
+                                      "entitlements";
+                                  errorResponse.error["code"] =
+                                      constants::ERR_DB_QUERY;
                                   callback(errorResponse);
                                 });
                           },
@@ -635,7 +643,8 @@ void SubscriptionService::completeGuestOneTimeBuy(
                     [callback](const DrogonDbException &e) {
                       dto::BaseApiResponse errorResponse;
                       errorResponse.success = false;
-                      errorResponse.message = "Unable to update purchase attempt record";
+                      errorResponse.message =
+                          "Unable to update purchase attempt record";
                       errorResponse.error["code"] = constants::ERR_DB_QUERY;
                       callback(errorResponse);
                     });
@@ -644,7 +653,8 @@ void SubscriptionService::completeGuestOneTimeBuy(
             [callback](const DrogonDbException &e) {
               dto::BaseApiResponse errorResponse;
               errorResponse.success = false;
-              errorResponse.message = "Unable to find user associated with this purchase";
+              errorResponse.message =
+                  "Unable to find user associated with this purchase";
               errorResponse.error["code"] = constants::ERR_DB_QUERY;
               callback(errorResponse);
             });
@@ -705,7 +715,8 @@ void SubscriptionService::validateNewsPaperEntitlement(
         subCriteria,
         [callback, newsPaperId](const UserSubscriptions &userSub) {
           // 3. Check newspaper_entitlements
-          std::string entitlementsStr =  userSub.getValueOfNewspaperEntitlements();
+          std::string entitlementsStr =
+              userSub.getValueOfNewspaperEntitlements();
           bool hasAccess = false;
 
           std::string uniqueId = "";
@@ -758,6 +769,129 @@ void SubscriptionService::validateNewsPaperEntitlement(
     response.message = std::string("Token validation failed: ") + e.what();
     callback(response);
   }
+}
+
+void SubscriptionService::grantNewsPaperAccessToRequester(
+    const dto::GrantNewsPaperAccessDto &dto,
+    const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {
+
+  auto dbClient = drogon::app().getDbClient();
+  Mapper<UserSubscriptions> subMapper(dbClient);
+
+  Criteria criteria = Criteria(UserSubscriptions::Cols::_user_id, CompareOperator::EQ, dto.getUserId()) && Criteria(UserSubscriptions::Cols::_email, CompareOperator::EQ, dto.getEmail());
+
+  subMapper.findOne(
+      criteria,
+      [callback, dto, dbClient](const UserSubscriptions &userSub) {
+        std::string entitlementsStr = userSub.getValueOfNewspaperEntitlements();
+        if (entitlementsStr.empty()) {
+          dto::BaseApiResponse response;
+          response.success = false;
+          response.message = "No newspaper entitlements found for this user";
+          callback(response);
+          return;
+        }
+
+        Json::Value entitlements;
+        Json::CharReaderBuilder readerBuilder;
+        std::string errs;
+        std::istringstream s(entitlementsStr);
+
+        if (!Json::parseFromStream(readerBuilder, s, &entitlements, &errs)) {
+          dto::BaseApiResponse response;
+          response.success = false;
+          response.message = "Failed to parse newspaper entitlements";
+          callback(response);
+          return;
+        }
+
+        std::string newspaperId = "";
+        for (const auto &ent : entitlements) {
+          if (ent.isObject() && ent.isMember("uniqueId") &&
+              ent["uniqueId"].asString() == dto.getUniqueId()) {
+            newspaperId = ent["id"].asString();
+            break;
+          }
+        }
+
+        if (newspaperId.empty()) {
+          dto::BaseApiResponse response;
+          response.success = false;
+          response.message = "Newspaper with provided uniqueId not found in entitlements";
+          callback(response);
+          return;
+        }
+
+        // Fetch newspaper details
+        Mapper<drogon_model::Gnp::Newspapers> newspaperMapper(dbClient);
+        newspaperMapper.findByPrimaryKey(
+            newspaperId,
+            [callback](const drogon_model::Gnp::Newspapers &newspaper) {
+              dto::BaseApiResponse response;
+              response.success = true;
+              response.message = "Newspaper access granted";
+
+                Json::Value src = newspaper.toJson();
+                Json::Value data;
+
+                // Basic fields
+                data["id"] = src["id"];
+                data["title"] = src["title"];
+                data["slug"] = src["slug"];
+                data["price"] = src["price"];
+                data["editionNumber"] = src["edition_number"];
+                data["shortDescription"] = src["short_description"];
+                data["fullDescription"] = src["full_description"];
+                data["thumbnailId"] = src["thumbnail_id"];
+                data["fileType"] = src["file_type"];
+                data["storageType"] = src["storage_type"];
+                data["documentId"] = src["document_id"];
+                data["isFree"] = src["is_free"];
+                data["isPopular"] = src["is_popular"];
+                data["publishedDate"] = src["published_date"];
+                data["isPublished"] = src["is_published"];
+
+                // Category / publication info
+                data["categoryId"] = src["category_id"];
+                data["categoryName"] = src["category_name"];
+                data["publicationId"] = src["publication_id"];
+                data["publicationName"] = src["publication_name"];
+
+                // Copyright
+                data["copyrightOwner"] = src["copyright_owner"];
+
+                // Featured stories (stored as JSON string)
+                std::string featuredStoriesStr = newspaper.getValueOfFeaturedStories();
+                Json::Value featuredStoriesJson;
+                Json::Reader reader;
+                if (!featuredStoriesStr.empty() && reader.parse(featuredStoriesStr, featuredStoriesJson))
+                {
+                    data["featuredStories"] = featuredStoriesJson;
+                }
+                else
+                {
+                    data["featuredStories"] = Json::arrayValue;
+                }
+
+                response.result = data;
+
+              callback(response);
+            },
+            [callback](const DrogonDbException &e) {
+              dto::BaseApiResponse response;
+              response.success = false;
+              response.message = "Database error while fetching newspaper details";
+              response.error["code"] = constants::ERR_DB_QUERY;
+              callback(response);
+            });
+      },
+      [callback](const DrogonDbException &e) {
+        dto::BaseApiResponse response;
+        response.success = false;
+        response.message = "User subscription not found";
+        response.error["code"] = constants::ERR_DB_QUERY;
+        callback(response);
+      });
 }
 
 } // namespace gnp::services

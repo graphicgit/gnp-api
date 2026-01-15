@@ -61,6 +61,7 @@ add_executable(${PROJECT_NAME} main.cc
         utils/IdGeneratorUtils.h
         utils/IdGeneratorUtils.cc
         dto/AssignPartnerSubscriberPlanDto.h
+        dto/GrantNewsPaperAccessDto.h
 )
 
 # ##############################################################################

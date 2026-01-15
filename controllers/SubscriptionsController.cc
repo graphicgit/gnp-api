@@ -1,5 +1,6 @@
 #include "SubscriptionsController.h"
 
+#include "dto/GrantNewsPaperAccessDto.h"
 #include "dto/GuestSubscriptionDto.h"
 #include "plugins/GnpServicePlugin.h"
 
@@ -142,6 +143,34 @@ void SubscriptionsController::validateNewsPaperEntitlement(
       auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
       callback(resp);
   });
+}
+
+void SubscriptionsController::grantNewsPaperAccess(const HttpRequestPtr &req,
+    std::function<void(const HttpResponsePtr &)> &&callback) {
+
+  auto jsonBody = req->getJsonObject();
+
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    callback(resp);
+  }
+
+
+  gnp::dto::GrantNewsPaperAccessDto grantNewsPaperAccessDto;
+  grantNewsPaperAccessDto.fromJson(*jsonBody);
+
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &subscriptionService = plugin->getSubscriptionService();
+
+  subscriptionService.grantNewsPaperAccessToRequester(grantNewsPaperAccessDto, [callback](const gnp::dto::BaseApiResponse &result) {
+        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+        callback(resp);
+      });
+
 }
 
 void SubscriptionsController::manageUserSubscription(
