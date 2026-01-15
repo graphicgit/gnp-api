@@ -7,6 +7,7 @@
 #include <drogon/drogon.h>
 #include <string>
 
+#include "dto/GrantNewsPaperAccessDto.h"
 #include "dto/GuestOnetimeBuyDto.h"
 #include "dto/GuestSubscriptionDto.h"
 
@@ -42,6 +43,13 @@ public:
   void validateNewsPaperEntitlement(
       const std::string &newsPaperId, const std::string &authToken,
       const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+
+    void grantNewsPaperAccessToRequester(const dto::GrantNewsPaperAccessDto &dto,
+      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+
+
+
+
 };
 
 } // namespace gnp::services

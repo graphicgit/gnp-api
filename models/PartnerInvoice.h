@@ -45,14 +45,15 @@ class PartnerInvoice
     struct Cols
     {
         static const std::string _id;
+        static const std::string _partner_id;
         static const std::string _billing_cycle;
         static const std::string _invoice_number;
-        static const std::string _amount;
+        static const std::string _invoice_amount;
+        static const std::string _balance;
         static const std::string _currency;
         static const std::string _due_date;
         static const std::string _paid_at;
         static const std::string _status;
-        static const std::string _payment_status;
         static const std::string _created_at;
         static const std::string _updated_at;
     };
@@ -115,6 +116,15 @@ class PartnerInvoice
     void setId(const std::string &pId) noexcept;
     void setId(std::string &&pId) noexcept;
 
+    /**  For column partner_id  */
+    ///Get the value of the column partner_id, returns the default value if the column is null
+    const std::string &getValueOfPartnerId() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getPartnerId() const noexcept;
+    ///Set the value of the column partner_id
+    void setPartnerId(const std::string &pPartnerId) noexcept;
+    void setPartnerId(std::string &&pPartnerId) noexcept;
+
     /**  For column billing_cycle  */
     ///Get the value of the column billing_cycle, returns the default value if the column is null
     const std::string &getValueOfBillingCycle() const noexcept;
@@ -135,14 +145,23 @@ class PartnerInvoice
     void setInvoiceNumber(std::string &&pInvoiceNumber) noexcept;
     void setInvoiceNumberToNull() noexcept;
 
-    /**  For column amount  */
-    ///Get the value of the column amount, returns the default value if the column is null
-    const std::string &getValueOfAmount() const noexcept;
+    /**  For column invoice_amount  */
+    ///Get the value of the column invoice_amount, returns the default value if the column is null
+    const std::string &getValueOfInvoiceAmount() const noexcept;
     ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<std::string> &getAmount() const noexcept;
-    ///Set the value of the column amount
-    void setAmount(const std::string &pAmount) noexcept;
-    void setAmount(std::string &&pAmount) noexcept;
+    const std::shared_ptr<std::string> &getInvoiceAmount() const noexcept;
+    ///Set the value of the column invoice_amount
+    void setInvoiceAmount(const std::string &pInvoiceAmount) noexcept;
+    void setInvoiceAmount(std::string &&pInvoiceAmount) noexcept;
+
+    /**  For column balance  */
+    ///Get the value of the column balance, returns the default value if the column is null
+    const std::string &getValueOfBalance() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getBalance() const noexcept;
+    ///Set the value of the column balance
+    void setBalance(const std::string &pBalance) noexcept;
+    void setBalance(std::string &&pBalance) noexcept;
 
     /**  For column currency  */
     ///Get the value of the column currency, returns the default value if the column is null
@@ -182,16 +201,6 @@ class PartnerInvoice
     void setStatus(std::string &&pStatus) noexcept;
     void setStatusToNull() noexcept;
 
-    /**  For column payment_status  */
-    ///Get the value of the column payment_status, returns the default value if the column is null
-    const std::string &getValueOfPaymentStatus() const noexcept;
-    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<std::string> &getPaymentStatus() const noexcept;
-    ///Set the value of the column payment_status
-    void setPaymentStatus(const std::string &pPaymentStatus) noexcept;
-    void setPaymentStatus(std::string &&pPaymentStatus) noexcept;
-    void setPaymentStatusToNull() noexcept;
-
     /**  For column created_at  */
     ///Get the value of the column created_at, returns the default value if the column is null
     const ::trantor::Date &getValueOfCreatedAt() const noexcept;
@@ -210,7 +219,7 @@ class PartnerInvoice
     void setUpdatedAtToNull() noexcept;
 
 
-    static size_t getColumnNumber() noexcept {  return 11;  }
+    static size_t getColumnNumber() noexcept {  return 12;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -233,14 +242,15 @@ class PartnerInvoice
     ///For mysql or sqlite3
     void updateId(const uint64_t id);
     std::shared_ptr<std::string> id_;
+    std::shared_ptr<std::string> partnerId_;
     std::shared_ptr<std::string> billingCycle_;
     std::shared_ptr<std::string> invoiceNumber_;
-    std::shared_ptr<std::string> amount_;
+    std::shared_ptr<std::string> invoiceAmount_;
+    std::shared_ptr<std::string> balance_;
     std::shared_ptr<std::string> currency_;
     std::shared_ptr<::trantor::Date> dueDate_;
     std::shared_ptr<::trantor::Date> paidAt_;
     std::shared_ptr<std::string> status_;
-    std::shared_ptr<std::string> paymentStatus_;
     std::shared_ptr<::trantor::Date> createdAt_;
     std::shared_ptr<::trantor::Date> updatedAt_;
     struct MetaData
@@ -254,7 +264,7 @@ class PartnerInvoice
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[11]={ false };
+    bool dirtyFlag_[12]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -278,57 +288,61 @@ class PartnerInvoice
         {
             needSelection=true;
         }
+        if(dirtyFlag_[1])
+        {
+            sql += "partner_id,";
+            ++parametersCount;
+        }
         sql += "billing_cycle,";
         ++parametersCount;
-        if(!dirtyFlag_[1])
+        if(!dirtyFlag_[2])
         {
             needSelection=true;
         }
-        if(dirtyFlag_[2])
+        if(dirtyFlag_[3])
         {
             sql += "invoice_number,";
             ++parametersCount;
         }
-        if(dirtyFlag_[3])
+        if(dirtyFlag_[4])
         {
-            sql += "amount,";
+            sql += "invoice_amount,";
+            ++parametersCount;
+        }
+        if(dirtyFlag_[5])
+        {
+            sql += "balance,";
             ++parametersCount;
         }
         sql += "currency,";
         ++parametersCount;
-        if(!dirtyFlag_[4])
+        if(!dirtyFlag_[6])
         {
             needSelection=true;
         }
-        if(dirtyFlag_[5])
+        if(dirtyFlag_[7])
         {
             sql += "due_date,";
             ++parametersCount;
         }
-        if(dirtyFlag_[6])
+        if(dirtyFlag_[8])
         {
             sql += "paid_at,";
             ++parametersCount;
         }
         sql += "status,";
         ++parametersCount;
-        if(!dirtyFlag_[7])
-        {
-            needSelection=true;
-        }
-        sql += "payment_status,";
-        ++parametersCount;
-        if(!dirtyFlag_[8])
+        if(!dirtyFlag_[9])
         {
             needSelection=true;
         }
         sql += "created_at,";
         ++parametersCount;
-        if(!dirtyFlag_[9])
+        if(!dirtyFlag_[10])
         {
             needSelection=true;
         }
-        if(dirtyFlag_[10])
+        if(dirtyFlag_[11])
         {
             sql += "updated_at,";
             ++parametersCount;
@@ -358,14 +372,14 @@ class PartnerInvoice
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
-        else
-        {
-            sql +="default,";
-        }
         if(dirtyFlag_[2])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
         }
         if(dirtyFlag_[3])
         {
@@ -377,10 +391,6 @@ class PartnerInvoice
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
-        else
-        {
-            sql +="default,";
-        }
         if(dirtyFlag_[5])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
@@ -391,23 +401,19 @@ class PartnerInvoice
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
+        else
+        {
+            sql +="default,";
+        }
         if(dirtyFlag_[7])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
-        else
-        {
-            sql +="default,";
-        }
         if(dirtyFlag_[8])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
-        }
-        else
-        {
-            sql +="default,";
         }
         if(dirtyFlag_[9])
         {
@@ -419,6 +425,15 @@ class PartnerInvoice
             sql +="default,";
         }
         if(dirtyFlag_[10])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
+        }
+        if(dirtyFlag_[11])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);

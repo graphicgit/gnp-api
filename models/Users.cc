@@ -30,7 +30,7 @@ const std::string Users::Cols::_is_active = "\"is_active\"";
 const std::string Users::Cols::_created_at = "\"created_at\"";
 const std::string Users::Cols::_updated_at = "\"updated_at\"";
 const std::string Users::Cols::_is_admin_user = "\"is_admin_user\"";
-const std::string Users::Cols::_is_partner_user = "\"is_partner_user\"";
+const std::string Users::Cols::_is_partner_admin_user = "\"is_partner_admin_user\"";
 const std::string Users::Cols::_partner_id = "\"partner_id\"";
 const std::string Users::Cols::_credential_id = "\"credential_id\"";
 const std::string Users::Cols::_public_key = "\"public_key\"";
@@ -61,7 +61,7 @@ const std::vector<typename Users::MetaData> Users::metaData_={
 {"created_at","::trantor::Date","timestamp with time zone",0,0,0,1},
 {"updated_at","::trantor::Date","timestamp with time zone",0,0,0,0},
 {"is_admin_user","bool","boolean",1,0,0,1},
-{"is_partner_user","bool","boolean",1,0,0,1},
+{"is_partner_admin_user","bool","boolean",1,0,0,1},
 {"partner_id","std::string","uuid",0,0,0,0},
 {"credential_id","std::vector<char>","bytea",0,0,0,0},
 {"public_key","std::vector<char>","bytea",0,0,0,0},
@@ -220,9 +220,9 @@ Users::Users(const Row &r, const ssize_t indexOffset) noexcept
         {
             isAdminUser_=std::make_shared<bool>(r["is_admin_user"].as<bool>());
         }
-        if(!r["is_partner_user"].isNull())
+        if(!r["is_partner_admin_user"].isNull())
         {
-            isPartnerUser_=std::make_shared<bool>(r["is_partner_user"].as<bool>());
+            isPartnerAdminUser_=std::make_shared<bool>(r["is_partner_admin_user"].as<bool>());
         }
         if(!r["partner_id"].isNull())
         {
@@ -441,7 +441,7 @@ Users::Users(const Row &r, const ssize_t indexOffset) noexcept
         index = offset + 17;
         if(!r[index].isNull())
         {
-            isPartnerUser_=std::make_shared<bool>(r[index].as<bool>());
+            isPartnerAdminUser_=std::make_shared<bool>(r[index].as<bool>());
         }
         index = offset + 18;
         if(!r[index].isNull())
@@ -722,7 +722,7 @@ Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasquera
         dirtyFlag_[17] = true;
         if(!pJson[pMasqueradingVector[17]].isNull())
         {
-            isPartnerUser_=std::make_shared<bool>(pJson[pMasqueradingVector[17]].asBool());
+            isPartnerAdminUser_=std::make_shared<bool>(pJson[pMasqueradingVector[17]].asBool());
         }
     }
     if(!pMasqueradingVector[18].empty() && pJson.isMember(pMasqueradingVector[18]))
@@ -1004,12 +1004,12 @@ Users::Users(const Json::Value &pJson) noexcept(false)
             isAdminUser_=std::make_shared<bool>(pJson["is_admin_user"].asBool());
         }
     }
-    if(pJson.isMember("is_partner_user"))
+    if(pJson.isMember("is_partner_admin_user"))
     {
         dirtyFlag_[17]=true;
-        if(!pJson["is_partner_user"].isNull())
+        if(!pJson["is_partner_admin_user"].isNull())
         {
-            isPartnerUser_=std::make_shared<bool>(pJson["is_partner_user"].asBool());
+            isPartnerAdminUser_=std::make_shared<bool>(pJson["is_partner_admin_user"].asBool());
         }
     }
     if(pJson.isMember("partner_id"))
@@ -1301,7 +1301,7 @@ void Users::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[17] = true;
         if(!pJson[pMasqueradingVector[17]].isNull())
         {
-            isPartnerUser_=std::make_shared<bool>(pJson[pMasqueradingVector[17]].asBool());
+            isPartnerAdminUser_=std::make_shared<bool>(pJson[pMasqueradingVector[17]].asBool());
         }
     }
     if(!pMasqueradingVector[18].empty() && pJson.isMember(pMasqueradingVector[18]))
@@ -1582,12 +1582,12 @@ void Users::updateByJson(const Json::Value &pJson) noexcept(false)
             isAdminUser_=std::make_shared<bool>(pJson["is_admin_user"].asBool());
         }
     }
-    if(pJson.isMember("is_partner_user"))
+    if(pJson.isMember("is_partner_admin_user"))
     {
         dirtyFlag_[17] = true;
-        if(!pJson["is_partner_user"].isNull())
+        if(!pJson["is_partner_admin_user"].isNull())
         {
-            isPartnerUser_=std::make_shared<bool>(pJson["is_partner_user"].asBool());
+            isPartnerAdminUser_=std::make_shared<bool>(pJson["is_partner_admin_user"].asBool());
         }
     }
     if(pJson.isMember("partner_id"))
@@ -2058,20 +2058,20 @@ void Users::setIsAdminUser(const bool &pIsAdminUser) noexcept
     dirtyFlag_[16] = true;
 }
 
-const bool &Users::getValueOfIsPartnerUser() const noexcept
+const bool &Users::getValueOfIsPartnerAdminUser() const noexcept
 {
     static const bool defaultValue = bool();
-    if(isPartnerUser_)
-        return *isPartnerUser_;
+    if(isPartnerAdminUser_)
+        return *isPartnerAdminUser_;
     return defaultValue;
 }
-const std::shared_ptr<bool> &Users::getIsPartnerUser() const noexcept
+const std::shared_ptr<bool> &Users::getIsPartnerAdminUser() const noexcept
 {
-    return isPartnerUser_;
+    return isPartnerAdminUser_;
 }
-void Users::setIsPartnerUser(const bool &pIsPartnerUser) noexcept
+void Users::setIsPartnerAdminUser(const bool &pIsPartnerAdminUser) noexcept
 {
-    isPartnerUser_ = std::make_shared<bool>(pIsPartnerUser);
+    isPartnerAdminUser_ = std::make_shared<bool>(pIsPartnerAdminUser);
     dirtyFlag_[17] = true;
 }
 
@@ -2326,7 +2326,7 @@ const std::vector<std::string> &Users::insertColumns() noexcept
         "created_at",
         "updated_at",
         "is_admin_user",
-        "is_partner_user",
+        "is_partner_admin_user",
         "partner_id",
         "credential_id",
         "public_key",
@@ -2530,9 +2530,9 @@ void Users::outputArgs(drogon::orm::internal::SqlBinder &binder) const
     }
     if(dirtyFlag_[17])
     {
-        if(getIsPartnerUser())
+        if(getIsPartnerAdminUser())
         {
-            binder << getValueOfIsPartnerUser();
+            binder << getValueOfIsPartnerAdminUser();
         }
         else
         {
@@ -2930,9 +2930,9 @@ void Users::updateArgs(drogon::orm::internal::SqlBinder &binder) const
     }
     if(dirtyFlag_[17])
     {
-        if(getIsPartnerUser())
+        if(getIsPartnerAdminUser())
         {
-            binder << getValueOfIsPartnerUser();
+            binder << getValueOfIsPartnerAdminUser();
         }
         else
         {
@@ -3167,13 +3167,13 @@ Json::Value Users::toJson() const
     {
         ret["is_admin_user"]=Json::Value();
     }
-    if(getIsPartnerUser())
+    if(getIsPartnerAdminUser())
     {
-        ret["is_partner_user"]=getValueOfIsPartnerUser();
+        ret["is_partner_admin_user"]=getValueOfIsPartnerAdminUser();
     }
     else
     {
-        ret["is_partner_user"]=Json::Value();
+        ret["is_partner_admin_user"]=Json::Value();
     }
     if(getPartnerId())
     {
@@ -3442,9 +3442,9 @@ Json::Value Users::toMasqueradedJson(
         }
         if(!pMasqueradingVector[17].empty())
         {
-            if(getIsPartnerUser())
+            if(getIsPartnerAdminUser())
             {
-                ret[pMasqueradingVector[17]]=getValueOfIsPartnerUser();
+                ret[pMasqueradingVector[17]]=getValueOfIsPartnerAdminUser();
             }
             else
             {
@@ -3678,13 +3678,13 @@ Json::Value Users::toMasqueradedJson(
     {
         ret["is_admin_user"]=Json::Value();
     }
-    if(getIsPartnerUser())
+    if(getIsPartnerAdminUser())
     {
-        ret["is_partner_user"]=getValueOfIsPartnerUser();
+        ret["is_partner_admin_user"]=getValueOfIsPartnerAdminUser();
     }
     else
     {
-        ret["is_partner_user"]=Json::Value();
+        ret["is_partner_admin_user"]=Json::Value();
     }
     if(getPartnerId())
     {
@@ -3850,9 +3850,9 @@ bool Users::validateJsonForCreation(const Json::Value &pJson, std::string &err)
         if(!validJsonOfField(16, "is_admin_user", pJson["is_admin_user"], err, true))
             return false;
     }
-    if(pJson.isMember("is_partner_user"))
+    if(pJson.isMember("is_partner_admin_user"))
     {
-        if(!validJsonOfField(17, "is_partner_user", pJson["is_partner_user"], err, true))
+        if(!validJsonOfField(17, "is_partner_admin_user", pJson["is_partner_admin_user"], err, true))
             return false;
     }
     if(pJson.isMember("partner_id"))
@@ -4225,9 +4225,9 @@ bool Users::validateJsonForUpdate(const Json::Value &pJson, std::string &err)
         if(!validJsonOfField(16, "is_admin_user", pJson["is_admin_user"], err, false))
             return false;
     }
-    if(pJson.isMember("is_partner_user"))
+    if(pJson.isMember("is_partner_admin_user"))
     {
-        if(!validJsonOfField(17, "is_partner_user", pJson["is_partner_user"], err, false))
+        if(!validJsonOfField(17, "is_partner_admin_user", pJson["is_partner_admin_user"], err, false))
             return false;
     }
     if(pJson.isMember("partner_id"))

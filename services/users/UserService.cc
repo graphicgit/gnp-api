@@ -3,25 +3,25 @@
 //
 
 #include "UserService.h"
+#include "UserSubscriptions.h"
 
 #include <random>
 
 #include "Users.h"
 #include "bcrypt.h"
 #include "constants/ErrorCodes.h"
+#include "dto/SendEmailDto.h"
 #include "dto/SigninDto.h"
+#include "services/email/EmailService.h"
 #include <jwt-cpp/jwt.h>
 #include <openssl/evp.h>
-#include <openssl/pem.h>
 #include <openssl/sha.h>
-
-#include "dto/SendEmailDto.h"
-#include "services/email/EmailService.h"
 
 using namespace drogon::orm;
 using drogon_model::Gnp::Users;
 
 namespace gnp::services {
+
 void UserService::getAll(
     int pageNo, int pageSize, const std::string &query,
     const std::function<void(const dto::BaseApiResponse &)> &callback) {
@@ -112,6 +112,249 @@ void UserService::getAll(
       });
 }
 
+void UserService::getAdminUsers(
+    int pageNo, int pageSize, const std::string &query,
+    const std::function<void(const dto::BaseApiResponse &)> &callback) {
+
+  auto dbClient = drogon::app().getDbClient();
+
+  auto mp = std::make_shared<Mapper<Users>>(dbClient);
+
+  // 1. Build the search criteria
+  Criteria criteria(Users::Cols::_is_admin_user, CompareOperator::EQ, true);
+
+  if (!query.empty()) {
+
+    std::string likeQuery = "%" + query + "%";
+
+    Criteria searchCriteria =
+        Criteria(Users::Cols::_first_name, CompareOperator::Like, likeQuery) ||
+        Criteria(Users::Cols::_email, CompareOperator::Like, likeQuery) ||
+        Criteria(Users::Cols::_last_name, CompareOperator::Like, likeQuery);
+
+    criteria = criteria && searchCriteria;
+  }
+
+  // 2. Asynchronously get the total count matching the criteria
+  mp->count(
+      criteria,
+      [=](const size_t totalCount) {
+        if (totalCount == 0) {
+          dto::BaseApiResponse response;
+          response.success = true;
+          response.result["data"] = Json::arrayValue;
+          response.result["totalCount"] = 0;
+          callback(response);
+          return;
+        }
+
+        // 3. Asynchronously find the paginated data
+        int offset = (pageNo - 1) * pageSize;
+        mp->limit(pageSize).offset(offset).findBy(
+            criteria,
+            [=](const std::vector<Users> &users) {
+              // 4. Build the final response inside the callback
+              dto::BaseApiResponse response;
+              response.success = true;
+              response.result["totalCount"] = (Json::UInt64)totalCount;
+              response.result["pageNo"] = pageNo;
+              response.result["pageSize"] = pageSize;
+              response.result["totalPages"] =
+                  (int)((totalCount + pageSize - 1) / pageSize);
+
+              Json::Value data = Json::arrayValue;
+              for (const auto &role : users) {
+                Json::Value roleJson = role.toJson();
+
+                // Convert snake_case to camelCase
+                Json::Value camelCaseRole;
+                camelCaseRole["id"] = roleJson["id"];
+                camelCaseRole["firstName"] = roleJson["first_name"];
+                camelCaseRole["lastName"] = roleJson["last_name"];
+                camelCaseRole["email"] = roleJson["email"];
+                camelCaseRole["phoneNumber"] = roleJson["phone_number"];
+                camelCaseRole["country"] = roleJson["country"];
+                camelCaseRole["profileImageUrl"] =
+                    roleJson["profile_image_url"];
+                camelCaseRole["isLockedOut"] = roleJson["is_locked_out"];
+                camelCaseRole["isActive"] = roleJson["is_active"];
+                camelCaseRole["createdAt"] = roleJson["created_at"];
+                camelCaseRole["updatedAt"] = roleJson["updated_at"];
+
+                data.append(camelCaseRole);
+              }
+              response.result["data"] = data;
+              callback(response);
+            },
+            [callback](const DrogonDbException &e) {
+              // Handle find error
+              dto::BaseApiResponse errorResponse;
+              errorResponse.success = false;
+              errorResponse.error["message"] =
+                  "Database error while fetching users.";
+              errorResponse.error["detail"] = e.base().what();
+              callback(errorResponse);
+            });
+      },
+      [callback](const DrogonDbException &e) {
+        // Handle count error
+        dto::BaseApiResponse errorResponse;
+        errorResponse.success = false;
+        errorResponse.error["code"] = constants::ERR_DB_QUERY;
+        errorResponse.error["message"] = "Database error while fetching users.";
+        errorResponse.error["detail"] = e.base().what();
+        callback(errorResponse);
+      });
+}
+
+void UserService::getPartnerSubscribers(
+    const std::string &partnerId, int pageNo, int pageSize,
+    const std::string &query,
+    const std::function<void(const dto::BaseApiResponse &)> &callback) {
+
+  auto dbClient = drogon::app().getDbClient();
+  auto mp = std::make_shared<Mapper<Users>>(dbClient);
+
+  // 1. Build the search criteria
+  Criteria criteria(Users::Cols::_partner_id, CompareOperator::EQ, partnerId);
+
+  if (!query.empty()) {
+    std::string likeQuery = "%" + query + "%";
+
+    Criteria searchCriteria =
+        Criteria(Users::Cols::_first_name, CompareOperator::Like, likeQuery) ||
+        Criteria(Users::Cols::_email, CompareOperator::Like, likeQuery) ||
+        Criteria(Users::Cols::_last_name, CompareOperator::Like, likeQuery);
+
+    criteria = criteria && searchCriteria;
+  }
+
+  // 2. Asynchronously get the total count matching the criteria
+  mp->count(
+      criteria,
+      [=](const size_t totalCount) {
+        if (totalCount == 0) {
+          dto::BaseApiResponse response;
+          response.success = true;
+          response.result["data"] = Json::arrayValue;
+          response.result["totalCount"] = 0;
+          callback(response);
+          return;
+        }
+
+        // 3. Asynchronously find the paginated data
+        int offset = (pageNo - 1) * pageSize;
+        mp->limit(pageSize).offset(offset).findBy(
+            criteria,
+            [=](const std::vector<Users> &users) {
+              // 4. Build the final response inside the callback
+              dto::BaseApiResponse response;
+              response.success = true;
+              response.result["totalCount"] = (Json::UInt64)totalCount;
+              response.result["pageNo"] = pageNo;
+              response.result["pageSize"] = pageSize;
+              response.result["totalPages"] =
+                  (int)((totalCount + pageSize - 1) / pageSize);
+
+              if (users.empty()) {
+                response.result["data"] = Json::arrayValue;
+                callback(response);
+                return;
+              }
+
+              // Extract user IDs to fetch subscription descriptions
+              std::string userIdsCondition = "(";
+              for (size_t i = 0; i < users.size(); ++i) {
+                userIdsCondition += "'" + users[i].getValueOfId() + "'";
+                if (i < users.size() - 1) {
+                  userIdsCondition += ",";
+                }
+              }
+              userIdsCondition += ")";
+
+              std::string sql = "SELECT user_id, subscription_plan_description "
+                                "FROM user_subscriptions "
+                                "WHERE is_active = true AND user_id IN " +
+                                userIdsCondition;
+
+              auto dbClient = drogon::app().getDbClient();
+              dbClient->execSqlAsync(
+                  sql,
+                  [=](const drogon::orm::Result &res) mutable {
+                    std::map<std::string, std::string> subMap;
+                    for (const auto &row : res) {
+                      subMap[row["user_id"].as<std::string>()] =
+                          row["subscription_plan_description"].isNull()
+                              ? "No Description"
+                              : row["subscription_plan_description"]
+                                    .as<std::string>();
+                    }
+
+                    Json::Value data = Json::arrayValue;
+                    for (const auto &role : users) {
+                      Json::Value roleJson = role.toJson();
+
+                      // Convert snake_case to camelCase
+                      Json::Value camelCaseRole;
+                      camelCaseRole["id"] = roleJson["id"];
+                      camelCaseRole["firstName"] = roleJson["first_name"];
+                      camelCaseRole["lastName"] = roleJson["last_name"];
+                      camelCaseRole["email"] = roleJson["email"];
+                      camelCaseRole["phoneNumber"] = roleJson["phone_number"];
+                      camelCaseRole["country"] = roleJson["country"];
+                      camelCaseRole["profileImageUrl"] =
+                          roleJson["profile_image_url"];
+                      camelCaseRole["partnerId"] = roleJson["partner_id"];
+                      camelCaseRole["isActive"] = roleJson["is_active"];
+                      camelCaseRole["createdAt"] = roleJson["created_at"];
+                      camelCaseRole["updatedAt"] = roleJson["updated_at"];
+
+                      // Add subscription plan description
+                      std::string userId = roleJson["id"].asString();
+                      if (subMap.find(userId) != subMap.end()) {
+                        camelCaseRole["subscriptionPlanDescription"] =
+                            subMap[userId];
+                      } else {
+                        camelCaseRole["subscriptionPlanDescription"] =
+                            "No Active Subscription";
+                      }
+
+                      data.append(camelCaseRole);
+                    }
+                    response.result["data"] = data;
+                    callback(response);
+                  },
+                  [callback](const drogon::orm::DrogonDbException &e) {
+                    dto::BaseApiResponse errorResponse;
+                    errorResponse.success = false;
+                    errorResponse.error["message"] =
+                        "Database error while fetching subscription "
+                        "descriptions.";
+                    errorResponse.error["detail"] = e.base().what();
+                    callback(errorResponse);
+                  });
+            },
+            [callback](const DrogonDbException &e) {
+              // Handle find error
+              dto::BaseApiResponse errorResponse;
+              errorResponse.success = false;
+              errorResponse.error["message"] =
+                  "Database error while fetching users.";
+              errorResponse.error["detail"] = e.base().what();
+              callback(errorResponse);
+            });
+      },
+      [callback](const DrogonDbException &e) {
+        // Handle count error
+        dto::BaseApiResponse errorResponse;
+        errorResponse.success = false;
+        errorResponse.error["code"] = constants::ERR_DB_QUERY;
+        errorResponse.error["message"] = "Database error while fetching users.";
+        errorResponse.error["detail"] = e.base().what();
+        callback(errorResponse);
+      });
+}
+
 void UserService::create(
     const dto::CreateUserDto &userDto,
     const std::function<void(const dto::BaseApiResponse &)> &callback) {
@@ -147,7 +390,7 @@ void UserService::create(
       [callback](const drogon::orm::DrogonDbException &e) {
         dto::BaseApiResponse errorResponse;
         errorResponse.success = false;
-        errorResponse.message = "Database error while creating Publication";
+        errorResponse.message = "Database error while creating user";
         errorResponse.error["code"] = constants::ERR_DB_QUERY;
         callback(errorResponse);
       });
@@ -537,7 +780,7 @@ void UserService::validateUserPasskeys(
                       .set_type("JWT")
                       .set_issued_at(std::chrono::system_clock::now())
                       .set_expires_at(std::chrono::system_clock::now() +
-                                      std::chrono::hours(24 * 30))
+                                      std::chrono::hours(24 * 120))
                       .set_payload_claim("userId",
                                          jwt::claim(user.getValueOfId()))
                       .set_payload_claim("username",
@@ -608,7 +851,7 @@ void UserService::validateUserCredentials(
                   .set_type("JWT")
                   .set_issued_at(std::chrono::system_clock::now())
                   .set_expires_at(std::chrono::system_clock::now() +
-                                  std::chrono::hours(24 * 30))
+                                  std::chrono::hours(24 * 120))
                   .set_payload_claim("userId", jwt::claim(user.getValueOfId()))
                   .set_payload_claim("username",
                                      jwt::claim(user.getValueOfUsername()))
@@ -783,6 +1026,7 @@ void UserService::lockUserAccount(
 void UserService::unlockUserAccount(
     const std::string &userId,
     const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {
+
   auto dbClient = drogon::app().getDbClient();
   Mapper<Users> mp(dbClient);
 
@@ -1334,4 +1578,6 @@ void UserService::setPassword(
       },
       "GET %s", sessionId.c_str());
 }
+
+
 } // namespace gnp::services

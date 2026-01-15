@@ -16,7 +16,10 @@ using namespace drogon_model::Gnp;
 const std::string UserSubscriptions::Cols::_id = "\"id\"";
 const std::string UserSubscriptions::Cols::_subscription_identifier = "\"subscription_identifier\"";
 const std::string UserSubscriptions::Cols::_user_id = "\"user_id\"";
-const std::string UserSubscriptions::Cols::_user_name = "\"user_name\"";
+const std::string UserSubscriptions::Cols::_partner_id = "\"partner_id\"";
+const std::string UserSubscriptions::Cols::_subscription_plan_id = "\"subscription_plan_id\"";
+const std::string UserSubscriptions::Cols::_billing_cycle = "\"billing_cycle\"";
+const std::string UserSubscriptions::Cols::_subscription_plan_description = "\"subscription_plan_description\"";
 const std::string UserSubscriptions::Cols::_email = "\"email\"";
 const std::string UserSubscriptions::Cols::_newspaper_entitlements = "\"newspaper_entitlements\"";
 const std::string UserSubscriptions::Cols::_is_active = "\"is_active\"";
@@ -30,7 +33,10 @@ const std::vector<typename UserSubscriptions::MetaData> UserSubscriptions::metaD
 {"id","std::string","uuid",0,0,1,1},
 {"subscription_identifier","std::string","character varying",50,0,0,1},
 {"user_id","std::string","uuid",0,0,0,1},
-{"user_name","std::string","character varying",255,0,0,0},
+{"partner_id","std::string","uuid",0,0,0,0},
+{"subscription_plan_id","std::string","uuid",0,0,0,0},
+{"billing_cycle","std::string","character varying",25,0,0,0},
+{"subscription_plan_description","std::string","character varying",255,0,0,0},
 {"email","std::string","character varying",255,0,0,0},
 {"newspaper_entitlements","std::string","jsonb",0,0,0,0},
 {"is_active","bool","boolean",1,0,0,1},
@@ -58,9 +64,21 @@ UserSubscriptions::UserSubscriptions(const Row &r, const ssize_t indexOffset) no
         {
             userId_=std::make_shared<std::string>(r["user_id"].as<std::string>());
         }
-        if(!r["user_name"].isNull())
+        if(!r["partner_id"].isNull())
         {
-            userName_=std::make_shared<std::string>(r["user_name"].as<std::string>());
+            partnerId_=std::make_shared<std::string>(r["partner_id"].as<std::string>());
+        }
+        if(!r["subscription_plan_id"].isNull())
+        {
+            subscriptionPlanId_=std::make_shared<std::string>(r["subscription_plan_id"].as<std::string>());
+        }
+        if(!r["billing_cycle"].isNull())
+        {
+            billingCycle_=std::make_shared<std::string>(r["billing_cycle"].as<std::string>());
+        }
+        if(!r["subscription_plan_description"].isNull())
+        {
+            subscriptionPlanDescription_=std::make_shared<std::string>(r["subscription_plan_description"].as<std::string>());
         }
         if(!r["email"].isNull())
         {
@@ -122,7 +140,7 @@ UserSubscriptions::UserSubscriptions(const Row &r, const ssize_t indexOffset) no
     else
     {
         size_t offset = (size_t)indexOffset;
-        if(offset + 9 > r.size())
+        if(offset + 12 > r.size())
         {
             LOG_FATAL << "Invalid SQL result for this model";
             return;
@@ -146,24 +164,39 @@ UserSubscriptions::UserSubscriptions(const Row &r, const ssize_t indexOffset) no
         index = offset + 3;
         if(!r[index].isNull())
         {
-            userName_=std::make_shared<std::string>(r[index].as<std::string>());
+            partnerId_=std::make_shared<std::string>(r[index].as<std::string>());
         }
         index = offset + 4;
         if(!r[index].isNull())
         {
-            email_=std::make_shared<std::string>(r[index].as<std::string>());
+            subscriptionPlanId_=std::make_shared<std::string>(r[index].as<std::string>());
         }
         index = offset + 5;
         if(!r[index].isNull())
         {
-            newspaperEntitlements_=std::make_shared<std::string>(r[index].as<std::string>());
+            billingCycle_=std::make_shared<std::string>(r[index].as<std::string>());
         }
         index = offset + 6;
         if(!r[index].isNull())
         {
-            isActive_=std::make_shared<bool>(r[index].as<bool>());
+            subscriptionPlanDescription_=std::make_shared<std::string>(r[index].as<std::string>());
         }
         index = offset + 7;
+        if(!r[index].isNull())
+        {
+            email_=std::make_shared<std::string>(r[index].as<std::string>());
+        }
+        index = offset + 8;
+        if(!r[index].isNull())
+        {
+            newspaperEntitlements_=std::make_shared<std::string>(r[index].as<std::string>());
+        }
+        index = offset + 9;
+        if(!r[index].isNull())
+        {
+            isActive_=std::make_shared<bool>(r[index].as<bool>());
+        }
+        index = offset + 10;
         if(!r[index].isNull())
         {
             auto timeStr = r[index].as<std::string>();
@@ -186,7 +219,7 @@ UserSubscriptions::UserSubscriptions(const Row &r, const ssize_t indexOffset) no
                 createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
-        index = offset + 8;
+        index = offset + 11;
         if(!r[index].isNull())
         {
             auto timeStr = r[index].as<std::string>();
@@ -215,7 +248,7 @@ UserSubscriptions::UserSubscriptions(const Row &r, const ssize_t indexOffset) no
 
 UserSubscriptions::UserSubscriptions(const Json::Value &pJson, const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 9)
+    if(pMasqueradingVector.size() != 12)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -249,7 +282,7 @@ UserSubscriptions::UserSubscriptions(const Json::Value &pJson, const std::vector
         dirtyFlag_[3] = true;
         if(!pJson[pMasqueradingVector[3]].isNull())
         {
-            userName_=std::make_shared<std::string>(pJson[pMasqueradingVector[3]].asString());
+            partnerId_=std::make_shared<std::string>(pJson[pMasqueradingVector[3]].asString());
         }
     }
     if(!pMasqueradingVector[4].empty() && pJson.isMember(pMasqueradingVector[4]))
@@ -257,7 +290,7 @@ UserSubscriptions::UserSubscriptions(const Json::Value &pJson, const std::vector
         dirtyFlag_[4] = true;
         if(!pJson[pMasqueradingVector[4]].isNull())
         {
-            email_=std::make_shared<std::string>(pJson[pMasqueradingVector[4]].asString());
+            subscriptionPlanId_=std::make_shared<std::string>(pJson[pMasqueradingVector[4]].asString());
         }
     }
     if(!pMasqueradingVector[5].empty() && pJson.isMember(pMasqueradingVector[5]))
@@ -265,7 +298,7 @@ UserSubscriptions::UserSubscriptions(const Json::Value &pJson, const std::vector
         dirtyFlag_[5] = true;
         if(!pJson[pMasqueradingVector[5]].isNull())
         {
-            newspaperEntitlements_=std::make_shared<std::string>(pJson[pMasqueradingVector[5]].asString());
+            billingCycle_=std::make_shared<std::string>(pJson[pMasqueradingVector[5]].asString());
         }
     }
     if(!pMasqueradingVector[6].empty() && pJson.isMember(pMasqueradingVector[6]))
@@ -273,7 +306,7 @@ UserSubscriptions::UserSubscriptions(const Json::Value &pJson, const std::vector
         dirtyFlag_[6] = true;
         if(!pJson[pMasqueradingVector[6]].isNull())
         {
-            isActive_=std::make_shared<bool>(pJson[pMasqueradingVector[6]].asBool());
+            subscriptionPlanDescription_=std::make_shared<std::string>(pJson[pMasqueradingVector[6]].asString());
         }
     }
     if(!pMasqueradingVector[7].empty() && pJson.isMember(pMasqueradingVector[7]))
@@ -281,7 +314,31 @@ UserSubscriptions::UserSubscriptions(const Json::Value &pJson, const std::vector
         dirtyFlag_[7] = true;
         if(!pJson[pMasqueradingVector[7]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[7]].asString();
+            email_=std::make_shared<std::string>(pJson[pMasqueradingVector[7]].asString());
+        }
+    }
+    if(!pMasqueradingVector[8].empty() && pJson.isMember(pMasqueradingVector[8]))
+    {
+        dirtyFlag_[8] = true;
+        if(!pJson[pMasqueradingVector[8]].isNull())
+        {
+            newspaperEntitlements_=std::make_shared<std::string>(pJson[pMasqueradingVector[8]].asString());
+        }
+    }
+    if(!pMasqueradingVector[9].empty() && pJson.isMember(pMasqueradingVector[9]))
+    {
+        dirtyFlag_[9] = true;
+        if(!pJson[pMasqueradingVector[9]].isNull())
+        {
+            isActive_=std::make_shared<bool>(pJson[pMasqueradingVector[9]].asBool());
+        }
+    }
+    if(!pMasqueradingVector[10].empty() && pJson.isMember(pMasqueradingVector[10]))
+    {
+        dirtyFlag_[10] = true;
+        if(!pJson[pMasqueradingVector[10]].isNull())
+        {
+            auto timeStr = pJson[pMasqueradingVector[10]].asString();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -302,12 +359,12 @@ UserSubscriptions::UserSubscriptions(const Json::Value &pJson, const std::vector
             }
         }
     }
-    if(!pMasqueradingVector[8].empty() && pJson.isMember(pMasqueradingVector[8]))
+    if(!pMasqueradingVector[11].empty() && pJson.isMember(pMasqueradingVector[11]))
     {
-        dirtyFlag_[8] = true;
-        if(!pJson[pMasqueradingVector[8]].isNull())
+        dirtyFlag_[11] = true;
+        if(!pJson[pMasqueradingVector[11]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[8]].asString();
+            auto timeStr = pJson[pMasqueradingVector[11]].asString();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -356,17 +413,41 @@ UserSubscriptions::UserSubscriptions(const Json::Value &pJson) noexcept(false)
             userId_=std::make_shared<std::string>(pJson["user_id"].asString());
         }
     }
-    if(pJson.isMember("user_name"))
+    if(pJson.isMember("partner_id"))
     {
         dirtyFlag_[3]=true;
-        if(!pJson["user_name"].isNull())
+        if(!pJson["partner_id"].isNull())
         {
-            userName_=std::make_shared<std::string>(pJson["user_name"].asString());
+            partnerId_=std::make_shared<std::string>(pJson["partner_id"].asString());
+        }
+    }
+    if(pJson.isMember("subscription_plan_id"))
+    {
+        dirtyFlag_[4]=true;
+        if(!pJson["subscription_plan_id"].isNull())
+        {
+            subscriptionPlanId_=std::make_shared<std::string>(pJson["subscription_plan_id"].asString());
+        }
+    }
+    if(pJson.isMember("billing_cycle"))
+    {
+        dirtyFlag_[5]=true;
+        if(!pJson["billing_cycle"].isNull())
+        {
+            billingCycle_=std::make_shared<std::string>(pJson["billing_cycle"].asString());
+        }
+    }
+    if(pJson.isMember("subscription_plan_description"))
+    {
+        dirtyFlag_[6]=true;
+        if(!pJson["subscription_plan_description"].isNull())
+        {
+            subscriptionPlanDescription_=std::make_shared<std::string>(pJson["subscription_plan_description"].asString());
         }
     }
     if(pJson.isMember("email"))
     {
-        dirtyFlag_[4]=true;
+        dirtyFlag_[7]=true;
         if(!pJson["email"].isNull())
         {
             email_=std::make_shared<std::string>(pJson["email"].asString());
@@ -374,7 +455,7 @@ UserSubscriptions::UserSubscriptions(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("newspaper_entitlements"))
     {
-        dirtyFlag_[5]=true;
+        dirtyFlag_[8]=true;
         if(!pJson["newspaper_entitlements"].isNull())
         {
             newspaperEntitlements_=std::make_shared<std::string>(pJson["newspaper_entitlements"].asString());
@@ -382,7 +463,7 @@ UserSubscriptions::UserSubscriptions(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("is_active"))
     {
-        dirtyFlag_[6]=true;
+        dirtyFlag_[9]=true;
         if(!pJson["is_active"].isNull())
         {
             isActive_=std::make_shared<bool>(pJson["is_active"].asBool());
@@ -390,7 +471,7 @@ UserSubscriptions::UserSubscriptions(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("created_at"))
     {
-        dirtyFlag_[7]=true;
+        dirtyFlag_[10]=true;
         if(!pJson["created_at"].isNull())
         {
             auto timeStr = pJson["created_at"].asString();
@@ -416,7 +497,7 @@ UserSubscriptions::UserSubscriptions(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("updated_at"))
     {
-        dirtyFlag_[8]=true;
+        dirtyFlag_[11]=true;
         if(!pJson["updated_at"].isNull())
         {
             auto timeStr = pJson["updated_at"].asString();
@@ -445,7 +526,7 @@ UserSubscriptions::UserSubscriptions(const Json::Value &pJson) noexcept(false)
 void UserSubscriptions::updateByMasqueradedJson(const Json::Value &pJson,
                                             const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 9)
+    if(pMasqueradingVector.size() != 12)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -478,7 +559,7 @@ void UserSubscriptions::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[3] = true;
         if(!pJson[pMasqueradingVector[3]].isNull())
         {
-            userName_=std::make_shared<std::string>(pJson[pMasqueradingVector[3]].asString());
+            partnerId_=std::make_shared<std::string>(pJson[pMasqueradingVector[3]].asString());
         }
     }
     if(!pMasqueradingVector[4].empty() && pJson.isMember(pMasqueradingVector[4]))
@@ -486,7 +567,7 @@ void UserSubscriptions::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[4] = true;
         if(!pJson[pMasqueradingVector[4]].isNull())
         {
-            email_=std::make_shared<std::string>(pJson[pMasqueradingVector[4]].asString());
+            subscriptionPlanId_=std::make_shared<std::string>(pJson[pMasqueradingVector[4]].asString());
         }
     }
     if(!pMasqueradingVector[5].empty() && pJson.isMember(pMasqueradingVector[5]))
@@ -494,7 +575,7 @@ void UserSubscriptions::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[5] = true;
         if(!pJson[pMasqueradingVector[5]].isNull())
         {
-            newspaperEntitlements_=std::make_shared<std::string>(pJson[pMasqueradingVector[5]].asString());
+            billingCycle_=std::make_shared<std::string>(pJson[pMasqueradingVector[5]].asString());
         }
     }
     if(!pMasqueradingVector[6].empty() && pJson.isMember(pMasqueradingVector[6]))
@@ -502,7 +583,7 @@ void UserSubscriptions::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[6] = true;
         if(!pJson[pMasqueradingVector[6]].isNull())
         {
-            isActive_=std::make_shared<bool>(pJson[pMasqueradingVector[6]].asBool());
+            subscriptionPlanDescription_=std::make_shared<std::string>(pJson[pMasqueradingVector[6]].asString());
         }
     }
     if(!pMasqueradingVector[7].empty() && pJson.isMember(pMasqueradingVector[7]))
@@ -510,7 +591,31 @@ void UserSubscriptions::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[7] = true;
         if(!pJson[pMasqueradingVector[7]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[7]].asString();
+            email_=std::make_shared<std::string>(pJson[pMasqueradingVector[7]].asString());
+        }
+    }
+    if(!pMasqueradingVector[8].empty() && pJson.isMember(pMasqueradingVector[8]))
+    {
+        dirtyFlag_[8] = true;
+        if(!pJson[pMasqueradingVector[8]].isNull())
+        {
+            newspaperEntitlements_=std::make_shared<std::string>(pJson[pMasqueradingVector[8]].asString());
+        }
+    }
+    if(!pMasqueradingVector[9].empty() && pJson.isMember(pMasqueradingVector[9]))
+    {
+        dirtyFlag_[9] = true;
+        if(!pJson[pMasqueradingVector[9]].isNull())
+        {
+            isActive_=std::make_shared<bool>(pJson[pMasqueradingVector[9]].asBool());
+        }
+    }
+    if(!pMasqueradingVector[10].empty() && pJson.isMember(pMasqueradingVector[10]))
+    {
+        dirtyFlag_[10] = true;
+        if(!pJson[pMasqueradingVector[10]].isNull())
+        {
+            auto timeStr = pJson[pMasqueradingVector[10]].asString();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -531,12 +636,12 @@ void UserSubscriptions::updateByMasqueradedJson(const Json::Value &pJson,
             }
         }
     }
-    if(!pMasqueradingVector[8].empty() && pJson.isMember(pMasqueradingVector[8]))
+    if(!pMasqueradingVector[11].empty() && pJson.isMember(pMasqueradingVector[11]))
     {
-        dirtyFlag_[8] = true;
-        if(!pJson[pMasqueradingVector[8]].isNull())
+        dirtyFlag_[11] = true;
+        if(!pJson[pMasqueradingVector[11]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[8]].asString();
+            auto timeStr = pJson[pMasqueradingVector[11]].asString();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -584,17 +689,41 @@ void UserSubscriptions::updateByJson(const Json::Value &pJson) noexcept(false)
             userId_=std::make_shared<std::string>(pJson["user_id"].asString());
         }
     }
-    if(pJson.isMember("user_name"))
+    if(pJson.isMember("partner_id"))
     {
         dirtyFlag_[3] = true;
-        if(!pJson["user_name"].isNull())
+        if(!pJson["partner_id"].isNull())
         {
-            userName_=std::make_shared<std::string>(pJson["user_name"].asString());
+            partnerId_=std::make_shared<std::string>(pJson["partner_id"].asString());
+        }
+    }
+    if(pJson.isMember("subscription_plan_id"))
+    {
+        dirtyFlag_[4] = true;
+        if(!pJson["subscription_plan_id"].isNull())
+        {
+            subscriptionPlanId_=std::make_shared<std::string>(pJson["subscription_plan_id"].asString());
+        }
+    }
+    if(pJson.isMember("billing_cycle"))
+    {
+        dirtyFlag_[5] = true;
+        if(!pJson["billing_cycle"].isNull())
+        {
+            billingCycle_=std::make_shared<std::string>(pJson["billing_cycle"].asString());
+        }
+    }
+    if(pJson.isMember("subscription_plan_description"))
+    {
+        dirtyFlag_[6] = true;
+        if(!pJson["subscription_plan_description"].isNull())
+        {
+            subscriptionPlanDescription_=std::make_shared<std::string>(pJson["subscription_plan_description"].asString());
         }
     }
     if(pJson.isMember("email"))
     {
-        dirtyFlag_[4] = true;
+        dirtyFlag_[7] = true;
         if(!pJson["email"].isNull())
         {
             email_=std::make_shared<std::string>(pJson["email"].asString());
@@ -602,7 +731,7 @@ void UserSubscriptions::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("newspaper_entitlements"))
     {
-        dirtyFlag_[5] = true;
+        dirtyFlag_[8] = true;
         if(!pJson["newspaper_entitlements"].isNull())
         {
             newspaperEntitlements_=std::make_shared<std::string>(pJson["newspaper_entitlements"].asString());
@@ -610,7 +739,7 @@ void UserSubscriptions::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("is_active"))
     {
-        dirtyFlag_[6] = true;
+        dirtyFlag_[9] = true;
         if(!pJson["is_active"].isNull())
         {
             isActive_=std::make_shared<bool>(pJson["is_active"].asBool());
@@ -618,7 +747,7 @@ void UserSubscriptions::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("created_at"))
     {
-        dirtyFlag_[7] = true;
+        dirtyFlag_[10] = true;
         if(!pJson["created_at"].isNull())
         {
             auto timeStr = pJson["created_at"].asString();
@@ -644,7 +773,7 @@ void UserSubscriptions::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("updated_at"))
     {
-        dirtyFlag_[8] = true;
+        dirtyFlag_[11] = true;
         if(!pJson["updated_at"].isNull())
         {
             auto timeStr = pJson["updated_at"].asString();
@@ -741,31 +870,112 @@ void UserSubscriptions::setUserId(std::string &&pUserId) noexcept
     dirtyFlag_[2] = true;
 }
 
-const std::string &UserSubscriptions::getValueOfUserName() const noexcept
+const std::string &UserSubscriptions::getValueOfPartnerId() const noexcept
 {
     static const std::string defaultValue = std::string();
-    if(userName_)
-        return *userName_;
+    if(partnerId_)
+        return *partnerId_;
     return defaultValue;
 }
-const std::shared_ptr<std::string> &UserSubscriptions::getUserName() const noexcept
+const std::shared_ptr<std::string> &UserSubscriptions::getPartnerId() const noexcept
 {
-    return userName_;
+    return partnerId_;
 }
-void UserSubscriptions::setUserName(const std::string &pUserName) noexcept
+void UserSubscriptions::setPartnerId(const std::string &pPartnerId) noexcept
 {
-    userName_ = std::make_shared<std::string>(pUserName);
+    partnerId_ = std::make_shared<std::string>(pPartnerId);
     dirtyFlag_[3] = true;
 }
-void UserSubscriptions::setUserName(std::string &&pUserName) noexcept
+void UserSubscriptions::setPartnerId(std::string &&pPartnerId) noexcept
 {
-    userName_ = std::make_shared<std::string>(std::move(pUserName));
+    partnerId_ = std::make_shared<std::string>(std::move(pPartnerId));
     dirtyFlag_[3] = true;
 }
-void UserSubscriptions::setUserNameToNull() noexcept
+void UserSubscriptions::setPartnerIdToNull() noexcept
 {
-    userName_.reset();
+    partnerId_.reset();
     dirtyFlag_[3] = true;
+}
+
+const std::string &UserSubscriptions::getValueOfSubscriptionPlanId() const noexcept
+{
+    static const std::string defaultValue = std::string();
+    if(subscriptionPlanId_)
+        return *subscriptionPlanId_;
+    return defaultValue;
+}
+const std::shared_ptr<std::string> &UserSubscriptions::getSubscriptionPlanId() const noexcept
+{
+    return subscriptionPlanId_;
+}
+void UserSubscriptions::setSubscriptionPlanId(const std::string &pSubscriptionPlanId) noexcept
+{
+    subscriptionPlanId_ = std::make_shared<std::string>(pSubscriptionPlanId);
+    dirtyFlag_[4] = true;
+}
+void UserSubscriptions::setSubscriptionPlanId(std::string &&pSubscriptionPlanId) noexcept
+{
+    subscriptionPlanId_ = std::make_shared<std::string>(std::move(pSubscriptionPlanId));
+    dirtyFlag_[4] = true;
+}
+void UserSubscriptions::setSubscriptionPlanIdToNull() noexcept
+{
+    subscriptionPlanId_.reset();
+    dirtyFlag_[4] = true;
+}
+
+const std::string &UserSubscriptions::getValueOfBillingCycle() const noexcept
+{
+    static const std::string defaultValue = std::string();
+    if(billingCycle_)
+        return *billingCycle_;
+    return defaultValue;
+}
+const std::shared_ptr<std::string> &UserSubscriptions::getBillingCycle() const noexcept
+{
+    return billingCycle_;
+}
+void UserSubscriptions::setBillingCycle(const std::string &pBillingCycle) noexcept
+{
+    billingCycle_ = std::make_shared<std::string>(pBillingCycle);
+    dirtyFlag_[5] = true;
+}
+void UserSubscriptions::setBillingCycle(std::string &&pBillingCycle) noexcept
+{
+    billingCycle_ = std::make_shared<std::string>(std::move(pBillingCycle));
+    dirtyFlag_[5] = true;
+}
+void UserSubscriptions::setBillingCycleToNull() noexcept
+{
+    billingCycle_.reset();
+    dirtyFlag_[5] = true;
+}
+
+const std::string &UserSubscriptions::getValueOfSubscriptionPlanDescription() const noexcept
+{
+    static const std::string defaultValue = std::string();
+    if(subscriptionPlanDescription_)
+        return *subscriptionPlanDescription_;
+    return defaultValue;
+}
+const std::shared_ptr<std::string> &UserSubscriptions::getSubscriptionPlanDescription() const noexcept
+{
+    return subscriptionPlanDescription_;
+}
+void UserSubscriptions::setSubscriptionPlanDescription(const std::string &pSubscriptionPlanDescription) noexcept
+{
+    subscriptionPlanDescription_ = std::make_shared<std::string>(pSubscriptionPlanDescription);
+    dirtyFlag_[6] = true;
+}
+void UserSubscriptions::setSubscriptionPlanDescription(std::string &&pSubscriptionPlanDescription) noexcept
+{
+    subscriptionPlanDescription_ = std::make_shared<std::string>(std::move(pSubscriptionPlanDescription));
+    dirtyFlag_[6] = true;
+}
+void UserSubscriptions::setSubscriptionPlanDescriptionToNull() noexcept
+{
+    subscriptionPlanDescription_.reset();
+    dirtyFlag_[6] = true;
 }
 
 const std::string &UserSubscriptions::getValueOfEmail() const noexcept
@@ -782,17 +992,17 @@ const std::shared_ptr<std::string> &UserSubscriptions::getEmail() const noexcept
 void UserSubscriptions::setEmail(const std::string &pEmail) noexcept
 {
     email_ = std::make_shared<std::string>(pEmail);
-    dirtyFlag_[4] = true;
+    dirtyFlag_[7] = true;
 }
 void UserSubscriptions::setEmail(std::string &&pEmail) noexcept
 {
     email_ = std::make_shared<std::string>(std::move(pEmail));
-    dirtyFlag_[4] = true;
+    dirtyFlag_[7] = true;
 }
 void UserSubscriptions::setEmailToNull() noexcept
 {
     email_.reset();
-    dirtyFlag_[4] = true;
+    dirtyFlag_[7] = true;
 }
 
 const std::string &UserSubscriptions::getValueOfNewspaperEntitlements() const noexcept
@@ -809,17 +1019,17 @@ const std::shared_ptr<std::string> &UserSubscriptions::getNewspaperEntitlements(
 void UserSubscriptions::setNewspaperEntitlements(const std::string &pNewspaperEntitlements) noexcept
 {
     newspaperEntitlements_ = std::make_shared<std::string>(pNewspaperEntitlements);
-    dirtyFlag_[5] = true;
+    dirtyFlag_[8] = true;
 }
 void UserSubscriptions::setNewspaperEntitlements(std::string &&pNewspaperEntitlements) noexcept
 {
     newspaperEntitlements_ = std::make_shared<std::string>(std::move(pNewspaperEntitlements));
-    dirtyFlag_[5] = true;
+    dirtyFlag_[8] = true;
 }
 void UserSubscriptions::setNewspaperEntitlementsToNull() noexcept
 {
     newspaperEntitlements_.reset();
-    dirtyFlag_[5] = true;
+    dirtyFlag_[8] = true;
 }
 
 const bool &UserSubscriptions::getValueOfIsActive() const noexcept
@@ -836,7 +1046,7 @@ const std::shared_ptr<bool> &UserSubscriptions::getIsActive() const noexcept
 void UserSubscriptions::setIsActive(const bool &pIsActive) noexcept
 {
     isActive_ = std::make_shared<bool>(pIsActive);
-    dirtyFlag_[6] = true;
+    dirtyFlag_[9] = true;
 }
 
 const ::trantor::Date &UserSubscriptions::getValueOfCreatedAt() const noexcept
@@ -853,12 +1063,12 @@ const std::shared_ptr<::trantor::Date> &UserSubscriptions::getCreatedAt() const 
 void UserSubscriptions::setCreatedAt(const ::trantor::Date &pCreatedAt) noexcept
 {
     createdAt_ = std::make_shared<::trantor::Date>(pCreatedAt);
-    dirtyFlag_[7] = true;
+    dirtyFlag_[10] = true;
 }
 void UserSubscriptions::setCreatedAtToNull() noexcept
 {
     createdAt_.reset();
-    dirtyFlag_[7] = true;
+    dirtyFlag_[10] = true;
 }
 
 const ::trantor::Date &UserSubscriptions::getValueOfUpdatedAt() const noexcept
@@ -875,12 +1085,12 @@ const std::shared_ptr<::trantor::Date> &UserSubscriptions::getUpdatedAt() const 
 void UserSubscriptions::setUpdatedAt(const ::trantor::Date &pUpdatedAt) noexcept
 {
     updatedAt_ = std::make_shared<::trantor::Date>(pUpdatedAt);
-    dirtyFlag_[8] = true;
+    dirtyFlag_[11] = true;
 }
 void UserSubscriptions::setUpdatedAtToNull() noexcept
 {
     updatedAt_.reset();
-    dirtyFlag_[8] = true;
+    dirtyFlag_[11] = true;
 }
 
 void UserSubscriptions::updateId(const uint64_t id)
@@ -893,7 +1103,10 @@ const std::vector<std::string> &UserSubscriptions::insertColumns() noexcept
         "id",
         "subscription_identifier",
         "user_id",
-        "user_name",
+        "partner_id",
+        "subscription_plan_id",
+        "billing_cycle",
+        "subscription_plan_description",
         "email",
         "newspaper_entitlements",
         "is_active",
@@ -940,9 +1153,9 @@ void UserSubscriptions::outputArgs(drogon::orm::internal::SqlBinder &binder) con
     }
     if(dirtyFlag_[3])
     {
-        if(getUserName())
+        if(getPartnerId())
         {
-            binder << getValueOfUserName();
+            binder << getValueOfPartnerId();
         }
         else
         {
@@ -950,6 +1163,39 @@ void UserSubscriptions::outputArgs(drogon::orm::internal::SqlBinder &binder) con
         }
     }
     if(dirtyFlag_[4])
+    {
+        if(getSubscriptionPlanId())
+        {
+            binder << getValueOfSubscriptionPlanId();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[5])
+    {
+        if(getBillingCycle())
+        {
+            binder << getValueOfBillingCycle();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[6])
+    {
+        if(getSubscriptionPlanDescription())
+        {
+            binder << getValueOfSubscriptionPlanDescription();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[7])
     {
         if(getEmail())
         {
@@ -960,7 +1206,7 @@ void UserSubscriptions::outputArgs(drogon::orm::internal::SqlBinder &binder) con
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[5])
+    if(dirtyFlag_[8])
     {
         if(getNewspaperEntitlements())
         {
@@ -971,7 +1217,7 @@ void UserSubscriptions::outputArgs(drogon::orm::internal::SqlBinder &binder) con
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[6])
+    if(dirtyFlag_[9])
     {
         if(getIsActive())
         {
@@ -982,7 +1228,7 @@ void UserSubscriptions::outputArgs(drogon::orm::internal::SqlBinder &binder) con
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[7])
+    if(dirtyFlag_[10])
     {
         if(getCreatedAt())
         {
@@ -993,7 +1239,7 @@ void UserSubscriptions::outputArgs(drogon::orm::internal::SqlBinder &binder) con
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[8])
+    if(dirtyFlag_[11])
     {
         if(getUpdatedAt())
         {
@@ -1045,6 +1291,18 @@ const std::vector<std::string> UserSubscriptions::updateColumns() const
     {
         ret.push_back(getColumnName(8));
     }
+    if(dirtyFlag_[9])
+    {
+        ret.push_back(getColumnName(9));
+    }
+    if(dirtyFlag_[10])
+    {
+        ret.push_back(getColumnName(10));
+    }
+    if(dirtyFlag_[11])
+    {
+        ret.push_back(getColumnName(11));
+    }
     return ret;
 }
 
@@ -1085,9 +1343,9 @@ void UserSubscriptions::updateArgs(drogon::orm::internal::SqlBinder &binder) con
     }
     if(dirtyFlag_[3])
     {
-        if(getUserName())
+        if(getPartnerId())
         {
-            binder << getValueOfUserName();
+            binder << getValueOfPartnerId();
         }
         else
         {
@@ -1095,6 +1353,39 @@ void UserSubscriptions::updateArgs(drogon::orm::internal::SqlBinder &binder) con
         }
     }
     if(dirtyFlag_[4])
+    {
+        if(getSubscriptionPlanId())
+        {
+            binder << getValueOfSubscriptionPlanId();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[5])
+    {
+        if(getBillingCycle())
+        {
+            binder << getValueOfBillingCycle();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[6])
+    {
+        if(getSubscriptionPlanDescription())
+        {
+            binder << getValueOfSubscriptionPlanDescription();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[7])
     {
         if(getEmail())
         {
@@ -1105,7 +1396,7 @@ void UserSubscriptions::updateArgs(drogon::orm::internal::SqlBinder &binder) con
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[5])
+    if(dirtyFlag_[8])
     {
         if(getNewspaperEntitlements())
         {
@@ -1116,7 +1407,7 @@ void UserSubscriptions::updateArgs(drogon::orm::internal::SqlBinder &binder) con
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[6])
+    if(dirtyFlag_[9])
     {
         if(getIsActive())
         {
@@ -1127,7 +1418,7 @@ void UserSubscriptions::updateArgs(drogon::orm::internal::SqlBinder &binder) con
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[7])
+    if(dirtyFlag_[10])
     {
         if(getCreatedAt())
         {
@@ -1138,7 +1429,7 @@ void UserSubscriptions::updateArgs(drogon::orm::internal::SqlBinder &binder) con
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[8])
+    if(dirtyFlag_[11])
     {
         if(getUpdatedAt())
         {
@@ -1177,13 +1468,37 @@ Json::Value UserSubscriptions::toJson() const
     {
         ret["user_id"]=Json::Value();
     }
-    if(getUserName())
+    if(getPartnerId())
     {
-        ret["user_name"]=getValueOfUserName();
+        ret["partner_id"]=getValueOfPartnerId();
     }
     else
     {
-        ret["user_name"]=Json::Value();
+        ret["partner_id"]=Json::Value();
+    }
+    if(getSubscriptionPlanId())
+    {
+        ret["subscription_plan_id"]=getValueOfSubscriptionPlanId();
+    }
+    else
+    {
+        ret["subscription_plan_id"]=Json::Value();
+    }
+    if(getBillingCycle())
+    {
+        ret["billing_cycle"]=getValueOfBillingCycle();
+    }
+    else
+    {
+        ret["billing_cycle"]=Json::Value();
+    }
+    if(getSubscriptionPlanDescription())
+    {
+        ret["subscription_plan_description"]=getValueOfSubscriptionPlanDescription();
+    }
+    else
+    {
+        ret["subscription_plan_description"]=Json::Value();
     }
     if(getEmail())
     {
@@ -1237,7 +1552,7 @@ Json::Value UserSubscriptions::toMasqueradedJson(
     const std::vector<std::string> &pMasqueradingVector) const
 {
     Json::Value ret;
-    if(pMasqueradingVector.size() == 9)
+    if(pMasqueradingVector.size() == 12)
     {
         if(!pMasqueradingVector[0].empty())
         {
@@ -1274,9 +1589,9 @@ Json::Value UserSubscriptions::toMasqueradedJson(
         }
         if(!pMasqueradingVector[3].empty())
         {
-            if(getUserName())
+            if(getPartnerId())
             {
-                ret[pMasqueradingVector[3]]=getValueOfUserName();
+                ret[pMasqueradingVector[3]]=getValueOfPartnerId();
             }
             else
             {
@@ -1285,9 +1600,9 @@ Json::Value UserSubscriptions::toMasqueradedJson(
         }
         if(!pMasqueradingVector[4].empty())
         {
-            if(getEmail())
+            if(getSubscriptionPlanId())
             {
-                ret[pMasqueradingVector[4]]=getValueOfEmail();
+                ret[pMasqueradingVector[4]]=getValueOfSubscriptionPlanId();
             }
             else
             {
@@ -1296,9 +1611,9 @@ Json::Value UserSubscriptions::toMasqueradedJson(
         }
         if(!pMasqueradingVector[5].empty())
         {
-            if(getNewspaperEntitlements())
+            if(getBillingCycle())
             {
-                ret[pMasqueradingVector[5]]=getValueOfNewspaperEntitlements();
+                ret[pMasqueradingVector[5]]=getValueOfBillingCycle();
             }
             else
             {
@@ -1307,9 +1622,9 @@ Json::Value UserSubscriptions::toMasqueradedJson(
         }
         if(!pMasqueradingVector[6].empty())
         {
-            if(getIsActive())
+            if(getSubscriptionPlanDescription())
             {
-                ret[pMasqueradingVector[6]]=getValueOfIsActive();
+                ret[pMasqueradingVector[6]]=getValueOfSubscriptionPlanDescription();
             }
             else
             {
@@ -1318,9 +1633,9 @@ Json::Value UserSubscriptions::toMasqueradedJson(
         }
         if(!pMasqueradingVector[7].empty())
         {
-            if(getCreatedAt())
+            if(getEmail())
             {
-                ret[pMasqueradingVector[7]]=getCreatedAt()->toDbStringLocal();
+                ret[pMasqueradingVector[7]]=getValueOfEmail();
             }
             else
             {
@@ -1329,13 +1644,46 @@ Json::Value UserSubscriptions::toMasqueradedJson(
         }
         if(!pMasqueradingVector[8].empty())
         {
-            if(getUpdatedAt())
+            if(getNewspaperEntitlements())
             {
-                ret[pMasqueradingVector[8]]=getUpdatedAt()->toDbStringLocal();
+                ret[pMasqueradingVector[8]]=getValueOfNewspaperEntitlements();
             }
             else
             {
                 ret[pMasqueradingVector[8]]=Json::Value();
+            }
+        }
+        if(!pMasqueradingVector[9].empty())
+        {
+            if(getIsActive())
+            {
+                ret[pMasqueradingVector[9]]=getValueOfIsActive();
+            }
+            else
+            {
+                ret[pMasqueradingVector[9]]=Json::Value();
+            }
+        }
+        if(!pMasqueradingVector[10].empty())
+        {
+            if(getCreatedAt())
+            {
+                ret[pMasqueradingVector[10]]=getCreatedAt()->toDbStringLocal();
+            }
+            else
+            {
+                ret[pMasqueradingVector[10]]=Json::Value();
+            }
+        }
+        if(!pMasqueradingVector[11].empty())
+        {
+            if(getUpdatedAt())
+            {
+                ret[pMasqueradingVector[11]]=getUpdatedAt()->toDbStringLocal();
+            }
+            else
+            {
+                ret[pMasqueradingVector[11]]=Json::Value();
             }
         }
         return ret;
@@ -1365,13 +1713,37 @@ Json::Value UserSubscriptions::toMasqueradedJson(
     {
         ret["user_id"]=Json::Value();
     }
-    if(getUserName())
+    if(getPartnerId())
     {
-        ret["user_name"]=getValueOfUserName();
+        ret["partner_id"]=getValueOfPartnerId();
     }
     else
     {
-        ret["user_name"]=Json::Value();
+        ret["partner_id"]=Json::Value();
+    }
+    if(getSubscriptionPlanId())
+    {
+        ret["subscription_plan_id"]=getValueOfSubscriptionPlanId();
+    }
+    else
+    {
+        ret["subscription_plan_id"]=Json::Value();
+    }
+    if(getBillingCycle())
+    {
+        ret["billing_cycle"]=getValueOfBillingCycle();
+    }
+    else
+    {
+        ret["billing_cycle"]=Json::Value();
+    }
+    if(getSubscriptionPlanDescription())
+    {
+        ret["subscription_plan_description"]=getValueOfSubscriptionPlanDescription();
+    }
+    else
+    {
+        ret["subscription_plan_description"]=Json::Value();
     }
     if(getEmail())
     {
@@ -1443,34 +1815,49 @@ bool UserSubscriptions::validateJsonForCreation(const Json::Value &pJson, std::s
         err="The user_id column cannot be null";
         return false;
     }
-    if(pJson.isMember("user_name"))
+    if(pJson.isMember("partner_id"))
     {
-        if(!validJsonOfField(3, "user_name", pJson["user_name"], err, true))
+        if(!validJsonOfField(3, "partner_id", pJson["partner_id"], err, true))
+            return false;
+    }
+    if(pJson.isMember("subscription_plan_id"))
+    {
+        if(!validJsonOfField(4, "subscription_plan_id", pJson["subscription_plan_id"], err, true))
+            return false;
+    }
+    if(pJson.isMember("billing_cycle"))
+    {
+        if(!validJsonOfField(5, "billing_cycle", pJson["billing_cycle"], err, true))
+            return false;
+    }
+    if(pJson.isMember("subscription_plan_description"))
+    {
+        if(!validJsonOfField(6, "subscription_plan_description", pJson["subscription_plan_description"], err, true))
             return false;
     }
     if(pJson.isMember("email"))
     {
-        if(!validJsonOfField(4, "email", pJson["email"], err, true))
+        if(!validJsonOfField(7, "email", pJson["email"], err, true))
             return false;
     }
     if(pJson.isMember("newspaper_entitlements"))
     {
-        if(!validJsonOfField(5, "newspaper_entitlements", pJson["newspaper_entitlements"], err, true))
+        if(!validJsonOfField(8, "newspaper_entitlements", pJson["newspaper_entitlements"], err, true))
             return false;
     }
     if(pJson.isMember("is_active"))
     {
-        if(!validJsonOfField(6, "is_active", pJson["is_active"], err, true))
+        if(!validJsonOfField(9, "is_active", pJson["is_active"], err, true))
             return false;
     }
     if(pJson.isMember("created_at"))
     {
-        if(!validJsonOfField(7, "created_at", pJson["created_at"], err, true))
+        if(!validJsonOfField(10, "created_at", pJson["created_at"], err, true))
             return false;
     }
     if(pJson.isMember("updated_at"))
     {
-        if(!validJsonOfField(8, "updated_at", pJson["updated_at"], err, true))
+        if(!validJsonOfField(11, "updated_at", pJson["updated_at"], err, true))
             return false;
     }
     return true;
@@ -1479,7 +1866,7 @@ bool UserSubscriptions::validateMasqueradedJsonForCreation(const Json::Value &pJ
                                                            const std::vector<std::string> &pMasqueradingVector,
                                                            std::string &err)
 {
-    if(pMasqueradingVector.size() != 9)
+    if(pMasqueradingVector.size() != 12)
     {
         err = "Bad masquerading vector";
         return false;
@@ -1567,6 +1954,30 @@ bool UserSubscriptions::validateMasqueradedJsonForCreation(const Json::Value &pJ
                   return false;
           }
       }
+      if(!pMasqueradingVector[9].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[9]))
+          {
+              if(!validJsonOfField(9, pMasqueradingVector[9], pJson[pMasqueradingVector[9]], err, true))
+                  return false;
+          }
+      }
+      if(!pMasqueradingVector[10].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[10]))
+          {
+              if(!validJsonOfField(10, pMasqueradingVector[10], pJson[pMasqueradingVector[10]], err, true))
+                  return false;
+          }
+      }
+      if(!pMasqueradingVector[11].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[11]))
+          {
+              if(!validJsonOfField(11, pMasqueradingVector[11], pJson[pMasqueradingVector[11]], err, true))
+                  return false;
+          }
+      }
     }
     catch(const Json::LogicError &e)
     {
@@ -1597,34 +2008,49 @@ bool UserSubscriptions::validateJsonForUpdate(const Json::Value &pJson, std::str
         if(!validJsonOfField(2, "user_id", pJson["user_id"], err, false))
             return false;
     }
-    if(pJson.isMember("user_name"))
+    if(pJson.isMember("partner_id"))
     {
-        if(!validJsonOfField(3, "user_name", pJson["user_name"], err, false))
+        if(!validJsonOfField(3, "partner_id", pJson["partner_id"], err, false))
+            return false;
+    }
+    if(pJson.isMember("subscription_plan_id"))
+    {
+        if(!validJsonOfField(4, "subscription_plan_id", pJson["subscription_plan_id"], err, false))
+            return false;
+    }
+    if(pJson.isMember("billing_cycle"))
+    {
+        if(!validJsonOfField(5, "billing_cycle", pJson["billing_cycle"], err, false))
+            return false;
+    }
+    if(pJson.isMember("subscription_plan_description"))
+    {
+        if(!validJsonOfField(6, "subscription_plan_description", pJson["subscription_plan_description"], err, false))
             return false;
     }
     if(pJson.isMember("email"))
     {
-        if(!validJsonOfField(4, "email", pJson["email"], err, false))
+        if(!validJsonOfField(7, "email", pJson["email"], err, false))
             return false;
     }
     if(pJson.isMember("newspaper_entitlements"))
     {
-        if(!validJsonOfField(5, "newspaper_entitlements", pJson["newspaper_entitlements"], err, false))
+        if(!validJsonOfField(8, "newspaper_entitlements", pJson["newspaper_entitlements"], err, false))
             return false;
     }
     if(pJson.isMember("is_active"))
     {
-        if(!validJsonOfField(6, "is_active", pJson["is_active"], err, false))
+        if(!validJsonOfField(9, "is_active", pJson["is_active"], err, false))
             return false;
     }
     if(pJson.isMember("created_at"))
     {
-        if(!validJsonOfField(7, "created_at", pJson["created_at"], err, false))
+        if(!validJsonOfField(10, "created_at", pJson["created_at"], err, false))
             return false;
     }
     if(pJson.isMember("updated_at"))
     {
-        if(!validJsonOfField(8, "updated_at", pJson["updated_at"], err, false))
+        if(!validJsonOfField(11, "updated_at", pJson["updated_at"], err, false))
             return false;
     }
     return true;
@@ -1633,7 +2059,7 @@ bool UserSubscriptions::validateMasqueradedJsonForUpdate(const Json::Value &pJso
                                                          const std::vector<std::string> &pMasqueradingVector,
                                                          std::string &err)
 {
-    if(pMasqueradingVector.size() != 9)
+    if(pMasqueradingVector.size() != 12)
     {
         err = "Bad masquerading vector";
         return false;
@@ -1687,6 +2113,21 @@ bool UserSubscriptions::validateMasqueradedJsonForUpdate(const Json::Value &pJso
       if(!pMasqueradingVector[8].empty() && pJson.isMember(pMasqueradingVector[8]))
       {
           if(!validJsonOfField(8, pMasqueradingVector[8], pJson[pMasqueradingVector[8]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[9].empty() && pJson.isMember(pMasqueradingVector[9]))
+      {
+          if(!validJsonOfField(9, pMasqueradingVector[9], pJson[pMasqueradingVector[9]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[10].empty() && pJson.isMember(pMasqueradingVector[10]))
+      {
+          if(!validJsonOfField(10, pMasqueradingVector[10], pJson[pMasqueradingVector[10]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[11].empty() && pJson.isMember(pMasqueradingVector[11]))
+      {
+          if(!validJsonOfField(11, pMasqueradingVector[11], pJson[pMasqueradingVector[11]], err, false))
               return false;
       }
     }
@@ -1759,14 +2200,6 @@ bool UserSubscriptions::validJsonOfField(size_t index,
                 err="Type error in the "+fieldName+" field";
                 return false;
             }
-            if(pJson.isString() && std::strlen(pJson.asCString()) > 255)
-            {
-                err="String length exceeds limit for the " +
-                    fieldName +
-                    " field (the maximum value is 255)";
-                return false;
-            }
-
             break;
         case 4:
             if(pJson.isNull())
@@ -1778,14 +2211,6 @@ bool UserSubscriptions::validJsonOfField(size_t index,
                 err="Type error in the "+fieldName+" field";
                 return false;
             }
-            if(pJson.isString() && std::strlen(pJson.asCString()) > 255)
-            {
-                err="String length exceeds limit for the " +
-                    fieldName +
-                    " field (the maximum value is 255)";
-                return false;
-            }
-
             break;
         case 5:
             if(pJson.isNull())
@@ -1797,18 +2222,33 @@ bool UserSubscriptions::validJsonOfField(size_t index,
                 err="Type error in the "+fieldName+" field";
                 return false;
             }
+            if(pJson.isString() && std::strlen(pJson.asCString()) > 25)
+            {
+                err="String length exceeds limit for the " +
+                    fieldName +
+                    " field (the maximum value is 25)";
+                return false;
+            }
+
             break;
         case 6:
             if(pJson.isNull())
             {
-                err="The " + fieldName + " column cannot be null";
-                return false;
+                return true;
             }
-            if(!pJson.isBool())
+            if(!pJson.isString())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;
             }
+            if(pJson.isString() && std::strlen(pJson.asCString()) > 255)
+            {
+                err="String length exceeds limit for the " +
+                    fieldName +
+                    " field (the maximum value is 255)";
+                return false;
+            }
+
             break;
         case 7:
             if(pJson.isNull())
@@ -1820,8 +2260,50 @@ bool UserSubscriptions::validJsonOfField(size_t index,
                 err="Type error in the "+fieldName+" field";
                 return false;
             }
+            if(pJson.isString() && std::strlen(pJson.asCString()) > 255)
+            {
+                err="String length exceeds limit for the " +
+                    fieldName +
+                    " field (the maximum value is 255)";
+                return false;
+            }
+
             break;
         case 8:
+            if(pJson.isNull())
+            {
+                return true;
+            }
+            if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 9:
+            if(pJson.isNull())
+            {
+                err="The " + fieldName + " column cannot be null";
+                return false;
+            }
+            if(!pJson.isBool())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 10:
+            if(pJson.isNull())
+            {
+                return true;
+            }
+            if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 11:
             if(pJson.isNull())
             {
                 return true;

@@ -6,6 +6,7 @@
 #include "Campaigns.h"
 #include "constants/ErrorCodes.h"
 #include "controllers/NotificationsHub.h"
+#include <drogon/orm/CoroMapper.h>
 #include <drogon/orm/Mapper.h>
 
 using namespace drogon::orm;
@@ -14,7 +15,8 @@ using drogon_model::Gnp::Campaigns;
 namespace gnp::services {
 
 void CampaignService::getAll(
-    int pageNo, int pageSize, const std::string &query, const std::string &channel,
+    int pageNo, int pageSize, const std::string &query,
+    const std::string &channel,
     const std::function<void(const dto::BaseApiResponse &)> &callback) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -28,13 +30,14 @@ void CampaignService::getAll(
     searchCriteria =
         Criteria(Campaigns::Cols::_name, CompareOperator::Like, likeQuery) ||
         Criteria(Campaigns::Cols::_subject, CompareOperator::Like, likeQuery) ||
-        Criteria(Campaigns::Cols::_message_body, CompareOperator::Like, likeQuery);
+        Criteria(Campaigns::Cols::_message_body, CompareOperator::Like,
+                 likeQuery);
   }
 
   if (!channel.empty()) {
 
-    searchCriteria = searchCriteria && Criteria(Campaigns::Cols::_channel, CompareOperator::EQ, channel);
-
+    searchCriteria = searchCriteria && Criteria(Campaigns::Cols::_channel,
+                                                CompareOperator::EQ, channel);
   }
 
   mp->count(
@@ -64,8 +67,11 @@ void CampaignService::getAll(
               response.result["pageNo"] = pageNo;
               response.result["pageSize"] = pageSize;
               response.result["lowerBound"] = pageSize * (pageNo - 1) + 1;
-              response.result["upperBound"] = Json::Value((int)totalPages == pageNo ? (Json::UInt64)totalCount : (Json::UInt64)(pageNo * pageSize));
-              response.result["totalPages"] =  (int)totalPages;
+              response.result["upperBound"] =
+                  Json::Value((int)totalPages == pageNo
+                                  ? (Json::UInt64)totalCount
+                                  : (Json::UInt64)(pageNo * pageSize));
+              response.result["totalPages"] = (int)totalPages;
 
               Json::Value data = Json::arrayValue;
 
@@ -78,10 +84,13 @@ void CampaignService::getAll(
                 camelCaseCampaign["name"] = campaignJson["name"];
                 camelCaseCampaign["reach"] = campaignJson["reach"];
                 camelCaseCampaign["status"] = campaignJson["status"];
-                camelCaseCampaign["campaignType"] = campaignJson["campaign_type"];
-                camelCaseCampaign["scheduledTime"] = campaignJson["scheduled_time"];
+                camelCaseCampaign["campaignType"] =
+                    campaignJson["campaign_type"];
+                camelCaseCampaign["scheduledTime"] =
+                    campaignJson["scheduled_time"];
                 camelCaseCampaign["clicks"] = campaignJson["clicks"];
-                camelCaseCampaign["targetAudience"] = campaignJson["target_audience"];
+                camelCaseCampaign["targetAudience"] =
+                    campaignJson["target_audience"];
                 camelCaseCampaign["channel"] = campaignJson["channel"];
                 camelCaseCampaign["subject"] = campaignJson["subject"];
                 camelCaseCampaign["messageBody"] = campaignJson["message_body"];
@@ -114,14 +123,12 @@ void CampaignService::getAll(
       });
 }
 
-void CampaignService::create(
-    const dto::CreateCampaignDto &dto,
-    const std::function<void(const dto::BaseApiResponse &)> &callback) {
+drogon::Task< ::gnp::dto::BaseApiResponse> CampaignService::createAsync(const ::gnp::dto::CreateCampaignDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
-  Mapper<Campaigns> mp(dbClient);
+  CoroMapper< ::drogon_model::Gnp::Campaigns> mp(dbClient);
 
-  Campaigns newCampaign;
+  ::drogon_model::Gnp::Campaigns newCampaign;
   newCampaign.setName(dto.getName());
   newCampaign.setTargetAudience(dto.getTargetAudience());
   newCampaign.setChannel(dto.getChannel());
@@ -135,23 +142,21 @@ void CampaignService::create(
   newCampaign.setClicks(0);
   newCampaign.setCreatedAt(trantor::Date::now());
 
-  mp.insert(
-      newCampaign,
-      [callback, dto](const drogon_model::Gnp::Campaigns &campaign) {
-        // 5. Prepare success response
-        dto::BaseApiResponse successResponse;
-        successResponse.success = true;
-        successResponse.message = "Campaign created successfully";
-        successResponse.result["id"] = campaign.getValueOfId();
-        callback(successResponse);
-      },
-      [callback](const drogon::orm::DrogonDbException &e) {
-        dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.message = "Database error while creating Campaign";
-        errorResponse.error["code"] = constants::ERR_DB_QUERY;
-        callback(errorResponse);
-      });
+  try {
+    auto campaign = co_await mp.insert(newCampaign);
+    ::gnp::dto::BaseApiResponse successResponse;
+    successResponse.success = true;
+    successResponse.message = "Campaign created successfully";
+    successResponse.result["id"] = campaign.getValueOfId();
+    co_return successResponse;
+  } catch (const drogon::orm::DrogonDbException &e) {
+    ::gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Database error while creating Campaign";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
 }
 
 void CampaignService::publishCampaign(
@@ -161,23 +166,28 @@ void CampaignService::publishCampaign(
   auto dbClient = drogon::app().getDbClient();
   Mapper<Campaigns> mp(dbClient);
 
-  mp.findByPrimaryKey(campaignId,[=](Campaigns campaign) {
+  mp.findByPrimaryKey(
+      campaignId,
+      [=](Campaigns campaign) {
         campaign.setStatus("Sent");
 
         Mapper<Campaigns> updateMp(dbClient);
-        updateMp.update(campaign,
+        updateMp.update(
+            campaign,
             [=](const size_t count) {
               dto::BaseApiResponse response;
               if (count > 0) {
 
-                if (campaign.getValueOfChannel() == "app-notification" || campaign.getValueOfChannel() == "all") {
+                if (campaign.getValueOfChannel() == "app-notification" ||
+                    campaign.getValueOfChannel() == "all") {
 
                   Json::Value payload;
                   payload["deepLink"] = campaign.getValueOfDeepLink();
                   payload["notificationId"] = campaign.getValueOfId();
                   payload["subject"] = campaign.getValueOfSubject();
                   payload["messageBody"] = campaign.getValueOfMessageBody();
-                  payload["timestamp"] = (Json::Int64)trantor::Date::now().microSecondsSinceEpoch();
+                  payload["timestamp"] = (Json::Int64)trantor::Date::now()
+                                             .microSecondsSinceEpoch();
 
                   Json::StreamWriterBuilder w;
                   std::string jsonPayload = Json::writeString(w, payload);
@@ -209,15 +219,17 @@ void CampaignService::publishCampaign(
       });
 }
 
-void CampaignService::updateCampaignStats(const std::string &campaignId,
-            const std::string &metricsType,
-            const std::function<void(const dto::BaseApiResponse &)> &callback) {
+void CampaignService::updateCampaignStats(
+    const std::string &campaignId, const std::string &metricsType,
+    const std::function<void(const dto::BaseApiResponse &)> &callback) {
 
   auto dbClient = drogon::app().getDbClient();
   Mapper<Campaigns> mp(dbClient);
 
   // Find the campaign by ID
-  mp.findByPrimaryKey(campaignId,[=](Campaigns campaign) {
+  mp.findByPrimaryKey(
+      campaignId,
+      [=](Campaigns campaign) {
         // Determine which metrics field to update
         bool shouldUpdate = false;
 
@@ -244,7 +256,9 @@ void CampaignService::updateCampaignStats(const std::string &campaignId,
 
         // Update the campaign record in the database
         Mapper<Campaigns> updateMp(dbClient);
-        updateMp.update( campaign,[=](const size_t count) {
+        updateMp.update(
+            campaign,
+            [=](const size_t count) {
               dto::BaseApiResponse response;
               if (count > 0) {
                 response.success = true;
@@ -261,8 +275,7 @@ void CampaignService::updateCampaignStats(const std::string &campaignId,
               response.message = "Database error updating campaign stats";
               response.error["detail"] = e.base().what();
               callback(response);
-            }
-        );
+            });
       },
       [=](const DrogonDbException &e) {
         dto::BaseApiResponse response;
@@ -270,10 +283,8 @@ void CampaignService::updateCampaignStats(const std::string &campaignId,
         response.message = "Campaign not found";
         response.error["detail"] = e.base().what();
         callback(response);
-      }
-  );
+      });
 }
-
 
 void CampaignService::deleteCampaign(
     const std::string &campaignId,
@@ -287,10 +298,14 @@ void CampaignService::deleteCampaign(
       Criteria(Campaigns::Cols::_id, CompareOperator::EQ, campaignId);
 
   // First verify the user exists
-  mp.findOne(criteria,[=](const Campaigns &campaigns) {
+  mp.findOne(
+      criteria,
+      [=](const Campaigns &campaigns) {
         // User found, proceed with deletion
         Mapper<Campaigns> deleteMp(dbClient);
-        deleteMp.deleteBy(criteria, [=](const size_t count) {
+        deleteMp.deleteBy(
+            criteria,
+            [=](const size_t count) {
               if (count > 0) {
                 // Successfully deleted
                 gnp::dto::BaseApiResponse response;

@@ -20,6 +20,7 @@ namespace gnp::constants {
         ERR_AUTH_TOKEN_INVALID = 1205,    // JWT token is invalid
         ERR_DUPLICATE_RESOURCE = 1301,    // Resource already exists
         ERR_INTERNAL = 1500,              // Internal server error
+        ERR_UNAUTHORIZED = 1501,          // Unauthorized access
         ERR_PERMISSION_DENIED = 1401,     // Insufficient permissions
         ERR_MISSING_PARAMETER = 1102,     // Required parameter is missing
         ERR_UNSUPPORTED_OPERATION = 1601  // Operation not supported
