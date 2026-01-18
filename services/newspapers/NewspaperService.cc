@@ -296,7 +296,7 @@ void NewspaperService::getFullDetailsByPublication(
   Criteria criteria =
       Criteria(Newspapers::Cols::_is_published, CompareOperator::EQ, true) &&
       Criteria(Newspapers::Cols::_is_free, CompareOperator::EQ, true) &&
-      Criteria(Newspapers::Cols::_published_date, CompareOperator::EQ, date);
+      Criteria(Newspapers::Cols::_publication_date, CompareOperator::EQ, date);
 
   if (!publicationId.empty()) {
     criteria = criteria && Criteria(Newspapers::Cols::_publication_id,CompareOperator::EQ, publicationId);
