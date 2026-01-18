@@ -746,7 +746,7 @@ void SubscriptionService::grantNewsPaperAccessToRequester(
               data["documentId"] = src["document_id"];
               data["isFree"] = src["is_free"];
               data["isPopular"] = src["is_popular"];
-              data["publishedDate"] = src["published_date"];
+              data["publicationDate"] = src["publication_date"];
               data["isPublished"] = src["is_published"];
 
               // Category / publication info
@@ -897,7 +897,7 @@ void SubscriptionService::getNewsPaperRedactedDetailsWithUniqueId(
                 data["id"] = src["id"];
                 data["title"] = src["title"];
                 data["slug"] = src["slug"];
-                data["publishedDate"] = src["published_date"];
+                data["publicationDate"] = src["publication_date"];
                 data["publicationId"] = src["publication_id"];
 
                 response.result = data;
@@ -907,8 +907,7 @@ void SubscriptionService::getNewsPaperRedactedDetailsWithUniqueId(
               [callback](const DrogonDbException &e) {
                 dto::BaseApiResponse response;
                 response.success = false;
-                response.message =
-                    "Database error while fetching newspaper details";
+                response.message =  "Database error while fetching newspaper details";
                 response.error["code"] = constants::ERR_DB_QUERY;
                 callback(response);
               });
@@ -973,10 +972,8 @@ void SubscriptionService::readNewsPaperByDateAndPublication(
     // 2. Find Newspaper ID by publicationId and date
     Mapper<drogon_model::Gnp::Newspapers> newspaperMapper(dbClient);
     Criteria newsCriteria =
-        Criteria(drogon_model::Gnp::Newspapers::Cols::_publication_id,
-                 CompareOperator::EQ, publicationId) &&
-        Criteria(drogon_model::Gnp::Newspapers::Cols::_published_date,
-                 CompareOperator::EQ, publicationDate);
+        Criteria(drogon_model::Gnp::Newspapers::Cols::_publication_id,  CompareOperator::EQ, publicationId) &&
+        Criteria(drogon_model::Gnp::Newspapers::Cols::_publication_date, CompareOperator::EQ, publicationDate);
 
     newspaperMapper.findOne(
         newsCriteria,
@@ -986,27 +983,22 @@ void SubscriptionService::readNewsPaperByDateAndPublication(
           std::string slug = newspaper.getValueOfSlug();
           std::string title = *newspaper.getTitle();
           std::string publicationId = *newspaper.getPublicationId();
-          std::string pubDate =
-              newspaper.getValueOfPublishedDate().toDbStringLocal();
+          std::string pubDate = newspaper.getValueOfPublicationDate().toDbStringLocal();
 
           // 3. Check User Entitlements
           Mapper<UserSubscriptions> subMapper(dbClient);
-          Criteria subCriteria = Criteria(UserSubscriptions::Cols::_user_id,
-                                          CompareOperator::EQ, userId) &&
-                                 Criteria(UserSubscriptions::Cols::_email,
-                                          CompareOperator::EQ, email);
+          Criteria subCriteria = Criteria(UserSubscriptions::Cols::_user_id, CompareOperator::EQ, userId) &&
+                                 Criteria(UserSubscriptions::Cols::_email, CompareOperator::EQ, email);
 
           subMapper.findOne(
               subCriteria,
-              [callback, newspaperId, publicationId, slug, title,
-               pubDate](const UserSubscriptions &userSub) {
+              [callback, newspaperId, publicationId, slug, title, pubDate](const UserSubscriptions &userSub) {
                 std::string entitlementsStr =
                     userSub.getValueOfNewspaperEntitlements();
                 if (entitlementsStr.empty()) {
                   dto::BaseApiResponse response;
                   response.success = false;
-                  response.message =
-                      "No newspaper entitlements found for this user";
+                  response.message = "No newspaper entitlements found for this user";
                   callback(response);
                   return;
                 }
@@ -1016,8 +1008,7 @@ void SubscriptionService::readNewsPaperByDateAndPublication(
                 std::string errs;
                 std::istringstream s(entitlementsStr);
 
-                if (!Json::parseFromStream(readerBuilder, s, &entitlements,
-                                           &errs)) {
+                if (!Json::parseFromStream(readerBuilder, s, &entitlements, &errs)) {
                   dto::BaseApiResponse response;
                   response.success = false;
                   response.message = "Failed to parse newspaper entitlements";
@@ -1053,7 +1044,7 @@ void SubscriptionService::readNewsPaperByDateAndPublication(
                 response.result["publicationId"] = publicationId;
                 response.result["slug"] = slug;
                 response.result["title"] = title;
-                response.result["publishedDate"] = pubDate;
+                response.result["publicationDate"] = pubDate;
                 callback(response);
               },
               [callback](const DrogonDbException &e) {
@@ -1081,8 +1072,7 @@ void SubscriptionService::readNewsPaperByDateAndPublication(
   }
 }
 
-drogon::Task<gnp::dto::BaseApiResponse>
-SubscriptionService::readNewsPaperByDateAndPublicationAsync(
+drogon::Task<gnp::dto::BaseApiResponse> SubscriptionService::readNewsPaperByDateAndPublicationAsync(
     const std::string &publicationId, const std::string &publicationDate,
     const std::string &authToken) {
 
@@ -1121,23 +1111,19 @@ SubscriptionService::readNewsPaperByDateAndPublicationAsync(
 
     // 2. Find Newspaper ID by publicationId and date
     CoroMapper<drogon_model::Gnp::Newspapers> newspaperMapper(dbClient);
-    Criteria newsCriteria =
-        Criteria(drogon_model::Gnp::Newspapers::Cols::_publication_id,
-                 CompareOperator::EQ, publicationId) &&
-        Criteria(drogon_model::Gnp::Newspapers::Cols::_published_date,
-                 CompareOperator::EQ, publicationDate);
+    Criteria newsCriteria = Criteria(drogon_model::Gnp::Newspapers::Cols::_publication_id, CompareOperator::EQ, publicationId) &&
+        Criteria(drogon_model::Gnp::Newspapers::Cols::_publication_date, CompareOperator::EQ, publicationDate);
 
     auto newspaper = co_await newspaperMapper.findOne(newsCriteria);
     std::string newspaperId = newspaper.getValueOfId();
     std::string slug = newspaper.getValueOfSlug();
     std::string title = *newspaper.getTitle();
-    std::string pubDate = newspaper.getValueOfPublishedDate().toDbStringLocal();
+    std::string pubDate = newspaper.getValueOfPublicationDate().toDbStringLocal();
 
     // 3. Check User Entitlements
     CoroMapper<UserSubscriptions> subMapper(dbClient);
     Criteria subCriteria =
-        Criteria(UserSubscriptions::Cols::_user_id, CompareOperator::EQ,
-                 userId) &&
+        Criteria(UserSubscriptions::Cols::_user_id, CompareOperator::EQ, userId) &&
         Criteria(UserSubscriptions::Cols::_email, CompareOperator::EQ, email);
 
     auto userSub = co_await subMapper.findOne(subCriteria);

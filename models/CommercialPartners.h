@@ -59,6 +59,8 @@ class CommercialPartners
         static const std::string _created_at;
         static const std::string _updated_at;
         static const std::string _remaining_quota;
+        static const std::string _subscription_plan_id;
+        static const std::string _subscription_plan_description;
     };
 
     static const int primaryKeyNumber;
@@ -250,8 +252,28 @@ class CommercialPartners
     ///Set the value of the column remaining_quota
     void setRemainingQuota(const int32_t &pRemainingQuota) noexcept;
 
+    /**  For column subscription_plan_id  */
+    ///Get the value of the column subscription_plan_id, returns the default value if the column is null
+    const std::string &getValueOfSubscriptionPlanId() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getSubscriptionPlanId() const noexcept;
+    ///Set the value of the column subscription_plan_id
+    void setSubscriptionPlanId(const std::string &pSubscriptionPlanId) noexcept;
+    void setSubscriptionPlanId(std::string &&pSubscriptionPlanId) noexcept;
+    void setSubscriptionPlanIdToNull() noexcept;
 
-    static size_t getColumnNumber() noexcept {  return 15;  }
+    /**  For column subscription_plan_description  */
+    ///Get the value of the column subscription_plan_description, returns the default value if the column is null
+    const std::string &getValueOfSubscriptionPlanDescription() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getSubscriptionPlanDescription() const noexcept;
+    ///Set the value of the column subscription_plan_description
+    void setSubscriptionPlanDescription(const std::string &pSubscriptionPlanDescription) noexcept;
+    void setSubscriptionPlanDescription(std::string &&pSubscriptionPlanDescription) noexcept;
+    void setSubscriptionPlanDescriptionToNull() noexcept;
+
+
+    static size_t getColumnNumber() noexcept {  return 17;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -288,6 +310,8 @@ class CommercialPartners
     std::shared_ptr<::trantor::Date> createdAt_;
     std::shared_ptr<::trantor::Date> updatedAt_;
     std::shared_ptr<int32_t> remainingQuota_;
+    std::shared_ptr<std::string> subscriptionPlanId_;
+    std::shared_ptr<std::string> subscriptionPlanDescription_;
     struct MetaData
     {
         const std::string colName_;
@@ -299,7 +323,7 @@ class CommercialPartners
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[15]={ false };
+    bool dirtyFlag_[17]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -399,6 +423,17 @@ class CommercialPartners
         if(!dirtyFlag_[14])
         {
             needSelection=true;
+        }
+        sql += "subscription_plan_id,";
+        ++parametersCount;
+        if(!dirtyFlag_[15])
+        {
+            needSelection=true;
+        }
+        if(dirtyFlag_[16])
+        {
+            sql += "subscription_plan_description,";
+            ++parametersCount;
         }
         if(parametersCount > 0)
         {
@@ -517,6 +552,20 @@ class CommercialPartners
         else
         {
             sql +="default,";
+        }
+        if(dirtyFlag_[15])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
+        }
+        if(dirtyFlag_[16])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
         }
         if(parametersCount > 0)
         {

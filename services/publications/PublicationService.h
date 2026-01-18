@@ -6,51 +6,41 @@
 #define PUBLICATIONSERVICE_H
 
 #include <drogon/drogon.h>
-#include "dto/BaseApiResponse.h"
-#include "dto/CreatePublicationDto.h"
-#include "dto/UpdatePublicationDto.h"
+#include <drogon/utils/coroutine.h>
+#include <functional>
+#include <json/json.h>
+#include <string>
+
+#include "../../dto/BaseApiResponse.h"
+#include "../../dto/CreatePublicationDto.h"
+#include "../../dto/UpdatePublicationDto.h"
 
 namespace gnp::services {
 
-    class PublicationService {
+class PublicationService {
 
-    public:
+public:
+  drogon::Task<gnp::dto::BaseApiResponse> getAllPublicationsAsync(int pageNo, int pageSize, const std::string &query);
 
-        void getAllPublications(
-           int pageNo,
-           int pageSize,
-           const std::string& query,
-           const std::function<void(const dto::BaseApiResponse&)>& callback
-       );
+  void createPublication(
+      const gnp::dto::CreatePublicationDto &userData,
+      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
-        void createPublication(const dto::CreatePublicationDto& userData,
-            const std::function<void(const dto::BaseApiResponse&)>& callback);
+  void updatePublication(
+      const gnp::dto::UpdatePublicationDto &userData,
+      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
-        void updatePublication(const dto::UpdatePublicationDto& userData,
-            const std::function<void(const dto::BaseApiResponse&)>& callback);
+  void activatePublication(
+      const std::string &publicationId,
+      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
-        void activatePublication(
-            const std::string& publicationId,
-            const std::function<void(const dto::BaseApiResponse&)>& callback
-        );
+  void deactivatePublication(
+      const std::string &publicationId,
+      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
-        void deactivatePublication(
-            const std::string& publicationId,
-            const std::function<void(const dto::BaseApiResponse&)>& callback
-        );
-
-        void deletePublication(
-            const std::string& publicationId,
-            const std::function<void(const dto::BaseApiResponse&)>& callback
-        );
-
-
-
-    };
-
-
-
-
-}
-
-#endif //PUBLICATIONSERVICE_H
+  void deletePublication(
+      const std::string &publicationId,
+      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+};
+} // namespace gnp
+#endif // PUBLICATIONSERVICE_H
