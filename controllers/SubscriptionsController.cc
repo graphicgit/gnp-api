@@ -47,9 +47,7 @@ void SubscriptionsController::manageGuestSubscription(
       });
 }
 
-void SubscriptionsController::manageGuestOneTimeBuy(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
+Task<HttpResponsePtr> SubscriptionsController::manageGuestOneTimeBuy(const HttpRequestPtr req) {
   auto jsonBody = req->getJsonObject();
 
   if (!jsonBody) {
@@ -58,8 +56,7 @@ void SubscriptionsController::manageGuestOneTimeBuy(
     response.error["message"] = "Invalid JSON body";
     auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
     resp->setStatusCode(k400BadRequest);
-    callback(resp);
-    return;
+    co_return resp;
   }
 
   gnp::dto::GuestOnetimeBuyDto guestOnetimeBuyDto;
@@ -69,12 +66,11 @@ void SubscriptionsController::manageGuestOneTimeBuy(
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &subscriptionService = plugin->getSubscriptionService();
 
-  subscriptionService.manageGuestOneTimeBuy(
-      guestOnetimeBuyDto, [callback](const gnp::dto::BaseApiResponse &result) {
-        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  auto result = co_await subscriptionService.manageGuestOneTimeBuyAsync(
+      guestOnetimeBuyDto);
 
-        callback(resp);
-      });
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
 }
 
 void SubscriptionsController::fulfillGuestOneTimeBuy(
@@ -215,7 +211,8 @@ void SubscriptionsController::grantNewsPaperAccess(
       });
 }
 
-Task<HttpResponsePtr> SubscriptionsController::findNewsPaperByDateAndPublication(
+Task<HttpResponsePtr>
+SubscriptionsController::findNewsPaperByDateAndPublication(
     const HttpRequestPtr req) {
   auto publicationId = req->getParameter("publicationId");
   auto publicationDate = req->getParameter("publicationDate");
@@ -244,7 +241,9 @@ Task<HttpResponsePtr> SubscriptionsController::findNewsPaperByDateAndPublication
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &subscriptionService = plugin->getSubscriptionService();
 
-  auto result =  co_await subscriptionService.readNewsPaperByDateAndPublicationAsync(publicationId, publicationDate, authToken);
+  auto result =
+      co_await subscriptionService.readNewsPaperByDateAndPublicationAsync(
+          publicationId, publicationDate, authToken);
 
   auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
   co_return resp;

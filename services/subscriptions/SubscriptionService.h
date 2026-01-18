@@ -32,9 +32,7 @@ public:
       const dto::GuestSubscriptionDto &dto,
       const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
-  void manageGuestOneTimeBuy(
-      const dto::GuestOnetimeBuyDto &dto,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse> manageGuestOneTimeBuyAsync(const dto::GuestOnetimeBuyDto &dto);
 
   void completeGuestOneTimeBuy(
       const std::string &reference,
@@ -57,7 +55,10 @@ public:
       const std::string &authToken,
       const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
-  drogon::Task<gnp::dto::BaseApiResponse> readNewsPaperByDateAndPublicationAsync(const std::string &publicationId, const std::string &publicationDate, const std::string &authToken);
+  drogon::Task<gnp::dto::BaseApiResponse>
+  readNewsPaperByDateAndPublicationAsync(const std::string &publicationId,
+                                         const std::string &publicationDate,
+                                         const std::string &authToken);
 };
 
 } // namespace gnp::services

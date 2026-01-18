@@ -4,35 +4,39 @@
 
 #ifndef PAYSTACKAPI_H
 #define PAYSTACKAPI_H
-#include "dto/BaseApiResponse.h"
+
 #include <drogon/drogon.h>
+#include <functional>
 #include <json/json.h>
+#include <string>
 
 #include "dto/InitializePaymentRequest.h"
 #include "dto/InitializePaymentResponse.h"
 #include "dto/VerifyPayResponse.h"
 
-namespace gnp::services {
+namespace gnp {
+namespace services {
 
-    class PaystackApi {
+class PaystackApi {
 
-    public:
+public:
+  void initialize(
+      const dto::InitializePaymentRequest &dto,
+      const std::function<void(const gnp::dto::InitializePaymentResponse &)>
+          &callback);
 
-        void initialize(
-          const dto::InitializePaymentRequest& dto,
-          const std::function<void(const gnp::dto::InitializePaymentResponse&)>& callback
-      );
+  drogon::Task<gnp::dto::InitializePaymentResponse>
+  initializeAsync(const dto::InitializePaymentRequest &dto);
 
-        void verify(
-           const std::string& reference,
-           const std::function<void(const gnp::dto::VerifyPayResponse&)>& callback
-       );
+  void verify(
+      const std::string &reference,
+      const std::function<void(const gnp::dto::VerifyPayResponse &)> &callback);
 
-        // create a method that can initialize a deferred routine :: with appropraite params on a WSSD service to complete
-        // when u call each of the steps within the WSSD flow, delay for at least 2 seconds,  before calling the next step.
+  drogon::Task<gnp::dto::VerifyPayResponse>
+  verifyAsync(const std::string &reference);
+};
 
+} // namespace services
+} // namespace gnp
 
-    };
-
-}
-#endif //PAYSTACKAPI_H
+#endif // PAYSTACKAPI_H

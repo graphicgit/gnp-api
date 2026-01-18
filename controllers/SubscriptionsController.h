@@ -46,9 +46,9 @@ public:
   void manageGuestSubscription(
       const HttpRequestPtr &req,
       std::function<void(const HttpResponsePtr &)> &&callback);
-  void manageGuestOneTimeBuy(
-      const HttpRequestPtr &req,
-      std::function<void(const HttpResponsePtr &)> &&callback);
+
+    Task<HttpResponsePtr> manageGuestOneTimeBuy(const HttpRequestPtr req);
+
   void fulfillGuestOneTimeBuy(
       const HttpRequestPtr &req,
       std::function<void(const HttpResponsePtr &)> &&callback);
@@ -64,8 +64,7 @@ public:
   void getNewsPaperRedactedDetailsViaUniqueId(
       const HttpRequestPtr &req,
       std::function<void(const HttpResponsePtr &)> &&callback);
-  Task<HttpResponsePtr>
-  findNewsPaperByDateAndPublication(const HttpRequestPtr req);
+    Task<HttpResponsePtr> findNewsPaperByDateAndPublication(const HttpRequestPtr req);
   void renew(const HttpRequestPtr &req,
              std::function<void(const HttpResponsePtr &)> &&callback);
 };
