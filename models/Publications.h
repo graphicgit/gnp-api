@@ -52,6 +52,8 @@ class Publications
         static const std::string _updated_at;
         static const std::string _description;
         static const std::string _price;
+        static const std::string _publishing_days;
+        static const std::string _sort_order;
     };
 
     static const int primaryKeyNumber;
@@ -174,8 +176,27 @@ class Publications
     void setPrice(const std::string &pPrice) noexcept;
     void setPrice(std::string &&pPrice) noexcept;
 
+    /**  For column publishing_days  */
+    ///Get the value of the column publishing_days, returns the default value if the column is null
+    const std::string &getValueOfPublishingDays() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getPublishingDays() const noexcept;
+    ///Set the value of the column publishing_days
+    void setPublishingDays(const std::string &pPublishingDays) noexcept;
+    void setPublishingDays(std::string &&pPublishingDays) noexcept;
+    void setPublishingDaysToNull() noexcept;
 
-    static size_t getColumnNumber() noexcept {  return 8;  }
+    /**  For column sort_order  */
+    ///Get the value of the column sort_order, returns the default value if the column is null
+    const int32_t &getValueOfSortOrder() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<int32_t> &getSortOrder() const noexcept;
+    ///Set the value of the column sort_order
+    void setSortOrder(const int32_t &pSortOrder) noexcept;
+    void setSortOrderToNull() noexcept;
+
+
+    static size_t getColumnNumber() noexcept {  return 10;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -205,6 +226,8 @@ class Publications
     std::shared_ptr<::trantor::Date> updatedAt_;
     std::shared_ptr<std::string> description_;
     std::shared_ptr<std::string> price_;
+    std::shared_ptr<std::string> publishingDays_;
+    std::shared_ptr<int32_t> sortOrder_;
     struct MetaData
     {
         const std::string colName_;
@@ -216,7 +239,7 @@ class Publications
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[8]={ false };
+    bool dirtyFlag_[10]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -277,6 +300,16 @@ class Publications
         if(!dirtyFlag_[7])
         {
             needSelection=true;
+        }
+        if(dirtyFlag_[8])
+        {
+            sql += "publishing_days,";
+            ++parametersCount;
+        }
+        if(dirtyFlag_[9])
+        {
+            sql += "sort_order,";
+            ++parametersCount;
         }
         if(parametersCount > 0)
         {
@@ -344,6 +377,16 @@ class Publications
         else
         {
             sql +="default,";
+        }
+        if(dirtyFlag_[8])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[9])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
         }
         if(parametersCount > 0)
         {

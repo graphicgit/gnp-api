@@ -5,7 +5,9 @@
 
 #include "plugins/GnpServicePlugin.h"
 
-void NewsPapersController::getAll(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback) {
+void NewsPapersController::getAll(
+    const HttpRequestPtr &req,
+    std::function<void(const HttpResponsePtr &)> &&callback) {
   int pageSize = 10; // Default page size
   int pageNo = 1;    //  Default page number
 
@@ -142,6 +144,50 @@ void NewsPapersController::getFullDetails(
       });
 }
 
+void NewsPapersController::getFullDetailsByPublication(
+    const HttpRequestPtr &req,
+    std::function<void(const HttpResponsePtr &)> &&callback) {
+
+  std::string publicationId = req->getParameter("publicationId");
+  std::string date = req->getParameter("date");
+  std::string privateKey = req->getHeader("Vitamin");
+
+  if (privateKey.empty()) {
+
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Missing required Header";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k500InternalServerError);
+    callback(resp);
+    return;
+  }
+
+  auto &app = drogon::app();
+  auto customConfig = app.getCustomConfig();
+  std::string privateKeyInConfig = customConfig["PrivateKey"].asString();
+
+  if (privateKey != privateKeyInConfig) {
+
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid Header";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k500InternalServerError);
+    callback(resp);
+    return;
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &newsPaperService = plugin->getNewsPaperService();
+
+  newsPaperService.getFullDetailsByPublication(
+      publicationId, date, [callback](const gnp::dto::BaseApiResponse &result) {
+        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+        callback(resp);
+      });
+}
+
 void NewsPapersController::publish(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) {
@@ -212,9 +258,9 @@ void NewsPapersController::unPublish(
       });
 }
 
-
-
-void NewsPapersController::ingestPublication(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback) {
+void NewsPapersController::ingestPublication(
+    const HttpRequestPtr &req,
+    std::function<void(const HttpResponsePtr &)> &&callback) {
 
   auto jsonBody = req->getJsonObject();
 
@@ -236,7 +282,8 @@ void NewsPapersController::ingestPublication(const HttpRequestPtr &req, std::fun
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
-  newsPaperService.ingest(dto, [callback](const gnp::dto::BaseApiResponse &result) {
+  newsPaperService.ingest(
+      dto, [callback](const gnp::dto::BaseApiResponse &result) {
         auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
         callback(resp);
       });
@@ -263,13 +310,38 @@ void NewsPapersController::deleteNewsPaper(
 
   std::string id = req->getParameter("id");
 
-  // Get tenant service from plugin
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
   // Call service method to delete the tenant
-  newsPaperService.deleteNewspaper(
-      id, [callback](const gnp::dto::BaseApiResponse &result) {
+  newsPaperService.deleteNewspaper(id, [callback](const gnp::dto::BaseApiResponse &result) {
+        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+        callback(resp);
+      });
+}
+
+
+void NewsPapersController::incrementViewCount(const HttpRequestPtr &req,
+    std::function<void(const HttpResponsePtr &)> &&callback) {
+
+  if (req->getParameter("id").empty()) {
+    // Missing tenant ID - return early
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Missing required parameter: id";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    callback(resp);
+    return;
+  }
+
+  std::string id = req->getParameter("id");
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &newsPaperService = plugin->getNewsPaperService();
+
+  // Call service method to delete the tenant
+  newsPaperService.incrementViewCount(id, [callback](const gnp::dto::BaseApiResponse &result) {
         auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
         callback(resp);
       });

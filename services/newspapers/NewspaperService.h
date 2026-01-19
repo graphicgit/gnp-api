@@ -33,6 +33,8 @@ namespace gnp::services {
 
         void getFullDetails(const std::string& id, const std::function<void(const gnp::dto::BaseApiResponse&)>& callback);
 
+        void getFullDetailsByPublication(const std::string& publicationId, const std::string& date, const std::function<void(const gnp::dto::BaseApiResponse&)>& callback);
+
         void listAll(
            int pageNo,
            int pageSize,
@@ -56,6 +58,10 @@ namespace gnp::services {
             const std::function<void(const gnp::dto::BaseApiResponse&)>& callback);
 
         void deleteNewspaper(
+            const std::string& id,
+            const std::function<void(const dto::BaseApiResponse&)>& callback);
+
+        void incrementViewCount(
             const std::string& id,
             const std::function<void(const dto::BaseApiResponse&)>& callback);
 

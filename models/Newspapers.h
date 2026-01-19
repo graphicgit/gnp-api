@@ -66,6 +66,7 @@ class Newspapers
         static const std::string _featured_stories;
         static const std::string _views;
         static const std::string _sales;
+        static const std::string _publication_date;
     };
 
     static const int primaryKeyNumber;
@@ -319,8 +320,17 @@ class Newspapers
     void setSales(const std::string &pSales) noexcept;
     void setSales(std::string &&pSales) noexcept;
 
+    /**  For column publication_date  */
+    ///Get the value of the column publication_date, returns the default value if the column is null
+    const ::trantor::Date &getValueOfPublicationDate() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<::trantor::Date> &getPublicationDate() const noexcept;
+    ///Set the value of the column publication_date
+    void setPublicationDate(const ::trantor::Date &pPublicationDate) noexcept;
+    void setPublicationDateToNull() noexcept;
 
-    static size_t getColumnNumber() noexcept {  return 22;  }
+
+    static size_t getColumnNumber() noexcept {  return 23;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -364,6 +374,7 @@ class Newspapers
     std::shared_ptr<std::string> featuredStories_;
     std::shared_ptr<int32_t> views_;
     std::shared_ptr<std::string> sales_;
+    std::shared_ptr<::trantor::Date> publicationDate_;
     struct MetaData
     {
         const std::string colName_;
@@ -375,7 +386,7 @@ class Newspapers
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[22]={ false };
+    bool dirtyFlag_[23]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -506,6 +517,12 @@ class Newspapers
         sql += "sales,";
         ++parametersCount;
         if(!dirtyFlag_[21])
+        {
+            needSelection=true;
+        }
+        sql += "publication_date,";
+        ++parametersCount;
+        if(!dirtyFlag_[22])
         {
             needSelection=true;
         }
@@ -646,6 +663,15 @@ class Newspapers
             sql +="default,";
         }
         if(dirtyFlag_[21])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
+        }
+        if(dirtyFlag_[22])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);

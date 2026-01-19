@@ -61,9 +61,7 @@ public:
   void
   grantNewsPaperAccess(const HttpRequestPtr &req,
                        std::function<void(const HttpResponsePtr &)> &&callback);
-  void getNewsPaperRedactedDetailsViaUniqueId(
-      const HttpRequestPtr &req,
-      std::function<void(const HttpResponsePtr &)> &&callback);
+  void getNewsPaperRedactedDetailsViaUniqueId(const HttpRequestPtr &req,std::function<void(const HttpResponsePtr &)> &&callback);
     Task<HttpResponsePtr> findNewsPaperByDateAndPublication(const HttpRequestPtr req);
   void renew(const HttpRequestPtr &req,
              std::function<void(const HttpResponsePtr &)> &&callback);
