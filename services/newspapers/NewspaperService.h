@@ -61,6 +61,10 @@ namespace gnp::services {
             const std::string& id,
             const std::function<void(const dto::BaseApiResponse&)>& callback);
 
+        void incrementViewCount(
+            const std::string& id,
+            const std::function<void(const dto::BaseApiResponse&)>& callback);
+
 
 
 

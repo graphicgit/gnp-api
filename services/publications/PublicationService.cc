@@ -67,7 +67,8 @@ drogon::Task<gnp::dto::BaseApiResponse> PublicationService::getAllPublicationsAs
       camelCasePublication["description"] = publicationJson["description"];
       camelCasePublication["price"] = publicationJson["price"];
       camelCasePublication["sortOrder"] = publicationJson["sort_order"];
-      camelCasePublication["createdAt"] = publicationJson["created_at"];
+      camelCasePublication["sortOrder"] = publicationJson["sort_order"];
+      //camelCasePublication["publishingDays"] = publicationJson["publishing_days"];
       camelCasePublication["updatedAt"] = publicationJson["updated_at"];
 
       data.append(camelCasePublication);

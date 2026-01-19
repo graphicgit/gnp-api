@@ -297,15 +297,18 @@ void NewspaperService::getFullDetailsByPublication(
   auto mp = std::make_shared<Mapper<drogon_model::Gnp::Newspapers>>(dbClient);
 
   // Only published and free newspapers are visible here
-  Criteria criteria = Criteria(Newspapers::Cols::_is_published, CompareOperator::EQ, true) &&
+  Criteria criteria =
+      Criteria(Newspapers::Cols::_is_published, CompareOperator::EQ, true) &&
       Criteria(Newspapers::Cols::_is_free, CompareOperator::EQ, true);
 
   if (!publicationId.empty()) {
-    criteria = criteria && Criteria(Newspapers::Cols::_publication_id, CompareOperator::EQ, publicationId);
+    criteria = criteria && Criteria(Newspapers::Cols::_publication_id,
+                                    CompareOperator::EQ, publicationId);
   }
 
   // Common success callback to avoid code duplication
-  auto successCallback = [callback](const drogon_model::Gnp::Newspapers &newspaper) {
+  auto successCallback =
+      [callback](const drogon_model::Gnp::Newspapers &newspaper) {
         dto::BaseApiResponse response;
         response.success = true;
 
@@ -365,13 +368,16 @@ void NewspaperService::getFullDetailsByPublication(
 
   // If date is provided, use exact match
   if (!date.empty()) {
-    criteria = criteria && Criteria(Newspapers::Cols::_publication_date, CompareOperator::EQ, date);
+    criteria = criteria && Criteria(Newspapers::Cols::_publication_date,
+                                    CompareOperator::EQ, date);
     mp->findOne(criteria, successCallback, errorCallback);
   } else {
     // If no date, get the latest one
     mp->orderBy(Newspapers::Cols::_publication_date, SortOrder::DESC)
         .limit(1)
-        .findBy(criteria, [successCallback, callback](
+        .findBy(
+            criteria,
+            [successCallback, callback](
                 const std::vector<drogon_model::Gnp::Newspapers> &newspapers) {
               if (newspapers.empty()) {
                 dto::BaseApiResponse errorResponse;
@@ -455,7 +461,8 @@ void NewspaperService::listAll(
               response.result["totalCount"] = (Json::UInt64)totalCount;
               response.result["pageNo"] = pageNo;
               response.result["pageSize"] = pageSize;
-              response.result["totalPages"] = (int)((totalCount + pageSize - 1) / pageSize);
+              response.result["totalPages"] =
+                  (int)((totalCount + pageSize - 1) / pageSize);
 
               Json::Value data = Json::arrayValue;
               for (const auto &role : publications) {
@@ -491,7 +498,8 @@ void NewspaperService::listAll(
               // Handle find error
               dto::BaseApiResponse errorResponse;
               errorResponse.success = false;
-              errorResponse.error["message"] = "Database error while fetching newspapers.";
+              errorResponse.error["message"] =
+                  "Database error while fetching newspapers.";
               errorResponse.error["detail"] = e.base().what();
               callback(errorResponse);
             });
@@ -501,7 +509,8 @@ void NewspaperService::listAll(
         dto::BaseApiResponse errorResponse;
         errorResponse.success = false;
         errorResponse.error["code"] = constants::ERR_DB_QUERY;
-        errorResponse.error["message"] = "Database error while fetching newspapers.";
+        errorResponse.error["message"] =
+            "Database error while fetching newspapers.";
         errorResponse.error["detail"] = e.base().what();
         callback(errorResponse);
       });
@@ -668,20 +677,17 @@ void NewspaperService::unPublish(
 
 void NewspaperService::deleteNewspaper(
     const std::string &id,
-    const std::function<void(const dto::BaseApiResponse &)> &callback) {
+    const std::function<void(const dto::BaseApiResponse &)> &callback)  {
 
   auto dbClient = drogon::app().getDbClient();
 
   Mapper<drogon_model::Gnp::Newspapers> mp(dbClient);
 
   // Create criteria to find the user with specified ID in the tenant
-  Criteria criteria = Criteria(drogon_model::Gnp::Newspapers::Cols::_id,
-                               CompareOperator::EQ, id);
+  Criteria criteria = Criteria(drogon_model::Gnp::Newspapers::Cols::_id, CompareOperator::EQ, id);
 
   // First verify the user exists
-  mp.findOne(
-      criteria,
-      [=](const drogon_model::Gnp::Newspapers &newspaper) {
+  mp.findOne(criteria, [=](const drogon_model::Gnp::Newspapers &newspaper) {
         // User found, proceed with deletion
         Mapper<drogon_model::Gnp::Newspapers> deleteMp(dbClient);
         deleteMp.deleteBy(
@@ -723,6 +729,37 @@ void NewspaperService::deleteNewspaper(
         errorResponse.error["detail"] = e.base().what();
         callback(errorResponse);
       });
+}
+
+void NewspaperService::incrementViewCount(
+    const std::string &id,
+    const std::function<void(const dto::BaseApiResponse &)> &callback) {
+
+  auto dbClient = drogon::app().getDbClient();
+
+  dbClient->execSqlAsync(
+      "UPDATE newspapers SET views = views + 1 WHERE id = $1",
+      [callback](const drogon::orm::Result &result) {
+        dto::BaseApiResponse response;
+        if (result.affectedRows() > 0) {
+          response.success = true;
+          response.message = "View count incremented successfully";
+        } else {
+          response.success = false;
+          response.message = "Newspaper not found";
+          response.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+        }
+        callback(response);
+      },
+      [callback](const drogon::orm::DrogonDbException &e) {
+        dto::BaseApiResponse response;
+        response.success = false;
+        response.message = "Database error while incrementing view count";
+        response.error["code"] = constants::ERR_DB_QUERY;
+        response.error["detail"] = e.base().what();
+        callback(response);
+      },
+      id);
 }
 
 } // namespace gnp::services
