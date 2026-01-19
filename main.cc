@@ -18,8 +18,6 @@ int main() {
             // Add more origins as needed
         };
 
-
-
         // Check if the origin is in our allowed list
         // For development, allow all origins
         resp->addHeader("Access-Control-Allow-Origin", "*");

@@ -148,17 +148,6 @@ void NewsPapersController::getFullDetailsByPublication(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) {
 
-  if (req->getParameter("date").empty()) {
-
-    gnp::dto::BaseApiResponse response;
-    response.success = false;
-    response.error["message"] = "Missing required parameter: date";
-    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
-    resp->setStatusCode(k400BadRequest);
-    callback(resp);
-    return;
-  }
-
   std::string publicationId = req->getParameter("publicationId");
   std::string date = req->getParameter("date");
   std::string privateKey = req->getHeader("Vitamin");

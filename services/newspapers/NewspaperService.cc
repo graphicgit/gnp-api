@@ -100,13 +100,17 @@ void NewspaperService::getAll(
                 camelCaseRole["title"] = newsPaperJson["title"];
                 camelCaseRole["slug"] = newsPaperJson["slug"];
                 camelCaseRole["price"] = newsPaperJson["price"];
-                camelCaseRole["editionNumber"] = newsPaperJson["edition_number"];
-                camelCaseRole["shortDescription"] = newsPaperJson["short_description"];
-                camelCaseRole["fullDescription"] = newsPaperJson["full_description"];
+                camelCaseRole["editionNumber"] =
+                    newsPaperJson["edition_number"];
+                camelCaseRole["shortDescription"] =
+                    newsPaperJson["short_description"];
+                camelCaseRole["fullDescription"] =
+                    newsPaperJson["full_description"];
                 camelCaseRole["thumbnailId"] = newsPaperJson["thumbnail_id"];
                 camelCaseRole["fileType"] = newsPaperJson["file_type"];
                 camelCaseRole["isFree"] = newsPaperJson["is_free"];
-                camelCaseRole["publicationDate"] = newsPaperJson["publication_date"];
+                camelCaseRole["publicationDate"] =
+                    newsPaperJson["publication_date"];
 
                 std::string featuredStoriesStr =
                     newspaper.getValueOfFeaturedStories();
@@ -293,18 +297,15 @@ void NewspaperService::getFullDetailsByPublication(
   auto mp = std::make_shared<Mapper<drogon_model::Gnp::Newspapers>>(dbClient);
 
   // Only published and free newspapers are visible here
-  Criteria criteria =
-      Criteria(Newspapers::Cols::_is_published, CompareOperator::EQ, true) &&
-      Criteria(Newspapers::Cols::_is_free, CompareOperator::EQ, true) &&
-      Criteria(Newspapers::Cols::_publication_date, CompareOperator::EQ, date);
+  Criteria criteria = Criteria(Newspapers::Cols::_is_published, CompareOperator::EQ, true) &&
+      Criteria(Newspapers::Cols::_is_free, CompareOperator::EQ, true);
 
   if (!publicationId.empty()) {
-    criteria = criteria && Criteria(Newspapers::Cols::_publication_id,CompareOperator::EQ, publicationId);
+    criteria = criteria && Criteria(Newspapers::Cols::_publication_id, CompareOperator::EQ, publicationId);
   }
 
-  mp->findOne(
-      criteria,
-      [callback](const drogon_model::Gnp::Newspapers &newspaper) {
+  // Common success callback to avoid code duplication
+  auto successCallback = [callback](const drogon_model::Gnp::Newspapers &newspaper) {
         dto::BaseApiResponse response;
         response.success = true;
 
@@ -350,15 +351,40 @@ void NewspaperService::getFullDetailsByPublication(
 
         response.result = data;
         callback(response);
-      },
-      [callback](const DrogonDbException &e) {
-        dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
-        errorResponse.error["message"] = "Newspaper not found.";
-        errorResponse.error["detail"] = e.base().what();
-        callback(errorResponse);
-      });
+      };
+
+  // Common error callback
+  auto errorCallback = [callback](const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+    errorResponse.error["message"] = "Newspaper not found.";
+    errorResponse.error["detail"] = e.base().what();
+    callback(errorResponse);
+  };
+
+  // If date is provided, use exact match
+  if (!date.empty()) {
+    criteria = criteria && Criteria(Newspapers::Cols::_publication_date, CompareOperator::EQ, date);
+    mp->findOne(criteria, successCallback, errorCallback);
+  } else {
+    // If no date, get the latest one
+    mp->orderBy(Newspapers::Cols::_publication_date, SortOrder::DESC)
+        .limit(1)
+        .findBy(criteria, [successCallback, callback](
+                const std::vector<drogon_model::Gnp::Newspapers> &newspapers) {
+              if (newspapers.empty()) {
+                dto::BaseApiResponse errorResponse;
+                errorResponse.success = false;
+                errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+                errorResponse.error["message"] = "Newspaper not found.";
+                callback(errorResponse);
+                return;
+              }
+              successCallback(newspapers[0]);
+            },
+            errorCallback);
+  }
 }
 
 // for admin use only
@@ -429,8 +455,7 @@ void NewspaperService::listAll(
               response.result["totalCount"] = (Json::UInt64)totalCount;
               response.result["pageNo"] = pageNo;
               response.result["pageSize"] = pageSize;
-              response.result["totalPages"] =
-                  (int)((totalCount + pageSize - 1) / pageSize);
+              response.result["totalPages"] = (int)((totalCount + pageSize - 1) / pageSize);
 
               Json::Value data = Json::arrayValue;
               for (const auto &role : publications) {
@@ -466,8 +491,7 @@ void NewspaperService::listAll(
               // Handle find error
               dto::BaseApiResponse errorResponse;
               errorResponse.success = false;
-              errorResponse.error["message"] =
-                  "Database error while fetching newspapers.";
+              errorResponse.error["message"] = "Database error while fetching newspapers.";
               errorResponse.error["detail"] = e.base().what();
               callback(errorResponse);
             });
@@ -477,8 +501,7 @@ void NewspaperService::listAll(
         dto::BaseApiResponse errorResponse;
         errorResponse.success = false;
         errorResponse.error["code"] = constants::ERR_DB_QUERY;
-        errorResponse.error["message"] =
-            "Database error while fetching newspapers.";
+        errorResponse.error["message"] = "Database error while fetching newspapers.";
         errorResponse.error["detail"] = e.base().what();
         callback(errorResponse);
       });

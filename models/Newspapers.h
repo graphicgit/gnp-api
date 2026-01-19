@@ -520,10 +520,11 @@ class Newspapers
         {
             needSelection=true;
         }
-        if(dirtyFlag_[22])
+        sql += "publication_date,";
+        ++parametersCount;
+        if(!dirtyFlag_[22])
         {
-            sql += "publication_date,";
-            ++parametersCount;
+            needSelection=true;
         }
         if(parametersCount > 0)
         {
@@ -674,6 +675,10 @@ class Newspapers
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
         }
         if(parametersCount > 0)
         {

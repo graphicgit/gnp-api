@@ -20,6 +20,7 @@ namespace gnp::services {
 
 drogon::Task<gnp::dto::BaseApiResponse> PublicationService::getAllPublicationsAsync(int pageNo, int pageSize,
                                             const std::string &query) {
+
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<drogon_model::Gnp::Publications> mp(dbClient);
 
@@ -65,6 +66,7 @@ drogon::Task<gnp::dto::BaseApiResponse> PublicationService::getAllPublicationsAs
       camelCasePublication["isActive"] = publicationJson["is_active"];
       camelCasePublication["description"] = publicationJson["description"];
       camelCasePublication["price"] = publicationJson["price"];
+      camelCasePublication["sortOrder"] = publicationJson["sort_order"];
       camelCasePublication["createdAt"] = publicationJson["created_at"];
       camelCasePublication["updatedAt"] = publicationJson["updated_at"];
 
@@ -76,8 +78,7 @@ drogon::Task<gnp::dto::BaseApiResponse> PublicationService::getAllPublicationsAs
     gnp::dto::BaseApiResponse errorResponse;
     errorResponse.success = false;
     errorResponse.error["code"] = constants::ERR_DB_QUERY;
-    errorResponse.error["message"] =
-        "Database error while fetching publications.";
+    errorResponse.error["message"] = "Database error while fetching publications.";
     errorResponse.error["detail"] = e.base().what();
     co_return errorResponse;
   }

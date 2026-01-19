@@ -19,12 +19,13 @@ public:
       int pageNo, int pageSize, const std::string &query,
       const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
-    void getAdminUsers(
+  void getAdminUsers(
       int pageNo, int pageSize, const std::string &query,
       const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
-    void getPartnerSubscribers(const std::string &partnerId,
-      int pageNo, int pageSize, const std::string &query,
+  void getPartnerSubscribers(
+      const std::string &partnerId, int pageNo, int pageSize,
+      const std::string &query,
       const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
   void create(
@@ -42,6 +43,9 @@ public:
   void lockUserAccount(
       const std::string &userId,
       const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+
+  Task<gnp::dto::BaseApiResponse>
+  registerProspectiveUser(const std::string &email, const std::string &phoneNo);
 
   void unlockUserAccount(
       const std::string &userId,

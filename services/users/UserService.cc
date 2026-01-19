@@ -1579,5 +1579,65 @@ void UserService::setPassword(
       "GET %s", sessionId.c_str());
 }
 
+drogon::Task<gnp::dto::BaseApiResponse> UserService::registerProspectiveUser(const std::string &email,
+                                     const std::string &phoneNo) {
+
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<Users> mp(dbClient);
+  dto::BaseApiResponse response;
+
+  bool userExists = false;
+
+  try {
+    // 1. Check if user exists
+    co_await mp.findOne(Criteria(Users::Cols::_email, CompareOperator::EQ, email));
+
+    // If findOne succeeds, user exists
+    userExists = true;
+
+  } catch (const DrogonDbException &e) {
+    // User not found, proceeds to creation
+    userExists = false;
+  } catch (const std::exception &e) {
+    response.success = false;
+    response.message = "An unexpected error occurred during user lookup.";
+    response.error["detail"] = e.what();
+    co_return response;
+  }
+
+  if (userExists) {
+    response.success = false;
+    response.message = "User with this email already exists.";
+    co_return response;
+  }
+
+  // 2. Create new user
+  try {
+    Users newUser;
+    newUser.setEmail(email);
+    newUser.setPhoneNumber(phoneNo);
+    newUser.setIsActive(true);
+    newUser.setIsLockedOut(false);
+    newUser.setCreatedAt(trantor::Date::now());
+    newUser.setUsername(email);
+    newUser.setPasswordHashToNull();
+
+    auto createdUser = co_await mp.insert(newUser);
+    response.success = true;
+    response.message = "Prospective user registered successfully.";
+    response.result["id"] = createdUser.getValueOfId();
+
+  } catch (const DrogonDbException &insertErr) {
+    response.success = false;
+    response.message = "Database error while creating prospective user.";
+    response.error["detail"] = insertErr.base().what();
+  } catch (const std::exception &e) {
+    response.success = false;
+    response.message = "An unexpected error occurred during creation.";
+    response.error["detail"] = e.what();
+  }
+
+  co_return response;
+}
 
 } // namespace gnp::services
