@@ -1579,8 +1579,7 @@ void UserService::setPassword(
       "GET %s", sessionId.c_str());
 }
 
-drogon::Task<gnp::dto::BaseApiResponse> UserService::registerProspectiveUser(const std::string &email,
-                                     const std::string &phoneNo) {
+drogon::Task<gnp::dto::BaseApiResponse> UserService::registerProspectiveUser(const dto::CreateUserDto &userDto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mp(dbClient);
@@ -1590,7 +1589,7 @@ drogon::Task<gnp::dto::BaseApiResponse> UserService::registerProspectiveUser(con
 
   try {
     // 1. Check if user exists
-    co_await mp.findOne(Criteria(Users::Cols::_email, CompareOperator::EQ, email));
+    co_await mp.findOne(Criteria(Users::Cols::_email, CompareOperator::EQ, userDto.getEmail()));
 
     // If findOne succeeds, user exists
     userExists = true;
@@ -1614,12 +1613,14 @@ drogon::Task<gnp::dto::BaseApiResponse> UserService::registerProspectiveUser(con
   // 2. Create new user
   try {
     Users newUser;
-    newUser.setEmail(email);
-    newUser.setPhoneNumber(phoneNo);
+    newUser.setFirstName(userDto.getFirstName());
+    newUser.setLastName(userDto.getLastName());
+    newUser.setEmail(userDto.getEmail());
+    newUser.setPhoneNumber(userDto.getPhoneNumber());
     newUser.setIsActive(true);
     newUser.setIsLockedOut(false);
     newUser.setCreatedAt(trantor::Date::now());
-    newUser.setUsername(email);
+    newUser.setUsernameToNull();
     newUser.setPasswordHashToNull();
 
     auto createdUser = co_await mp.insert(newUser);

@@ -321,11 +321,10 @@ void NewsPapersController::deleteNewsPaper(
 }
 
 
-void NewsPapersController::incrementViewCount(const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
+void NewsPapersController::incrementViewCount(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback) {
 
   if (req->getParameter("id").empty()) {
-    // Missing tenant ID - return early
+
     gnp::dto::BaseApiResponse response;
     response.success = false;
     response.error["message"] = "Missing required parameter: id";
