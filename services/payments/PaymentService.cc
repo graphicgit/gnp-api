@@ -3,10 +3,11 @@
 //
 
 #include "PaymentService.h"
-#include "Payments.h"
-#include "constants/ErrorCodes.h"
-#include "dto/BaseApiResponse.h"
+#include "../../constants/ErrorCodes.h"
+#include "../../dto/BaseApiResponse.h"
+#include "../../models/Payments.h"
 #include <drogon/orm/Mapper.h>
+#include <drogon/utils/coroutine.h>
 
 using namespace drogon::orm;
 using drogon_model::Gnp::Payments;
@@ -152,7 +153,8 @@ void PaymentService::createPayment(
       });
 }
 
-drogon::Task<dto::BaseApiResponse> PaymentService::createPaymentAsync(const dto::CreatePaymentDto &dto) {
+drogon::Task<dto::BaseApiResponse>
+PaymentService::createPaymentAsync(const dto::CreatePaymentDto &dto) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Payments> mp(dbClient);
 
@@ -229,6 +231,32 @@ void PaymentService::updateStatus(
         errorResponse.error["detail"] = e.base().what();
         callback(errorResponse);
       });
+}
+
+drogon::Task<dto::BaseApiResponse>
+PaymentService::updateStatusAsync(const std::string &status,
+                                  const std::string &paymentReference) {
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<Payments> mp(dbClient);
+  dto::BaseApiResponse response;
+
+  try {
+    auto payment =
+        co_await mp.findOne(Criteria(Payments::Cols::_transaction_reference,
+                                     CompareOperator::EQ, paymentReference));
+
+    payment.setStatus(status);
+    payment.setUpdatedAt(trantor::Date::now());
+
+    co_await mp.update(payment);
+    response.success = true;
+    response.message = "Payment status updated successfully";
+  } catch (const DrogonDbException &e) {
+    response.success = false;
+    response.message = "Payment not found or database error";
+    response.error["code"] = constants::ERR_DB_QUERY;
+  }
+  co_return response;
 }
 
 } // namespace gnp::services

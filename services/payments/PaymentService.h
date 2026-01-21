@@ -5,9 +5,10 @@
 #ifndef PAYMENTSERVICE_H
 #define PAYMENTSERVICE_H
 
-#include "dto/BaseApiResponse.h"
-#include "dto/CreatePaymentDto.h"
+#include "../../dto/BaseApiResponse.h"
+#include "../../dto/CreatePaymentDto.h"
 #include <drogon/drogon.h>
+#include <drogon/utils/coroutine.h>
 #include <functional>
 #include <string>
 
@@ -30,6 +31,10 @@ public:
   void updateStatus(
       const std::string &status, const std::string &paymentId,
       const std::function<void(const dto::BaseApiResponse &)> &callback);
+
+  drogon::Task<dto::BaseApiResponse>
+  updateStatusAsync(const std::string &status,
+                    const std::string &paymentReference);
 };
 
 } // namespace services

@@ -73,9 +73,7 @@ Task<HttpResponsePtr> SubscriptionsController::manageGuestOneTimeBuy(const HttpR
   co_return resp;
 }
 
-void SubscriptionsController::fulfillGuestOneTimeBuy(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
+Task<HttpResponsePtr> SubscriptionsController::fulfillGuestOneTimeBuy(const HttpRequestPtr req) {
 
   auto reference = req->getParameter("reference");
 
@@ -85,20 +83,17 @@ void SubscriptionsController::fulfillGuestOneTimeBuy(
     response.error["message"] = "Reference is required";
     auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
     resp->setStatusCode(k400BadRequest);
-    callback(resp);
-    return;
+    co_return resp;
   }
 
   // Get tenant service from plugin
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &subscriptionService = plugin->getSubscriptionService();
 
-  subscriptionService.completeGuestOneTimeBuy(
-      reference, [callback](const gnp::dto::BaseApiResponse &result) {
-        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  auto result = co_await subscriptionService.completeGuestOneTimeBuyAsync(reference);
 
-        callback(resp);
-      });
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
 }
 
 void SubscriptionsController::validateNewsPaperEntitlement(
@@ -211,9 +206,7 @@ void SubscriptionsController::grantNewsPaperAccess(
       });
 }
 
-Task<HttpResponsePtr>
-SubscriptionsController::findNewsPaperByDateAndPublication(
-    const HttpRequestPtr req) {
+Task<HttpResponsePtr> SubscriptionsController::findNewsPaperByDateAndPublication(const HttpRequestPtr req) {
   auto publicationId = req->getParameter("publicationId");
   auto publicationDate = req->getParameter("publicationDate");
 
@@ -241,9 +234,7 @@ SubscriptionsController::findNewsPaperByDateAndPublication(
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &subscriptionService = plugin->getSubscriptionService();
 
-  auto result =
-      co_await subscriptionService.readNewsPaperByDateAndPublicationAsync(
-          publicationId, publicationDate, authToken);
+  auto result = co_await subscriptionService.readNewsPaperByDateAndPublicationAsync(publicationId, publicationDate, authToken);
 
   auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
   co_return resp;

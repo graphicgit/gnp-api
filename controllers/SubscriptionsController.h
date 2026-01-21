@@ -21,10 +21,8 @@ public:
                 PREFIX + "/guest", Post, Options);
   ADD_METHOD_TO(SubscriptionsController::manageGuestOneTimeBuy,
                 PREFIX + "/guest-onetime", Post, Options);
-  ADD_METHOD_TO(SubscriptionsController::fulfillGuestOneTimeBuy,
-                PREFIX + "/fulfill-guest-onetime", Get, Options);
-  ADD_METHOD_TO(SubscriptionsController::validateNewsPaperEntitlement,
-                PREFIX + "/validate-newspaper-entitlement", Get, Options);
+  ADD_METHOD_TO(SubscriptionsController::fulfillGuestOneTimeBuy, PREFIX + "/fulfill-guest-onetime", Get, Options);
+  ADD_METHOD_TO(SubscriptionsController::validateNewsPaperEntitlement, PREFIX + "/validate-newspaper-entitlement", Get, Options);
   ADD_METHOD_TO(SubscriptionsController::grantNewsPaperAccess,
                 PREFIX + "/grant-newspaper-access", Post, Options);
   ADD_METHOD_TO(SubscriptionsController::getNewsPaperRedactedDetailsViaUniqueId,
@@ -49,9 +47,8 @@ public:
 
     Task<HttpResponsePtr> manageGuestOneTimeBuy(const HttpRequestPtr req);
 
-  void fulfillGuestOneTimeBuy(
-      const HttpRequestPtr &req,
-      std::function<void(const HttpResponsePtr &)> &&callback);
+    Task<HttpResponsePtr> fulfillGuestOneTimeBuy(const HttpRequestPtr req);
+
   void manageUserSubscription(
       const HttpRequestPtr &req,
       std::function<void(const HttpResponsePtr &)> &&callback);
