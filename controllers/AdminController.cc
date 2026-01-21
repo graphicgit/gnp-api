@@ -434,6 +434,7 @@ void AdminController::getAllCampaigns(
 }
 
 drogon::Task<HttpResponsePtr> AdminController::createCampaign(HttpRequestPtr req) {
+
   auto jsonPtr = req->getJsonObject();
   if (!jsonPtr) {
     auto resp = HttpResponse::newHttpResponse();

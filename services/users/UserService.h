@@ -44,7 +44,7 @@ public:
       const std::string &userId,
       const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
-  drogon::Task<gnp::dto::BaseApiResponse> registerProspectiveUser(const std::string &email, const std::string &phoneNo);
+  drogon::Task<gnp::dto::BaseApiResponse> registerProspectiveUser(const dto::CreateUserDto &userDto);
 
   void unlockUserAccount(
       const std::string &userId,
