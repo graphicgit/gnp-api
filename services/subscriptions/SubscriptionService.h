@@ -50,10 +50,6 @@ public:
       const std::string &uniqueId, const std::string &authToken,
       const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
-  void readNewsPaperByDateAndPublication(
-      const std::string &publicationId, const std::string &publicationDate,
-      const std::string &authToken,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
   drogon::Task<gnp::dto::BaseApiResponse> readNewsPaperByDateAndPublicationAsync(const std::string &publicationId, const std::string &publicationDate, const std::string &authToken);
 };
