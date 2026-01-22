@@ -7,8 +7,7 @@
 
 // news papers
 
-drogon::Task<HttpResponsePtr>
-AdminController::getAllNewsPapers(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::getAllNewsPapers(const HttpRequestPtr req) {
   int pageSize = 10; // Default page size
   int pageNo = 1;    //  Default page number
 
@@ -53,7 +52,7 @@ AdminController::getAllNewsPapers(const HttpRequestPtr req) {
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
-  auto result = co_await newsPaperService.getAllAsync(
+  auto result = co_await newsPaperService.listAllAsync(
       pageNo, pageSize, publicationId, startDate, endDate, query);
 
   auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
