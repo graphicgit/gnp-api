@@ -1,6 +1,7 @@
 #pragma once
 
 #include <drogon/HttpController.h>
+#include <drogon/utils/coroutine.h>
 
 namespace {
 const std::string PREFIX = "/api/v1/admin";
@@ -49,8 +50,7 @@ public:
   // subscription plans
   ADD_METHOD_TO(AdminController::getAllSubscriptionPlans,
                 PREFIX + "/get-all-subscription-plans", Get, Options);
-  ADD_METHOD_TO(AdminController::getSubscriptionPlanDetails,
-                PREFIX + "/get-subscription-plan-details", Get, Options);
+
   ADD_METHOD_TO(AdminController::createSubscriptionPlan,
                 PREFIX + "/create-subscription-plan", Post, Options);
   ADD_METHOD_TO(AdminController::updateSubscriptionPlan,
@@ -99,7 +99,8 @@ public:
                 PREFIX + "/update-partner-status", Get, Options);
   ADD_METHOD_TO(AdminController::deletePartner, PREFIX + "/delete-partner",
                 Delete, Options);
-  ADD_METHOD_TO(AdminController::deletePartnerSubscriber, PREFIX + "/delete-partner-subscriber", Delete, Options);
+  ADD_METHOD_TO(AdminController::deletePartnerSubscriber,
+                PREFIX + "/delete-partner-subscriber", Delete, Options);
 
   ADD_METHOD_TO(AdminController::enablePartnerSubaccount,
                 PREFIX + "/enable-partner-subaccount", Get, Options);
@@ -163,21 +164,12 @@ public:
                   std::function<void(const HttpResponsePtr &)> &&callback);
 
   // subscription plans...
-  void getAllSubscriptionPlans(
-      const HttpRequestPtr &req,
-      std::function<void(const HttpResponsePtr &)> &&callback);
-  void getSubscriptionPlanDetails(
-      const HttpRequestPtr &req,
-      std::function<void(const HttpResponsePtr &)> &&callback);
-  void createSubscriptionPlan(
-      const HttpRequestPtr &req,
-      std::function<void(const HttpResponsePtr &)> &&callback);
-  void updateSubscriptionPlan(
-      const HttpRequestPtr &req,
-      std::function<void(const HttpResponsePtr &)> &&callback);
-  void deleteSubscriptionPlan(
-      const HttpRequestPtr &req,
-      std::function<void(const HttpResponsePtr &)> &&callback);
+
+
+  drogon::Task<HttpResponsePtr> getAllSubscriptionPlans(HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> createSubscriptionPlan(HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> updateSubscriptionPlan(HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> deleteSubscriptionPlan(HttpRequestPtr req);
 
   // user subscription...
   void getAllUserSubscriptions(
@@ -226,7 +218,8 @@ public:
   void
   updatePartnerStatus(const HttpRequestPtr &req,
                       std::function<void(const HttpResponsePtr &)> &&callback);
-  void deletePartner(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+  void deletePartner(const HttpRequestPtr &req,
+                     std::function<void(const HttpResponsePtr &)> &&callback);
   drogon::Task<HttpResponsePtr> deletePartnerSubscriber(HttpRequestPtr req);
 
   void enablePartnerSubaccount(

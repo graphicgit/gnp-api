@@ -4,38 +4,29 @@
 
 #ifndef SUBSCRIPTIONPLANMANAGER_H
 #define SUBSCRIPTIONPLANMANAGER_H
-#include <drogon/drogon.h>
 #include "dto/BaseApiResponse.h"
 #include "dto/CreateSubscriptionPlanDto.h"
 #include "dto/UpdateSubscriptionPlanDto.h"
+#include <drogon/drogon.h>
+#include <drogon/utils/coroutine.h>
 
 namespace gnp::services {
 
-    class SubscriptionPlanService {
+class SubscriptionPlanService {
 
-    public:
+public:
+  drogon::Task<gnp::dto::BaseApiResponse>
+  getAllPlansAsync(int pageNo, int pageSize, const std::string &query);
 
-        void getAll(
-           int pageNo,
-           int pageSize,
-           const std::string& query,
-           const std::function<void(const dto::BaseApiResponse&)>& callback
-       );
+  drogon::Task<gnp::dto::BaseApiResponse>
+  createPlanAsync(const gnp::dto::CreateSubscriptionPlanDto &userData);
 
-        void createPlan(const dto::CreateSubscriptionPlanDto& userData,
-                    const std::function<void(const dto::BaseApiResponse&)>& callback);
+  drogon::Task<gnp::dto::BaseApiResponse>
+  updatePlanAsync(const gnp::dto::UpdateSubscriptionPlanDto &userData);
 
-        void updatePlan(const dto::UpdateSubscriptionPlanDto& userData,
-                    const std::function<void(const dto::BaseApiResponse&)>& callback);
+  drogon::Task<gnp::dto::BaseApiResponse>
+  deletePlanAsync(const std::string &planId);
+};
 
-        void deletePlan(
-            const std::string& planId,
-            const std::function<void(const dto::BaseApiResponse&)>& callback
-        );
-
-    };
-
-
-
-}
-#endif //SUBSCRIPTIONPLANMANAGER_H
+} // namespace gnp::services
+#endif // SUBSCRIPTIONPLANMANAGER_H

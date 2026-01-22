@@ -3,13 +3,14 @@
 #ifndef SUBSCRIPTIONSERVICE_H
 #define SUBSCRIPTIONSERVICE_H
 
-#include "dto/BaseApiResponse.h"
+#include "../../dto/BaseApiResponse.h"
 #include <drogon/drogon.h>
+#include <drogon/utils/coroutine.h>
 #include <string>
 
-#include "dto/GrantNewsPaperAccessDto.h"
-#include "dto/GuestOnetimeBuyDto.h"
-#include "dto/GuestSubscriptionDto.h"
+#include "../../dto/GrantNewsPaperAccessDto.h"
+#include "../../dto/GuestOnetimeBuyDto.h"
+#include "../../dto/GuestSubscriptionDto.h"
 
 namespace gnp::services {
 
@@ -34,9 +35,7 @@ public:
 
   drogon::Task<gnp::dto::BaseApiResponse> manageGuestOneTimeBuyAsync(const dto::GuestOnetimeBuyDto &dto);
 
-  void completeGuestOneTimeBuy(
-      const std::string &reference,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse> completeGuestOneTimeBuyAsync(const std::string &reference);
 
   void validateNewsPaperEntitlement(
       const std::string &newsPaperId, const std::string &authToken,
@@ -50,8 +49,9 @@ public:
       const std::string &uniqueId, const std::string &authToken,
       const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
-
-  drogon::Task<gnp::dto::BaseApiResponse> readNewsPaperByDateAndPublicationAsync(const std::string &publicationId, const std::string &publicationDate, const std::string &authToken);
+  drogon::Task<gnp::dto::BaseApiResponse> readNewsPaperByDateAndPublicationAsync(const std::string &publicationId,
+                                         const std::string &publicationDate,
+                                         const std::string &authToken);
 };
 
 } // namespace gnp::services
