@@ -37,11 +37,10 @@ public:
       const std::string &publicationId, const std::string &date,
       const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
-  void listAll(
-      int pageNo, int pageSize, const std::string &publicationId,
-      const std::string &startDate, const std::string &endDate,
-      const std::string &query,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse>
+  listAllAsync(int pageNo, int pageSize, const std::string &publicationId,
+               const std::string &startDate, const std::string &endDate,
+               const std::string &query);
 
   void
   ingest(const dto::IngestNewsPaperDto &dto,

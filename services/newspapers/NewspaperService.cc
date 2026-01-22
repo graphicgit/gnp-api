@@ -375,13 +375,12 @@ void NewspaperService::getFullDetailsByPublication(
 }
 
 // for admin use only
-void NewspaperService::listAll(
+drogon::Task<dto::BaseApiResponse> NewspaperService::listAllAsync(
     int pageNo, int pageSize, const std::string &publicationId,
     const std::string &startDate, const std::string &endDate,
-    const std::string &query,
-    const std::function<void(const dto::BaseApiResponse &)> &callback) {
+    const std::string &query) {
   auto dbClient = drogon::app().getDbClient();
-  auto mp = std::make_shared<Mapper<drogon_model::Gnp::Newspapers>>(dbClient);
+  CoroMapper<Newspapers> mp(dbClient);
 
   // 1. Build the search criteria
   Criteria searchCriteria;
@@ -418,83 +417,71 @@ void NewspaperService::listAll(
                                    CompareOperator::LE, endDate);
   }
 
-  // 2. Asynchronously get the total count matching the criteria ...
-  mp->count(
-      searchCriteria,
-      [=](const size_t totalCount) {
-        if (totalCount == 0) {
-          dto::BaseApiResponse response;
-          response.success = true;
-          response.result["data"] = Json::arrayValue;
-          response.result["totalCount"] = 0;
-          callback(response);
-          return;
-        }
+  try {
+    size_t totalCount = co_await mp.count(searchCriteria);
 
-        // 3. Asynchronously find the paginated data
-        int offset = (pageNo - 1) * pageSize;
-        mp->limit(pageSize).offset(offset).findBy(
-            searchCriteria,
-            [=](const std::vector<Newspapers> &publications) {
-              // 4. Build the final response inside the callback
-              dto::BaseApiResponse response;
-              response.success = true;
-              response.result["totalCount"] = (Json::UInt64)totalCount;
-              response.result["pageNo"] = pageNo;
-              response.result["pageSize"] = pageSize;
-              response.result["totalPages"] =
-                  (int)((totalCount + pageSize - 1) / pageSize);
+    if (totalCount == 0) {
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.result["data"] = Json::arrayValue;
+      response.result["totalCount"] = 0;
+      co_return response;
+    }
 
-              Json::Value data = Json::arrayValue;
-              for (const auto &role : publications) {
-                Json::Value roleJson = role.toJson();
+    int offset = (pageNo - 1) * pageSize;
+    auto publications =
+        co_await mp.limit(pageSize)
+            .offset(offset)
+            .orderBy(Newspapers::Cols::_publication_date, SortOrder::DESC)
+            .findBy(searchCriteria);
 
-                // Convert snake_case to camelCase
-                Json::Value camelCaseRole;
-                camelCaseRole["id"] = roleJson["id"];
-                camelCaseRole["title"] = roleJson["title"];
-                camelCaseRole["slug"] = roleJson["slug"];
-                camelCaseRole["price"] = roleJson["price"];
-                camelCaseRole["editionNumber"] = roleJson["edition_number"];
-                camelCaseRole["views"] = roleJson["views"];
-                camelCaseRole["sales"] = roleJson["sales"];
-                camelCaseRole["fullDescription"] = roleJson["full_description"];
-                camelCaseRole["thumbnailId"] = roleJson["thumbnail_id"];
-                camelCaseRole["documentId"] = roleJson["document_id"];
-                camelCaseRole["isPublished"] = roleJson["is_published"];
-                camelCaseRole["publicationId"] = roleJson["publication_id"];
-                camelCaseRole["publicationName"] = roleJson["publication_name"];
-                camelCaseRole["publicationDate"] = roleJson["publication_date"];
-                camelCaseRole["isFree"] = roleJson["is_free"];
-                camelCaseRole["createdAt"] = roleJson["created_at"];
-                camelCaseRole["updatedAt"] = roleJson["updated_at"];
+    dto::BaseApiResponse response;
+    response.success = true;
+    response.result["totalCount"] = (Json::UInt64)totalCount;
+    response.result["pageNo"] = pageNo;
+    response.result["pageSize"] = pageSize;
+    response.result["totalPages"] =
+        (int)((totalCount + pageSize - 1) / pageSize);
 
-                data.append(camelCaseRole);
-              }
+    Json::Value data = Json::arrayValue;
+    for (const auto &role : publications) {
+      Json::Value roleJson = role.toJson();
 
-              response.result["data"] = data;
-              callback(response);
-            },
-            [callback](const DrogonDbException &e) {
-              // Handle find error
-              dto::BaseApiResponse errorResponse;
-              errorResponse.success = false;
-              errorResponse.error["message"] =
-                  "Database error while fetching newspapers.";
-              errorResponse.error["detail"] = e.base().what();
-              callback(errorResponse);
-            });
-      },
-      [callback](const DrogonDbException &e) {
-        // Handle count error
-        dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.error["code"] = constants::ERR_DB_QUERY;
-        errorResponse.error["message"] =
-            "Database error while fetching newspapers.";
-        errorResponse.error["detail"] = e.base().what();
-        callback(errorResponse);
-      });
+      // Convert snake_case to camelCase
+      Json::Value camelCaseRole;
+      camelCaseRole["id"] = roleJson["id"];
+      camelCaseRole["title"] = roleJson["title"];
+      camelCaseRole["slug"] = roleJson["slug"];
+      camelCaseRole["price"] = roleJson["price"];
+      camelCaseRole["editionNumber"] = roleJson["edition_number"];
+      camelCaseRole["views"] = roleJson["views"];
+      camelCaseRole["sales"] = roleJson["sales"];
+      camelCaseRole["fullDescription"] = roleJson["full_description"];
+      camelCaseRole["thumbnailId"] = roleJson["thumbnail_id"];
+      camelCaseRole["documentId"] = roleJson["document_id"];
+      camelCaseRole["isPublished"] = roleJson["is_published"];
+      camelCaseRole["publicationId"] = roleJson["publication_id"];
+      camelCaseRole["publicationName"] = roleJson["publication_name"];
+      camelCaseRole["publicationDate"] = roleJson["publication_date"];
+      camelCaseRole["isFree"] = roleJson["is_free"];
+      camelCaseRole["createdAt"] = roleJson["created_at"];
+      camelCaseRole["updatedAt"] = roleJson["updated_at"];
+
+      data.append(camelCaseRole);
+    }
+
+    response.result["data"] = data;
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["message"] =
+        "Database error while fetching newspapers.";
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
 }
 
 void NewspaperService::ingest(
