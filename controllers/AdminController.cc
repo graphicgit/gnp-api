@@ -7,10 +7,8 @@
 
 // news papers
 
-void AdminController::getAllNewsPapers(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
-
+drogon::Task<HttpResponsePtr>
+AdminController::getAllNewsPapers(const HttpRequestPtr req) {
   int pageSize = 10; // Default page size
   int pageNo = 1;    //  Default page number
 
@@ -55,12 +53,11 @@ void AdminController::getAllNewsPapers(
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
-  newsPaperService.listAll(
-      pageNo, pageSize, publicationId, startDate, endDate, query,
-      [callback](const gnp::dto::BaseApiResponse &result) {
-        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-        callback(resp);
-      });
+  auto result = co_await newsPaperService.getAllAsync(
+      pageNo, pageSize, publicationId, startDate, endDate, query);
+
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
 }
 
 void AdminController::getNewsPaperFullDetails(
@@ -260,7 +257,8 @@ void AdminController::deleteUser(
 }
 
 // subscription plans
-drogon::Task<HttpResponsePtr> AdminController::getAllSubscriptionPlans(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr>
+AdminController::getAllSubscriptionPlans(const HttpRequestPtr req) {
 
   int pageSize = 10; // Default page size
   int pageNo = 1;    //  Default page number
@@ -291,14 +289,14 @@ drogon::Task<HttpResponsePtr> AdminController::getAllSubscriptionPlans(const Htt
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &subscriptionPlanService = plugin->getSubscriptionPlanService();
 
-  auto result = co_await subscriptionPlanService.getAllPlansAsync(pageNo, pageSize, query);
+  auto result = co_await subscriptionPlanService.getAllPlansAsync(
+      pageNo, pageSize, query);
   auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
   co_return resp;
-
 }
 
-
-drogon::Task<HttpResponsePtr> AdminController::createSubscriptionPlan(HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr>
+AdminController::createSubscriptionPlan(HttpRequestPtr req) {
 
   auto jsonBody = req->getJsonObject();
 

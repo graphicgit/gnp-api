@@ -41,7 +41,8 @@ SubscriptionPlanService::getAllPlansAsync(int pageNo, int pageSize,
     }
 
     int offset = (pageNo - 1) * pageSize;
-    auto subscriptionPlans =  co_await mp.limit(pageSize)
+    auto subscriptionPlans =
+        co_await mp.limit(pageSize)
             .offset(offset)
             .orderBy(SubscriptionPlans::Cols::_created_at, SortOrder::DESC)
             .findBy(searchCriteria);
@@ -54,7 +55,8 @@ SubscriptionPlanService::getAllPlansAsync(int pageNo, int pageSize,
     response.result["pageNo"] = pageNo;
     response.result["pageSize"] = pageSize;
     response.result["lowerBound"] = pageSize * (pageNo - 1) + 1;
-    response.result["upperBound"] = Json::Value( (int)totalPages == pageNo ? (Json::UInt64)totalCount
+    response.result["upperBound"] = Json::Value(
+        (int)totalPages == pageNo ? (Json::UInt64)totalCount
                                   : (Json::UInt64)(pageNo * pageSize));
     response.result["totalPages"] = (int)totalPages;
 
@@ -72,7 +74,7 @@ SubscriptionPlanService::getAllPlansAsync(int pageNo, int pageSize,
       camelCaseRole["createdAt"] = roleJson["created_at"];
       camelCaseRole["updatedAt"] = roleJson["updated_at"];
 
-      // Parse permissions from string to JSON object
+      // Parse pricing from string to JSON object
       std::string pricingStr = subscriptionPlan.getValueOfPricing();
       Json::Value pricingJson;
       Json::Reader reader;
@@ -81,6 +83,17 @@ SubscriptionPlanService::getAllPlansAsync(int pageNo, int pageSize,
         camelCaseRole["pricing"] = pricingJson;
       } else {
         camelCaseRole["pricing"] = Json::objectValue;
+      }
+
+      // Include targetPublications
+      std::string targetPublicationsStr =
+          subscriptionPlan.getValueOfTargetPublications();
+      Json::Value targetPublicationsJson;
+      if (!targetPublicationsStr.empty() &&
+          reader.parse(targetPublicationsStr, targetPublicationsJson)) {
+        camelCaseRole["targetPublications"] = targetPublicationsJson;
+      } else {
+        camelCaseRole["targetPublications"] = Json::arrayValue;
       }
 
       data.append(camelCaseRole);

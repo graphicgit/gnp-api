@@ -14,13 +14,12 @@ using drogon_model::Gnp::Newspapers;
 namespace gnp::services {
 
 // reduced information
-void NewspaperService::getAll(
+drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::getAllAsync(
     int pageNo, int pageSize, const std::string &publicationId,
     const std::string &startDate, const std::string &endDate,
-    const std::string &query,
-    const std::function<void(const dto::BaseApiResponse &)> &callback) {
+    const std::string &query) {
   auto dbClient = drogon::app().getDbClient();
-  auto mp = std::make_shared<Mapper<drogon_model::Gnp::Newspapers>>(dbClient);
+  CoroMapper<Newspapers> mp(dbClient);
 
   // 1. Build the search criteria
   Criteria searchCriteria =
@@ -30,9 +29,10 @@ void NewspaperService::getAll(
   if (!query.empty()) {
     std::string likeQuery = "%" + query + "%";
     searchCriteria =
-        Criteria(Newspapers::Cols::_title, CompareOperator::Like, likeQuery) ||
-        Criteria(Newspapers::Cols::_full_description, CompareOperator::Like,
-                 likeQuery);
+        searchCriteria &&
+        (Criteria(Newspapers::Cols::_title, CompareOperator::Like, likeQuery) ||
+         Criteria(Newspapers::Cols::_full_description, CompareOperator::Like,
+                  likeQuery));
   }
 
   // filter by publicationId
@@ -56,100 +56,81 @@ void NewspaperService::getAll(
                                    CompareOperator::LE, endDate);
   }
 
-  // 2. Asynchronously get the total count matching the criteria ...
-  mp->count(
-      searchCriteria,
-      [=](const size_t totalCount) {
-        if (totalCount == 0) {
-          dto::BaseApiResponse response;
-          response.success = true;
-          response.result["data"] = Json::arrayValue;
-          response.result["totalCount"] = 0;
-          callback(response);
-          return;
-        }
+  try {
+    size_t totalCount = co_await mp.count(searchCriteria);
 
-        // 3. Asynchronously find the paginated data
-        int offset = (pageNo - 1) * pageSize;
-        mp->limit(pageSize).offset(offset).findBy(
-            searchCriteria,
-            [=](const std::vector<Newspapers> &publications) {
-              // 4. Build the final response inside the callback
-              dto::BaseApiResponse response;
+    if (totalCount == 0) {
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.result["data"] = Json::arrayValue;
+      response.result["totalCount"] = 0;
+      co_return response;
+    }
 
-              auto totalPages = (totalCount + pageSize - 1) / pageSize;
+    int offset = (pageNo - 1) * pageSize;
+    auto publications =
+        co_await mp.limit(pageSize)
+            .offset(offset)
+            .orderBy(Newspapers::Cols::_publication_date, SortOrder::DESC)
+            .findBy(searchCriteria);
 
-              response.success = true;
-              response.result["totalCount"] = (Json::UInt64)totalCount;
-              response.result["pageNo"] = pageNo;
-              response.result["pageSize"] = pageSize;
-              response.result["lowerBound"] = pageSize * (pageNo - 1) + 1;
-              response.result["upperBound"] =
-                  Json::Value((int)totalPages == pageNo
-                                  ? (Json::UInt64)totalCount
+    dto::BaseApiResponse response;
+    auto totalPages = (totalCount + pageSize - 1) / pageSize;
+
+    response.success = true;
+    response.result["totalCount"] = (Json::UInt64)totalCount;
+    response.result["pageNo"] = pageNo;
+    response.result["pageSize"] = pageSize;
+    response.result["lowerBound"] = pageSize * (pageNo - 1) + 1;
+    response.result["upperBound"] = Json::Value(
+        (int)totalPages == pageNo ? (Json::UInt64)totalCount
                                   : (Json::UInt64)(pageNo * pageSize));
-              response.result["totalPages"] = (int)totalPages;
+    response.result["totalPages"] = (int)totalPages;
 
-              Json::Value data = Json::arrayValue;
-              for (const auto &newspaper : publications) {
-                Json::Value newsPaperJson = newspaper.toJson();
+    Json::Value data = Json::arrayValue;
+    for (const auto &newspaper : publications) {
+      Json::Value newsPaperJson = newspaper.toJson();
 
-                // Convert snake_case to camelCase
-                Json::Value camelCaseRole;
-                camelCaseRole["id"] = newsPaperJson["id"];
-                camelCaseRole["title"] = newsPaperJson["title"];
-                camelCaseRole["slug"] = newsPaperJson["slug"];
-                camelCaseRole["price"] = newsPaperJson["price"];
-                camelCaseRole["editionNumber"] =
-                    newsPaperJson["edition_number"];
-                camelCaseRole["shortDescription"] =
-                    newsPaperJson["short_description"];
-                camelCaseRole["fullDescription"] =
-                    newsPaperJson["full_description"];
-                camelCaseRole["thumbnailId"] = newsPaperJson["thumbnail_id"];
-                camelCaseRole["fileType"] = newsPaperJson["file_type"];
-                camelCaseRole["isFree"] = newsPaperJson["is_free"];
-                camelCaseRole["publicationDate"] =
-                    newsPaperJson["publication_date"];
+      // Convert snake_case to camelCase
+      Json::Value camelCaseRole;
+      camelCaseRole["id"] = newsPaperJson["id"];
+      camelCaseRole["title"] = newsPaperJson["title"];
+      camelCaseRole["slug"] = newsPaperJson["slug"];
+      camelCaseRole["price"] = newsPaperJson["price"];
+      camelCaseRole["editionNumber"] = newsPaperJson["edition_number"];
+      camelCaseRole["shortDescription"] = newsPaperJson["short_description"];
+      camelCaseRole["fullDescription"] = newsPaperJson["full_description"];
+      camelCaseRole["thumbnailId"] = newsPaperJson["thumbnail_id"];
+      camelCaseRole["fileType"] = newsPaperJson["file_type"];
+      camelCaseRole["isFree"] = newsPaperJson["is_free"];
+      camelCaseRole["publicationDate"] = newsPaperJson["publication_date"];
 
-                std::string featuredStoriesStr =
-                    newspaper.getValueOfFeaturedStories();
-                Json::Value featuredStoriesJson;
-                Json::Reader reader;
+      std::string featuredStoriesStr = newspaper.getValueOfFeaturedStories();
+      Json::Value featuredStoriesJson;
+      Json::Reader reader;
 
-                if (!featuredStoriesStr.empty() &&
-                    reader.parse(featuredStoriesStr, featuredStoriesJson)) {
-                  camelCaseRole["featuredStories"] = featuredStoriesJson;
-                } else {
-                  camelCaseRole["featuredStories"] = Json::arrayValue;
-                }
+      if (!featuredStoriesStr.empty() &&
+          reader.parse(featuredStoriesStr, featuredStoriesJson)) {
+        camelCaseRole["featuredStories"] = featuredStoriesJson;
+      } else {
+        camelCaseRole["featuredStories"] = Json::arrayValue;
+      }
 
-                data.append(camelCaseRole);
-              }
+      data.append(camelCaseRole);
+    }
 
-              response.result["data"] = data;
-              callback(response);
-            },
-            [callback](const DrogonDbException &e) {
-              // Handle find error
-              dto::BaseApiResponse errorResponse;
-              errorResponse.success = false;
-              errorResponse.error["message"] =
-                  "Database error while fetching newspapers.";
-              errorResponse.error["detail"] = e.base().what();
-              callback(errorResponse);
-            });
-      },
-      [callback](const DrogonDbException &e) {
-        // Handle count error
-        dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.error["code"] = constants::ERR_DB_QUERY;
-        errorResponse.error["message"] =
-            "Database error while fetching newspapers.";
-        errorResponse.error["detail"] = e.base().what();
-        callback(errorResponse);
-      });
+    response.result["data"] = data;
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["message"] =
+        "Database error while fetching newspapers.";
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
 }
 
 void NewspaperService::getReductedDetails(
@@ -677,17 +658,20 @@ void NewspaperService::unPublish(
 
 void NewspaperService::deleteNewspaper(
     const std::string &id,
-    const std::function<void(const dto::BaseApiResponse &)> &callback)  {
+    const std::function<void(const dto::BaseApiResponse &)> &callback) {
 
   auto dbClient = drogon::app().getDbClient();
 
   Mapper<drogon_model::Gnp::Newspapers> mp(dbClient);
 
   // Create criteria to find the user with specified ID in the tenant
-  Criteria criteria = Criteria(drogon_model::Gnp::Newspapers::Cols::_id, CompareOperator::EQ, id);
+  Criteria criteria = Criteria(drogon_model::Gnp::Newspapers::Cols::_id,
+                               CompareOperator::EQ, id);
 
   // First verify the user exists
-  mp.findOne(criteria, [=](const drogon_model::Gnp::Newspapers &newspaper) {
+  mp.findOne(
+      criteria,
+      [=](const drogon_model::Gnp::Newspapers &newspaper) {
         // User found, proceed with deletion
         Mapper<drogon_model::Gnp::Newspapers> deleteMp(dbClient);
         deleteMp.deleteBy(

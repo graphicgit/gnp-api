@@ -123,9 +123,7 @@ public:
   METHOD_LIST_END
 
   // Newspapers
-  void
-  getAllNewsPapers(const HttpRequestPtr &req,
-                   std::function<void(const HttpResponsePtr &)> &&callback);
+  drogon::Task<HttpResponsePtr> getAllNewsPapers(const HttpRequestPtr req);
   void getNewsPaperFullDetails(
       const HttpRequestPtr &req,
       std::function<void(const HttpResponsePtr &)> &&callback);
@@ -164,7 +162,6 @@ public:
                   std::function<void(const HttpResponsePtr &)> &&callback);
 
   // subscription plans...
-
 
   drogon::Task<HttpResponsePtr> getAllSubscriptionPlans(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> createSubscriptionPlan(HttpRequestPtr req);
