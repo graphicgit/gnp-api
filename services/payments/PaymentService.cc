@@ -114,47 +114,9 @@ void PaymentService::getAll(
       });
 }
 
-void PaymentService::createPayment(
-    const dto::CreatePaymentDto &dto,
-    const std::function<void(const dto::BaseApiResponse &)> &callback) {
 
-  auto dbClient = drogon::app().getDbClient();
-  Mapper<Payments> mp(dbClient);
+drogon::Task<dto::BaseApiResponse> PaymentService::createPaymentAsync(const dto::CreatePaymentDto &dto) {
 
-  Payments newPayment;
-  newPayment.setUserId(dto.getUserId());
-  newPayment.setUserName(dto.getUserName());
-  newPayment.setUserEmail(dto.getUserEmail());
-  newPayment.setPackageName(dto.getPackageName());
-
-  newPayment.setAmountPaid(dto.getAmountPaid());
-  newPayment.setReceiptNo(dto.getReceiptNo());
-  newPayment.setTransactionReference(dto.getTransactionReference());
-  newPayment.setStatus(dto.getStatus());
-  newPayment.setCreatedAt(trantor::Date::now());
-
-  mp.insert(
-      newPayment,
-      [callback](const Payments &payment) {
-        // 5. Prepare success response
-        dto::BaseApiResponse successResponse;
-        successResponse.success = true;
-        successResponse.message = "Payment created successfully";
-        successResponse.result["id"] = payment.getValueOfId();
-
-        callback(successResponse);
-      },
-      [callback](const drogon::orm::DrogonDbException &e) {
-        dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.message = "Database error while creating Payment";
-        errorResponse.error["code"] = constants::ERR_DB_QUERY;
-        callback(errorResponse);
-      });
-}
-
-drogon::Task<dto::BaseApiResponse>
-PaymentService::createPaymentAsync(const dto::CreatePaymentDto &dto) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Payments> mp(dbClient);
 
@@ -183,67 +145,17 @@ PaymentService::createPaymentAsync(const dto::CreatePaymentDto &dto) {
   co_return response;
 }
 
-void PaymentService::updateStatus(
-    const std::string &status, const std::string &paymentId,
-    const std::function<void(const dto::BaseApiResponse &)> &callback) {
 
-  auto dbClient = drogon::app().getDbClient();
-  Mapper<Payments> mp(dbClient);
 
-  // Find the payment entry by ID
-  mp.findOne(
-      Criteria(Payments::Cols::_id, CompareOperator::EQ, paymentId),
-      [=](Payments payment) {
-        // Update the status and updatedAt timestamp
-        payment.setStatus(status);
-        payment.setUpdatedAt(trantor::Date::now());
+drogon::Task<dto::BaseApiResponse> PaymentService::updateStatusAsync(const std::string &status, const std::string &paymentId) {
 
-        // Save the changes to the database
-        Mapper<Payments> updateMp(dbClient);
-        updateMp.update(
-            payment,
-            [callback](const size_t count) {
-              dto::BaseApiResponse response;
-              if (count > 0) {
-                response.success = true;
-                response.message = "Payment status updated successfully";
-              } else {
-                response.success = false;
-                response.message = "No payment updated";
-              }
-              callback(response);
-            },
-            [callback](const drogon::orm::DrogonDbException &e) {
-              dto::BaseApiResponse errorResponse;
-              errorResponse.success = false;
-              errorResponse.message =
-                  "Database error while updating payment status";
-              errorResponse.error["code"] = constants::ERR_DB_QUERY;
-              errorResponse.error["detail"] = e.base().what();
-              callback(errorResponse);
-            });
-      },
-      [callback](const drogon::orm::DrogonDbException &e) {
-        dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.message = "Payment not found";
-        errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
-        errorResponse.error["detail"] = e.base().what();
-        callback(errorResponse);
-      });
-}
-
-drogon::Task<dto::BaseApiResponse>
-PaymentService::updateStatusAsync(const std::string &status,
-                                  const std::string &paymentReference) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Payments> mp(dbClient);
   dto::BaseApiResponse response;
 
   try {
-    auto payment =
-        co_await mp.findOne(Criteria(Payments::Cols::_transaction_reference,
-                                     CompareOperator::EQ, paymentReference));
+
+    auto payment =  co_await mp.findOne(Criteria(Payments::Cols::_transaction_reference, CompareOperator::EQ, paymentId));
 
     payment.setStatus(status);
     payment.setUpdatedAt(trantor::Date::now());
@@ -259,4 +171,4 @@ PaymentService::updateStatusAsync(const std::string &status,
   co_return response;
 }
 
-} // namespace gnp::services
+}

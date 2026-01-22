@@ -88,14 +88,18 @@ void SubscriptionService::manageGuestSubscription(
               initReq.setClientReference(clientReference);
               initReq.setCallBackUrl("https://gnp-api.com/paystack/callback");
 
-              paystackApi.initialize(initReq, [callback](const gnp::dto::InitializePaymentResponse &payResp) {
-
+              paystackApi.initialize(
+                  initReq,
+                  [callback](
+                      const gnp::dto::InitializePaymentResponse &payResp) {
                     dto::BaseApiResponse response;
 
                     if (!payResp.getStatus()) {
 
                       response.success = false;
-                      response.message = payResp.getMessage().empty() ? "Failed to initialize payment" : payResp.getMessage();
+                      response.message = payResp.getMessage().empty()
+                                             ? "Failed to initialize payment"
+                                             : payResp.getMessage();
                       callback(response);
                     }
 
@@ -127,7 +131,8 @@ void SubscriptionService::manageGuestSubscription(
       });
 }
 
-drogon::Task<gnp::dto::BaseApiResponse> SubscriptionService::manageGuestOneTimeBuyAsync(const dto::GuestOnetimeBuyDto &guestOnetimeBuyDto) {
+drogon::Task<gnp::dto::BaseApiResponse> SubscriptionService::manageGuestOneTimeBuyAsync(
+    const dto::GuestOnetimeBuyDto &guestOnetimeBuyDto) {
 
   auto dbClient = drogon::app().getDbClient();
   dto::BaseApiResponse response;
@@ -221,7 +226,9 @@ drogon::Task<gnp::dto::BaseApiResponse> SubscriptionService::manageGuestOneTimeB
     auto payResp = co_await paystackApi.initializeAsync(initReq);
     if (!payResp.getStatus()) {
       response.success = false;
-      response.message = payResp.getMessage().empty() ? "Failed to initialize payment" : payResp.getMessage();
+      response.message = payResp.getMessage().empty()
+                             ? "Failed to initialize payment"
+                             : payResp.getMessage();
       co_return response;
     }
 
@@ -244,7 +251,8 @@ drogon::Task<gnp::dto::BaseApiResponse> SubscriptionService::manageGuestOneTimeB
   co_return response;
 }
 
-drogon::Task<gnp::dto::BaseApiResponse> SubscriptionService::completeGuestOneTimeBuyAsync(const std::string &reference) {
+drogon::Task<gnp::dto::BaseApiResponse> SubscriptionService::completeGuestOneTimeBuyAsync(
+    const std::string &reference) {
 
   auto dbClient = drogon::app().getDbClient();
   dto::BaseApiResponse response;
@@ -284,6 +292,29 @@ drogon::Task<gnp::dto::BaseApiResponse> SubscriptionService::completeGuestOneTim
       co_await purchaseAttemptMapper.update(purchaseAttempt);
 
       co_await paymentService->updateStatusAsync("Success", reference);
+
+      // Increment Newspaper Sales
+      try {
+        CoroMapper<drogon_model::Gnp::Newspapers> newspaperMapper(dbClient);
+        auto newspaper = co_await newspaperMapper.findByPrimaryKey(
+            purchaseAttempt.getValueOfNewspaperId());
+
+        std::string salesStr = newspaper.getValueOfSales();
+        long long sales = 0;
+        if (!salesStr.empty()) {
+          try {
+            sales = std::stoll(salesStr);
+          } catch (...) {
+            sales = 0;
+          }
+        }
+        sales++;
+        newspaper.setSales(std::to_string(sales));
+        co_await newspaperMapper.update(newspaper);
+      } catch (...) {
+        // Log error or handle failure to update sales (not critical to the
+        // purchase flow)
+      }
 
       response.success = true;
       response.message =
@@ -350,7 +381,8 @@ drogon::Task<gnp::dto::BaseApiResponse> SubscriptionService::completeGuestOneTim
             )";
 
       emailDto.setBody(emailBody);
-      emailService->sendEmail(emailDto,[](const gnp::dto::BaseApiResponse &) {});
+      emailService->sendEmail(emailDto,
+                              [](const gnp::dto::BaseApiResponse &) {});
 
       // 8. Generate JWT
       auto &app = drogon::app();
@@ -380,7 +412,8 @@ drogon::Task<gnp::dto::BaseApiResponse> SubscriptionService::completeGuestOneTim
 
       // 9. Update User Subscription Entitlements
       CoroMapper<UserSubscriptions> subMapper(dbClient);
-      Criteria subCriteria(UserSubscriptions::Cols::_user_id, CompareOperator::EQ, user.getValueOfId());
+      Criteria subCriteria(UserSubscriptions::Cols::_user_id,
+                           CompareOperator::EQ, user.getValueOfId());
       auto userSub = co_await subMapper.findOne(subCriteria);
 
       Json::Value entitlements;
@@ -416,13 +449,15 @@ drogon::Task<gnp::dto::BaseApiResponse> SubscriptionService::completeGuestOneTim
       if (!alreadyExists) {
         Json::Value newEnt;
         newEnt["id"] = newPaperId;
-        newEnt["uniqueId"] =  gnp::utils::IdGeneratorUtils::generateAlphanumericId();
+        newEnt["uniqueId"] =
+            gnp::utils::IdGeneratorUtils::generateAlphanumericId();
         entitlements.append(newEnt);
       }
 
       Json::StreamWriterBuilder writerBuilder;
       writerBuilder["indentation"] = "";
-      userSub.setNewspaperEntitlements(Json::writeString(writerBuilder, entitlements));
+      userSub.setNewspaperEntitlements(
+          Json::writeString(writerBuilder, entitlements));
       userSub.setIsActive(true);
       co_await subMapper.update(userSub);
 
@@ -435,7 +470,8 @@ drogon::Task<gnp::dto::BaseApiResponse> SubscriptionService::completeGuestOneTim
       co_await paymentService->updateStatusAsync("Failed", reference);
 
       response.success = false;
-      response.message = "Payment verification failed. Status: " + verifyData.status_;
+      response.message =
+          "Payment verification failed. Status: " + verifyData.status_;
     }
 
   } catch (const DrogonDbException &e) {
@@ -449,6 +485,8 @@ drogon::Task<gnp::dto::BaseApiResponse> SubscriptionService::completeGuestOneTim
 
   co_return response;
 }
+
+
 void SubscriptionService::validateNewsPaperEntitlement(
     const std::string &newsPaperId, const std::string &authToken,
     const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {

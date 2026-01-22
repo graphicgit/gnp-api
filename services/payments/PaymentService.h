@@ -12,32 +12,19 @@
 #include <functional>
 #include <string>
 
-namespace gnp {
-namespace services {
+namespace gnp::services {
 
 class PaymentService {
+
 public:
-  void
-  getAll(int pageNo, int pageSize, const std::string &query,
-         const std::function<void(const dto::BaseApiResponse &)> &callback);
+  void getAll(int pageNo, int pageSize, const std::string &query, const std::function<void(const dto::BaseApiResponse &)> &callback);
 
-  void createPayment(
-      const dto::CreatePaymentDto &dto,
-      const std::function<void(const dto::BaseApiResponse &)> &callback);
+  drogon::Task<dto::BaseApiResponse> createPaymentAsync(const dto::CreatePaymentDto &dto);
 
-  drogon::Task<dto::BaseApiResponse>
-  createPaymentAsync(const dto::CreatePaymentDto &dto);
+  drogon::Task<dto::BaseApiResponse> updateStatusAsync(const std::string &status, const std::string &paymentReference);
 
-  void updateStatus(
-      const std::string &status, const std::string &paymentId,
-      const std::function<void(const dto::BaseApiResponse &)> &callback);
-
-  drogon::Task<dto::BaseApiResponse>
-  updateStatusAsync(const std::string &status,
-                    const std::string &paymentReference);
 };
 
-} // namespace services
 } // namespace gnp
 
 #endif // PAYMENTSERVICE_H

@@ -4,84 +4,101 @@
 
 using namespace gnp;
 
-void SubscriptionPlansController::getAllPlans(const HttpRequestPtr& req, std::function<void (const HttpResponsePtr &)> &&callback)
-{
+drogon::Task<HttpResponsePtr> SubscriptionPlansController::getAllPlans(const HttpRequestPtr req) {
 
-    int pageSize = 10; // Default page size
-    int pageNo = 1;    //  Default page number
+  int pageNo = 1;
+  int pageSize = 10;
 
-    if (!req->getParameter("pageSize").empty()) {
-        try {
-            pageSize = std::stoi(req->getParameter("pageSize"));
-            pageSize = std::max(1, std::min(100, pageSize)); // Limit between 1-100
-        } catch (...) {
-            // Keep default if conversion fails
-        }
-    }
+  auto pageNoStr = req->getParameter("pageNo");
+  if (!pageNoStr.empty()) {
+    pageNo = std::stoi(pageNoStr);
+  }
 
-    if (!req->getParameter("pageNo").empty()) {
-        try {
-            pageNo = std::stoi(req->getParameter("pageNo"));
-            pageNo = std::max(1, pageNo); // Ensure page number is at least 1
-        } catch (...) {
-            // Keep default if conversion fails
-        }
-    }
+  auto pageSizeStr = req->getParameter("pageSize");
+  if (!pageSizeStr.empty()) {
+    pageSize = std::stoi(pageSizeStr);
+  }
 
-    std::string query = req->getParameter("query");
-    if (query.empty()) {
-        query = ""; // Default to empty string if not specified
-    }
+  std::string query = req->getParameter("query");
+  if (query.empty()) {
+    query = ""; // Default to empty string if not specified
+  }
 
-    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
-    auto& subscriptionPlanService = plugin->getSubscriptionPlanService();
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &subscriptionPlanService = plugin->getSubscriptionPlanService();
 
-    subscriptionPlanService.getAll(pageNo, pageSize, query, [callback](const gnp::dto::BaseApiResponse& result) {
-        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-        callback(resp);
-    });
-
-
+  auto result = co_await subscriptionPlanService.getAllPlansAsync(pageNo, pageSize, query);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
 }
 
-void SubscriptionPlansController::getDetails(const HttpRequestPtr& req, std::function<void (const HttpResponsePtr &)> &&callback)
-{
-    // write your application logic here
+
+drogon::Task<HttpResponsePtr>
+SubscriptionPlansController::create(const HttpRequestPtr req) {
+  auto jsonBody = req->getJsonObject();
+
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  gnp::dto::CreateSubscriptionPlanDto dto;
+
+  dto.fromJson(*jsonBody);
+
+  auto plugin = app().getPlugin<plugins::GnpServicePlugin>();
+  auto &subscriptionPlanService = plugin->getSubscriptionPlanService();
+
+  auto result = co_await subscriptionPlanService.createPlanAsync(dto);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
 }
 
-void SubscriptionPlansController::create(const HttpRequestPtr& req, std::function<void (const HttpResponsePtr &)> &&callback)
-{
-    auto jsonBody = req->getJsonObject();
+drogon::Task<HttpResponsePtr>
+SubscriptionPlansController::update(const HttpRequestPtr req) {
+  auto jsonBody = req->getJsonObject();
 
-    if (!jsonBody) {
-        dto::BaseApiResponse response;
-        response.success = false;
-        response.error["message"] = "Invalid JSON body";
-        auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
-        resp->setStatusCode(k400BadRequest);
-        callback(resp);
-        return;
-    }
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
 
-    dto::CreateSubscriptionPlanDto dto;
+  gnp::dto::UpdateSubscriptionPlanDto dto;
+  dto.fromJson(*jsonBody);
 
-    dto.fromJson(*jsonBody);
+  auto plugin = app().getPlugin<plugins::GnpServicePlugin>();
+  auto &subscriptionPlanService = plugin->getSubscriptionPlanService();
 
-    auto plugin = app().getPlugin<plugins::GnpServicePlugin>();
-    auto& subscriptionPlanService = plugin->getSubscriptionPlanService();
-
-    subscriptionPlanService.createPlan(dto, [callback](const dto::BaseApiResponse& result) {
-        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-        callback(resp);
-    });
+  auto result = co_await subscriptionPlanService.updatePlanAsync(dto);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
 }
 
-void SubscriptionPlansController::update(const HttpRequestPtr& req, std::function<void (const HttpResponsePtr &)> &&callback)
-{
-    // write your application logic here
-}
+drogon::Task<HttpResponsePtr>
+SubscriptionPlansController::deletePlan(const HttpRequestPtr req) {
+  auto id = req->getParameter("id");
 
-void SubscriptionPlansController::deletePlan(const HttpRequestPtr& req, std::function<void (const HttpResponsePtr &)> &&callback)
-{
-    // write your application logic here
+  if (id.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Missing required parameter: id";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto plugin = app().getPlugin<plugins::GnpServicePlugin>();
+  auto &subscriptionPlanService = plugin->getSubscriptionPlanService();
+
+  auto result = co_await subscriptionPlanService.deletePlanAsync(id);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
 }
