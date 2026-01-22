@@ -6,72 +6,64 @@
 #define NEWSPAPERSERVICE_H
 
 #include "dto/BaseApiResponse.h"
-#include <drogon/drogon.h>
 #include "dto/IngestNewsPaperDto.h"
+#include <drogon/drogon.h>
 
 namespace gnp::services {
 
-    class NewspaperService {
+class NewspaperService {
 
-    public:
+public:
+  drogon::Task<gnp::dto::BaseApiResponse>
+  getAllAsync(int pageNo, int pageSize, const std::string &publicationId,
+              const std::string &startDate, const std::string &endDate,
+              const std::string &query);
 
-        void getAll(
-           int pageNo,
-           int pageSize,
-           const std::string& publicationId,
-           const std::string& startDate,
-           const std::string& endDate,
-           const std::string& query,
-           const std::function<void(const gnp::dto::BaseApiResponse&)>& callback
-       );
+  // void getLatest(const std::function<void(const gnp::dto::BaseApiResponse&)>&
+  // callback);
 
-        //void getLatest(const std::function<void(const gnp::dto::BaseApiResponse&)>& callback);
+  // void getRelatedContent(const std::string& newsPaperId, const
+  // std::function<void(const gnp::dto::BaseApiResponse&)>& callback);
 
-        //void getRelatedContent(const std::string& newsPaperId, const std::function<void(const gnp::dto::BaseApiResponse&)>& callback);
+  void getReductedDetails(
+      const std::string &id,
+      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
-        void getReductedDetails(const std::string& id, const std::function<void(const gnp::dto::BaseApiResponse&)>& callback);
+  void getFullDetails(
+      const std::string &id,
+      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
-        void getFullDetails(const std::string& id, const std::function<void(const gnp::dto::BaseApiResponse&)>& callback);
+  void getFullDetailsByPublication(
+      const std::string &publicationId, const std::string &date,
+      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
-        void getFullDetailsByPublication(const std::string& publicationId, const std::string& date, const std::function<void(const gnp::dto::BaseApiResponse&)>& callback);
+  void listAll(
+      int pageNo, int pageSize, const std::string &publicationId,
+      const std::string &startDate, const std::string &endDate,
+      const std::string &query,
+      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
-        void listAll(
-           int pageNo,
-           int pageSize,
-           const std::string& publicationId,
-           const std::string& startDate,
-           const std::string& endDate,
-           const std::string& query,
-           const std::function<void(const gnp::dto::BaseApiResponse&)>& callback
-       );
+  void
+  ingest(const dto::IngestNewsPaperDto &dto,
+         const std::function<void(const dto::BaseApiResponse &)> &callback);
 
-        void ingest(const dto::IngestNewsPaperDto& dto,
-          const std::function<void(const dto::BaseApiResponse&)>& callback);
+  void publish(
+      const std::string &id,
+      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
+  void unPublish(
+      const std::string &id,
+      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
-        void publish(
-            const std::string& id,
-            const std::function<void(const gnp::dto::BaseApiResponse&)>& callback);
+  void deleteNewspaper(
+      const std::string &id,
+      const std::function<void(const dto::BaseApiResponse &)> &callback);
 
-        void unPublish(
-            const std::string& id,
-            const std::function<void(const gnp::dto::BaseApiResponse&)>& callback);
+  void incrementViewCount(
+      const std::string &id,
+      const std::function<void(const dto::BaseApiResponse &)> &callback);
+};
 
-        void deleteNewspaper(
-            const std::string& id,
-            const std::function<void(const dto::BaseApiResponse&)>& callback);
+} // namespace gnp::services
 
-        void incrementViewCount(
-            const std::string& id,
-            const std::function<void(const dto::BaseApiResponse&)>& callback);
-
-
-
-
-
-    };
-
-
-}
-
-#endif //NEWSPAPERSERVICE_H
+#endif // NEWSPAPERSERVICE_H

@@ -5,9 +5,8 @@
 
 #include "plugins/GnpServicePlugin.h"
 
-void NewsPapersController::getAll(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
+drogon::Task<HttpResponsePtr>
+NewsPapersController::getAll(const HttpRequestPtr req) {
   int pageSize = 10; // Default page size
   int pageNo = 1;    //  Default page number
 
@@ -52,12 +51,11 @@ void NewsPapersController::getAll(
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
-  newsPaperService.getAll(
-      pageNo, pageSize, publicationId, startDate, endDate, query,
-      [callback](const gnp::dto::BaseApiResponse &result) {
-        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-        callback(resp);
-      });
+  auto result = co_await newsPaperService.getAllAsync(
+      pageNo, pageSize, publicationId, startDate, endDate, query);
+
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
 }
 
 void NewsPapersController::getReductedDetails(
@@ -314,14 +312,16 @@ void NewsPapersController::deleteNewsPaper(
   auto &newsPaperService = plugin->getNewsPaperService();
 
   // Call service method to delete the tenant
-  newsPaperService.deleteNewspaper(id, [callback](const gnp::dto::BaseApiResponse &result) {
+  newsPaperService.deleteNewspaper(
+      id, [callback](const gnp::dto::BaseApiResponse &result) {
         auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
         callback(resp);
       });
 }
 
-
-void NewsPapersController::incrementViewCount(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback) {
+void NewsPapersController::incrementViewCount(
+    const HttpRequestPtr &req,
+    std::function<void(const HttpResponsePtr &)> &&callback) {
 
   if (req->getParameter("id").empty()) {
 
@@ -340,7 +340,8 @@ void NewsPapersController::incrementViewCount(const HttpRequestPtr &req, std::fu
   auto &newsPaperService = plugin->getNewsPaperService();
 
   // Call service method to delete the tenant
-  newsPaperService.incrementViewCount(id, [callback](const gnp::dto::BaseApiResponse &result) {
+  newsPaperService.incrementViewCount(
+      id, [callback](const gnp::dto::BaseApiResponse &result) {
         auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
         callback(resp);
       });
