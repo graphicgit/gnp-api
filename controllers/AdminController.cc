@@ -5,8 +5,6 @@
 #include "plugins/GnpServicePlugin.h"
 #include "services/campaigns/CampaignService.h"
 
-// news papers
-
 drogon::Task<HttpResponsePtr>
 AdminController::getAllNewsPapers(const HttpRequestPtr req) {
   int pageSize = 10; // Default page size
@@ -73,7 +71,6 @@ AdminController::getNewsPaperFullDetails(const HttpRequestPtr req) {
 
   std::string id = req->getParameter("id");
 
-  // Get tenant service from plugin
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
@@ -139,7 +136,6 @@ AdminController::IngestNewsPaper(const HttpRequestPtr req) {
   gnp::dto::IngestNewsPaperDto dto;
   dto.fromJson(*jsonBody);
 
-  // Get tenant service from plugin
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
