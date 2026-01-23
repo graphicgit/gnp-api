@@ -60,10 +60,25 @@ AdminController::getAllNewsPapers(const HttpRequestPtr req) {
   co_return resp;
 }
 
-void AdminController::getNewsPaperFullDetails(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
-  // write your application logic here
+drogon::Task<HttpResponsePtr>
+AdminController::getNewsPaperFullDetails(const HttpRequestPtr req) {
+  if (req->getParameter("id").empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Missing required parameter: id";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  std::string id = req->getParameter("id");
+
+  // Get tenant service from plugin
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &newsPaperService = plugin->getNewsPaperService();
+
+  auto result = co_await newsPaperService.getFullDetailsAsync(id);
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
 drogon::Task<HttpResponsePtr>

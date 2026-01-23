@@ -25,13 +25,11 @@ public:
   // void getRelatedContent(const std::string& newsPaperId, const
   // std::function<void(const gnp::dto::BaseApiResponse&)>& callback);
 
-  void getReductedDetails(
-      const std::string &id,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse>
+  getRedactedDetailsAsync(const std::string &id);
 
-  void getFullDetails(
-      const std::string &id,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse>
+  getFullDetailsAsync(const std::string &id);
 
   void getFullDetailsByPublication(
       const std::string &publicationId, const std::string &date,
@@ -50,7 +48,8 @@ public:
 
   drogon::Task<gnp::dto::BaseApiResponse> unPublishAsync(const std::string &id);
 
-  drogon::Task<gnp::dto::BaseApiResponse> deleteNewspaperAsync(const std::string &id);
+  drogon::Task<gnp::dto::BaseApiResponse>
+  deleteNewspaperAsync(const std::string &id);
 
   void incrementViewCount(
       const std::string &id,

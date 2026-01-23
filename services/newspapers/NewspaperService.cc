@@ -133,142 +133,138 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::getAllAsync(
   }
 }
 
-void NewspaperService::getReductedDetails(
-    const std::string &id,
-    const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {
+drogon::Task<gnp::dto::BaseApiResponse>
+NewspaperService::getRedactedDetailsAsync(const std::string &id) {
   auto dbClient = drogon::app().getDbClient();
-  auto mp = std::make_shared<Mapper<drogon_model::Gnp::Newspapers>>(dbClient);
+  auto mp = drogon::orm::CoroMapper<drogon_model::Gnp::Newspapers>(dbClient);
 
-  // Only published newspapers are visible here
-  Criteria criteria =
-      Criteria(Newspapers::Cols::_id, CompareOperator::EQ, id) &&
-      Criteria(Newspapers::Cols::_is_published, CompareOperator::EQ, true);
+  try {
+    // Only published newspapers are visible here
+    Criteria criteria =
+        Criteria(Newspapers::Cols::_id, CompareOperator::EQ, id) &&
+        Criteria(Newspapers::Cols::_is_published, CompareOperator::EQ, true);
 
-  mp->findOne(
-      criteria,
-      [callback](const drogon_model::Gnp::Newspapers &newspaper) {
-        dto::BaseApiResponse response;
-        response.success = true;
+    auto newspaper = co_await mp.findOne(criteria);
 
-        Json::Value src = newspaper.toJson();
-        Json::Value data;
+    dto::BaseApiResponse response;
+    response.success = true;
 
-        // Basic fields
-        data["id"] = src["id"];
-        data["title"] = src["title"];
-        data["slug"] = src["slug"];
-        data["price"] = src["price"];
-        data["editionNumber"] = src["edition_number"];
-        data["shortDescription"] = src["short_description"];
-        data["fullDescription"] = src["full_description"];
-        data["thumbnailId"] = src["thumbnail_id"];
-        data["fileType"] = src["file_type"];
+    Json::Value src = newspaper.toJson();
+    Json::Value data;
 
-        data["isFree"] = src["is_free"];
-        data["isPopular"] = src["is_popular"];
-        data["publishedDate"] = src["published_date"];
+    // Basic fields
+    data["id"] = src["id"];
+    data["title"] = src["title"];
+    data["slug"] = src["slug"];
+    data["price"] = src["price"];
+    data["editionNumber"] = src["edition_number"];
+    data["shortDescription"] = src["short_description"];
+    data["fullDescription"] = src["full_description"];
+    data["thumbnailId"] = src["thumbnail_id"];
+    data["fileType"] = src["file_type"];
 
-        // Category / publication info
-        data["categoryId"] = src["category_id"];
-        data["categoryName"] = src["category_name"];
-        data["publicationId"] = src["publication_id"];
-        data["publicationName"] = src["publication_name"];
+    data["isFree"] = src["is_free"];
+    data["isPopular"] = src["is_popular"];
+    data["publishedDate"] = src["published_date"];
 
-        // Copyright
-        data["copyrightOwner"] = src["copyright_owner"];
+    // Category / publication info
+    data["categoryId"] = src["category_id"];
+    data["categoryName"] = src["category_name"];
+    data["publicationId"] = src["publication_id"];
+    data["publicationName"] = src["publication_name"];
 
-        // Featured stories (stored as JSON string)
-        std::string featuredStoriesStr = newspaper.getValueOfFeaturedStories();
-        Json::Value featuredStoriesJson;
-        Json::Reader reader;
-        if (!featuredStoriesStr.empty() &&
-            reader.parse(featuredStoriesStr, featuredStoriesJson)) {
-          data["featuredStories"] = featuredStoriesJson;
-        } else {
-          data["featuredStories"] = Json::arrayValue;
-        }
+    // Copyright
+    data["copyrightOwner"] = src["copyright_owner"];
 
-        response.result = data;
-        callback(response);
-      },
-      [callback](const DrogonDbException &e) {
-        dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
-        errorResponse.error["message"] = "Newspaper not found.";
-        errorResponse.error["detail"] = e.base().what();
-        callback(errorResponse);
-      });
+    // Featured stories (stored as JSON string)
+    std::string featuredStoriesStr = newspaper.getValueOfFeaturedStories();
+    Json::Value featuredStoriesJson;
+    Json::Reader reader;
+    if (!featuredStoriesStr.empty() &&
+        reader.parse(featuredStoriesStr, featuredStoriesJson)) {
+      data["featuredStories"] = featuredStoriesJson;
+    } else {
+      data["featuredStories"] = Json::arrayValue;
+    }
+
+    response.result = data;
+    co_return response;
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+    errorResponse.error["message"] = "Newspaper not found.";
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
 }
 
-void NewspaperService::getFullDetails(
-    const std::string &id,
-    const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {
+drogon::Task<gnp::dto::BaseApiResponse>
+NewspaperService::getFullDetailsAsync(const std::string &id) {
   auto dbClient = drogon::app().getDbClient();
-  auto mp = std::make_shared<Mapper<drogon_model::Gnp::Newspapers>>(dbClient);
+  auto mp = drogon::orm::CoroMapper<drogon_model::Gnp::Newspapers>(dbClient);
 
-  // Only published newspapers are visible here
-  Criteria criteria =
-      Criteria(Newspapers::Cols::_id, CompareOperator::EQ, id) &&
-      Criteria(Newspapers::Cols::_is_published, CompareOperator::EQ, true);
+  try {
+    // Only published newspapers are visible here
+    Criteria criteria =
+        Criteria(Newspapers::Cols::_id, CompareOperator::EQ, id) &&
+        Criteria(Newspapers::Cols::_is_published, CompareOperator::EQ, true);
 
-  mp->findOne(
-      criteria,
-      [callback](const drogon_model::Gnp::Newspapers &newspaper) {
-        dto::BaseApiResponse response;
-        response.success = true;
+    auto newspaper = co_await mp.findOne(criteria);
 
-        Json::Value src = newspaper.toJson();
-        Json::Value data;
+    dto::BaseApiResponse response;
+    response.success = true;
 
-        // Basic fields
-        data["id"] = src["id"];
-        data["title"] = src["title"];
-        data["slug"] = src["slug"];
-        data["price"] = src["price"];
-        data["editionNumber"] = src["edition_number"];
-        data["shortDescription"] = src["short_description"];
-        data["fullDescription"] = src["full_description"];
-        data["thumbnailId"] = src["thumbnail_id"];
-        data["fileType"] = src["file_type"];
-        data["storageType"] = src["storage_type"];
-        data["documentId"] = src["document_id"];
-        data["isFree"] = src["is_free"];
-        data["isPopular"] = src["is_popular"];
-        data["publishedDate"] = src["published_date"];
-        data["isPublished"] = src["is_published"];
+    Json::Value src = newspaper.toJson();
+    Json::Value data;
 
-        // Category / publication info
-        data["categoryId"] = src["category_id"];
-        data["categoryName"] = src["category_name"];
-        data["publicationId"] = src["publication_id"];
-        data["publicationName"] = src["publication_name"];
+    // Basic fields
+    data["id"] = src["id"];
+    data["title"] = src["title"];
+    data["slug"] = src["slug"];
+    data["price"] = src["price"];
+    data["editionNumber"] = src["edition_number"];
+    data["shortDescription"] = src["short_description"];
+    data["fullDescription"] = src["full_description"];
+    data["thumbnailId"] = src["thumbnail_id"];
+    data["fileType"] = src["file_type"];
+    data["storageType"] = src["storage_type"];
+    data["documentId"] = src["document_id"];
+    data["isFree"] = src["is_free"];
+    data["isPopular"] = src["is_popular"];
+    data["publishedDate"] = src["published_date"];
+    data["isPublished"] = src["is_published"];
 
-        // Copyright
-        data["copyrightOwner"] = src["copyright_owner"];
+    // Category / publication info
+    data["categoryId"] = src["category_id"];
+    data["categoryName"] = src["category_name"];
+    data["publicationId"] = src["publication_id"];
+    data["publicationName"] = src["publication_name"];
 
-        // Featured stories (stored as JSON string)
-        std::string featuredStoriesStr = newspaper.getValueOfFeaturedStories();
-        Json::Value featuredStoriesJson;
-        Json::Reader reader;
-        if (!featuredStoriesStr.empty() &&
-            reader.parse(featuredStoriesStr, featuredStoriesJson)) {
-          data["featuredStories"] = featuredStoriesJson;
-        } else {
-          data["featuredStories"] = Json::arrayValue;
-        }
+    // Copyright
+    data["copyrightOwner"] = src["copyright_owner"];
 
-        response.result = data;
-        callback(response);
-      },
-      [callback](const DrogonDbException &e) {
-        dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
-        errorResponse.error["message"] = "Newspaper not found.";
-        errorResponse.error["detail"] = e.base().what();
-        callback(errorResponse);
-      });
+    // Featured stories (stored as JSON string)
+    std::string featuredStoriesStr = newspaper.getValueOfFeaturedStories();
+    Json::Value featuredStoriesJson;
+    Json::Reader reader;
+    if (!featuredStoriesStr.empty() &&
+        reader.parse(featuredStoriesStr, featuredStoriesJson)) {
+      data["featuredStories"] = featuredStoriesJson;
+    } else {
+      data["featuredStories"] = Json::arrayValue;
+    }
+
+    response.result = data;
+    co_return response;
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+    errorResponse.error["message"] = "Newspaper not found.";
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
 }
 
 void NewspaperService::getFullDetailsByPublication(
@@ -617,7 +613,8 @@ NewspaperService::unPublishAsync(const std::string &id) {
   }
 }
 
-drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::deleteNewspaperAsync(const std::string &id) {
+drogon::Task<gnp::dto::BaseApiResponse>
+NewspaperService::deleteNewspaperAsync(const std::string &id) {
   auto dbClient = drogon::app().getDbClient();
   auto mp = drogon::orm::CoroMapper<drogon_model::Gnp::Newspapers>(dbClient);
 

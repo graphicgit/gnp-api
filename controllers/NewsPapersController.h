@@ -33,11 +33,8 @@ public:
 
   // handler methods
   drogon::Task<HttpResponsePtr> getAll(const HttpRequestPtr req);
-  void
-  getReductedDetails(const HttpRequestPtr &req,
-                     std::function<void(const HttpResponsePtr &)> &&callback);
-  void getFullDetails(const HttpRequestPtr &req,
-                      std::function<void(const HttpResponsePtr &)> &&callback);
+  drogon::Task<HttpResponsePtr> getRedactedDetails(const HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> getFullDetails(const HttpRequestPtr req);
   void getFullDetailsByPublication(
       const HttpRequestPtr &req,
       std::function<void(const HttpResponsePtr &)> &&callback);

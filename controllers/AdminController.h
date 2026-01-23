@@ -124,9 +124,8 @@ public:
 
   // Newspapers
   drogon::Task<HttpResponsePtr> getAllNewsPapers(const HttpRequestPtr req);
-  void getNewsPaperFullDetails(
-      const HttpRequestPtr &req,
-      std::function<void(const HttpResponsePtr &)> &&callback);
+  drogon::Task<HttpResponsePtr>
+  getNewsPaperFullDetails(const HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> publishNewsPaper(const HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> unPublishNewsPaper(const HttpRequestPtr req);
   void IngestNewsPaper(const HttpRequestPtr &req,
