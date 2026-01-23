@@ -267,106 +267,100 @@ NewspaperService::getFullDetailsAsync(const std::string &id) {
   }
 }
 
-void NewspaperService::getFullDetailsByPublication(
-    const std::string &publicationId, const std::string &date,
-    const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {
+drogon::Task<gnp::dto::BaseApiResponse>
+NewspaperService::getFullDetailsByPublicationAsync(
+    const std::string &publicationId, const std::string &date) {
   auto dbClient = drogon::app().getDbClient();
-  auto mp = std::make_shared<Mapper<drogon_model::Gnp::Newspapers>>(dbClient);
+  auto mp = drogon::orm::CoroMapper<drogon_model::Gnp::Newspapers>(dbClient);
 
-  // Only published and free newspapers are visible here
-  Criteria criteria =
-      Criteria(Newspapers::Cols::_is_published, CompareOperator::EQ, true) &&
-      Criteria(Newspapers::Cols::_is_free, CompareOperator::EQ, true);
+  try {
+    // Only published and free newspapers are visible here
+    Criteria criteria =
+        Criteria(Newspapers::Cols::_is_published, CompareOperator::EQ, true) &&
+        Criteria(Newspapers::Cols::_is_free, CompareOperator::EQ, true);
 
-  if (!publicationId.empty()) {
-    criteria = criteria && Criteria(Newspapers::Cols::_publication_id,
-                                    CompareOperator::EQ, publicationId);
-  }
+    if (!publicationId.empty()) {
+      criteria = criteria && Criteria(Newspapers::Cols::_publication_id,
+                                      CompareOperator::EQ, publicationId);
+    }
 
-  // Common success callback to avoid code duplication
-  auto successCallback =
-      [callback](const drogon_model::Gnp::Newspapers &newspaper) {
-        dto::BaseApiResponse response;
-        response.success = true;
+    drogon_model::Gnp::Newspapers newspaper;
 
-        Json::Value src = newspaper.toJson();
-        Json::Value data;
+    // If date is provided, use exact match
+    if (!date.empty()) {
+      criteria = criteria && Criteria(Newspapers::Cols::_publication_date,
+                                      CompareOperator::EQ, date);
+      newspaper = co_await mp.findOne(criteria);
+    } else {
+      // If no date, get the latest one
+      auto newspapers =
+          co_await mp
+              .orderBy(Newspapers::Cols::_publication_date, SortOrder::DESC)
+              .limit(1)
+              .findBy(criteria);
 
-        // Basic fields
-        data["id"] = src["id"];
-        data["title"] = src["title"];
-        data["slug"] = src["slug"];
-        data["price"] = src["price"];
-        data["editionNumber"] = src["edition_number"];
-        data["shortDescription"] = src["short_description"];
-        data["fullDescription"] = src["full_description"];
-        data["thumbnailId"] = src["thumbnail_id"];
-        data["fileType"] = src["file_type"];
-        data["storageType"] = src["storage_type"];
-        data["documentId"] = src["document_id"];
-        data["isFree"] = src["is_free"];
-        data["isPopular"] = src["is_popular"];
-        data["publishedDate"] = src["published_date"];
-        data["isPublished"] = src["is_published"];
+      if (newspapers.empty()) {
+        dto::BaseApiResponse errorResponse;
+        errorResponse.success = false;
+        errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+        errorResponse.error["message"] = "Newspaper not found.";
+        co_return errorResponse;
+      }
+      newspaper = newspapers[0];
+    }
 
-        // Category / publication info
-        data["categoryId"] = src["category_id"];
-        data["categoryName"] = src["category_name"];
-        data["publicationId"] = src["publication_id"];
-        data["publicationName"] = src["publication_name"];
+    dto::BaseApiResponse response;
+    response.success = true;
 
-        // Copyright
-        data["copyrightOwner"] = src["copyright_owner"];
+    Json::Value src = newspaper.toJson();
+    Json::Value data;
 
-        // Featured stories (stored as JSON string)
-        std::string featuredStoriesStr = newspaper.getValueOfFeaturedStories();
-        Json::Value featuredStoriesJson;
-        Json::Reader reader;
-        if (!featuredStoriesStr.empty() &&
-            reader.parse(featuredStoriesStr, featuredStoriesJson)) {
-          data["featuredStories"] = featuredStoriesJson;
-        } else {
-          data["featuredStories"] = Json::arrayValue;
-        }
+    // Basic fields
+    data["id"] = src["id"];
+    data["title"] = src["title"];
+    data["slug"] = src["slug"];
+    data["price"] = src["price"];
+    data["editionNumber"] = src["edition_number"];
+    data["shortDescription"] = src["short_description"];
+    data["fullDescription"] = src["full_description"];
+    data["thumbnailId"] = src["thumbnail_id"];
+    data["fileType"] = src["file_type"];
+    data["storageType"] = src["storage_type"];
+    data["documentId"] = src["document_id"];
+    data["isFree"] = src["is_free"];
+    data["isPopular"] = src["is_popular"];
+    data["publishedDate"] = src["published_date"];
+    data["isPublished"] = src["is_published"];
 
-        response.result = data;
-        callback(response);
-      };
+    // Category / publication info
+    data["categoryId"] = src["category_id"];
+    data["categoryName"] = src["category_name"];
+    data["publicationId"] = src["publication_id"];
+    data["publicationName"] = src["publication_name"];
 
-  // Common error callback
-  auto errorCallback = [callback](const DrogonDbException &e) {
+    // Copyright
+    data["copyrightOwner"] = src["copyright_owner"];
+
+    // Featured stories (stored as JSON string)
+    std::string featuredStoriesStr = newspaper.getValueOfFeaturedStories();
+    Json::Value featuredStoriesJson;
+    Json::Reader reader;
+    if (!featuredStoriesStr.empty() &&
+        reader.parse(featuredStoriesStr, featuredStoriesJson)) {
+      data["featuredStories"] = featuredStoriesJson;
+    } else {
+      data["featuredStories"] = Json::arrayValue;
+    }
+
+    response.result = data;
+    co_return response;
+  } catch (const DrogonDbException &e) {
     dto::BaseApiResponse errorResponse;
     errorResponse.success = false;
     errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
     errorResponse.error["message"] = "Newspaper not found.";
     errorResponse.error["detail"] = e.base().what();
-    callback(errorResponse);
-  };
-
-  // If date is provided, use exact match
-  if (!date.empty()) {
-    criteria = criteria && Criteria(Newspapers::Cols::_publication_date,
-                                    CompareOperator::EQ, date);
-    mp->findOne(criteria, successCallback, errorCallback);
-  } else {
-    // If no date, get the latest one
-    mp->orderBy(Newspapers::Cols::_publication_date, SortOrder::DESC)
-        .limit(1)
-        .findBy(
-            criteria,
-            [successCallback, callback](
-                const std::vector<drogon_model::Gnp::Newspapers> &newspapers) {
-              if (newspapers.empty()) {
-                dto::BaseApiResponse errorResponse;
-                errorResponse.success = false;
-                errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
-                errorResponse.error["message"] = "Newspaper not found.";
-                callback(errorResponse);
-                return;
-              }
-              successCallback(newspapers[0]);
-            },
-            errorCallback);
+    co_return errorResponse;
   }
 }
 

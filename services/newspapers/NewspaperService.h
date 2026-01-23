@@ -31,9 +31,9 @@ public:
   drogon::Task<gnp::dto::BaseApiResponse>
   getFullDetailsAsync(const std::string &id);
 
-  void getFullDetailsByPublication(
-      const std::string &publicationId, const std::string &date,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse>
+  getFullDetailsByPublicationAsync(const std::string &publicationId,
+                                   const std::string &date);
 
   drogon::Task<gnp::dto::BaseApiResponse>
   listAllAsync(int pageNo, int pageSize, const std::string &publicationId,

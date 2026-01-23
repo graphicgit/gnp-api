@@ -14,8 +14,8 @@ public:
   METHOD_LIST_BEGIN
   ADD_METHOD_TO(NewsPapersController::getAll, PREFIX + "/get-all", Get,
                 Options);
-  ADD_METHOD_TO(NewsPapersController::getReductedDetails,
-                PREFIX + "/get-reducted-details", Get, Options);
+  ADD_METHOD_TO(NewsPapersController::getRedactedDetails,
+                PREFIX + "/get-redacted-details", Get, Options);
   ADD_METHOD_TO(NewsPapersController::getFullDetails,
                 PREFIX + "/get-full-details", Get);
   ADD_METHOD_TO(NewsPapersController::getFullDetailsByPublication,
@@ -35,9 +35,8 @@ public:
   drogon::Task<HttpResponsePtr> getAll(const HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> getRedactedDetails(const HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> getFullDetails(const HttpRequestPtr req);
-  void getFullDetailsByPublication(
-      const HttpRequestPtr &req,
-      std::function<void(const HttpResponsePtr &)> &&callback);
+  drogon::Task<HttpResponsePtr>
+  getFullDetailsByPublication(const HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> publish(const HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> unPublish(const HttpRequestPtr req);
   void
