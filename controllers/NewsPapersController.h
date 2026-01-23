@@ -41,10 +41,8 @@ public:
   void getFullDetailsByPublication(
       const HttpRequestPtr &req,
       std::function<void(const HttpResponsePtr &)> &&callback);
-  void publish(const HttpRequestPtr &req,
-               std::function<void(const HttpResponsePtr &)> &&callback);
-  void unPublish(const HttpRequestPtr &req,
-                 std::function<void(const HttpResponsePtr &)> &&callback);
+  drogon::Task<HttpResponsePtr> publish(const HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> unPublish(const HttpRequestPtr req);
   void
   ingestPublication(const HttpRequestPtr &req,
                     std::function<void(const HttpResponsePtr &)> &&callback);
@@ -53,6 +51,5 @@ public:
                      std::function<void(const HttpResponsePtr &)> &&callback);
   void update(const HttpRequestPtr &req,
               std::function<void(const HttpResponsePtr &)> &&callback);
-  void deleteNewsPaper(const HttpRequestPtr &req,
-                       std::function<void(const HttpResponsePtr &)> &&callback);
+  drogon::Task<HttpResponsePtr> deleteNewsPaper(const HttpRequestPtr req);
 };

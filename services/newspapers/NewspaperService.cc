@@ -536,170 +536,125 @@ void NewspaperService::ingest(
       });
 }
 
-void NewspaperService::publish(
-    const std::string &id,
-    const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {
-  // Get database client
+drogon::Task<gnp::dto::BaseApiResponse>
+NewspaperService::publishAsync(const std::string &id) {
   auto dbClient = drogon::app().getDbClient();
-  auto tenantMapper =
-      std::make_shared<Mapper<drogon_model::Gnp::Newspapers>>(dbClient);
+  CoroMapper<Newspapers> mp(dbClient);
 
-  // First, check if the tenant exists
-  tenantMapper->findByPrimaryKey(
-      id,
-      [=](const drogon_model::Gnp::Newspapers &newspaper) {
-        if (newspaper.getValueOfIsPublished()) {
-          // Tenant is already active
-          dto::BaseApiResponse response;
-          response.success = true;
-          response.message = "Newspaper is already published.";
-          callback(response);
-          return;
-        }
+  try {
+    auto newspaper = co_await mp.findByPrimaryKey(id);
 
-        // Update tenant to set is_active to true ...
-        auto updatedNewsPaper = newspaper;
-        updatedNewsPaper.setIsPublished(true);
-        updatedNewsPaper.setPublishedDate(trantor::Date::now());
+    if (newspaper.getValueOfIsPublished()) {
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.message = "Newspaper is already published.";
+      co_return response;
+    }
 
-        tenantMapper->update(
-            updatedNewsPaper,
-            [=](const size_t count) {
-              dto::BaseApiResponse response;
-              response.success = true;
-              response.message = "Newspaper published successfully.";
-              callback(response);
-            },
-            [=](const DrogonDbException &e) {
-              // Error updating tenant
-              dto::BaseApiResponse response;
-              response.success = false;
-              response.error["code"] = constants::ERR_DB_QUERY;
-              response.error["message"] = "Error publishing newspaper.";
-              response.error["detail"] = e.base().what();
-              callback(response);
-            });
-      },
-      [=](const DrogonDbException &e) {
-        // Error finding tenant
-        dto::BaseApiResponse response;
-        response.success = false;
-        response.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
-        response.error["message"] = "Newspaper not found.";
-        response.error["detail"] = e.base().what();
-        callback(response);
-      });
+    newspaper.setIsPublished(true);
+    newspaper.setPublishedDate(trantor::Date::now());
+
+    co_await mp.update(newspaper);
+
+    dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Newspaper published successfully.";
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse response;
+    response.success = false;
+    if (e.base().what() == std::string("Record Not Found")) {
+      response.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+      response.error["message"] = "Newspaper not found.";
+    } else {
+      response.error["code"] = constants::ERR_DB_QUERY;
+      response.error["message"] = "Error publishing newspaper.";
+    }
+    response.error["detail"] = e.base().what();
+    co_return response;
+  }
 }
 
-void NewspaperService::unPublish(
-    const std::string &id,
-    const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {
-  // Get database client
+drogon::Task<gnp::dto::BaseApiResponse>
+NewspaperService::unPublishAsync(const std::string &id) {
+
   auto dbClient = drogon::app().getDbClient();
-  auto tenantMapper =
-      std::make_shared<Mapper<drogon_model::Gnp::Newspapers>>(dbClient);
+  CoroMapper<Newspapers> mp(dbClient);
 
-  // First, check if the newspaper exists
-  tenantMapper->findByPrimaryKey(
-      id,
-      [=](const drogon_model::Gnp::Newspapers &newspaper) {
-        if (!newspaper.getValueOfIsPublished()) {
-          // Newspaper is already published
-          dto::BaseApiResponse response;
-          response.success = true;
-          response.message = "Newspaper is already unpublished.";
-          callback(response);
-          return;
-        }
+  try {
 
-        auto updatedNewspaper = newspaper;
-        updatedNewspaper.setIsPublished(false);
+    auto newspaper = co_await mp.findByPrimaryKey(id);
 
-        tenantMapper->update(
-            updatedNewspaper,
-            [=](const size_t count) {
-              // Newspaper published successfully ...
-              dto::BaseApiResponse response;
-              response.success = true;
-              response.message = "Newspaper unpublished successfully.";
-              callback(response);
-            },
-            [=](const DrogonDbException &e) {
-              dto::BaseApiResponse response;
-              response.success = false;
-              response.error["code"] = constants::ERR_DB_QUERY;
-              response.error["message"] = "Error unpublishing newspapers.";
-              response.error["detail"] = e.base().what();
-              callback(response);
-            });
-      },
-      [=](const DrogonDbException &e) {
-        dto::BaseApiResponse response;
-        response.success = false;
-        response.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
-        response.error["message"] = "Newspaper not found.";
-        response.error["detail"] = e.base().what();
-        callback(response);
-      });
+    if (!newspaper.getValueOfIsPublished()) {
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.message = "Newspaper is already unpublished.";
+      co_return response;
+    }
+
+    newspaper.setIsPublished(false);
+    co_await mp.update(newspaper);
+
+    dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Newspaper unpublished successfully.";
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse response;
+    response.success = false;
+
+    if (e.base().what() == std::string("Record Not Found")) {
+      response.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+      response.error["message"] = "Newspaper not found.";
+    } else {
+      response.error["code"] = constants::ERR_DB_QUERY;
+      response.error["message"] = "Error unpublishing newspaper.";
+    }
+    response.error["detail"] = e.base().what();
+    co_return response;
+  }
 }
 
-void NewspaperService::deleteNewspaper(
-    const std::string &id,
-    const std::function<void(const dto::BaseApiResponse &)> &callback) {
-
+drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::deleteNewspaperAsync(const std::string &id) {
   auto dbClient = drogon::app().getDbClient();
+  auto mp = drogon::orm::CoroMapper<drogon_model::Gnp::Newspapers>(dbClient);
 
-  Mapper<drogon_model::Gnp::Newspapers> mp(dbClient);
+  try {
+    // Create criteria to find the newspaper with specified ID
+    Criteria criteria = Criteria(drogon_model::Gnp::Newspapers::Cols::_id,
+                                 CompareOperator::EQ, id);
 
-  // Create criteria to find the user with specified ID in the tenant
-  Criteria criteria = Criteria(drogon_model::Gnp::Newspapers::Cols::_id,
-                               CompareOperator::EQ, id);
+    // First verify the newspaper exists
+    co_await mp.findOne(criteria);
 
-  // First verify the user exists
-  mp.findOne(
-      criteria,
-      [=](const drogon_model::Gnp::Newspapers &newspaper) {
-        // User found, proceed with deletion
-        Mapper<drogon_model::Gnp::Newspapers> deleteMp(dbClient);
-        deleteMp.deleteBy(
-            criteria,
-            [=](const size_t count) {
-              if (count > 0) {
+    // Newspaper found, proceed with deletion
+    size_t count = co_await mp.deleteBy(criteria);
 
-                // Successfully deleted
-                dto::BaseApiResponse response;
-                response.success = true;
-                response.message = "Newspaper deleted successfully";
-                callback(response);
-
-              } else {
-                // No rows were deleted (shouldn't happen if we found the user)
-                dto::BaseApiResponse errorResponse;
-                errorResponse.success = false;
-                errorResponse.message = "Failed to delete newspaper";
-                errorResponse.error["code"] = constants::ERR_DB_QUERY;
-                callback(errorResponse);
-              }
-            },
-            [=](const DrogonDbException &e) {
-              // Error during deletion
-              dto::BaseApiResponse errorResponse;
-              errorResponse.success = false;
-              errorResponse.message = "Failed to delete newspaper";
-              errorResponse.error["code"] = constants::ERR_DB_QUERY;
-              errorResponse.error["detail"] = e.base().what();
-              callback(errorResponse);
-            });
-      },
-      [=](const DrogonDbException &e) {
-        // User not found
-        dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.message = "Newspaper not found";
-        errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
-        errorResponse.error["detail"] = e.base().what();
-        callback(errorResponse);
-      });
+    if (count > 0) {
+      // Successfully deleted
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.message = "Newspaper deleted successfully";
+      co_return response;
+    } else {
+      // No rows were deleted
+      dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.message = "Failed to delete newspaper";
+      errorResponse.error["code"] = constants::ERR_DB_QUERY;
+      co_return errorResponse;
+    }
+  } catch (const DrogonDbException &e) {
+    // Newspaper not found or database error
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Newspaper not found or database error";
+    errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
 }
 
 void NewspaperService::incrementViewCount(

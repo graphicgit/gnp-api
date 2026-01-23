@@ -186,74 +186,46 @@ void NewsPapersController::getFullDetailsByPublication(
       });
 }
 
-void NewsPapersController::publish(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
-
+drogon::Task<HttpResponsePtr>
+NewsPapersController::publish(const HttpRequestPtr req) {
   if (req->getParameter("id").empty()) {
-    // Missing tenant ID - return early
     gnp::dto::BaseApiResponse response;
     response.success = false;
     response.error["message"] = "Missing required parameter: id";
     auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
     resp->setStatusCode(k400BadRequest);
-    callback(resp);
-    return;
+    co_return resp;
   }
 
   std::string id = req->getParameter("id");
 
-  // Get tenant service from plugin
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
-  // Call service method to delete the tenant
-  newsPaperService.publish(
-      id, [callback](const gnp::dto::BaseApiResponse &result) {
-        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-        callback(resp);
-
-        // if (result.success) {
-        //   auto notificationHub = NotificationHub::get();
-        //   if (notificationHub) {
-        //     Json::Value notification;
-        //     notification["type"] = "NewContent";
-        //     notification["message"] = "New newspaper published!";
-        //     // Add more details if needed, e.g., result data
-        //     Json::StreamWriterBuilder w;
-        //     notificationHub->broadcast(Json::writeString(w, notification));
-        //   }
-        // }
-      });
+  auto result = co_await newsPaperService.publishAsync(id);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
 }
 
-void NewsPapersController::unPublish(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
-
+drogon::Task<HttpResponsePtr>
+NewsPapersController::unPublish(const HttpRequestPtr req) {
   if (req->getParameter("id").empty()) {
-    // Missing tenant ID - return early
     gnp::dto::BaseApiResponse response;
     response.success = false;
     response.error["message"] = "Missing required parameter: id";
     auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
     resp->setStatusCode(k400BadRequest);
-    callback(resp);
-    return;
+    co_return resp;
   }
 
   std::string id = req->getParameter("id");
 
-  // Get tenant service from plugin
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
-  // Call service method to delete the tenant
-  newsPaperService.unPublish(
-      id, [callback](const gnp::dto::BaseApiResponse &result) {
-        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-        callback(resp);
-      });
+  auto result = co_await newsPaperService.unPublishAsync(id);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
 }
 
 void NewsPapersController::ingestPublication(
@@ -291,9 +263,8 @@ void NewsPapersController::update(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) {}
 
-void NewsPapersController::deleteNewsPaper(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
+drogon::Task<HttpResponsePtr>
+NewsPapersController::deleteNewsPaper(const HttpRequestPtr req) {
 
   if (req->getParameter("id").empty()) {
     // Missing tenant ID - return early
@@ -302,8 +273,7 @@ void NewsPapersController::deleteNewsPaper(
     response.error["message"] = "Missing required parameter: id";
     auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
     resp->setStatusCode(k400BadRequest);
-    callback(resp);
-    return;
+    co_return resp;
   }
 
   std::string id = req->getParameter("id");
@@ -312,11 +282,8 @@ void NewsPapersController::deleteNewsPaper(
   auto &newsPaperService = plugin->getNewsPaperService();
 
   // Call service method to delete the tenant
-  newsPaperService.deleteNewspaper(
-      id, [callback](const gnp::dto::BaseApiResponse &result) {
-        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-        callback(resp);
-      });
+  auto result = co_await newsPaperService.deleteNewspaperAsync(id);
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
 void NewsPapersController::incrementViewCount(
