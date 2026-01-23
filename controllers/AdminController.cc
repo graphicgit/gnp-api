@@ -123,10 +123,8 @@ AdminController::unPublishNewsPaper(const HttpRequestPtr req) {
   co_return resp;
 }
 
-void AdminController::IngestNewsPaper(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
-
+drogon::Task<HttpResponsePtr>
+AdminController::IngestNewsPaper(const HttpRequestPtr req) {
   auto jsonBody = req->getJsonObject();
 
   if (!jsonBody) {
@@ -135,23 +133,18 @@ void AdminController::IngestNewsPaper(
     response.error["message"] = "Invalid JSON body";
     auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
     resp->setStatusCode(k400BadRequest);
-    callback(resp);
-    return;
+    co_return resp;
   }
 
   gnp::dto::IngestNewsPaperDto dto;
-
   dto.fromJson(*jsonBody);
 
   // Get tenant service from plugin
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
-  newsPaperService.ingest(
-      dto, [callback](const gnp::dto::BaseApiResponse &result) {
-        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-        callback(resp);
-      });
+  auto result = co_await newsPaperService.ingestAsync(dto);
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
 void AdminController::updateNewsPaper(

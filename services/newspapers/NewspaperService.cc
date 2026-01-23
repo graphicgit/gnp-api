@@ -474,13 +474,10 @@ drogon::Task<dto::BaseApiResponse> NewspaperService::listAllAsync(
   }
 }
 
-void NewspaperService::ingest(
-    const dto::IngestNewsPaperDto &dto,
-    const std::function<void(const dto::BaseApiResponse &)> &callback) {
-
+drogon::Task<gnp::dto::BaseApiResponse>
+NewspaperService::ingestAsync(const dto::IngestNewsPaperDto &dto) {
   auto dbClient = drogon::app().getDbClient();
-
-  Mapper<drogon_model::Gnp::Newspapers> mp(dbClient);
+  drogon::orm::CoroMapper<drogon_model::Gnp::Newspapers> mp(dbClient);
 
   drogon_model::Gnp::Newspapers newspaper;
 
@@ -507,23 +504,23 @@ void NewspaperService::ingest(
   newspaper.setCreatedAt(trantor::Date::now());
   newspaper.setFeaturedStories(dto.getFeaturedStories());
 
-  mp.insert(
-      newspaper,
-      [callback](const drogon_model::Gnp::Newspapers &newspaper) {
-        dto::BaseApiResponse successResponse;
-        successResponse.success = true;
-        successResponse.message = "Newspaper created successfully";
-        successResponse.result["id"] = newspaper.getValueOfId();
+  try {
+    auto insertedNewspaper = co_await mp.insert(newspaper);
 
-        callback(successResponse);
-      },
-      [callback](const drogon::orm::DrogonDbException &e) {
-        dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.message = "Database error while creating Newspaper";
-        errorResponse.error["code"] = constants::ERR_DB_QUERY;
-        callback(errorResponse);
-      });
+    dto::BaseApiResponse successResponse;
+    successResponse.success = true;
+    successResponse.message = "Newspaper created successfully";
+    successResponse.result["id"] = insertedNewspaper.getValueOfId();
+
+    co_return successResponse;
+  } catch (const drogon::orm::DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Database error while creating Newspaper";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
 }
 
 drogon::Task<gnp::dto::BaseApiResponse>

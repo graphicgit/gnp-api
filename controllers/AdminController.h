@@ -128,8 +128,7 @@ public:
   getNewsPaperFullDetails(const HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> publishNewsPaper(const HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> unPublishNewsPaper(const HttpRequestPtr req);
-  void IngestNewsPaper(const HttpRequestPtr &req,
-                       std::function<void(const HttpResponsePtr &)> &&callback);
+  drogon::Task<HttpResponsePtr> IngestNewsPaper(const HttpRequestPtr req);
   void updateNewsPaper(const HttpRequestPtr &req,
                        std::function<void(const HttpResponsePtr &)> &&callback);
   drogon::Task<HttpResponsePtr> deleteNewsPaper(const HttpRequestPtr req);

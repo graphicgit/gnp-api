@@ -40,9 +40,8 @@ public:
                const std::string &startDate, const std::string &endDate,
                const std::string &query);
 
-  void
-  ingest(const dto::IngestNewsPaperDto &dto,
-         const std::function<void(const dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse>
+  ingestAsync(const dto::IngestNewsPaperDto &dto);
 
   drogon::Task<gnp::dto::BaseApiResponse> publishAsync(const std::string &id);
 

@@ -39,9 +39,7 @@ public:
   getFullDetailsByPublication(const HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> publish(const HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> unPublish(const HttpRequestPtr req);
-  void
-  ingestPublication(const HttpRequestPtr &req,
-                    std::function<void(const HttpResponsePtr &)> &&callback);
+  drogon::Task<HttpResponsePtr> ingestPublication(const HttpRequestPtr req);
   void
   incrementViewCount(const HttpRequestPtr &req,
                      std::function<void(const HttpResponsePtr &)> &&callback);
