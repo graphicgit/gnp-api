@@ -50,8 +50,7 @@ public:
 
   drogon::Task<gnp::dto::BaseApiResponse> unPublishAsync(const std::string &id);
 
-  drogon::Task<gnp::dto::BaseApiResponse>
-  deleteNewspaperAsync(const std::string &id);
+  drogon::Task<gnp::dto::BaseApiResponse> deleteNewspaperAsync(const std::string &id);
 
   void incrementViewCount(
       const std::string &id,
