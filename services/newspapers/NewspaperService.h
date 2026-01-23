@@ -46,17 +46,11 @@ public:
   ingest(const dto::IngestNewsPaperDto &dto,
          const std::function<void(const dto::BaseApiResponse &)> &callback);
 
-  void publish(
-      const std::string &id,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse> publishAsync(const std::string &id);
 
-  void unPublish(
-      const std::string &id,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse> unPublishAsync(const std::string &id);
 
-  void deleteNewspaper(
-      const std::string &id,
-      const std::function<void(const dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse> deleteNewspaperAsync(const std::string &id);
 
   void incrementViewCount(
       const std::string &id,

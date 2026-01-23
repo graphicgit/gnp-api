@@ -127,18 +127,13 @@ public:
   void getNewsPaperFullDetails(
       const HttpRequestPtr &req,
       std::function<void(const HttpResponsePtr &)> &&callback);
-  void
-  publishNewsPaper(const HttpRequestPtr &req,
-                   std::function<void(const HttpResponsePtr &)> &&callback);
-  void
-  unPublishNewsPaper(const HttpRequestPtr &req,
-                     std::function<void(const HttpResponsePtr &)> &&callback);
+  drogon::Task<HttpResponsePtr> publishNewsPaper(const HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> unPublishNewsPaper(const HttpRequestPtr req);
   void IngestNewsPaper(const HttpRequestPtr &req,
                        std::function<void(const HttpResponsePtr &)> &&callback);
   void updateNewsPaper(const HttpRequestPtr &req,
                        std::function<void(const HttpResponsePtr &)> &&callback);
-  void deleteNewsPaper(const HttpRequestPtr &req,
-                       std::function<void(const HttpResponsePtr &)> &&callback);
+  drogon::Task<HttpResponsePtr> deleteNewsPaper(const HttpRequestPtr req);
 
   // users...
   void getAllUsers(const HttpRequestPtr &req,
