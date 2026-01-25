@@ -25,32 +25,30 @@ public:
   // void getRelatedContent(const std::string& newsPaperId, const
   // std::function<void(const gnp::dto::BaseApiResponse&)>& callback);
 
-  void getReductedDetails(
-      const std::string &id,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse>
+  getRedactedDetailsAsync(const std::string &id);
 
-  void getFullDetails(
-      const std::string &id,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse>
+  getFullDetailsAsync(const std::string &id);
 
-  void getFullDetailsByPublication(
-      const std::string &publicationId, const std::string &date,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse>
+  getFullDetailsByPublicationAsync(const std::string &publicationId,
+                                   const std::string &date);
 
   drogon::Task<gnp::dto::BaseApiResponse>
   listAllAsync(int pageNo, int pageSize, const std::string &publicationId,
                const std::string &startDate, const std::string &endDate,
                const std::string &query);
 
-  void
-  ingest(const dto::IngestNewsPaperDto &dto,
-         const std::function<void(const dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse>
+  ingestAsync(const dto::IngestNewsPaperDto &dto);
 
   drogon::Task<gnp::dto::BaseApiResponse> publishAsync(const std::string &id);
 
   drogon::Task<gnp::dto::BaseApiResponse> unPublishAsync(const std::string &id);
 
-  drogon::Task<gnp::dto::BaseApiResponse> deleteNewspaperAsync(const std::string &id);
+  drogon::Task<gnp::dto::BaseApiResponse>
+  deleteNewspaperAsync(const std::string &id);
 
   void incrementViewCount(
       const std::string &id,

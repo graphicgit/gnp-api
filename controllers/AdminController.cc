@@ -5,8 +5,6 @@
 #include "plugins/GnpServicePlugin.h"
 #include "services/campaigns/CampaignService.h"
 
-// news papers
-
 drogon::Task<HttpResponsePtr>
 AdminController::getAllNewsPapers(const HttpRequestPtr req) {
   int pageSize = 10; // Default page size
@@ -60,10 +58,24 @@ AdminController::getAllNewsPapers(const HttpRequestPtr req) {
   co_return resp;
 }
 
-void AdminController::getNewsPaperFullDetails(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
-  // write your application logic here
+drogon::Task<HttpResponsePtr>
+AdminController::getNewsPaperFullDetails(const HttpRequestPtr req) {
+  if (req->getParameter("id").empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Missing required parameter: id";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  std::string id = req->getParameter("id");
+
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &newsPaperService = plugin->getNewsPaperService();
+
+  auto result = co_await newsPaperService.getFullDetailsAsync(id);
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
 drogon::Task<HttpResponsePtr>
@@ -108,10 +120,8 @@ AdminController::unPublishNewsPaper(const HttpRequestPtr req) {
   co_return resp;
 }
 
-void AdminController::IngestNewsPaper(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
-
+drogon::Task<HttpResponsePtr>
+AdminController::IngestNewsPaper(const HttpRequestPtr req) {
   auto jsonBody = req->getJsonObject();
 
   if (!jsonBody) {
@@ -120,23 +130,17 @@ void AdminController::IngestNewsPaper(
     response.error["message"] = "Invalid JSON body";
     auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
     resp->setStatusCode(k400BadRequest);
-    callback(resp);
-    return;
+    co_return resp;
   }
 
   gnp::dto::IngestNewsPaperDto dto;
-
   dto.fromJson(*jsonBody);
 
-  // Get tenant service from plugin
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
-  newsPaperService.ingest(
-      dto, [callback](const gnp::dto::BaseApiResponse &result) {
-        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-        callback(resp);
-      });
+  auto result = co_await newsPaperService.ingestAsync(dto);
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
 void AdminController::updateNewsPaper(
