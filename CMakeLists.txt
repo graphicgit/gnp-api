@@ -62,6 +62,7 @@ add_executable(${PROJECT_NAME} main.cc
         utils/IdGeneratorUtils.cc
         dto/AssignPartnerSubscriberPlanDto.h
         dto/GrantNewsPaperAccessDto.h
+        filters/JwtAuthFilter.h
 )
 
 # ##############################################################################

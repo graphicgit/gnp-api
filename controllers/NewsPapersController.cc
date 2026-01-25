@@ -61,7 +61,7 @@ NewsPapersController::getAll(const HttpRequestPtr req) {
 drogon::Task<HttpResponsePtr>
 NewsPapersController::getRedactedDetails(const HttpRequestPtr req) {
   if (req->getParameter("id").empty()) {
-    // Missing tenant ID - return early
+
     gnp::dto::BaseApiResponse response;
     response.success = false;
     response.error["message"] = "Missing required parameter: id";
@@ -128,8 +128,7 @@ NewsPapersController::getFullDetails(const HttpRequestPtr req) {
   co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
-drogon::Task<HttpResponsePtr>
-NewsPapersController::getFullDetailsByPublication(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> NewsPapersController::getFullDetailsByPublication(const HttpRequestPtr req) {
   std::string publicationId = req->getParameter("publicationId");
   std::string date = req->getParameter("date");
   std::string privateKey = req->getHeader("Vitamin");

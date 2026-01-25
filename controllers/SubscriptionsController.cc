@@ -47,7 +47,8 @@ void SubscriptionsController::manageGuestSubscription(
       });
 }
 
-Task<HttpResponsePtr> SubscriptionsController::manageGuestOneTimeBuy(const HttpRequestPtr req) {
+Task<HttpResponsePtr>
+SubscriptionsController::manageGuestOneTimeBuy(const HttpRequestPtr req) {
   auto jsonBody = req->getJsonObject();
 
   if (!jsonBody) {
@@ -73,7 +74,8 @@ Task<HttpResponsePtr> SubscriptionsController::manageGuestOneTimeBuy(const HttpR
   co_return resp;
 }
 
-Task<HttpResponsePtr> SubscriptionsController::fulfillGuestOneTimeBuy(const HttpRequestPtr req) {
+Task<HttpResponsePtr>
+SubscriptionsController::fulfillGuestOneTimeBuy(const HttpRequestPtr req) {
 
   auto reference = req->getParameter("reference");
 
@@ -90,15 +92,15 @@ Task<HttpResponsePtr> SubscriptionsController::fulfillGuestOneTimeBuy(const Http
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &subscriptionService = plugin->getSubscriptionService();
 
-  auto result = co_await subscriptionService.completeGuestOneTimeBuyAsync(reference);
+  auto result =
+      co_await subscriptionService.completeGuestOneTimeBuyAsync(reference);
 
   auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
   co_return resp;
 }
 
-void SubscriptionsController::validateNewsPaperEntitlement(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
+Task<HttpResponsePtr> SubscriptionsController::validateNewsPaperEntitlement(
+    const HttpRequestPtr req) {
 
   auto newsPaperId = req->getParameter("newsPaperId");
 
@@ -108,38 +110,24 @@ void SubscriptionsController::validateNewsPaperEntitlement(
     response.error["message"] = "News Paper Reference is required";
     auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
     resp->setStatusCode(k400BadRequest);
-    callback(resp);
+    co_return resp;
   }
 
-  // extract the authorization headers to get the user token: Authorization:
-  // `Bearer ${authToken}`
-  auto authHeader = req->getHeader("Authorization");
-
-  if (authHeader.empty() || authHeader.substr(0, 7) != "Bearer ") {
-    gnp::dto::BaseApiResponse response;
-    response.success = false;
-    response.error["message"] = "Authorization header is missing or invalid";
-    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
-    resp->setStatusCode(k401Unauthorized);
-    callback(resp);
-  }
-
-  std::string authToken = authHeader.substr(7);
+  // Get userId from request attributes (set by JwtAuthFilter)
+  auto userId = req->attributes()->get<std::string>("userId");
 
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &subscriptionService = plugin->getSubscriptionService();
 
-  subscriptionService.validateNewsPaperEntitlement(
-      newsPaperId, authToken,
-      [callback](const gnp::dto::BaseApiResponse &result) {
-        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-        callback(resp);
-      });
+  auto result = co_await subscriptionService.validateNewsPaperEntitlementAsync(
+      newsPaperId, userId);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
 }
 
-void SubscriptionsController::getNewsPaperRedactedDetailsViaUniqueId(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
+Task<HttpResponsePtr>
+SubscriptionsController::getNewsPaperRedactedDetailsViaUniqueId(
+    const HttpRequestPtr req) {
 
   auto uniqueId = req->getParameter("id");
 
@@ -149,32 +137,21 @@ void SubscriptionsController::getNewsPaperRedactedDetailsViaUniqueId(
     response.error["message"] = "News Paper Reference is required";
     auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
     resp->setStatusCode(k400BadRequest);
-    callback(resp);
+    co_return resp;
   }
 
-  // extract the authorization headers to get the user token: Authorization:
-  // `Bearer ${authToken}`
-  auto authHeader = req->getHeader("Authorization");
-
-  if (authHeader.empty() || authHeader.substr(0, 7) != "Bearer ") {
-    gnp::dto::BaseApiResponse response;
-    response.success = false;
-    response.error["message"] = "Authorization header is missing or invalid";
-    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
-    resp->setStatusCode(k401Unauthorized);
-    callback(resp);
-  }
-
-  std::string authToken = authHeader.substr(7);
+  // Get userId and email from request attributes (set by JwtAuthFilter)
+  auto userId = req->attributes()->get<std::string>("userId");
+  auto email = req->attributes()->get<std::string>("email");
 
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &subscriptionService = plugin->getSubscriptionService();
 
-  subscriptionService.getNewsPaperRedactedDetailsWithUniqueId(
-      uniqueId, authToken, [callback](const gnp::dto::BaseApiResponse &result) {
-        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-        callback(resp);
-      });
+  auto result =
+      co_await subscriptionService.getNewsPaperRedactedDetailsWithUniqueIdAsync(
+          uniqueId, userId, email);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
 }
 
 void SubscriptionsController::grantNewsPaperAccess(
@@ -206,7 +183,9 @@ void SubscriptionsController::grantNewsPaperAccess(
       });
 }
 
-Task<HttpResponsePtr> SubscriptionsController::findNewsPaperByDateAndPublication(const HttpRequestPtr req) {
+Task<HttpResponsePtr>
+SubscriptionsController::findNewsPaperByDateAndPublication(
+    const HttpRequestPtr req) {
   auto publicationId = req->getParameter("publicationId");
   auto publicationDate = req->getParameter("publicationDate");
 
@@ -219,22 +198,16 @@ Task<HttpResponsePtr> SubscriptionsController::findNewsPaperByDateAndPublication
     co_return resp;
   }
 
-  auto authHeader = req->getHeader("Authorization");
-  if (authHeader.empty() || authHeader.substr(0, 7) != "Bearer ") {
-    gnp::dto::BaseApiResponse response;
-    response.success = false;
-    response.error["message"] = "Authorization header is missing or invalid";
-    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
-    resp->setStatusCode(k401Unauthorized);
-    co_return resp;
-  }
-
-  std::string authToken = authHeader.substr(7);
+  // Get userId and email from request attributes (set by JwtAuthFilter)
+  auto userId = req->attributes()->get<std::string>("userId");
+  auto email = req->attributes()->get<std::string>("email");
 
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &subscriptionService = plugin->getSubscriptionService();
 
-  auto result = co_await subscriptionService.readNewsPaperByDateAndPublicationAsync(publicationId, publicationDate, authToken);
+  auto result =
+      co_await subscriptionService.readNewsPaperByDateAndPublicationAsync(
+          publicationId, publicationDate, userId, email);
 
   auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
   co_return resp;
