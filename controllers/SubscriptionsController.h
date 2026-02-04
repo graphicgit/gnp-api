@@ -23,17 +23,11 @@ public:
                 PREFIX + "/guest-onetime", Post, Options);
   ADD_METHOD_TO(SubscriptionsController::fulfillGuestOneTimeBuy,
                 PREFIX + "/fulfill-guest-onetime", Get, Options);
-  ADD_METHOD_TO(SubscriptionsController::validateNewsPaperEntitlement,
-                PREFIX + "/validate-newspaper-entitlement", Get, Options,
-                "JwtAuthFilter");
+  ADD_METHOD_TO(SubscriptionsController::validateNewsPaperEntitlement, PREFIX + "/validate-newspaper-entitlement", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(SubscriptionsController::grantNewsPaperAccess,
                 PREFIX + "/grant-newspaper-access", Post, Options);
-  ADD_METHOD_TO(SubscriptionsController::getNewsPaperRedactedDetailsViaUniqueId,
-                PREFIX + "/get-newspaper-redacted-details-via-unique-id", Get,
-                Options, "JwtAuthFilter");
-  ADD_METHOD_TO(SubscriptionsController::findNewsPaperByDateAndPublication,
-                PREFIX + "/find-newspaper-by-date", Get, Options,
-                "JwtAuthFilter");
+  ADD_METHOD_TO(SubscriptionsController::getNewsPaperRedactedDetailsViaUniqueId, PREFIX + "/get-newspaper-redacted-details-via-unique-id", Get,Options, "JwtAuthFilter");
+  ADD_METHOD_TO(SubscriptionsController::findNewsPaperByDateAndPublication, PREFIX + "/find-newspaper-by-date", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(SubscriptionsController::manageUserSubscription,
                 PREFIX + "/user", Post);
   ADD_METHOD_TO(SubscriptionsController::renew, PREFIX + "/renew", Post);
