@@ -535,6 +535,7 @@ SubscriptionService::validateNewsPaperEntitlementAsync(
     response.message = hasAccess ? "Access granted" : "Access denied";
     response.result["hasAccess"] = hasAccess;
     response.result["newsPaperId"] = newsPaperId;
+    response.result["price"] = 1.5;
     response.result["uniqueId"] = uniqueId;
 
   } catch (const DrogonDbException &e) {

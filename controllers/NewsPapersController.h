@@ -2,48 +2,38 @@
 
 #include <drogon/HttpController.h>
 
-namespace {
-const std::string PREFIX = "/api/v1/news-papers";
-}
+
 
 using namespace drogon;
 
 class NewsPapersController
     : public drogon::HttpController<NewsPapersController> {
 public:
+    static constexpr const char *PREFIX = "/api/v1/news-papers";
   METHOD_LIST_BEGIN
-  ADD_METHOD_TO(NewsPapersController::getAll, PREFIX + "/get-all", Get,
-                Options);
-  ADD_METHOD_TO(NewsPapersController::getRedactedDetails,
-                PREFIX + "/get-redacted-details", Get, Options);
-  ADD_METHOD_TO(NewsPapersController::getFullDetails,
-                PREFIX + "/get-full-details", Get);
-  ADD_METHOD_TO(NewsPapersController::getFullDetailsByPublication,
-                PREFIX + "/get-full-details-by-publication", Get, Options);
-  ADD_METHOD_TO(NewsPapersController::publish, PREFIX + "/publish", Get);
-  ADD_METHOD_TO(NewsPapersController::incrementViewCount,
-                PREFIX + "/increment-view-count", Get);
-  ADD_METHOD_TO(NewsPapersController::unPublish, PREFIX + "/unpublish", Get);
-  ADD_METHOD_TO(NewsPapersController::ingestPublication, PREFIX + "/ingest",
-                Post);
-  ADD_METHOD_TO(NewsPapersController::update, PREFIX + "/update", Post);
-  ADD_METHOD_TO(NewsPapersController::deleteNewsPaper, PREFIX + "/delete",
-                Delete);
+  ADD_METHOD_TO(NewsPapersController::getAll, std::string(PREFIX) + "/get-all", Get, Options);
+  ADD_METHOD_TO(NewsPapersController::getRedactedDetails, std::string(PREFIX) + "/get-redacted-details", Get, Options);
+  ADD_METHOD_TO(NewsPapersController::getFullDetails, std::string(PREFIX) + "/get-full-details", Get);
+  ADD_METHOD_TO(NewsPapersController::GetFreeNewsPaperDetailsByPublication, std::string(PREFIX) + "/get-free-details-by-publication", Get, Options);
+  ADD_METHOD_TO(NewsPapersController::GetPaidNewsPaperDetailsByPublication, std::string(PREFIX) + "/get-paid-details-by-publication", Get, Options);
+  ADD_METHOD_TO(NewsPapersController::publish, std::string(PREFIX) + "/publish", Get);
+  ADD_METHOD_TO(NewsPapersController::incrementViewCount, std::string(PREFIX) + "/increment-view-count", Get);
+  ADD_METHOD_TO(NewsPapersController::unPublish, std::string(PREFIX) + "/unpublish", Get);
+  ADD_METHOD_TO(NewsPapersController::ingestPublication, std::string(PREFIX) + "/ingest", Post);
+  ADD_METHOD_TO(NewsPapersController::update, std::string(PREFIX) + "/update", Post);
+  ADD_METHOD_TO(NewsPapersController::deleteNewsPaper, std::string(PREFIX) + "/delete", Delete);
   METHOD_LIST_END
 
   // handler methods
   drogon::Task<HttpResponsePtr> getAll(const HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> getRedactedDetails(const HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> getFullDetails(const HttpRequestPtr req);
-  drogon::Task<HttpResponsePtr>
-  getFullDetailsByPublication(const HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> GetFreeNewsPaperDetailsByPublication(const HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> GetPaidNewsPaperDetailsByPublication(const HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> publish(const HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> unPublish(const HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> ingestPublication(const HttpRequestPtr req);
-  void
-  incrementViewCount(const HttpRequestPtr &req,
-                     std::function<void(const HttpResponsePtr &)> &&callback);
-  void update(const HttpRequestPtr &req,
-              std::function<void(const HttpResponsePtr &)> &&callback);
+  void  incrementViewCount(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+  void update(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   drogon::Task<HttpResponsePtr> deleteNewsPaper(const HttpRequestPtr req);
 };

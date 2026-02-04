@@ -128,7 +128,7 @@ NewsPapersController::getFullDetails(const HttpRequestPtr req) {
   co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
-drogon::Task<HttpResponsePtr> NewsPapersController::getFullDetailsByPublication(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> NewsPapersController::GetFreeNewsPaperDetailsByPublication(const HttpRequestPtr req) {
   std::string publicationId = req->getParameter("publicationId");
   std::string date = req->getParameter("date");
   std::string privateKey = req->getHeader("Vitamin");
@@ -158,13 +158,45 @@ drogon::Task<HttpResponsePtr> NewsPapersController::getFullDetailsByPublication(
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
-  auto result = co_await newsPaperService.getFullDetailsByPublicationAsync(
-      publicationId, date);
+  auto result = co_await newsPaperService.getFreeNewsPaperDetailsByPublicationAsync(publicationId, date);
   co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
-drogon::Task<HttpResponsePtr>
-NewsPapersController::publish(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> NewsPapersController::GetPaidNewsPaperDetailsByPublication(const HttpRequestPtr req) {
+  std::string publicationId = req->getParameter("publicationId");
+  std::string date = req->getParameter("date");
+  std::string privateKey = req->getHeader("Vitamin");
+
+  if (privateKey.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Missing required Header";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k500InternalServerError);
+    co_return resp;
+  }
+
+  auto &app = drogon::app();
+  auto customConfig = app.getCustomConfig();
+  std::string privateKeyInConfig = customConfig["PrivateKey"].asString();
+
+  if (privateKey != privateKeyInConfig) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid Header";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k500InternalServerError);
+    co_return resp;
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &newsPaperService = plugin->getNewsPaperService();
+
+  auto result = co_await newsPaperService.getPaidNewsPaperDetailsByPublicationAsync(publicationId, date);
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+}
+
+drogon::Task<HttpResponsePtr> NewsPapersController::publish(const HttpRequestPtr req) {
   if (req->getParameter("id").empty()) {
     gnp::dto::BaseApiResponse response;
     response.success = false;
