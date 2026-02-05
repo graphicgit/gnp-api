@@ -3,122 +3,106 @@
 #include <drogon/HttpController.h>
 #include <drogon/utils/coroutine.h>
 
-namespace {
-const std::string PREFIX = "/api/v1/admin";
-}
 
 using namespace drogon;
 
 class AdminController : public drogon::HttpController<AdminController> {
 public:
+    static constexpr const char *PREFIX = "/api/v1/admin";
   METHOD_LIST_BEGIN
   // newspaper
-  ADD_METHOD_TO(AdminController::getAllNewsPapers,
-                PREFIX + "/get-all-newspapers", Get, Options);
-  ADD_METHOD_TO(AdminController::getNewsPaperFullDetails,
-                PREFIX + "/get-full-details", Get, Options);
-  ADD_METHOD_TO(AdminController::publishNewsPaper,
-                PREFIX + "/publish-newspaper", Get, Options);
-  ADD_METHOD_TO(AdminController::unPublishNewsPaper,
-                PREFIX + "/unpublish-newspaper", Get, Options);
-  ADD_METHOD_TO(AdminController::IngestNewsPaper, PREFIX + "/ingest-newspaper",
-                Post, Options);
+  ADD_METHOD_TO(AdminController::getAllNewsPapers, std::string(PREFIX) + "/get-all-newspapers", Get, Options);
+  ADD_METHOD_TO(AdminController::getNewsPaperFullDetails,  std::string(PREFIX) + "/get-full-details", Get, Options);
+  ADD_METHOD_TO(AdminController::publishNewsPaper, std::string(PREFIX) + "/publish-newspaper", Get, Options);
+  ADD_METHOD_TO(AdminController::unPublishNewsPaper, std::string(PREFIX) + "/unpublish-newspaper", Get, Options);
+  ADD_METHOD_TO(AdminController::IngestNewsPaper,  std::string(PREFIX) + "/ingest-newspaper", Post, Options);
 
-  ADD_METHOD_TO(AdminController::updateNewsPaper, PREFIX + "/update-newspaper",
-                Post, Options);
-  ADD_METHOD_TO(AdminController::deleteNewsPaper, PREFIX + "/delete-newspaper",
-                Delete, Options);
+  ADD_METHOD_TO(AdminController::updateNewsPaper,  std::string(PREFIX) + "/update-newspaper", Post, Options);
+  ADD_METHOD_TO(AdminController::deleteNewsPaper,  std::string(PREFIX) + "/delete-newspaper", Delete, Options);
   // users
-  ADD_METHOD_TO(AdminController::getAllUsers, PREFIX + "/get-all-users", Get,
-                Options);
-  ADD_METHOD_TO(AdminController::getUserDetails, PREFIX + "/get-user-details",
-                Get, Options);
-  ADD_METHOD_TO(AdminController::lockUserAccount, PREFIX + "/lock-account", Get,
-                Options);
-  ADD_METHOD_TO(AdminController::unLockUserAccount, PREFIX + "/unlock-account",
-                Get, Options);
-  ADD_METHOD_TO(AdminController::activate, PREFIX + "/activate", Get, Options);
-  ADD_METHOD_TO(AdminController::deactivate, PREFIX + "/deactivate", Get,
-                Options);
-  ADD_METHOD_TO(AdminController::createUser, PREFIX + "/create", Post, Options);
-  ADD_METHOD_TO(AdminController::updateUser, PREFIX + "/update", Post, Options);
-  ADD_METHOD_TO(AdminController::updateUser, PREFIX + "/update-profile-image",
-                Post, Options);
-  ADD_METHOD_TO(AdminController::deleteUser, PREFIX + "/delete", Delete,
-                Options);
+  ADD_METHOD_TO(AdminController::getAllUsers,  std::string(PREFIX) + "/get-all-users", Get, Options);
+  ADD_METHOD_TO(AdminController::getUserDetails,  std::string(PREFIX) + "/get-user-details", Get, Options);
+  ADD_METHOD_TO(AdminController::lockUserAccount,  std::string(PREFIX) + "/lock-account", Get, Options);
+  ADD_METHOD_TO(AdminController::unLockUserAccount,  std::string(PREFIX) + "/unlock-account", Get, Options);
+  ADD_METHOD_TO(AdminController::activate,  std::string(PREFIX) + "/activate", Get, Options);
+  ADD_METHOD_TO(AdminController::deactivate,  std::string(PREFIX) + "/deactivate", Get, Options);
+  ADD_METHOD_TO(AdminController::createUser,  std::string(PREFIX) + "/create", Post, Options);
+  ADD_METHOD_TO(AdminController::updateUser,  std::string(PREFIX) + "/update", Post, Options);
+  ADD_METHOD_TO(AdminController::updateUser,  std::string(PREFIX) + "/update-profile-image", Post, Options);
+  ADD_METHOD_TO(AdminController::deleteUser,  std::string(PREFIX) + "/delete", Delete, Options);
 
   // subscription plans
   ADD_METHOD_TO(AdminController::getAllSubscriptionPlans,
-                PREFIX + "/get-all-subscription-plans", Get, Options);
+                 std::string(PREFIX) + "/get-all-subscription-plans", Get, Options);
 
   ADD_METHOD_TO(AdminController::createSubscriptionPlan,
-                PREFIX + "/create-subscription-plan", Post, Options);
+                 std::string(PREFIX) + "/create-subscription-plan", Post, Options);
   ADD_METHOD_TO(AdminController::updateSubscriptionPlan,
-                PREFIX + "/update-subscription-plan", Post, Options);
+                 std::string(PREFIX) + "/update-subscription-plan", Post, Options);
   ADD_METHOD_TO(AdminController::deleteSubscriptionPlan,
-                PREFIX + "/delete-subscription-plan", Delete, Options);
+                 std::string(PREFIX) + "/delete-subscription-plan", Delete, Options);
 
   // user subscription
   ADD_METHOD_TO(AdminController::getAllUserSubscriptions,
-                PREFIX + "/get-all-subscriptions", Get);
+                 std::string(PREFIX) + "/get-all-subscriptions", Get);
   ADD_METHOD_TO(AdminController::getUserSubscriptionDetails,
-                PREFIX + "/get-user-subscription-details", Get);
+                 std::string(PREFIX) + "/get-user-subscription-details", Get);
   ADD_METHOD_TO(AdminController::renewUserSubscription,
-                PREFIX + "/renew-user-subscription", Post);
+                 std::string(PREFIX) + "/renew-user-subscription", Post);
 
   // campaigns
-  ADD_METHOD_TO(AdminController::getAllCampaigns, PREFIX + "/get-all-campaigns",
+  ADD_METHOD_TO(AdminController::getAllCampaigns,  std::string(PREFIX) + "/get-all-campaigns",
                 Get, Options);
-  ADD_METHOD_TO(AdminController::createCampaign, PREFIX + "/create-campaign",
+  ADD_METHOD_TO(AdminController::createCampaign,  std::string(PREFIX) + "/create-campaign",
                 Post, Options);
-  ADD_METHOD_TO(AdminController::publishCampaign, PREFIX + "/publish-campaign",
+  ADD_METHOD_TO(AdminController::publishCampaign,  std::string(PREFIX) + "/publish-campaign",
                 Get, Options);
-  ADD_METHOD_TO(AdminController::deleteCampaign, PREFIX + "/delete-campaign",
+  ADD_METHOD_TO(AdminController::deleteCampaign,  std::string(PREFIX) + "/delete-campaign",
                 Get, Options);
 
   // commercial partners
-  ADD_METHOD_TO(AdminController::getAllPartners, PREFIX + "/get-all-partners",
+  ADD_METHOD_TO(AdminController::getAllPartners,  std::string(PREFIX) + "/get-all-partners",
                 Get, Options);
   ADD_METHOD_TO(AdminController::getPartnerSubscribers,
-                PREFIX + "/get-partner-subscribers", Get, Options);
+                 std::string(PREFIX) + "/get-partner-subscribers", Get, Options);
   ADD_METHOD_TO(AdminController::getPartnerSubscriptionSummary,
-                PREFIX + "/get-partner-subscription-summary", Get, Options);
-  ADD_METHOD_TO(AdminController::getPartnerStats, PREFIX + "/get-partner-stats",
+                 std::string(PREFIX) + "/get-partner-subscription-summary", Get, Options);
+  ADD_METHOD_TO(AdminController::getPartnerStats,  std::string(PREFIX) + "/get-partner-stats",
                 Get, Options);
   ADD_METHOD_TO(AdminController::getPartnerDetails,
-                PREFIX + "/get-partner-details", Get, Options);
-  ADD_METHOD_TO(AdminController::createPartner, PREFIX + "/create-partner",
+                 std::string(PREFIX) + "/get-partner-details", Get, Options);
+  ADD_METHOD_TO(AdminController::createPartner,  std::string(PREFIX) + "/create-partner",
                 Post, Options);
   ADD_METHOD_TO(AdminController::createPartnerSubscriber,
-                PREFIX + "/create-partner-subscriber", Post, Options);
+                 std::string(PREFIX) + "/create-partner-subscriber", Post, Options);
   ADD_METHOD_TO(AdminController::assignPartnerSubscribersPlan,
-                PREFIX + "/assign-partner-subscribers-plan", Post, Options);
-  ADD_METHOD_TO(AdminController::updatePartner, PREFIX + "/update-partner",
+                 std::string(PREFIX) + "/assign-partner-subscribers-plan", Post, Options);
+  ADD_METHOD_TO(AdminController::updatePartner,  std::string(PREFIX) + "/update-partner",
                 Post, Options);
   ADD_METHOD_TO(AdminController::updatePartnerStatus,
-                PREFIX + "/update-partner-status", Get, Options);
-  ADD_METHOD_TO(AdminController::deletePartner, PREFIX + "/delete-partner",
+                 std::string(PREFIX) + "/update-partner-status", Get, Options);
+  ADD_METHOD_TO(AdminController::deletePartner,  std::string(PREFIX) + "/delete-partner",
                 Delete, Options);
   ADD_METHOD_TO(AdminController::deletePartnerSubscriber,
-                PREFIX + "/delete-partner-subscriber", Delete, Options);
+                 std::string(PREFIX) + "/delete-partner-subscriber", Delete, Options);
 
   ADD_METHOD_TO(AdminController::enablePartnerSubaccount,
-                PREFIX + "/enable-partner-subaccount", Get, Options);
+                 std::string(PREFIX) + "/enable-partner-subaccount", Get, Options);
 
   ADD_METHOD_TO(AdminController::disablePartnerSubaccount,
-                PREFIX + "/disable-partner-subaccount", Get, Options);
+                 std::string(PREFIX) + "/disable-partner-subaccount", Get, Options);
 
   // payments
-  ADD_METHOD_TO(AdminController::getAllPayments, PREFIX + "/get-all-payments",
+  ADD_METHOD_TO(AdminController::getAllPayments,  std::string(PREFIX) + "/get-all-payments",
                 Get, Options);
 
   // ingestion jobs
   ADD_METHOD_TO(AdminController::getAllIngestionJobs,
-                PREFIX + "/get-all-ingestion-jobs", Get, Options);
+                 std::string(PREFIX) + "/get-all-ingestion-jobs", Get, Options);
   ADD_METHOD_TO(AdminController::createIngestionJob,
-                PREFIX + "/create-ingestion-job", Post, Options);
+                 std::string(PREFIX) + "/create-ingestion-job", Post, Options);
   ADD_METHOD_TO(AdminController::deleteIngestionJob,
-                PREFIX + "/delete-ingestion-job", Get, Options);
+                 std::string(PREFIX) + "/delete-ingestion-job", Get, Options);
 
   METHOD_LIST_END
 

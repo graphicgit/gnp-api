@@ -74,6 +74,32 @@ SubscriptionsController::manageGuestOneTimeBuy(const HttpRequestPtr req) {
   co_return resp;
 }
 
+Task<HttpResponsePtr> SubscriptionsController::manageUserOneTimeBuy(const HttpRequestPtr req) {
+
+  auto newsPaperId = req->getParameter("newsPaperId");
+
+  if (newsPaperId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "newsPaperId is required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  // Get userId from request attributes (set by JwtAuthFilter)
+  auto userId = req->attributes()->get<std::string>("userId");
+
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &subscriptionService = plugin->getSubscriptionService();
+
+  auto result = co_await subscriptionService.initializeUserOneTimeBuyAsync(
+      newsPaperId, userId);
+
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+}
+
 Task<HttpResponsePtr>
 SubscriptionsController::fulfillGuestOneTimeBuy(const HttpRequestPtr req) {
 

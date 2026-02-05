@@ -14,7 +14,8 @@ public:
   ADD_METHOD_TO(SubscriptionsController::getAll, std::string(PREFIX) + "/get-all", Get); // for admin use
   ADD_METHOD_TO(SubscriptionsController::getUserSubscription,  std::string(PREFIX) + "/get-details", Get);
   ADD_METHOD_TO(SubscriptionsController::manageGuestSubscription, std::string(PREFIX) + "/guest", Post, Options);
-  ADD_METHOD_TO(SubscriptionsController::manageGuestOneTimeBuy, std::string(PREFIX) + "/guest-onetime", Post, Options);
+  ADD_METHOD_TO(SubscriptionsController::manageGuestOneTimeBuy, std::string(PREFIX) + "/guest-onetime-buy", Post, Options);
+  ADD_METHOD_TO(SubscriptionsController::manageUserOneTimeBuy, std::string(PREFIX) + "/user-onetime-buy", Get, Options);
   ADD_METHOD_TO(SubscriptionsController::fulfillGuestOneTimeBuy,  std::string(PREFIX) + "/fulfill-guest-onetime", Get, Options);
   ADD_METHOD_TO(SubscriptionsController::validateNewsPaperEntitlement, std::string(PREFIX) + "/validate-newspaper-entitlement", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(SubscriptionsController::grantNewsPaperAccess,  std::string(PREFIX) + "/grant-newspaper-access", Post, Options);
@@ -33,6 +34,8 @@ public:
       std::function<void(const HttpResponsePtr &)> &&callback);
 
   Task<HttpResponsePtr> manageGuestOneTimeBuy(const HttpRequestPtr req);
+
+  Task<HttpResponsePtr> manageUserOneTimeBuy(const HttpRequestPtr req);
 
   Task<HttpResponsePtr> fulfillGuestOneTimeBuy(const HttpRequestPtr req);
 
