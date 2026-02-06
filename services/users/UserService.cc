@@ -823,10 +823,8 @@ void UserService::validateUserCredentials(
   Mapper<Users> mapper(dbClient);
 
   Criteria criteria =
-      (Criteria(Users::Cols::_username, CompareOperator::EQ,
-                signin_dto.getUsernameOrEmail()) ||
-       Criteria(Users::Cols::_email, CompareOperator::EQ,
-                signin_dto.getUsernameOrEmail())) &&
+      (Criteria(Users::Cols::_username, CompareOperator::EQ, signin_dto.getUsernameOrEmail()) ||
+       Criteria(Users::Cols::_email, CompareOperator::EQ,signin_dto.getUsernameOrEmail())) &&
       Criteria(Users::Cols::_is_active, CompareOperator::EQ, true) &&
       Criteria(Users::Cols::_is_locked_out, CompareOperator::EQ, false);
 
@@ -865,8 +863,7 @@ void UserService::validateUserCredentials(
           response.result["token"] = token;
           response.result["userId"] = user.getValueOfId();
           response.result["username"] = user.getValueOfUsername();
-          response.result["fullName"] =
-              user.getValueOfFirstName() + " " + user.getValueOfLastName();
+          response.result["fullName"] = user.getValueOfFirstName() + " " + user.getValueOfLastName();
           response.result["email"] = user.getValueOfEmail();
 
           callback(response);

@@ -29,29 +29,28 @@ public:
       int pageNo, int pageSize, const std::string &query,
       const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
-  void manageGuestSubscription(
-      const dto::GuestSubscriptionDto &dto,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  void manageGuestSubscription(const dto::GuestSubscriptionDto &dto, const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
   drogon::Task<gnp::dto::BaseApiResponse> manageGuestOneTimeBuyAsync(const dto::GuestOnetimeBuyDto &dto);
 
   drogon::Task<gnp::dto::BaseApiResponse> completeGuestOneTimeBuyAsync(const std::string &reference);
 
-  void validateNewsPaperEntitlement(
-      const std::string &newsPaperId, const std::string &authToken,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse> completeUserOneTimeBuyAsync(const std::string &userId, const std::string &reference );
 
-  void grantNewsPaperAccessToRequester(
-      const dto::GrantNewsPaperAccessDto &dto,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse> initializeUserOneTimeBuyAsync(const std::string &newsPaperId, const std::string &userId);
 
-  void getNewsPaperRedactedDetailsWithUniqueId(
-      const std::string &uniqueId, const std::string &authToken,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse> validateNewsPaperEntitlementAsync(const std::string &newsPaperId, const std::string &userId);
+
+  void grantNewsPaperAccessToRequester(const dto::GrantNewsPaperAccessDto &dto, const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+
+  drogon::Task<gnp::dto::BaseApiResponse> getNewsPaperRedactedDetailsWithUniqueIdAsync(const std::string &uniqueId,
+                                               const std::string &userId,
+                                               const std::string &email);
 
   drogon::Task<gnp::dto::BaseApiResponse> readNewsPaperByDateAndPublicationAsync(const std::string &publicationId,
                                          const std::string &publicationDate,
-                                         const std::string &authToken);
+                                         const std::string &userId,
+                                         const std::string &email);
 };
 
 } // namespace gnp::services

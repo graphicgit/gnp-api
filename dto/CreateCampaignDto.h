@@ -108,4 +108,6 @@ namespace gnp::dto {
     }
 
 }
+
+
 #endif //CREATECAMPAIGNDTO_H

@@ -172,9 +172,7 @@ void AuthController::setPassword(
       });
 }
 
-void AuthController::signIn(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
+void AuthController::signIn(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback) {
   auto jsonBody = req->getJsonObject();
 
   if (!jsonBody) {
