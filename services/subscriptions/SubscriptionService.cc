@@ -488,6 +488,142 @@ SubscriptionService::completeGuestOneTimeBuyAsync(
   co_return response;
 }
 
+drogon::Task<gnp::dto::BaseApiResponse> SubscriptionService::completeUserOneTimeBuyAsync(const std::string &userId,
+                                                 const std::string &reference) {
+  auto dbClient = drogon::app().getDbClient();
+  dto::BaseApiResponse response;
+
+  try {
+    // 1. Find Purchase Attempt
+    CoroMapper<PurchaseAttempts> purchaseAttemptMapper(dbClient);
+    Criteria criteria = Criteria(PurchaseAttempts::Cols::_attempt_reference,CompareOperator::EQ, reference);
+    auto purchaseAttempt = co_await purchaseAttemptMapper.findOne(criteria);
+
+    // 2. Verify Payment with Paystack
+    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto &paystackApi = plugin->getPaystackApi();
+    auto verifyPayResponse = co_await paystackApi.verifyAsync(reference);
+
+    if (!verifyPayResponse.getStatus()) {
+      response.success = false;
+      response.message = !verifyPayResponse.getMessage().empty()
+                             ? verifyPayResponse.getMessage()
+                             : "Failed to verify payment";
+      co_return response;
+    }
+
+    const auto &verifyData = verifyPayResponse.getData();
+    auto paymentService = std::make_shared<gnp::services::PaymentService>();
+
+    if (verifyData.status_ == "success") {
+      // 3. Update status to Success
+      purchaseAttempt.setStatus("Success");
+      purchaseAttempt.setFailureReasonToNull();
+      co_await purchaseAttemptMapper.update(purchaseAttempt);
+
+      co_await paymentService->updateStatusAsync("Success", reference);
+
+      // Increment Newspaper Sales
+      try {
+        CoroMapper<drogon_model::Gnp::Newspapers> newspaperMapper(dbClient);
+        auto newspaper = co_await newspaperMapper.findByPrimaryKey(
+            purchaseAttempt.getValueOfNewspaperId());
+
+        std::string salesStr = newspaper.getValueOfSales();
+        long long sales = 0;
+        if (!salesStr.empty()) {
+          try {
+            sales = std::stoll(salesStr);
+          } catch (...) {
+            sales = 0;
+          }
+        }
+        sales++;
+        newspaper.setSales(std::to_string(sales));
+        co_await newspaperMapper.update(newspaper);
+      } catch (...) {
+        // Log error or handle failure to update sales
+      }
+
+      // 4. Update User Subscription Entitlements
+      CoroMapper<UserSubscriptions> subMapper(dbClient);
+      Criteria subCriteria(UserSubscriptions::Cols::_user_id,
+                           CompareOperator::EQ, userId);
+      auto userSub = co_await subMapper.findOne(subCriteria);
+
+      Json::Value entitlements;
+      std::string currentEntitlementsStr =
+          userSub.getValueOfNewspaperEntitlements();
+
+      if (!currentEntitlementsStr.empty()) {
+        Json::CharReaderBuilder readerBuilder;
+        std::string errs;
+        std::istringstream s(currentEntitlementsStr);
+        if (!Json::parseFromStream(readerBuilder, s, &entitlements, &errs)) {
+          entitlements = Json::arrayValue;
+        }
+      } else {
+        entitlements = Json::arrayValue;
+      }
+
+      std::string newPaperId = purchaseAttempt.getValueOfNewspaperId();
+      bool alreadyExists = false;
+
+      for (const auto &ent : entitlements) {
+        if (ent.isObject() && ent.isMember("id") &&
+            ent["id"].asString() == newPaperId) {
+          alreadyExists = true;
+          break;
+        } else if (ent.asString() == newPaperId) {
+          alreadyExists = true;
+          break;
+        }
+      }
+
+      if (!alreadyExists) {
+        Json::Value newEnt;
+        newEnt["id"] = newPaperId;
+        newEnt["uniqueId"] =
+            gnp::utils::IdGeneratorUtils::generateAlphanumericId();
+        entitlements.append(newEnt);
+      }
+
+      Json::StreamWriterBuilder writerBuilder;
+      writerBuilder["indentation"] = "";
+      userSub.setNewspaperEntitlements(
+          Json::writeString(writerBuilder, entitlements));
+      userSub.setIsActive(true);
+      co_await subMapper.update(userSub);
+
+      response.success = true;
+      response.message =
+          "Payment verified successfully. Access to Newspaper granted.";
+
+    } else {
+      // Payment Failed
+      purchaseAttempt.setStatus("Failed");
+      purchaseAttempt.setFailureReason(verifyData.message_);
+      co_await purchaseAttemptMapper.update(purchaseAttempt);
+
+      co_await paymentService->updateStatusAsync("Failed", reference);
+
+      response.success = false;
+      response.message =
+          "Payment verification failed. Status: " + verifyData.status_;
+    }
+
+  } catch (const DrogonDbException &e) {
+    response.success = false;
+    response.message = "Database error: " + std::string(e.base().what());
+    response.error["code"] = constants::ERR_DB_QUERY;
+  } catch (const std::exception &e) {
+    response.success = false;
+    response.message = "An error occurred: " + std::string(e.what());
+  }
+
+  co_return response;
+}
+
 drogon::Task<gnp::dto::BaseApiResponse>
 SubscriptionService::validateNewsPaperEntitlementAsync(
     const std::string &newsPaperId, const std::string &userId) {

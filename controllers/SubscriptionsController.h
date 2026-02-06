@@ -21,10 +21,9 @@ public:
   ADD_METHOD_TO(SubscriptionsController::manageUserOneTimeBuy,
                 std::string(PREFIX) + "/user-onetime-buy", Get, Options,
                 "JwtAuthFilter");
-  ADD_METHOD_TO(SubscriptionsController::fulfillGuestOneTimeBuy,
-                std::string(PREFIX) + "/fulfill-guest-onetime", Get, Options);
-  ADD_METHOD_TO(SubscriptionsController::validateNewsPaperEntitlement,
-                std::string(PREFIX) + "/validate-newspaper-entitlement", Get,
+  ADD_METHOD_TO(SubscriptionsController::fulfillGuestOneTimeBuy, std::string(PREFIX) + "/fulfill-guest-onetime", Get, Options);
+  ADD_METHOD_TO(SubscriptionsController::fulfillUserOneTimeBuy, std::string(PREFIX) + "/fulfill-user-onetime", Get, Options);
+  ADD_METHOD_TO(SubscriptionsController::validateNewsPaperEntitlement, std::string(PREFIX) + "/validate-newspaper-entitlement", Get,
                 Options, "JwtAuthFilter");
   ADD_METHOD_TO(SubscriptionsController::grantNewsPaperAccess,
                 std::string(PREFIX) + "/grant-newspaper-access", Post, Options);
@@ -57,17 +56,16 @@ public:
 
   Task<HttpResponsePtr> fulfillGuestOneTimeBuy(const HttpRequestPtr req);
 
-  void manageUserSubscription(
-      const HttpRequestPtr &req,
-      std::function<void(const HttpResponsePtr &)> &&callback);
+  Task<HttpResponsePtr> fulfillUserOneTimeBuy(const HttpRequestPtr req);
+
+  void manageUserSubscription(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+
   Task<HttpResponsePtr> validateNewsPaperEntitlement(const HttpRequestPtr req);
-  void
-  grantNewsPaperAccess(const HttpRequestPtr &req,
-                       std::function<void(const HttpResponsePtr &)> &&callback);
-  Task<HttpResponsePtr>
-  getNewsPaperRedactedDetailsViaUniqueId(const HttpRequestPtr req);
-  Task<HttpResponsePtr>
-  findNewsPaperByDateAndPublication(const HttpRequestPtr req);
+
+  void grantNewsPaperAccess(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+
+  Task<HttpResponsePtr> getNewsPaperRedactedDetailsViaUniqueId(const HttpRequestPtr req);
+  Task<HttpResponsePtr> findNewsPaperByDateAndPublication(const HttpRequestPtr req);
   void renew(const HttpRequestPtr &req,
              std::function<void(const HttpResponsePtr &)> &&callback);
 };

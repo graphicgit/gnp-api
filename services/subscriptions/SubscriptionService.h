@@ -35,6 +35,8 @@ public:
 
   drogon::Task<gnp::dto::BaseApiResponse> completeGuestOneTimeBuyAsync(const std::string &reference);
 
+  drogon::Task<gnp::dto::BaseApiResponse> completeUserOneTimeBuyAsync(const std::string &userId, const std::string &reference );
+
   drogon::Task<gnp::dto::BaseApiResponse> initializeUserOneTimeBuyAsync(const std::string &newsPaperId, const std::string &userId);
 
   drogon::Task<gnp::dto::BaseApiResponse> validateNewsPaperEntitlementAsync(const std::string &newsPaperId, const std::string &userId);
