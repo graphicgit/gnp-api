@@ -74,7 +74,8 @@ SubscriptionsController::manageGuestOneTimeBuy(const HttpRequestPtr req) {
   co_return resp;
 }
 
-Task<HttpResponsePtr> SubscriptionsController::manageUserOneTimeBuy(const HttpRequestPtr req) {
+Task<HttpResponsePtr>
+SubscriptionsController::manageUserOneTimeBuy(const HttpRequestPtr req) {
 
   auto newsPaperId = req->getParameter("newsPaperId");
 
@@ -89,6 +90,15 @@ Task<HttpResponsePtr> SubscriptionsController::manageUserOneTimeBuy(const HttpRe
 
   // Get userId from request attributes (set by JwtAuthFilter)
   auto userId = req->attributes()->get<std::string>("userId");
+
+  if (userId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "User ID not found in token";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k401Unauthorized);
+    co_return resp;
+  }
 
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &subscriptionService = plugin->getSubscriptionService();
