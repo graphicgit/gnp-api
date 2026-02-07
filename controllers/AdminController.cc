@@ -1003,3 +1003,107 @@ AdminController::deletePartnerSubscriber(HttpRequestPtr req) {
       partnerId, subscriberId);
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
+
+#include "dto/GeneratePartnerApiKeyDto.h"
+
+drogon::Task<HttpResponsePtr>
+AdminController::getPartnerApiKeys(HttpRequestPtr req) {
+  auto partnerId = req->getParameter("partnerId");
+
+  if (partnerId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Missing required parameter: partnerId";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &partnerService = plugin->getCommercialPartnerService();
+
+  auto apiResp = co_await partnerService.getPartnerApiKeys(partnerId);
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+}
+
+drogon::Task<HttpResponsePtr>
+AdminController::generatePartnerApiKey(HttpRequestPtr req) {
+  auto jsonPtr = req->getJsonObject();
+  if (!jsonPtr) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  gnp::dto::GeneratePartnerApiKeyDto dto;
+  dto.fromJson(*jsonPtr);
+
+  if (dto.getPartnerId().empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Missing required field: partnerId";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &partnerService = plugin->getCommercialPartnerService();
+
+  auto apiResp = co_await partnerService.generatePartnerApiKey(dto);
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+}
+drogon::Task<HttpResponsePtr>
+AdminController::revokePartnerApiKey(HttpRequestPtr req) {
+  auto partnerId = req->getParameter("partnerId");
+  auto clientId = req->getParameter("clientId");
+
+  if (partnerId.empty() || clientId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] =
+        "Missing required parameters: partnerId or clientId";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &partnerService = plugin->getCommercialPartnerService();
+
+  auto apiResp =
+      co_await partnerService.revokePartnerApiKey(partnerId, clientId);
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+}
+drogon::Task<HttpResponsePtr> AdminController::updatePartnerApiKey(HttpRequestPtr req) {
+  auto json = req->getJsonObject();
+  if (!json) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  gnp::dto::UpdatePartnerApiKeyDto dto;
+  dto.fromJson(*json);
+
+  if (dto.getId().empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Missing required parameter: id";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &partnerService = plugin->getCommercialPartnerService();
+
+  auto apiResp = co_await partnerService.updatePartnerApiKey(dto);
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+}

@@ -3,6 +3,7 @@
 //
 
 #include "CommercialPartnerService.h"
+#include "CommercialPartnerApiKeys.h"
 #include "CommercialPartners.h"
 #include "SubscriptionPlans.h"
 #include "UserSubscriptions.h"
@@ -10,11 +11,11 @@
 #include "bcrypt.h"
 #include "constants/ErrorCodes.h"
 #include "dto/BaseApiResponse.h"
+#include "dto/GeneratePartnerApiKeyDto.h"
 #include "dto/SendEmailDto.h"
 #include "plugins/GnpServicePlugin.h"
 #include "utils/IdGeneratorUtils.h"
 #include "utils/PasswordUtils.h"
-
 #include <drogon/orm/CoroMapper.h>
 
 using namespace drogon::orm;
@@ -343,17 +344,20 @@ void CommercialPartnerService::createPartnerSubscriber(
                         <h1>Graphic News Plus</h1>
                       </div>
                       <div class="content">
-                        <p>Hello )" + userDto.getFirstName() + R"(,</p>
+                        <p>Hello )" +
+            userDto.getFirstName() + R"(,</p>
                         <p>Welcome to Graphic News Plus! Your corporate account has been created successfully.</p>
                         <p>Below are your login credentials:</p>
                         <div class="credentials">
                           <div class="credential-item">
                             <div class="credential-label">Username (Email):</div>
-                            <div class="credential-value">)" +  userDto.getEmail() + R"(</div>
+                            <div class="credential-value">)" +
+            userDto.getEmail() + R"(</div>
                           </div>
                           <div class="credential-item">
                             <div class="credential-label">Password:</div>
-                            <div class="credential-value">)" +  password + R"(</div>
+                            <div class="credential-value">)" +
+            password + R"(</div>
                           </div>
                         </div>
                         <p>Please keep these credentials secure and change your password after your first login.</p>
@@ -1165,7 +1169,8 @@ void CommercialPartnerService::updateStatus(
       });
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::deletePartnerSubscriberAsync(
+drogon::Task<::gnp::dto::BaseApiResponse>
+CommercialPartnerService::deletePartnerSubscriberAsync(
     const std::string &partnerId, const std::string &subscriberId) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -1193,13 +1198,336 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::deletePartne
 
     ::gnp::dto::BaseApiResponse successResponse;
     successResponse.success = true;
-    successResponse.message = "Subscriber deleted successfully, quota recovered";
+    successResponse.message =
+        "Subscriber deleted successfully, quota recovered";
     co_return successResponse;
 
   } catch (const DrogonDbException &e) {
     ::gnp::dto::BaseApiResponse errorResponse;
     errorResponse.success = false;
     errorResponse.message = "Database error during subscriber deletion";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+drogon::Task<::gnp::dto::BaseApiResponse>
+CommercialPartnerService::getPartnerApiKeys(const std::string &partnerId) {
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> mp(dbClient);
+
+  try {
+    auto apiKeys = co_await mp.findBy(
+        Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_partner_id,
+                 CompareOperator::EQ, partnerId));
+
+    gnp::dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "API keys fetched successfully";
+
+    auto pgArrayToJson = [](const std::string &pgArr) {
+      Json::Value arr = Json::arrayValue;
+      if (pgArr.length() < 2 || pgArr.front() != '{' || pgArr.back() != '}')
+        return arr;
+      std::string content = pgArr.substr(1, pgArr.length() - 2);
+      std::stringstream ss(content);
+      std::string item;
+      while (std::getline(ss, item, ',')) {
+        if (!item.empty()) {
+          if (item.front() == '"' && item.back() == '"' && item.length() >= 2) {
+            item = item.substr(1, item.length() - 2);
+          }
+          arr.append(item);
+        }
+      }
+      return arr;
+    };
+
+    Json::Value data = Json::arrayValue;
+    for (const auto &apiKey : apiKeys) {
+      Json::Value apiKeyJson = apiKey.toJson();
+      Json::Value camelCaseApiKey;
+
+      camelCaseApiKey["id"] = apiKeyJson["id"];
+      camelCaseApiKey["partnerId"] = apiKeyJson["partner_id"];
+      camelCaseApiKey["partnerName"] = apiKeyJson["partner_name"];
+      camelCaseApiKey["clientId"] = apiKeyJson["client_id"];
+      camelCaseApiKey["label"] = apiKeyJson["label"];
+
+      // Parse scopes (database type is json)
+      if (apiKeyJson["scopes"].isString()) {
+        std::string scopesStr = apiKeyJson["scopes"].asString();
+        Json::Value scopesJson;
+        Json::Reader reader;
+        if (reader.parse(scopesStr, scopesJson)) {
+          camelCaseApiKey["scopes"] = scopesJson;
+        } else {
+          camelCaseApiKey["scopes"] = Json::arrayValue;
+        }
+      } else {
+        camelCaseApiKey["scopes"] = apiKeyJson["scopes"];
+      }
+
+      // Parse allowedIps (PostgreSQL array type: {"val1","val2"})
+      camelCaseApiKey["allowedIps"] =
+          pgArrayToJson(apiKeyJson["allowed_ips"].asString());
+
+      camelCaseApiKey["isActive"] = apiKeyJson["is_active"];
+      camelCaseApiKey["lastUsedAt"] = apiKeyJson["last_used_at"];
+      camelCaseApiKey["createdAt"] = apiKeyJson["created_at"];
+
+      data.append(camelCaseApiKey);
+    }
+    response.result = data;
+    co_return response;
+  } catch (const DrogonDbException &e) {
+    gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to fetch API keys";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+drogon::Task<::gnp::dto::BaseApiResponse>
+CommercialPartnerService::generatePartnerApiKey(
+    const ::gnp::dto::GeneratePartnerApiKeyDto &dto) {
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> mp(dbClient);
+
+  try {
+    // 1. Generate Client ID and Client Secret
+    std::string clientId =
+        "gnp_" + utils::IdGeneratorUtils::generateAlphanumericId(10);
+    std::string clientSecret =
+        "gnp_sk_" + utils::IdGeneratorUtils::generateAlphanumericId(18);
+
+    // 2. Hash Client Secret
+    std::string clientSecretHash = bcrypt::generateHash(clientSecret);
+
+    // 3. Prepare model
+    drogon_model::Gnp::CommercialPartnerApiKeys apiKey;
+    apiKey.setPartnerId(dto.getPartnerId());
+    apiKey.setClientId(clientId);
+    apiKey.setClientSecretHash(clientSecretHash);
+    apiKey.setLabel(dto.getLabel());
+    apiKey.setPartnerName(dto.getPartnerName());
+
+    // Format scopes as JSON string (database type is json)
+    Json::Value scopesJson = Json::arrayValue;
+    for (const auto &scope : dto.getScopes()) {
+      scopesJson.append(scope);
+    }
+    Json::StreamWriterBuilder writerBuilder;
+    writerBuilder["indentation"] = ""; // Compact JSON
+    apiKey.setScopes(Json::writeString(writerBuilder, scopesJson));
+
+    // Format allowed IPs as PostgreSQL array literal: {"ip1", "ip2"}
+    std::string ipsStr = "{";
+    for (size_t i = 0; i < dto.getAllowedIps().size(); ++i) {
+      ipsStr += "\"" + dto.getAllowedIps()[i] + "\"";
+      if (i < dto.getAllowedIps().size() - 1)
+        ipsStr += ",";
+    }
+    ipsStr += "}";
+    apiKey.setAllowedIps(ipsStr);
+
+    apiKey.setIsActive(true);
+    apiKey.setCreatedAt(trantor::Date::now());
+
+    // 4. Save to database
+    co_await mp.insert(apiKey);
+
+    // 5. Prepare response
+    gnp::dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "API key generated successfully";
+
+    Json::Value data;
+
+    data["clientSecret"] = clientSecret; // Return plain secret ONLY ONCE
+    data["clientId"] = clientId;
+
+    for (const auto &scope : dto.getScopes())
+      scopesJson.append(scope);
+    data["scopes"] = scopesJson;
+
+    Json::Value ipsJson = Json::arrayValue;
+    for (const auto &ip : dto.getAllowedIps())
+      ipsJson.append(ip);
+    data["allowedIps"] = ipsJson;
+
+    response.result = data;
+    co_return response;
+  } catch (const DrogonDbException &e) {
+    gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to generate API key";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+drogon::Task<::gnp::dto::BaseApiResponse>
+CommercialPartnerService::revokePartnerApiKey(const std::string &partnerId,
+                                              const std::string &clientId) {
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> mp(dbClient);
+
+  try {
+    auto apiKey = co_await mp.findOne(
+        Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_partner_id,
+                 CompareOperator::EQ, partnerId) &&
+        Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_client_id,
+                 CompareOperator::EQ, clientId));
+
+    apiKey.setIsActive(false);
+    co_await mp.update(apiKey);
+
+    gnp::dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "API key revoked successfully";
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to revoke API key";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+drogon::Task<::gnp::dto::BaseApiResponse>
+CommercialPartnerService::updatePartnerApiKey(
+    const ::gnp::dto::UpdatePartnerApiKeyDto &dto) {
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> mp(dbClient);
+
+  try {
+    auto apiKey = co_await mp.findByPrimaryKey(dto.getId());
+
+    // Update scopes (database type is json)
+    Json::Value scopesJson = Json::arrayValue;
+    for (const auto &scope : dto.getScopes()) {
+      scopesJson.append(scope);
+    }
+    Json::StreamWriterBuilder writerBuilder;
+    writerBuilder["indentation"] = ""; // Compact JSON
+    apiKey.setScopes(Json::writeString(writerBuilder, scopesJson));
+
+    // Update allowed IPs (database type is text[])
+    std::string ipsStr = "{";
+    for (size_t i = 0; i < dto.getAllowedIps().size(); ++i) {
+      ipsStr += "\"" + dto.getAllowedIps()[i] + "\"";
+      if (i < dto.getAllowedIps().size() - 1)
+        ipsStr += ",";
+    }
+    ipsStr += "}";
+    apiKey.setAllowedIps(ipsStr);
+
+    co_await mp.update(apiKey);
+
+    gnp::dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "API key updated successfully";
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to update API key";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubscriberAsync(
+const std::string &clientId, const std::string &clientSecret,
+    const ::gnp::dto::PartnerOnboardingDto &dto) {
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> apiKeyMapper(
+      dbClient);
+
+  try {
+    // 1. Verify API Key
+    auto apiKey = co_await apiKeyMapper.findOne(
+        Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_client_id,
+                 CompareOperator::EQ, clientId) &&
+        Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_is_active,
+                 CompareOperator::EQ, true));
+
+    if (!bcrypt::validatePassword(clientSecret,
+                                  apiKey.getValueOfClientSecretHash())) {
+      gnp::dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.message = "Invalid ClientSecret";
+      errorResponse.error["code"] = constants::ERR_UNAUTHORIZED;
+      co_return errorResponse;
+    }
+
+    // Update last used at
+    apiKey.setLastUsedAt(trantor::Date::now());
+    co_await apiKeyMapper.update(apiKey);
+
+    // 2. Process Subscriber creation
+    CoroMapper<drogon_model::Gnp::Users> userMapper(dbClient);
+    std::string fullName = dto.getFullName();
+    std::string firstName, lastName;
+    size_t lastSpace = fullName.find_last_of(' ');
+    if (lastSpace != std::string::npos) {
+      firstName = fullName.substr(0, lastSpace);
+      lastName = fullName.substr(lastSpace + 1);
+    } else {
+      firstName = fullName;
+    }
+
+    // Check if subscriber profile already exists (optional, keeping it simple
+    // based on original logic)
+    drogon_model::Gnp::Users newUser;
+    newUser.setFirstName(firstName);
+    if (!lastName.empty())
+      newUser.setLastName(lastName);
+    newUser.setPhoneNumber(dto.getPhoneNumber());
+      newUser.setEmail(dto.getPhoneNumber()+"@graphic.com.gh");
+    newUser.setPartnerId(apiKey.getValueOfPartnerId());
+    newUser.setIsActive(true);
+    newUser.setIsLockedOut(false);
+    newUser.setCreatedAt(trantor::Date::now());
+    // Since it's via API, we might not have email, or phone is used as username
+    newUser.setUsername(dto.getPhoneNumber());
+    // Generate a random password for them
+    std::string password = utils::PasswordUtils::generateRandomPassword(8);
+    newUser.setPasswordHash(bcrypt::generateHash(password));
+
+    co_await userMapper.insert(newUser);
+
+    // 3. Update Partner Quota
+    CoroMapper<drogon_model::Gnp::CommercialPartners> partnerMapper(dbClient);
+    auto partner =
+        co_await partnerMapper.findByPrimaryKey(apiKey.getValueOfPartnerId());
+    auto remainingQuota = partner.getValueOfRemainingQuota();
+    if (remainingQuota > 0) {
+      partner.setRemainingQuota(remainingQuota - 1);
+      co_await partnerMapper.update(partner);
+    }
+
+    //send email to the user
+
+    gnp::dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Subscriber onboarded successfully";
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Onboarding failed or unauthorized";
     errorResponse.error["code"] = constants::ERR_DB_QUERY;
     errorResponse.error["detail"] = e.base().what();
     co_return errorResponse;

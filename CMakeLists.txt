@@ -63,6 +63,8 @@ add_executable(${PROJECT_NAME} main.cc
         dto/AssignPartnerSubscriberPlanDto.h
         dto/GrantNewsPaperAccessDto.h
         filters/JwtAuthFilter.h
+        controllers/PartnerApiController.h
+        constants/PartnerApiScopes.h
 )
 
 # ##############################################################################
