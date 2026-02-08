@@ -1,5 +1,5 @@
 #include "AdminController.h"
-
+#include "dto/GeneratePartnerApiKeyDto.h"
 #include "dto/AssignPartnerSubscriberPlanDto.h"
 #include "dto/CreateCampaignDto.h"
 #include "plugins/GnpServicePlugin.h"
@@ -1004,10 +1004,8 @@ AdminController::deletePartnerSubscriber(HttpRequestPtr req) {
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
-#include "dto/GeneratePartnerApiKeyDto.h"
 
-drogon::Task<HttpResponsePtr>
-AdminController::getPartnerApiKeys(HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::getPartnerApiKeys(HttpRequestPtr req) {
   auto partnerId = req->getParameter("partnerId");
 
   if (partnerId.empty()) {
@@ -1026,8 +1024,7 @@ AdminController::getPartnerApiKeys(HttpRequestPtr req) {
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
-drogon::Task<HttpResponsePtr>
-AdminController::generatePartnerApiKey(HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::generatePartnerApiKey(HttpRequestPtr req) {
   auto jsonPtr = req->getJsonObject();
   if (!jsonPtr) {
     gnp::dto::BaseApiResponse response;
