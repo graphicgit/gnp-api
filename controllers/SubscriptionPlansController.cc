@@ -1,10 +1,12 @@
 #include "SubscriptionPlansController.h"
 
 #include "plugins/GnpServicePlugin.h"
+#include "services/subscription_plans/SubscriptionPlanService.h"
 
 using namespace gnp;
 
-drogon::Task<HttpResponsePtr> SubscriptionPlansController::getAllPlans(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr>
+SubscriptionPlansController::getAllPlans(const HttpRequestPtr req) {
 
   int pageNo = 1;
   int pageSize = 10;
@@ -27,11 +29,11 @@ drogon::Task<HttpResponsePtr> SubscriptionPlansController::getAllPlans(const Htt
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &subscriptionPlanService = plugin->getSubscriptionPlanService();
 
-  auto result = co_await subscriptionPlanService.getAllPlansAsync(pageNo, pageSize, query);
+  auto result = co_await subscriptionPlanService.getAllPlansAsync(
+      pageNo, pageSize, query);
   auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
   co_return resp;
 }
-
 
 drogon::Task<HttpResponsePtr>
 SubscriptionPlansController::create(const HttpRequestPtr req) {

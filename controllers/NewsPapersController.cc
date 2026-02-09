@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "plugins/GnpServicePlugin.h"
+#include "services/newspapers/NewspaperService.h"
 
 drogon::Task<HttpResponsePtr>
 NewsPapersController::getAll(const HttpRequestPtr req) {
@@ -128,7 +129,9 @@ NewsPapersController::getFullDetails(const HttpRequestPtr req) {
   co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
-drogon::Task<HttpResponsePtr> NewsPapersController::GetFreeNewsPaperDetailsByPublication(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr>
+NewsPapersController::GetFreeNewsPaperDetailsByPublication(
+    const HttpRequestPtr req) {
   std::string publicationId = req->getParameter("publicationId");
   std::string date = req->getParameter("date");
   std::string privateKey = req->getHeader("Vitamin");
@@ -158,11 +161,15 @@ drogon::Task<HttpResponsePtr> NewsPapersController::GetFreeNewsPaperDetailsByPub
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
-  auto result = co_await newsPaperService.getFreeNewsPaperDetailsByPublicationAsync(publicationId, date);
+  auto result =
+      co_await newsPaperService.getFreeNewsPaperDetailsByPublicationAsync(
+          publicationId, date);
   co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
-drogon::Task<HttpResponsePtr> NewsPapersController::GetPaidNewsPaperDetailsByPublication(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr>
+NewsPapersController::GetPaidNewsPaperDetailsByPublication(
+    const HttpRequestPtr req) {
   std::string publicationId = req->getParameter("publicationId");
   std::string date = req->getParameter("date");
   std::string privateKey = req->getHeader("Vitamin");
@@ -192,11 +199,14 @@ drogon::Task<HttpResponsePtr> NewsPapersController::GetPaidNewsPaperDetailsByPub
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
-  auto result = co_await newsPaperService.getPaidNewsPaperDetailsByPublicationAsync(publicationId, date);
+  auto result =
+      co_await newsPaperService.getPaidNewsPaperDetailsByPublicationAsync(
+          publicationId, date);
   co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
-drogon::Task<HttpResponsePtr> NewsPapersController::publish(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr>
+NewsPapersController::publish(const HttpRequestPtr req) {
   if (req->getParameter("id").empty()) {
     gnp::dto::BaseApiResponse response;
     response.success = false;

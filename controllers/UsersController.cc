@@ -2,6 +2,7 @@
 #include "constants/ErrorCodes.h"
 #include "dto/RegisterUserPasskeysDto.h"
 #include "plugins/GnpServicePlugin.h"
+#include "services/users/UserService.h"
 
 using namespace gnp;
 
@@ -75,7 +76,8 @@ void UsersController::createUser(
   });
 }
 
-drogon::Task<HttpResponsePtr> UsersController::registerProspectiveUser(HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr>
+UsersController::registerProspectiveUser(HttpRequestPtr req) {
 
   auto jsonPtr = req->getJsonObject();
 

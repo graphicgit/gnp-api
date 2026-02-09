@@ -14,6 +14,7 @@
 #include "dto/GeneratePartnerApiKeyDto.h"
 #include "dto/SendEmailDto.h"
 #include "plugins/GnpServicePlugin.h"
+#include "services/email/EmailService.h"
 #include "utils/IdGeneratorUtils.h"
 #include "utils/PasswordUtils.h"
 #include <drogon/orm/CoroMapper.h>
@@ -1447,8 +1448,9 @@ CommercialPartnerService::updatePartnerApiKey(
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubscriberAsync(
-const std::string &clientId, const std::string &clientSecret,
+drogon::Task<::gnp::dto::BaseApiResponse>
+CommercialPartnerService::onboardSubscriberAsync(
+    const std::string &clientId, const std::string &clientSecret,
     const ::gnp::dto::PartnerOnboardingDto &dto) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> apiKeyMapper(
@@ -1494,7 +1496,7 @@ const std::string &clientId, const std::string &clientSecret,
     if (!lastName.empty())
       newUser.setLastName(lastName);
     newUser.setPhoneNumber(dto.getPhoneNumber());
-      newUser.setEmail(dto.getPhoneNumber()+"@graphic.com.gh");
+    newUser.setEmail(dto.getPhoneNumber() + "@graphic.com.gh");
     newUser.setPartnerId(apiKey.getValueOfPartnerId());
     newUser.setIsActive(true);
     newUser.setIsLockedOut(false);
@@ -1517,7 +1519,7 @@ const std::string &clientId, const std::string &clientSecret,
       co_await partnerMapper.update(partner);
     }
 
-    //send email to the user
+    // send email to the user
 
     gnp::dto::BaseApiResponse response;
     response.success = true;

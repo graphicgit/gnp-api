@@ -1,5 +1,6 @@
 #include "PublicationsController.h"
 #include "plugins/GnpServicePlugin.h"
+#include "services/publications/PublicationService.h"
 #include <drogon/HttpController.h>
 #include <drogon/drogon.h>
 #include <json/json.h>
@@ -8,7 +9,8 @@
 using namespace gnp;
 using namespace drogon;
 
-Task<HttpResponsePtr> PublicationsController::getPublications(const HttpRequestPtr req) {
+Task<HttpResponsePtr>
+PublicationsController::getPublications(const HttpRequestPtr req) {
   int pageSize = 10; // Default page size
   int pageNo = 1;    //  Default page number
 

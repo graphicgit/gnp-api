@@ -3,6 +3,7 @@
 #include "dto/GrantNewsPaperAccessDto.h"
 #include "dto/GuestSubscriptionDto.h"
 #include "plugins/GnpServicePlugin.h"
+#include "services/subscriptions/SubscriptionService.h"
 
 void SubscriptionsController::getAll(
     const HttpRequestPtr &req,
@@ -110,7 +111,8 @@ SubscriptionsController::manageUserOneTimeBuy(const HttpRequestPtr req) {
   co_return resp;
 }
 
-Task<HttpResponsePtr> SubscriptionsController::fulfillGuestOneTimeBuy(const HttpRequestPtr req) {
+Task<HttpResponsePtr>
+SubscriptionsController::fulfillGuestOneTimeBuy(const HttpRequestPtr req) {
 
   auto reference = req->getParameter("reference");
 
@@ -134,8 +136,8 @@ Task<HttpResponsePtr> SubscriptionsController::fulfillGuestOneTimeBuy(const Http
   co_return resp;
 }
 
-
-Task<HttpResponsePtr> SubscriptionsController::fulfillUserOneTimeBuy(const HttpRequestPtr req) {
+Task<HttpResponsePtr>
+SubscriptionsController::fulfillUserOneTimeBuy(const HttpRequestPtr req) {
 
   auto reference = req->getParameter("reference");
 
@@ -153,7 +155,8 @@ Task<HttpResponsePtr> SubscriptionsController::fulfillUserOneTimeBuy(const HttpR
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &subscriptionService = plugin->getSubscriptionService();
 
-  auto result = co_await subscriptionService.completeUserOneTimeBuyAsync(userId,reference);
+  auto result = co_await subscriptionService.completeUserOneTimeBuyAsync(
+      userId, reference);
 
   auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
   co_return resp;
@@ -283,4 +286,63 @@ void SubscriptionsController::renew(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) {
   // write your application logic here
+}
+
+Task<HttpResponsePtr>
+SubscriptionsController::buyCopy(const HttpRequestPtr req) {
+  auto jsonBody = req->getJsonObject();
+
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  gnp::dto::BuyNewspaperCopyDto buyNewspaperCopyDto;
+  buyNewspaperCopyDto.fromJson(*jsonBody);
+
+  // Get userId from request attributes (set by JwtAuthFilter)
+  auto userId = req->attributes()->get<std::string>("userId");
+
+  if (userId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "User ID not found in token";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k401Unauthorized);
+    co_return resp;
+  }
+
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &subscriptionService = plugin->getSubscriptionService();
+
+  auto result = co_await subscriptionService.buyCopy(userId, buyNewspaperCopyDto);
+
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+}
+
+Task<HttpResponsePtr>
+SubscriptionsController::fulfillBuyCopy(const HttpRequestPtr req) {
+  auto reference = req->getParameter("reference");
+
+  if (reference.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Reference is required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &subscriptionService = plugin->getSubscriptionService();
+
+  auto result = co_await subscriptionService.fulFillBuyCopy(reference);
+
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
 }

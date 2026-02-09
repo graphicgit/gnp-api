@@ -65,6 +65,7 @@ add_executable(${PROJECT_NAME} main.cc
         filters/JwtAuthFilter.h
         controllers/PartnerApiController.h
         constants/PartnerApiScopes.h
+        services/hubtel_sms/HubtelSmsApi.cc
 )
 
 # ##############################################################################

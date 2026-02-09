@@ -32,8 +32,10 @@ void PaystackApi::initialize(
         customConfig["PayStackApi"]["SecretKey"].asString();
 
     Json::Value requestPayload;
-    int standardAmount = static_cast<int>(0.1 * 100.0);
-    requestPayload["email"] = requestDto.getPhone() + "@graphicarchives.com";
+    double amountDouble = std::stod(requestDto.getAmount());
+    int standardAmount = static_cast<int>(amountDouble * 100.0);
+
+    requestPayload["email"] = requestDto.getEmail();
     requestPayload["amount"] = standardAmount;
     requestPayload["reference"] = requestDto.getClientReference();
     requestPayload["callback_url"] = requestDto.getCallBackUrl();
@@ -74,18 +76,21 @@ void PaystackApi::initialize(
 }
 
 drogon::Task<gnp::dto::InitializePaymentResponse> PaystackApi::initializeAsync(const dto::InitializePaymentRequest &requestDto) {
+
   gnp::dto::InitializePaymentResponse outDto{};
+
   try {
     auto &app = drogon::app();
     auto customConfig = app.getCustomConfig();
-    std::string PAYSTACK_BASE_URL =
-        customConfig["PayStackApi"]["BaseUrl"].asString();
-    std::string PAYSTACK_SECRET =
-        customConfig["PayStackApi"]["SecretKey"].asString();
+    std::string PAYSTACK_BASE_URL =  customConfig["PayStackApi"]["BaseUrl"].asString();
+    std::string PAYSTACK_SECRET = customConfig["PayStackApi"]["SecretKey"].asString();
 
     Json::Value requestPayload;
+    double amountDouble = std::stod(requestDto.getAmount());
+    //int standardAmount = static_cast<int>(amountDouble * 100.0);
     int standardAmount = static_cast<int>(0.1 * 100.0);
-    requestPayload["email"] = requestDto.getPhone() + "@graphicarchives.com";
+
+    requestPayload["email"] = requestDto.getEmail();
     requestPayload["amount"] = standardAmount;
     requestPayload["reference"] = requestDto.getClientReference();
     requestPayload["callback_url"] = requestDto.getCallBackUrl();
@@ -105,6 +110,11 @@ drogon::Task<gnp::dto::InitializePaymentResponse> PaystackApi::initializeAsync(c
 
     if (resp->getStatusCode() == drogon::k200OK) {
       const std::string rawBody{resp->getBody().data(), resp->getBody().size()};
+
+      LOG_INFO << "Paystack initialize response: http="
+                         << resp->getStatusCode()
+                         << " body=" << rawBody;
+
       Json::Value responseJson;
       Json::CharReaderBuilder builder;
       std::string errs;
@@ -168,7 +178,8 @@ void PaystackApi::verify(
   }
 }
 
-drogon::Task<gnp::dto::VerifyPayResponse> PaystackApi::verifyAsync(const std::string &reference) {
+drogon::Task<gnp::dto::VerifyPayResponse>
+PaystackApi::verifyAsync(const std::string &reference) {
   gnp::dto::VerifyPayResponse outDto{};
   try {
     auto &app = drogon::app();

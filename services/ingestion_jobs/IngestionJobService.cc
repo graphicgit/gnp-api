@@ -5,7 +5,6 @@
 #include "IngestionJobService.h"
 #include "constants/ErrorCodes.h"
 #include <drogon/orm/Mapper.h>
-
 #include "IngestionJobs.h"
 
 using namespace drogon::orm;
@@ -14,8 +13,7 @@ using drogon_model::Gnp::IngestionJobs;
 namespace gnp::services {
 
 
-    void IngestionJobService::getAll(int pageNo, int pageSize, const std::string &query,
-               const std::function<void(const dto::BaseApiResponse &)> &callback) {
+    void IngestionJobService::getAll(int pageNo, int pageSize, const std::string &query, const std::function<void(const dto::BaseApiResponse &)> &callback) {
 
          auto dbClient = drogon::app().getDbClient();
         auto mp = std::make_shared<Mapper<IngestionJobs>>(dbClient);

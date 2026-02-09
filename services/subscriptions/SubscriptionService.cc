@@ -15,13 +15,16 @@
 #include "UserSubscriptions.h"
 #include "Users.h"
 #include "bcrypt.h"
+#include "dto/BuyNewspaperCopyDto.h" // Added missing include
 #include "dto/SendEmailDto.h"
 #include "plugins/GnpServicePlugin.h"
 #include "services/email/EmailService.h"
+#include "services/hubtel_sms/HubtelSmsApi.h"
+#include "services/newspapers/NewspaperService.h"
 #include "services/payments/PaymentService.h"
+#include "services/paystack/PaystackApi.h"
 #include "utils/IdGeneratorUtils.h"
 
-using namespace drogon::orm;
 using namespace drogon::orm;
 using drogon_model::Gnp::PurchaseAttempts;
 using drogon_model::Gnp::Users;
@@ -221,6 +224,7 @@ SubscriptionService::manageGuestOneTimeBuyAsync(
     gnp::dto::InitializePaymentRequest initReq;
     initReq.setAmount(paperCost);
     initReq.setPhone(guestOnetimeBuyDto.getPhoneNumber());
+    initReq.setEmail(guestOnetimeBuyDto.getEmail());
     initReq.setClientReference(clientReference);
     initReq.setCallBackUrl("https://gnp-api.com/paystack/callback");
 
@@ -488,7 +492,8 @@ SubscriptionService::completeGuestOneTimeBuyAsync(
   co_return response;
 }
 
-drogon::Task<gnp::dto::BaseApiResponse> SubscriptionService::completeUserOneTimeBuyAsync(const std::string &userId,
+drogon::Task<gnp::dto::BaseApiResponse>
+SubscriptionService::completeUserOneTimeBuyAsync(const std::string &userId,
                                                  const std::string &reference) {
   auto dbClient = drogon::app().getDbClient();
   dto::BaseApiResponse response;
@@ -1077,6 +1082,7 @@ SubscriptionService::initializeUserOneTimeBuyAsync(
     gnp::dto::InitializePaymentRequest initReq;
     initReq.setAmount(paperCost);
     initReq.setPhone(user.getValueOfPhoneNumber());
+    initReq.setEmail(user.getValueOfEmail());
     initReq.setClientReference(clientReference);
     initReq.setCallBackUrl("https://gnp-api.com/paystack/callback");
 
@@ -1094,6 +1100,340 @@ SubscriptionService::initializeUserOneTimeBuyAsync(
     response.message = "One-time purchase initialized successfully";
     response.result["paymentUrl"] = payData.getAuthorizationUrl();
     response.result["reference"] = payData.getReference();
+
+  } catch (const DrogonDbException &e) {
+    response.success = false;
+    response.message = "Database error: " + std::string(e.base().what());
+    response.error["code"] = constants::ERR_DB_QUERY;
+  } catch (const std::exception &e) {
+    response.success = false;
+    response.message = "An error occurred: " + std::string(e.what());
+  }
+
+  co_return response;
+}
+
+drogon::Task<gnp::dto::BaseApiResponse>
+SubscriptionService::buyCopy(const std::string &userId,
+                             const dto::BuyNewspaperCopyDto &dto) {
+
+  auto dbClient = drogon::app().getDbClient();
+  dto::BaseApiResponse response;
+
+  try {
+    // 1. Find Newspaper
+    CoroMapper<drogon_model::Gnp::Newspapers> newspaperMapper(dbClient);
+    auto newspaper =
+        co_await newspaperMapper.findByPrimaryKey(dto.getNewspaperId());
+
+    const auto &pricePtr = newspaper.getPrice();
+    const std::string &paperCost = *pricePtr;
+    std::string clientReference = gnp::utils::IdGeneratorUtils::generateGuid();
+
+    std::string targetUserId;
+    std::string targetUserEmail;
+    std::string targetUserPhone;
+    std::string targetUserName;
+
+    CoroMapper<Users> userMapper(dbClient);
+
+    // Determine email to use (provided or generated from phone)
+    std::string emailToUse = dto.getPhoneNumber() + "@graphicnewsplus.com.gh";
+
+    Criteria checkCriteria =
+        Criteria(Users::Cols::_email, CompareOperator::EQ, emailToUse);
+    bool createNewUser = false;
+    try {
+      auto user = co_await userMapper.findOne(checkCriteria);
+      targetUserId = user.getValueOfId();
+      targetUserEmail = user.getValueOfEmail();
+      targetUserPhone = user.getValueOfPhoneNumber();
+      targetUserName = user.getValueOfUsername();
+    } catch (const drogon::orm::UnexpectedRows &) {
+      createNewUser = true;
+    }
+
+    if (createNewUser) {
+      // User doesn't exist, create new
+      Users newUser;
+
+      newUser.setFirstName(dto.getFirstName());
+      newUser.setLastName(dto.getLastName());
+      newUser.setEmail(emailToUse);
+      newUser.setPhoneNumber(dto.getPhoneNumber());
+      newUser.setIsActive(true);
+      newUser.setIsLockedOut(false);
+      newUser.setCreatedAt(trantor::Date::now());
+
+      auto user = co_await userMapper.insert(newUser);
+      targetUserId = user.getValueOfId();
+      targetUserEmail = user.getValueOfEmail();
+      targetUserPhone = user.getValueOfPhoneNumber();
+      targetUserName = dto.getFirstName() + " " + dto.getLastName();
+
+      // Create User Subscription (inactive) for the new user
+      CoroMapper<drogon_model::Gnp::UserSubscriptions> subMapper(dbClient);
+      UserSubscriptions newUserSubscription;
+      newUserSubscription.setSubscriptionIdentifier(
+          gnp::utils::IdGeneratorUtils::generateRandomSixDigit());
+      newUserSubscription.setUserId(targetUserId);
+      newUserSubscription.setEmail(targetUserEmail);
+      newUserSubscription.setIsActive(false);
+      newUserSubscription.setCreatedAt(trantor::Date::now());
+
+      co_await subMapper.insert(newUserSubscription);
+    }
+
+    // 3. Check for existing entitlement (UserSubscription) for TARGET USER
+    CoroMapper<UserSubscriptions> subMapper(dbClient);
+    Criteria subCriteria(UserSubscriptions::Cols::_user_id, CompareOperator::EQ,
+                         targetUserId);
+
+    auto userSubscriptions = co_await subMapper.findBy(subCriteria);
+
+    if (!userSubscriptions.empty()) {
+      const auto &userSub = userSubscriptions[0];
+      std::string entitlementsStr = userSub.getValueOfNewspaperEntitlements();
+      if (!entitlementsStr.empty()) {
+        Json::CharReaderBuilder readerBuilder;
+        std::string errs;
+        std::istringstream s(entitlementsStr);
+        Json::Value entitlements;
+        if (Json::parseFromStream(readerBuilder, s, &entitlements, &errs)) {
+          for (const auto &ent : entitlements) {
+            if (ent.isObject() && ent.isMember("id") &&
+                ent["id"].asString() == dto.getNewspaperId()) {
+              response.success = true;
+              response.message =
+                  "The recipient already has access to this newspaper.";
+              response.result["hasAccess"] = true;
+              co_return response;
+            }
+          }
+        }
+      }
+    }
+
+    // 4. Create Purchase Attempt linked to TARGET USER
+    CoroMapper<PurchaseAttempts> paMapper(dbClient);
+    PurchaseAttempts newPurchaseAttempt;
+    newPurchaseAttempt.setUserId(targetUserId);
+    newPurchaseAttempt.setNewspaperId(dto.getNewspaperId());
+    newPurchaseAttempt.setAttemptReference(clientReference);
+    newPurchaseAttempt.setAmount(paperCost);
+    newPurchaseAttempt.setStatus("Initiated");
+    newPurchaseAttempt.setFailureReasonToNull();
+    newPurchaseAttempt.setCreatedAt(trantor::Date::now());
+
+    co_await paMapper.insert(newPurchaseAttempt);
+
+    // 5. Create Payment Record (Async) linked to TARGET USER
+    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto &paymentService = plugin->getPaymentService();
+
+    gnp::dto::CreatePaymentDto paymentDto;
+    paymentDto.setUserId(targetUserId);
+    paymentDto.setUserName(targetUserName);
+    paymentDto.setUserEmail(targetUserEmail);
+    paymentDto.setPackageName(*newspaper.getTitle());
+    paymentDto.setAmountPaid(paperCost);
+    paymentDto.setReceiptNo(clientReference);
+    paymentDto.setTransactionReference(clientReference);
+    paymentDto.setStatus("Initiated");
+
+    co_await paymentService.createPaymentAsync(paymentDto);
+
+    auto &paystackApi = plugin->getPaystackApi();
+
+    gnp::dto::InitializePaymentRequest initReq;
+    initReq.setAmount(paperCost);
+    initReq.setPhone(dto.getPhoneNumber()+ "@graphicnewsplus.com.gh");
+    initReq.setEmail(targetUserEmail);
+    initReq.setClientReference(clientReference);
+    initReq.setCallBackUrl("https://gnp-api.com/paystack/callback");
+
+    auto payResp = co_await paystackApi.initializeAsync(initReq);
+    if (!payResp.getStatus()) {
+      response.success = false;
+      response.message = payResp.getMessage().empty()
+                             ? "Failed to initialize payment"
+                             : payResp.getMessage();
+      co_return response;
+    }
+
+    const auto &payData = payResp.getData();
+    response.success = true;
+    response.message = "Purchase initialized successfully";
+    response.result["paymentUrl"] = payData.getAuthorizationUrl();
+    response.result["reference"] = payData.getReference();
+
+  } catch (const DrogonDbException &e) {
+    response.success = false;
+    response.message = "Database error: " + std::string(e.base().what());
+    response.error["code"] = constants::ERR_DB_QUERY;
+  } catch (const std::exception &e) {
+    response.success = false;
+    response.message = "An error occurred: " + std::string(e.what());
+  }
+
+  co_return response;
+}
+
+drogon::Task<gnp::dto::BaseApiResponse>
+SubscriptionService::fulFillBuyCopy(const std::string &reference) {
+  auto dbClient = drogon::app().getDbClient();
+  dto::BaseApiResponse response;
+
+  try {
+    // 1. Find Purchase Attempt
+    CoroMapper<PurchaseAttempts> purchaseAttemptMapper(dbClient);
+    Criteria criteria = Criteria(PurchaseAttempts::Cols::_attempt_reference,
+                                 CompareOperator::EQ, reference);
+    auto purchaseAttempt = co_await purchaseAttemptMapper.findOne(criteria);
+
+    // 2. Verify Payment with Paystack
+    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto &paystackApi = plugin->getPaystackApi();
+    auto verifyPayResponse = co_await paystackApi.verifyAsync(reference);
+
+    if (!verifyPayResponse.getStatus()) {
+      response.success = false;
+      response.message = !verifyPayResponse.getMessage().empty()
+                             ? verifyPayResponse.getMessage()
+                             : "Failed to verify payment";
+      co_return response;
+    }
+
+    const auto &verifyData = verifyPayResponse.getData();
+    auto paymentService = std::make_shared<gnp::services::PaymentService>();
+
+    if (verifyData.status_ == "success") {
+      // 3. Update status to Success
+      purchaseAttempt.setStatus("Success");
+      purchaseAttempt.setFailureReasonToNull();
+      co_await purchaseAttemptMapper.update(purchaseAttempt);
+
+      co_await paymentService->updateStatusAsync("Success", reference);
+
+      // Increment Newspaper Sales
+      try {
+        CoroMapper<drogon_model::Gnp::Newspapers> newspaperMapper(dbClient);
+        auto newspaper = co_await newspaperMapper.findByPrimaryKey(
+            purchaseAttempt.getValueOfNewspaperId());
+
+        std::string salesStr = newspaper.getValueOfSales();
+        long long sales = 0;
+        if (!salesStr.empty()) {
+          try {
+            sales = std::stoll(salesStr);
+          } catch (...) {
+            sales = 0;
+          }
+        }
+        sales++;
+        newspaper.setSales(std::to_string(sales));
+        co_await newspaperMapper.update(newspaper);
+      } catch (...) {
+      }
+
+      // 4. Update User Subscription Entitlements for TARGET USER
+      std::string targetUserId = purchaseAttempt.getValueOfUserId();
+
+      CoroMapper<UserSubscriptions> subMapper(dbClient);
+      Criteria subCriteria(UserSubscriptions::Cols::_user_id,
+                           CompareOperator::EQ, targetUserId);
+      auto userSub = co_await subMapper.findOne(subCriteria);
+
+      Json::Value entitlements;
+      std::string currentEntitlementsStr =
+          userSub.getValueOfNewspaperEntitlements();
+
+      if (!currentEntitlementsStr.empty()) {
+        Json::CharReaderBuilder readerBuilder;
+        std::string errs;
+        std::istringstream s(currentEntitlementsStr);
+        if (!Json::parseFromStream(readerBuilder, s, &entitlements, &errs)) {
+          entitlements = Json::arrayValue;
+        }
+      } else {
+        entitlements = Json::arrayValue;
+      }
+
+      std::string newPaperId = purchaseAttempt.getValueOfNewspaperId();
+      bool alreadyExists = false;
+
+      for (const auto &ent : entitlements) {
+        if (ent.isObject() && ent.isMember("id") && ent["id"].isString() &&
+            ent["id"].asString() == newPaperId) {
+          alreadyExists = true;
+          break;
+        } else if (ent.isString() && ent.asString() == newPaperId) {
+          alreadyExists = true;
+          break;
+        }
+      }
+
+      std::string uniqueId;
+      if (!alreadyExists) {
+        Json::Value newEnt;
+        newEnt["id"] = newPaperId;
+        uniqueId = gnp::utils::IdGeneratorUtils::generateAlphanumericId();
+        newEnt["uniqueId"] = uniqueId;
+        entitlements.append(newEnt);
+      }
+
+      Json::StreamWriterBuilder writerBuilder;
+      writerBuilder["indentation"] = "";
+      userSub.setNewspaperEntitlements(
+          Json::writeString(writerBuilder, entitlements));
+      userSub.setIsActive(true);
+      co_await subMapper.update(userSub);
+
+      // 5. Check if User needs credentials (Password check)
+      CoroMapper<Users> userMapper(dbClient);
+      auto user = co_await userMapper.findByPrimaryKey(targetUserId);
+      std::string pwdHash = user.getValueOfPasswordHash();
+
+      if (pwdHash.empty()) {
+        // New User - Generate Credentials & Send Email
+        std::string firstName = user.getValueOfFirstName();
+        std::string phoneNumber = user.getValueOfPhoneNumber();
+        std::string password;
+        if (phoneNumber.length() >= 4) {
+          password =
+              firstName + "@" + phoneNumber.substr(phoneNumber.length() - 4);
+        } else {
+          password = firstName + "@" + phoneNumber;
+        }
+        std::string newPasswordHash = bcrypt::generateHash(password);
+
+        user.setPasswordHash(newPasswordHash);
+        co_await userMapper.update(user);
+
+        // Send an SMS containing a uniqueId to the newspaper: add the password
+        // to their account in their message
+        auto &hubtelSmsApi = plugin->getHubtelSmsApi();
+        co_await hubtelSmsApi.sendSms(phoneNumber, uniqueId, password);
+      } else {
+        // Existing User - Maybe send a notification email?
+        // For now, we stay silent or generic success message.
+      }
+
+      response.success = true;
+      response.message = "Payment verified. Access granted.";
+
+    } else {
+      // Payment Failed
+      purchaseAttempt.setStatus("Failed");
+      purchaseAttempt.setFailureReason(verifyData.message_);
+      co_await purchaseAttemptMapper.update(purchaseAttempt);
+
+      co_await paymentService->updateStatusAsync("Failed", reference);
+
+      response.success = false;
+      response.message =
+          "Payment verification failed. Status: " + verifyData.status_;
+    }
 
   } catch (const DrogonDbException &e) {
     response.success = false;
