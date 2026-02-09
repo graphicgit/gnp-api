@@ -22,9 +22,8 @@ public:
                 std::string(PREFIX) + "/user-onetime-buy", Get, Options,
                 "JwtAuthFilter");
   ADD_METHOD_TO(SubscriptionsController::fulfillGuestOneTimeBuy, std::string(PREFIX) + "/fulfill-guest-onetime", Get, Options);
-  ADD_METHOD_TO(SubscriptionsController::fulfillUserOneTimeBuy, std::string(PREFIX) + "/fulfill-user-onetime", Get, Options);
-  ADD_METHOD_TO(SubscriptionsController::validateNewsPaperEntitlement, std::string(PREFIX) + "/validate-newspaper-entitlement", Get,
-                Options, "JwtAuthFilter");
+  ADD_METHOD_TO(SubscriptionsController::fulfillUserOneTimeBuy, std::string(PREFIX) + "/fulfill-user-onetime", Get, Options, "JwtAuthFilter" );
+  ADD_METHOD_TO(SubscriptionsController::validateNewsPaperEntitlement, std::string(PREFIX) + "/validate-newspaper-entitlement", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(SubscriptionsController::grantNewsPaperAccess,
                 std::string(PREFIX) + "/grant-newspaper-access", Post, Options);
   ADD_METHOD_TO(SubscriptionsController::getNewsPaperRedactedDetailsViaUniqueId,

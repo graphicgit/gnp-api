@@ -14,6 +14,10 @@
 #include "dto/AssignPartnerSubscriberPlanDto.h"
 #include <drogon/utils/coroutine.h>
 
+#include "dto/GeneratePartnerApiKeyDto.h"
+#include "dto/PartnerOnboardingDto.h"
+#include "dto/UpdatePartnerApiKeyDto.h"
+
 namespace gnp::services {
 
 class CommercialPartnerService {
@@ -70,9 +74,21 @@ public:
       const std::string &partnerId, const std::string &subscriberId,
       const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
-  drogon::Task< ::gnp::dto::BaseApiResponse>
+  drogon::Task<::gnp::dto::BaseApiResponse>
   deletePartnerSubscriberAsync(const std::string &partnerId,
                                const std::string &subscriberId);
+  drogon::Task<::gnp::dto::BaseApiResponse>
+  getPartnerApiKeys(const std::string &partnerId);
+  drogon::Task<::gnp::dto::BaseApiResponse>
+  generatePartnerApiKey(const ::gnp::dto::GeneratePartnerApiKeyDto &dto);
+  drogon::Task<::gnp::dto::BaseApiResponse>
+  updatePartnerApiKey(const ::gnp::dto::UpdatePartnerApiKeyDto &dto);
+  drogon::Task<::gnp::dto::BaseApiResponse>
+  revokePartnerApiKey(const std::string &partnerId,
+                      const std::string &clientId);
+  drogon::Task<::gnp::dto::BaseApiResponse> onboardSubscriberAsync(const std::string &clientId,
+                         const std::string &clientSecret,
+                         const ::gnp::dto::PartnerOnboardingDto &dto);
 };
 
 } // namespace gnp::services

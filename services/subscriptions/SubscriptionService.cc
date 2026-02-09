@@ -438,11 +438,11 @@ SubscriptionService::completeGuestOneTimeBuyAsync(
       bool alreadyExists = false;
 
       for (const auto &ent : entitlements) {
-        if (ent.isObject() && ent.isMember("id") &&
+        if (ent.isObject() && ent.isMember("id") && ent["id"].isString() &&
             ent["id"].asString() == newPaperId) {
           alreadyExists = true;
           break;
-        } else if (ent.asString() == newPaperId) {
+        } else if (ent.isString() && ent.asString() == newPaperId) {
           alreadyExists = true;
           break;
         }
@@ -496,7 +496,8 @@ drogon::Task<gnp::dto::BaseApiResponse> SubscriptionService::completeUserOneTime
   try {
     // 1. Find Purchase Attempt
     CoroMapper<PurchaseAttempts> purchaseAttemptMapper(dbClient);
-    Criteria criteria = Criteria(PurchaseAttempts::Cols::_attempt_reference,CompareOperator::EQ, reference);
+    Criteria criteria = Criteria(PurchaseAttempts::Cols::_attempt_reference,
+                                 CompareOperator::EQ, reference);
     auto purchaseAttempt = co_await purchaseAttemptMapper.findOne(criteria);
 
     // 2. Verify Payment with Paystack
@@ -570,11 +571,11 @@ drogon::Task<gnp::dto::BaseApiResponse> SubscriptionService::completeUserOneTime
       bool alreadyExists = false;
 
       for (const auto &ent : entitlements) {
-        if (ent.isObject() && ent.isMember("id") &&
+        if (ent.isObject() && ent.isMember("id") && ent["id"].isString() &&
             ent["id"].asString() == newPaperId) {
           alreadyExists = true;
           break;
-        } else if (ent.asString() == newPaperId) {
+        } else if (ent.isString() && ent.asString() == newPaperId) {
           alreadyExists = true;
           break;
         }
@@ -651,15 +652,15 @@ SubscriptionService::validateNewsPaperEntitlementAsync(
       std::istringstream s(entitlementsStr);
       if (Json::parseFromStream(readerBuilder, s, &entitlements, &errs)) {
         for (const auto &ent : entitlements) {
-          if (ent.isObject() && ent.isMember("id")) {
+          if (ent.isObject() && ent.isMember("id") && ent["id"].isString()) {
             if (ent["id"].asString() == newsPaperId) {
               hasAccess = true;
-              if (ent.isMember("uniqueId")) {
+              if (ent.isMember("uniqueId") && ent["uniqueId"].isString()) {
                 uniqueId = ent["uniqueId"].asString();
               }
               break;
             }
-          } else if (ent.asString() == newsPaperId) {
+          } else if (ent.isString() && ent.asString() == newsPaperId) {
             hasAccess = true;
             break;
           }

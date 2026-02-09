@@ -1,5 +1,5 @@
-#include <drogon/drogon.h>
 #include <drogon/WebSocketConnection.h>
+#include <drogon/drogon.h>
 
 #include "filters/CorsFilter.h"
 
@@ -7,33 +7,28 @@ int main() {
   printf("Starting GnpApi...\n");
   // Load config file
   //drogon::app().loadConfigFile("../config.json");
-  drogon::app().loadConfigFile("config.json");
+   drogon::app().loadConfigFile("config.json");
 
   drogon::app().registerPostHandlingAdvice(
       [](const drogon::HttpRequestPtr &req,
          const drogon::HttpResponsePtr &resp) {
         // Array of allowed origins
         const std::vector<std::string> allowedOrigins = {
-            "http://localhost:3009", "https://dev.graphicnewsplus.com",
+            "http://localhost:3000",
+            "http://localhost:3001",
+            "http://localhost:3009",
+            "https://dev.graphicnewsplus.com",
+            "https://graphicnewsplus.com",
+            "https://www.graphicnewsplus.com"
             // Add more origins as needed
         };
 
-        // Check if the origin is in our allowed list
-        // For development, allow all origins
-        resp->addHeader("Access-Control-Allow-Origin", "*");
-        /*
+        auto origin = req->getHeader("Origin");
         if (std::find(allowedOrigins.begin(), allowedOrigins.end(), origin) !=
             allowedOrigins.end()) {
           resp->addHeader("Access-Control-Allow-Origin", origin);
-        } else {
-          // For development, you might want to allow all origins using "*"
-          // resp->addHeader("Access-Control-Allow-Origin", "*");
-
-          // For production, better to be explicit about allowed origins
-          resp->addHeader("Access-Control-Allow-Origin", allowedOrigins[0]);
-          return;
+          resp->addHeader("Access-Control-Allow-Credentials", "true");
         }
-        */
 
         // Add CORS headers to every response
 

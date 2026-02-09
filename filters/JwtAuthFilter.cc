@@ -39,7 +39,7 @@ void JwtAuthFilter::doFilter(const HttpRequestPtr &req, FilterCallback &&fcb,
 
   // Extract the token
   std::string token = authHeader.substr(7);
-  LOG_DEBUG << "Extracted token: " << token.substr(0, 20) << "...";
+  //LOG_DEBUG << "Extracted token: " << token.substr(0, 20) << "...";
 
   try {
     // Get JWT config

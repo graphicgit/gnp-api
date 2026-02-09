@@ -172,7 +172,9 @@ void AuthController::setPassword(
       });
 }
 
-void AuthController::signIn(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback) {
+void AuthController::signIn(
+    const HttpRequestPtr &req,
+    std::function<void(const HttpResponsePtr &)> &&callback) {
   auto jsonBody = req->getJsonObject();
 
   if (!jsonBody) {
@@ -205,15 +207,21 @@ void AuthController::signIn(const HttpRequestPtr &req, std::function<void(const 
   auto userService = std::make_shared<gnp::services::UserService>();
 
   userService->validateUserCredentials(
-      signin_dto, [callback](const gnp::dto::BaseApiResponse &result) {
+      signin_dto, [this, callback](const gnp::dto::BaseApiResponse &result) {
         auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
         resp->setStatusCode(result.success ? k200OK : k500InternalServerError);
+
+        if (result.success) {
+          setAuthCookie(resp, result.result["token"].asString());
+        }
+
         callback(resp);
       });
 }
 
-void AuthController::registerPasskeys(const HttpRequestPtr& req, std::function<void (const HttpResponsePtr &)> &&callback)
-{
+void AuthController::registerPasskeys(
+    const HttpRequestPtr &req,
+    std::function<void(const HttpResponsePtr &)> &&callback) {
 
   auto jsonBody = req->getJsonObject();
 
@@ -233,17 +241,23 @@ void AuthController::registerPasskeys(const HttpRequestPtr& req, std::function<v
 
   // Get tenant service from plugin
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
-  auto& userService = plugin->getUserService();
+  auto &userService = plugin->getUserService();
 
-  userService.registerUserPasskeys(dto, [callback](const gnp::dto::BaseApiResponse& result) {
-      auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-      callback(resp);
-  });
+  userService.registerUserPasskeys(
+      dto, [this, callback](const gnp::dto::BaseApiResponse &result) {
+        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
 
+        if (result.success && result.result.isMember("token")) {
+          setAuthCookie(resp, result.result["token"].asString());
+        }
+
+        callback(resp);
+      });
 }
 
-void AuthController::loginViaPasskeys(const HttpRequestPtr& req, std::function<void (const HttpResponsePtr &)> &&callback)
-{
+void AuthController::loginViaPasskeys(
+    const HttpRequestPtr &req,
+    std::function<void(const HttpResponsePtr &)> &&callback) {
 
   auto jsonBody = req->getJsonObject();
 
@@ -262,13 +276,18 @@ void AuthController::loginViaPasskeys(const HttpRequestPtr& req, std::function<v
   dto.fromJson(*jsonBody);
 
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
-  auto& userService = plugin->getUserService();
+  auto &userService = plugin->getUserService();
 
-  userService.validateUserPasskeys(dto, [callback](const gnp::dto::BaseApiResponse& result) {
-      auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-      callback(resp);
-  });
+  userService.validateUserPasskeys(
+      dto, [this, callback](const gnp::dto::BaseApiResponse &result) {
+        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
 
+        if (result.success && result.result.isMember("token")) {
+          setAuthCookie(resp, result.result["token"].asString());
+        }
+
+        callback(resp);
+      });
 }
 
 void AuthController::adminSignIn(
@@ -306,9 +325,26 @@ void AuthController::adminSignIn(
   auto userService = std::make_shared<gnp::services::UserService>();
 
   userService->validateAdminUserCredentials(
-      signin_dto, [callback](const gnp::dto::BaseApiResponse &result) {
+      signin_dto, [this, callback](const gnp::dto::BaseApiResponse &result) {
         auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
         resp->setStatusCode(result.success ? k200OK : k500InternalServerError);
+
+        if (result.success) {
+          setAuthCookie(resp, result.result["token"].asString());
+        }
+
         callback(resp);
       });
+}
+
+void AuthController::setAuthCookie(const HttpResponsePtr &resp,
+                                   const std::string &token) {
+  drogon::Cookie cookie("auth_token", token);
+  cookie.setHttpOnly(true);
+  cookie.setSecure(true);
+  cookie.setPath("/");
+  // 24 * 120 hours = 120 days. Match the token expiration.
+  cookie.setMaxAge(24 * 120 * 3600);
+  cookie.setSameSite(drogon::Cookie::SameSite::kLax);
+  resp->addCookie(cookie);
 }
