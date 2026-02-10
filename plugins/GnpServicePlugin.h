@@ -18,6 +18,7 @@
 #include "services/payments/PaymentService.h"
 #include "services/paystack/PaystackApi.h"
 #include "services/publications/PublicationService.h"
+#include "services/quartz/QuartzApi.h"
 #include "services/subscription_plans/SubscriptionPlanService.h"
 #include "services/subscriptions/SubscriptionService.h"
 #include "services/users/UserService.h"
@@ -27,7 +28,7 @@ namespace gnp::plugins {
 
 class GnpServicePlugin : public drogon::Plugin<GnpServicePlugin> {
 public:
-  GnpServicePlugin() {}
+  GnpServicePlugin() = default;
   ~GnpServicePlugin() override = default;
 
   void initAndStart(const Json::Value &config) override;
@@ -61,6 +62,7 @@ public:
   }
   ::gnp::services::PaystackApi &getPaystackApi() { return paystackApi_; }
   ::gnp::services::HubtelSmsApi &getHubtelSmsApi() { return hubtelSmsApi_; }
+  ::gnp::services::QuartzApi &getQuartzApi() { return quartzApi_; }
 
 private:
   ::gnp::services::UserService userService_;
@@ -75,6 +77,7 @@ private:
   ::gnp::services::PublicationService publicationService_;
   ::gnp::services::PaystackApi paystackApi_;
   ::gnp::services::HubtelSmsApi hubtelSmsApi_;
+  ::gnp::services::QuartzApi quartzApi_;
 };
 
 } // namespace gnp::plugins

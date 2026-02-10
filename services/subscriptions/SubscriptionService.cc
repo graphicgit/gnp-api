@@ -387,14 +387,13 @@ SubscriptionService::completeGuestOneTimeBuyAsync(
             )";
 
       emailDto.setBody(emailBody);
-      emailService->sendEmail(emailDto,
-                              [](const gnp::dto::BaseApiResponse &) {});
+
+      co_await emailService->sendEmailAsync(emailDto);
 
       // 8. Generate JWT
       auto &app = drogon::app();
       auto customConfig = app.getCustomConfig();
-      std::string jwtSecurityKey =
-          customConfig["JwtBearer"]["JwtSecurityKey"].asString();
+      std::string jwtSecurityKey = customConfig["JwtBearer"]["JwtSecurityKey"].asString();
       std::string jwtIssuer = customConfig["JwtBearer"]["JwtIssuer"].asString();
 
       auto token =

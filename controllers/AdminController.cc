@@ -72,8 +72,7 @@ AdminController::getAllNewsPapers(const HttpRequestPtr req) {
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr>
-AdminController::getNewsPaperFullDetails(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::getNewsPaperFullDetails(const HttpRequestPtr req) {
   if (req->getParameter("id").empty()) {
     gnp::dto::BaseApiResponse response;
     response.success = false;
@@ -92,8 +91,7 @@ AdminController::getNewsPaperFullDetails(const HttpRequestPtr req) {
   co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
-drogon::Task<HttpResponsePtr>
-AdminController::publishNewsPaper(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::publishNewsPaper(const HttpRequestPtr req) {
   if (req->getParameter("id").empty()) {
     gnp::dto::BaseApiResponse response;
     response.success = false;
@@ -113,8 +111,7 @@ AdminController::publishNewsPaper(const HttpRequestPtr req) {
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr>
-AdminController::unPublishNewsPaper(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::unPublishNewsPaper(const HttpRequestPtr req) {
   if (req->getParameter("id").empty()) {
     gnp::dto::BaseApiResponse response;
     response.success = false;
@@ -134,8 +131,7 @@ AdminController::unPublishNewsPaper(const HttpRequestPtr req) {
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr>
-AdminController::IngestNewsPaper(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::IngestNewsPaper(const HttpRequestPtr req) {
   auto jsonBody = req->getJsonObject();
 
   if (!jsonBody) {

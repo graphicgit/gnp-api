@@ -3,14 +3,21 @@
 //
 
 #include "CampaignService.h"
-#include "Campaigns.h"
+#include "Campaigns.h" // Defines drogon_model::Gnp::Campaigns
 #include "constants/ErrorCodes.h"
 #include "controllers/NotificationsHub.h"
+#include "dto/SendEmailDto.h"
+#include "models/Users.h" // Defines drogon_model::Gnp::Users
+#include "plugins/GnpServicePlugin.h"
+#include "services/email/EmailService.h"
+#include <ctime>
 #include <drogon/orm/CoroMapper.h>
 #include <drogon/orm/Mapper.h>
+#include <sstream>
 
 using namespace drogon::orm;
 using drogon_model::Gnp::Campaigns;
+using drogon_model::Gnp::Users;
 
 namespace gnp::services {
 
@@ -123,10 +130,11 @@ void CampaignService::getAll(
       });
 }
 
-drogon::Task< ::gnp::dto::BaseApiResponse> CampaignService::createAsync(const ::gnp::dto::CreateCampaignDto &dto) {
+drogon::Task<::gnp::dto::BaseApiResponse>
+CampaignService::createAsync(const ::gnp::dto::CreateCampaignDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
-  CoroMapper< ::drogon_model::Gnp::Campaigns> mp(dbClient);
+  CoroMapper<::drogon_model::Gnp::Campaigns> mp(dbClient);
 
   ::drogon_model::Gnp::Campaigns newCampaign;
   newCampaign.setName(dto.getName());
@@ -144,11 +152,59 @@ drogon::Task< ::gnp::dto::BaseApiResponse> CampaignService::createAsync(const ::
 
   try {
     auto campaign = co_await mp.insert(newCampaign);
-    ::gnp::dto::BaseApiResponse successResponse;
-    successResponse.success = true;
-    successResponse.message = "Campaign created successfully";
-    successResponse.result["id"] = campaign.getValueOfId();
-    co_return successResponse;
+
+    // create a job on quartz
+
+    auto &app = drogon::app();
+    auto customConfig = app.getCustomConfig();
+    std::string campaignCallBackUrl =
+        customConfig["QuartzSchedulerApi"]["CampaignCallBackUrl"].asString();
+
+    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto &quartzApi = plugin->getQuartzApi();
+
+    ::gnp::dto::QuartzJobDto jobDto;
+    jobDto.name = campaign.getValueOfName(); // Using Name as the unique identifier name
+    jobDto.description = campaign.getValueOfSubject();
+    jobDto.customData.uniqueId = campaign.getValueOfId();
+    // Default or empty callbackUrl as not specified by user context
+    jobDto.customData.callbackUrl = campaignCallBackUrl;
+
+    auto scheduledTime = dto.getScheduledTime();
+    time_t rawTime = scheduledTime.secondsSinceEpoch();
+    struct tm *timeinfo = localtime(&rawTime);
+
+    const char *months[] = {"JAN", "FEB", "MAR", "APR", "MAY", "JUN",
+                            "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"};
+
+    // Cron format: 0 Minute Hour Day Month ? Year
+    std::stringstream cron;
+    cron << "0 " << timeinfo->tm_min << " " << timeinfo->tm_hour << " "
+         << timeinfo->tm_mday << " " << months[timeinfo->tm_mon] << " ? "
+         << (timeinfo->tm_year + 1900);
+    jobDto.schedule = cron.str();
+
+    // StartDate format: YYYY-MM-DDTHH:MM:SS
+    std::string startDateStr = scheduledTime.toDbStringLocal();
+    std::replace(startDateStr.begin(), startDateStr.end(), ' ', 'T');
+    jobDto.startDate = startDateStr;
+    jobDto.endDate = startDateStr;
+
+    bool isScheduleSuccessful = co_await quartzApi.scheduleJob(jobDto);
+
+    if (isScheduleSuccessful) {
+      ::gnp::dto::BaseApiResponse successResponse;
+      successResponse.success = true;
+      successResponse.message = "Campaign created and scheduled successfully";
+      successResponse.result["id"] = campaign.getValueOfId();
+      co_return successResponse;
+    } else {
+      ::gnp::dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.message = "Campaign created but failed to schedule.";
+      errorResponse.result["id"] = campaign.getValueOfId();
+      co_return errorResponse;
+    }
   } catch (const drogon::orm::DrogonDbException &e) {
     ::gnp::dto::BaseApiResponse errorResponse;
     errorResponse.success = false;
@@ -193,6 +249,8 @@ void CampaignService::publishCampaign(
                   std::string jsonPayload = Json::writeString(w, payload);
 
                   gnp::signalr::NotificationsHub::broadcastMessage(jsonPayload);
+                } else {
+                  // use email service to send messages to target users
                 }
                 response.success = true;
                 response.message = "Campaign published successfully";
@@ -340,6 +398,58 @@ void CampaignService::deleteCampaign(
         errorResponse.error["detail"] = e.base().what();
         callback(errorResponse);
       });
+}
+
+drogon::Task<::gnp::dto::BaseApiResponse> CampaignService::runScheduledCampaign(const std::string &campaignId) {
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<Campaigns> mp(dbClient);
+
+  try {
+    auto campaign = co_await mp.findByPrimaryKey(campaignId);
+
+    // Fetch target users
+    // If target audience is "All", fetch all active users.
+    // If it's specific, we would filter. For now, defaulting to all active
+    // users.
+    CoroMapper<Users> userMp(dbClient);
+    auto users = co_await userMp.findBy(Criteria(Users::Cols::_is_active, CompareOperator::EQ, true));
+
+    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto &emailService = plugin->getEmailService();
+
+    int sentCount = 0;
+    for (const auto &user : users) {
+
+      gnp::dto::SendEmailDto emailDto;
+      emailDto.setTo(user.getValueOfEmail());
+      emailDto.setSubject(campaign.getValueOfSubject());
+      emailDto.setBody(campaign.getValueOfMessageBody());
+
+      // check if user has email
+      if (user.getValueOfEmail().empty()) {
+        continue;
+      }
+
+      co_await emailService.sendEmailAsync(emailDto);
+
+      sentCount++;
+    }
+
+     campaign.setStatus("Sent");
+     co_await mp.update(campaign);
+
+    ::gnp::dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Campaign execution started. Emails dispatched: " + std::to_string(sentCount);
+    co_return response;
+
+  } catch (const std::exception &e) {
+    LOG_ERROR << "Error running campaign " << campaignId << ": " << e.what();
+    ::gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.message = "Failed to run campaign: " + std::string(e.what());
+    co_return response;
+  }
 }
 
 } // namespace gnp::services

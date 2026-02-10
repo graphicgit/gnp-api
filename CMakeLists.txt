@@ -66,6 +66,9 @@ add_executable(${PROJECT_NAME} main.cc
         controllers/PartnerApiController.h
         constants/PartnerApiScopes.h
         services/hubtel_sms/HubtelSmsApi.cc
+        controllers/CampaignsController.h
+        services/quartz/QuartzApi.h
+        services/quartz/QuartzApi.cc
 )
 
 # ##############################################################################

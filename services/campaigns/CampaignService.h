@@ -20,10 +20,12 @@ public:
          const std::string &channel,
          const std::function<void(const dto::BaseApiResponse &)> &callback);
 
-  void create(const dto::CreateCampaignDto &dto,
+  void
+  create(const dto::CreateCampaignDto &dto,
          const std::function<void(const dto::BaseApiResponse &)> &callback);
 
-  drogon::Task< ::gnp::dto::BaseApiResponse> createAsync(const ::gnp::dto::CreateCampaignDto &dto);
+  drogon::Task<::gnp::dto::BaseApiResponse>
+  createAsync(const ::gnp::dto::CreateCampaignDto &dto);
 
   void publishCampaign(
       const std::string &campaignId,
@@ -36,6 +38,8 @@ public:
   void deleteCampaign(
       const std::string &campaignId,
       const std::function<void(const dto::BaseApiResponse &)> &callback);
+
+  drogon::Task<::gnp::dto::BaseApiResponse> runScheduledCampaign(const std::string &campaignId);
 };
 
 } // namespace gnp::services
