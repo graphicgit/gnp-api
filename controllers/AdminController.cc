@@ -56,11 +56,17 @@ AdminController::getAllNewsPapers(const HttpRequestPtr req) {
     endDate = ""; //
   }
 
+  std::string status = req->getParameter("status");
+  if (status.empty()) {
+    status = ""; //
+  }
+
+
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
   auto result = co_await newsPaperService.listAllAsync(
-      pageNo, pageSize, publicationId, startDate, endDate, query);
+      pageNo, pageSize, publicationId, startDate, endDate, query, status);
 
   auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
   co_return resp;
