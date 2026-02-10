@@ -82,8 +82,7 @@ NewsPapersController::getRedactedDetails(const HttpRequestPtr req) {
   co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
-drogon::Task<HttpResponsePtr>
-NewsPapersController::getFullDetails(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> NewsPapersController::getFullDetails(const HttpRequestPtr req) {
   if (req->getParameter("id").empty()) {
     // Missing tenant ID - return early
     gnp::dto::BaseApiResponse response;

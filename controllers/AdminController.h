@@ -121,11 +121,16 @@ public:
   ADD_METHOD_TO(AdminController::getPartnerApiKeys,
                 std::string(PREFIX) + "/get-partner-api-keys", Get, Options);
 
-  ADD_METHOD_TO(AdminController::generatePartnerApiKey, std::string(PREFIX) + "/generate-partner-api-key", Post, Options);
+  ADD_METHOD_TO(AdminController::generatePartnerApiKey,
+                std::string(PREFIX) + "/generate-partner-api-key", Post,
+                Options);
 
-  ADD_METHOD_TO(AdminController::updatePartnerApiKey, std::string(PREFIX) + "/update-partner-api-key", Post, Options);
+  ADD_METHOD_TO(AdminController::updatePartnerApiKey,
+                std::string(PREFIX) + "/update-partner-api-key", Post, Options);
 
-  ADD_METHOD_TO(AdminController::revokePartnerApiKey, std::string(PREFIX) + "/revoke-partner-api-key", Delete, Options);
+  ADD_METHOD_TO(AdminController::revokePartnerApiKey,
+                std::string(PREFIX) + "/revoke-partner-api-key", Delete,
+                Options);
 
   // payments
   ADD_METHOD_TO(AdminController::getAllPayments,
@@ -192,13 +197,10 @@ public:
       std::function<void(const HttpResponsePtr &)> &&callback);
 
   // campaigns ...
-  void getAllCampaigns(const HttpRequestPtr &req,
-                       std::function<void(const HttpResponsePtr &)> &&callback);
+  drogon::Task<HttpResponsePtr> getAllCampaigns(const HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> createCampaign(HttpRequestPtr req);
-  void publishCampaign(const HttpRequestPtr &req,
-                       std::function<void(const HttpResponsePtr &)> &&callback);
-  void deleteCampaign(const HttpRequestPtr &req,
-                      std::function<void(const HttpResponsePtr &)> &&callback);
+  drogon::Task<HttpResponsePtr> publishCampaign(HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> deleteCampaign(const HttpRequestPtr req);
 
   // commercial partners ...
   void getAllPartners(const HttpRequestPtr &req,

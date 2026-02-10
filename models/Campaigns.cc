@@ -27,6 +27,7 @@ const std::string Campaigns::Cols::_reach = "\"reach\"";
 const std::string Campaigns::Cols::_clicks = "\"clicks\"";
 const std::string Campaigns::Cols::_created_at = "\"created_at\"";
 const std::string Campaigns::Cols::_updated_at = "\"updated_at\"";
+const std::string Campaigns::Cols::_html_template = "\"html_template\"";
 const std::string Campaigns::primaryKeyName = "id";
 const bool Campaigns::hasPrimaryKey = true;
 const std::string Campaigns::tableName = "\"campaigns\"";
@@ -45,7 +46,8 @@ const std::vector<typename Campaigns::MetaData> Campaigns::metaData_={
 {"reach","int32_t","integer",4,0,0,0},
 {"clicks","int32_t","integer",4,0,0,0},
 {"created_at","::trantor::Date","timestamp with time zone",0,0,0,1},
-{"updated_at","::trantor::Date","timestamp without time zone",0,0,0,0}
+{"updated_at","::trantor::Date","timestamp without time zone",0,0,0,0},
+{"html_template","std::string","text",0,0,0,0}
 };
 const std::string &Campaigns::getColumnName(size_t index) noexcept(false)
 {
@@ -166,11 +168,15 @@ Campaigns::Campaigns(const Row &r, const ssize_t indexOffset) noexcept
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
+        if(!r["html_template"].isNull())
+        {
+            htmlTemplate_=std::make_shared<std::string>(r["html_template"].as<std::string>());
+        }
     }
     else
     {
         size_t offset = (size_t)indexOffset;
-        if(offset + 14 > r.size())
+        if(offset + 15 > r.size())
         {
             LOG_FATAL << "Invalid SQL result for this model";
             return;
@@ -300,13 +306,18 @@ Campaigns::Campaigns(const Row &r, const ssize_t indexOffset) noexcept
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
+        index = offset + 14;
+        if(!r[index].isNull())
+        {
+            htmlTemplate_=std::make_shared<std::string>(r[index].as<std::string>());
+        }
     }
 
 }
 
 Campaigns::Campaigns(const Json::Value &pJson, const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 14)
+    if(pMasqueradingVector.size() != 15)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -475,6 +486,14 @@ Campaigns::Campaigns(const Json::Value &pJson, const std::vector<std::string> &p
                 }
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
+        }
+    }
+    if(!pMasqueradingVector[14].empty() && pJson.isMember(pMasqueradingVector[14]))
+    {
+        dirtyFlag_[14] = true;
+        if(!pJson[pMasqueradingVector[14]].isNull())
+        {
+            htmlTemplate_=std::make_shared<std::string>(pJson[pMasqueradingVector[14]].asString());
         }
     }
 }
@@ -647,12 +666,20 @@ Campaigns::Campaigns(const Json::Value &pJson) noexcept(false)
             }
         }
     }
+    if(pJson.isMember("html_template"))
+    {
+        dirtyFlag_[14]=true;
+        if(!pJson["html_template"].isNull())
+        {
+            htmlTemplate_=std::make_shared<std::string>(pJson["html_template"].asString());
+        }
+    }
 }
 
 void Campaigns::updateByMasqueradedJson(const Json::Value &pJson,
                                             const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 14)
+    if(pMasqueradingVector.size() != 15)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -822,6 +849,14 @@ void Campaigns::updateByMasqueradedJson(const Json::Value &pJson,
             }
         }
     }
+    if(!pMasqueradingVector[14].empty() && pJson.isMember(pMasqueradingVector[14]))
+    {
+        dirtyFlag_[14] = true;
+        if(!pJson[pMasqueradingVector[14]].isNull())
+        {
+            htmlTemplate_=std::make_shared<std::string>(pJson[pMasqueradingVector[14]].asString());
+        }
+    }
 }
 
 void Campaigns::updateByJson(const Json::Value &pJson) noexcept(false)
@@ -989,6 +1024,14 @@ void Campaigns::updateByJson(const Json::Value &pJson) noexcept(false)
                 }
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
+        }
+    }
+    if(pJson.isMember("html_template"))
+    {
+        dirtyFlag_[14] = true;
+        if(!pJson["html_template"].isNull())
+        {
+            htmlTemplate_=std::make_shared<std::string>(pJson["html_template"].asString());
         }
     }
 }
@@ -1306,6 +1349,33 @@ void Campaigns::setUpdatedAtToNull() noexcept
     dirtyFlag_[13] = true;
 }
 
+const std::string &Campaigns::getValueOfHtmlTemplate() const noexcept
+{
+    static const std::string defaultValue = std::string();
+    if(htmlTemplate_)
+        return *htmlTemplate_;
+    return defaultValue;
+}
+const std::shared_ptr<std::string> &Campaigns::getHtmlTemplate() const noexcept
+{
+    return htmlTemplate_;
+}
+void Campaigns::setHtmlTemplate(const std::string &pHtmlTemplate) noexcept
+{
+    htmlTemplate_ = std::make_shared<std::string>(pHtmlTemplate);
+    dirtyFlag_[14] = true;
+}
+void Campaigns::setHtmlTemplate(std::string &&pHtmlTemplate) noexcept
+{
+    htmlTemplate_ = std::make_shared<std::string>(std::move(pHtmlTemplate));
+    dirtyFlag_[14] = true;
+}
+void Campaigns::setHtmlTemplateToNull() noexcept
+{
+    htmlTemplate_.reset();
+    dirtyFlag_[14] = true;
+}
+
 void Campaigns::updateId(const uint64_t id)
 {
 }
@@ -1326,7 +1396,8 @@ const std::vector<std::string> &Campaigns::insertColumns() noexcept
         "reach",
         "clicks",
         "created_at",
-        "updated_at"
+        "updated_at",
+        "html_template"
     };
     return inCols;
 }
@@ -1487,6 +1558,17 @@ void Campaigns::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[14])
+    {
+        if(getHtmlTemplate())
+        {
+            binder << getValueOfHtmlTemplate();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 
 const std::vector<std::string> Campaigns::updateColumns() const
@@ -1547,6 +1629,10 @@ const std::vector<std::string> Campaigns::updateColumns() const
     if(dirtyFlag_[13])
     {
         ret.push_back(getColumnName(13));
+    }
+    if(dirtyFlag_[14])
+    {
+        ret.push_back(getColumnName(14));
     }
     return ret;
 }
@@ -1707,6 +1793,17 @@ void Campaigns::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[14])
+    {
+        if(getHtmlTemplate())
+        {
+            binder << getValueOfHtmlTemplate();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 Json::Value Campaigns::toJson() const
 {
@@ -1823,6 +1920,14 @@ Json::Value Campaigns::toJson() const
     {
         ret["updated_at"]=Json::Value();
     }
+    if(getHtmlTemplate())
+    {
+        ret["html_template"]=getValueOfHtmlTemplate();
+    }
+    else
+    {
+        ret["html_template"]=Json::Value();
+    }
     return ret;
 }
 
@@ -1835,7 +1940,7 @@ Json::Value Campaigns::toMasqueradedJson(
     const std::vector<std::string> &pMasqueradingVector) const
 {
     Json::Value ret;
-    if(pMasqueradingVector.size() == 14)
+    if(pMasqueradingVector.size() == 15)
     {
         if(!pMasqueradingVector[0].empty())
         {
@@ -1991,6 +2096,17 @@ Json::Value Campaigns::toMasqueradedJson(
                 ret[pMasqueradingVector[13]]=Json::Value();
             }
         }
+        if(!pMasqueradingVector[14].empty())
+        {
+            if(getHtmlTemplate())
+            {
+                ret[pMasqueradingVector[14]]=getValueOfHtmlTemplate();
+            }
+            else
+            {
+                ret[pMasqueradingVector[14]]=Json::Value();
+            }
+        }
         return ret;
     }
     LOG_ERROR << "Masquerade failed";
@@ -2106,6 +2222,14 @@ Json::Value Campaigns::toMasqueradedJson(
     {
         ret["updated_at"]=Json::Value();
     }
+    if(getHtmlTemplate())
+    {
+        ret["html_template"]=getValueOfHtmlTemplate();
+    }
+    else
+    {
+        ret["html_template"]=Json::Value();
+    }
     return ret;
 }
 
@@ -2216,13 +2340,18 @@ bool Campaigns::validateJsonForCreation(const Json::Value &pJson, std::string &e
         if(!validJsonOfField(13, "updated_at", pJson["updated_at"], err, true))
             return false;
     }
+    if(pJson.isMember("html_template"))
+    {
+        if(!validJsonOfField(14, "html_template", pJson["html_template"], err, true))
+            return false;
+    }
     return true;
 }
 bool Campaigns::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                                                    const std::vector<std::string> &pMasqueradingVector,
                                                    std::string &err)
 {
-    if(pMasqueradingVector.size() != 14)
+    if(pMasqueradingVector.size() != 15)
     {
         err = "Bad masquerading vector";
         return false;
@@ -2375,6 +2504,14 @@ bool Campaigns::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                   return false;
           }
       }
+      if(!pMasqueradingVector[14].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[14]))
+          {
+              if(!validJsonOfField(14, pMasqueradingVector[14], pJson[pMasqueradingVector[14]], err, true))
+                  return false;
+          }
+      }
     }
     catch(const Json::LogicError &e)
     {
@@ -2460,13 +2597,18 @@ bool Campaigns::validateJsonForUpdate(const Json::Value &pJson, std::string &err
         if(!validJsonOfField(13, "updated_at", pJson["updated_at"], err, false))
             return false;
     }
+    if(pJson.isMember("html_template"))
+    {
+        if(!validJsonOfField(14, "html_template", pJson["html_template"], err, false))
+            return false;
+    }
     return true;
 }
 bool Campaigns::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
                                                  const std::vector<std::string> &pMasqueradingVector,
                                                  std::string &err)
 {
-    if(pMasqueradingVector.size() != 14)
+    if(pMasqueradingVector.size() != 15)
     {
         err = "Bad masquerading vector";
         return false;
@@ -2545,6 +2687,11 @@ bool Campaigns::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
       if(!pMasqueradingVector[13].empty() && pJson.isMember(pMasqueradingVector[13]))
       {
           if(!validJsonOfField(13, pMasqueradingVector[13], pJson[pMasqueradingVector[13]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[14].empty() && pJson.isMember(pMasqueradingVector[14]))
+      {
+          if(!validJsonOfField(14, pMasqueradingVector[14], pJson[pMasqueradingVector[14]], err, false))
               return false;
       }
     }
@@ -2780,6 +2927,17 @@ bool Campaigns::validJsonOfField(size_t index,
             }
             break;
         case 13:
+            if(pJson.isNull())
+            {
+                return true;
+            }
+            if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 14:
             if(pJson.isNull())
             {
                 return true;

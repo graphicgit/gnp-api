@@ -58,6 +58,7 @@ class Campaigns
         static const std::string _clicks;
         static const std::string _created_at;
         static const std::string _updated_at;
+        static const std::string _html_template;
     };
 
     static const int primaryKeyNumber;
@@ -235,8 +236,18 @@ class Campaigns
     void setUpdatedAt(const ::trantor::Date &pUpdatedAt) noexcept;
     void setUpdatedAtToNull() noexcept;
 
+    /**  For column html_template  */
+    ///Get the value of the column html_template, returns the default value if the column is null
+    const std::string &getValueOfHtmlTemplate() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getHtmlTemplate() const noexcept;
+    ///Set the value of the column html_template
+    void setHtmlTemplate(const std::string &pHtmlTemplate) noexcept;
+    void setHtmlTemplate(std::string &&pHtmlTemplate) noexcept;
+    void setHtmlTemplateToNull() noexcept;
 
-    static size_t getColumnNumber() noexcept {  return 14;  }
+
+    static size_t getColumnNumber() noexcept {  return 15;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -272,6 +283,7 @@ class Campaigns
     std::shared_ptr<int32_t> clicks_;
     std::shared_ptr<::trantor::Date> createdAt_;
     std::shared_ptr<::trantor::Date> updatedAt_;
+    std::shared_ptr<std::string> htmlTemplate_;
     struct MetaData
     {
         const std::string colName_;
@@ -283,7 +295,7 @@ class Campaigns
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[14]={ false };
+    bool dirtyFlag_[15]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -373,6 +385,11 @@ class Campaigns
             sql += "updated_at,";
             ++parametersCount;
         }
+        if(dirtyFlag_[14])
+        {
+            sql += "html_template,";
+            ++parametersCount;
+        }
         if(parametersCount > 0)
         {
             sql[sql.length()-1]=')';
@@ -458,6 +475,11 @@ class Campaigns
             sql +="default,";
         }
         if(dirtyFlag_[13])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[14])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);

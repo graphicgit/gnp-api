@@ -9,16 +9,19 @@
 #include "dto/CreateCampaignDto.h"
 #include <drogon/drogon.h>
 #include <drogon/utils/coroutine.h>
+#include <map>
+#include <string>
+
+#include "Users.h"
 
 namespace gnp::services {
 
 class CampaignService {
 
 public:
-  void
-  getAll(int pageNo, int pageSize, const std::string &query,
-         const std::string &channel,
-         const std::function<void(const dto::BaseApiResponse &)> &callback);
+  drogon::Task<dto::BaseApiResponse> getAll(int pageNo, int pageSize,
+                                            const std::string &query,
+                                            const std::string &channel);
 
   void
   create(const dto::CreateCampaignDto &dto,
@@ -27,19 +30,22 @@ public:
   drogon::Task<::gnp::dto::BaseApiResponse>
   createAsync(const ::gnp::dto::CreateCampaignDto &dto);
 
-  void publishCampaign(
-      const std::string &campaignId,
-      const std::function<void(const dto::BaseApiResponse &)> &callback);
+  drogon::Task<dto::BaseApiResponse>
+  publishCampaign(const std::string &campaignId);
 
-  void updateCampaignStats(
-      const std::string &campaignId, const std::string &metricsType,
-      const std::function<void(const dto::BaseApiResponse &)> &callback);
+  drogon::Task<dto::BaseApiResponse>
+  updateCampaignStats(const std::string &campaignId,
+                      const std::string &metricsType);
 
-  void deleteCampaign(
-      const std::string &campaignId,
-      const std::function<void(const dto::BaseApiResponse &)> &callback);
+  drogon::Task<dto::BaseApiResponse>
+  deleteCampaign(const std::string &campaignId);
 
-  drogon::Task<::gnp::dto::BaseApiResponse> runScheduledCampaign(const std::string &campaignId);
+  drogon::Task<::gnp::dto::BaseApiResponse>
+  runScheduledCampaign(const std::string &campaignId);
+
+private:
+  std::string replaceTokens(const std::string &templateStr,
+                            const std::map<std::string, std::string> &tokens);
 };
 
 } // namespace gnp::services
