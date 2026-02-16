@@ -40,11 +40,11 @@ public:
       const std::string &userId,
       const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
-  void lockUserAccount(
-      const std::string &userId,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse>
+  lockUserAccount(const std::string &userId);
 
-  drogon::Task<gnp::dto::BaseApiResponse> registerProspectiveUser(const dto::CreateUserDto &userDto);
+  drogon::Task<gnp::dto::BaseApiResponse>
+  registerProspectiveUser(const dto::CreateUserDto &userDto);
 
   void unlockUserAccount(
       const std::string &userId,

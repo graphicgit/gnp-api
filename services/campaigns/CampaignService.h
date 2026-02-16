@@ -12,8 +12,6 @@
 #include <map>
 #include <string>
 
-#include "Users.h"
-
 namespace gnp::services {
 
 class CampaignService {
@@ -23,18 +21,11 @@ public:
                                             const std::string &query,
                                             const std::string &channel);
 
-  void
-  create(const dto::CreateCampaignDto &dto,
-         const std::function<void(const dto::BaseApiResponse &)> &callback);
+  drogon::Task<::gnp::dto::BaseApiResponse> createAsync(const ::gnp::dto::CreateCampaignDto &dto);
 
-  drogon::Task<::gnp::dto::BaseApiResponse>
-  createAsync(const ::gnp::dto::CreateCampaignDto &dto);
+  drogon::Task<dto::BaseApiResponse> publishCampaign(const std::string &campaignId);
 
-  drogon::Task<dto::BaseApiResponse>
-  publishCampaign(const std::string &campaignId);
-
-  drogon::Task<dto::BaseApiResponse>
-  updateCampaignStats(const std::string &campaignId,
+  drogon::Task<dto::BaseApiResponse> updateCampaignStats(const std::string &campaignId,
                       const std::string &metricsType);
 
   drogon::Task<dto::BaseApiResponse>

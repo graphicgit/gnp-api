@@ -9,6 +9,7 @@
 #include <drogon/drogon.h>
 #include <drogon/plugins/Plugin.h>
 
+#include "services/affiliates/AffiliateService.h"
 #include "services/campaigns/CampaignService.h"
 #include "services/email/EmailService.h"
 #include "services/hubtel_sms/HubtelSmsApi.h"
@@ -60,11 +61,13 @@ public:
   ::gnp::services::PublicationService &getPublicationService() {
     return publicationService_;
   }
+  ::gnp::services::AffiliateService &getAffiliateService() { return affiliate_service_; }
   ::gnp::services::PaystackApi &getPaystackApi() { return paystackApi_; }
   ::gnp::services::HubtelSmsApi &getHubtelSmsApi() { return hubtelSmsApi_; }
   ::gnp::services::QuartzApi &getQuartzApi() { return quartzApi_; }
 
 private:
+  ::gnp::services::AffiliateService affiliate_service_;
   ::gnp::services::UserService userService_;
   ::gnp::services::EmailService emailService_;
   ::gnp::services::NewspaperService newspaperService_;

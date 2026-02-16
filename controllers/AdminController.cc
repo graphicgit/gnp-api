@@ -8,9 +8,7 @@
 #include "services/newspapers/NewspaperService.h"
 #include "services/partners/CommercialPartnerService.h"
 #include "services/payments/PaymentService.h"
-#include "services/publications/PublicationService.h"
 #include "services/subscription_plans/SubscriptionPlanService.h"
-#include "services/subscriptions/SubscriptionService.h"
 #include "services/users/UserService.h"
 
 drogon::Task<HttpResponsePtr>
@@ -133,8 +131,7 @@ AdminController::unPublishNewsPaper(const HttpRequestPtr req) {
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr>
-AdminController::IngestNewsPaper(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::IngestNewsPaper(const HttpRequestPtr req) {
   auto jsonBody = req->getJsonObject();
 
   if (!jsonBody) {

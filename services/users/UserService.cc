@@ -823,8 +823,10 @@ void UserService::validateUserCredentials(
   Mapper<Users> mapper(dbClient);
 
   Criteria criteria =
-      (Criteria(Users::Cols::_username, CompareOperator::EQ, signin_dto.getUsernameOrEmail()) ||
-       Criteria(Users::Cols::_email, CompareOperator::EQ,signin_dto.getUsernameOrEmail())) &&
+      (Criteria(Users::Cols::_username, CompareOperator::EQ,
+                signin_dto.getUsernameOrEmail()) ||
+       Criteria(Users::Cols::_email, CompareOperator::EQ,
+                signin_dto.getUsernameOrEmail())) &&
       Criteria(Users::Cols::_is_active, CompareOperator::EQ, true) &&
       Criteria(Users::Cols::_is_locked_out, CompareOperator::EQ, false);
 
@@ -863,7 +865,8 @@ void UserService::validateUserCredentials(
           response.result["token"] = token;
           response.result["userId"] = user.getValueOfId();
           response.result["username"] = user.getValueOfUsername();
-          response.result["fullName"] = user.getValueOfFirstName() + " " + user.getValueOfLastName();
+          response.result["fullName"] =
+              user.getValueOfFirstName() + " " + user.getValueOfLastName();
           response.result["email"] = user.getValueOfEmail();
 
           callback(response);
@@ -963,61 +966,43 @@ void UserService::validateAdminUserCredentials(
       });
 }
 
-void UserService::lockUserAccount(
-    const std::string &userId,
-    const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {
-
+drogon::Task<gnp::dto::BaseApiResponse> UserService::lockUserAccount(const std::string &userId) {
   auto dbClient = drogon::app().getDbClient();
-  Mapper<Users> mp(dbClient);
+  auto mp = drogon::orm::CoroMapper<Users>(dbClient);
 
-  // Create criteria to find the user with specified ID in the tenant
-  Criteria criteria = Criteria(Users::Cols::_id, CompareOperator::EQ, userId);
+  try {
+    Users user = co_await mp.findOne(
+        Criteria(Users::Cols::_id, CompareOperator::EQ, userId));
 
-  // Find the user first
-  mp.findOne(
-      criteria,
-      [=](Users user) {
-        if (user.getValueOfIsLockedOut()) {
-          dto::BaseApiResponse response;
-          response.success = true;
-          response.message = "User account is already locked.";
-          callback(response);
-          return;
-        }
+    if (user.getValueOfIsLockedOut()) {
+      gnp::dto::BaseApiResponse response;
+      response.success = true;
+      response.message = "User account is already locked.";
+      co_return response;
+    }
 
-        // Set the user as locked out
-        user.setIsLockedOut(true);
+    user.setIsLockedOut(true);
+    co_await mp.update(user);
 
-        // Update the user in the database
-        Mapper<Users> updateMp(dbClient);
-        updateMp.update(
-            user,
-            [callback](const size_t count) {
-              // Successfully updated
-              gnp::dto::BaseApiResponse response;
-              response.success = true;
-              response.message = "User account locked successfully";
-              callback(response);
-            },
-            [=](const DrogonDbException &e) {
-              // Error during update
-              gnp::dto::BaseApiResponse errorResponse;
-              errorResponse.success = false;
-              errorResponse.message = "Failed to lock user account";
-              errorResponse.error["code"] = constants::ERR_DB_QUERY;
-              errorResponse.error["detail"] = e.base().what();
-              callback(errorResponse);
-            });
-      },
-      [callback](const DrogonDbException &e) {
-        // User not found
-        gnp::dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.message = "User not found";
-        errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
-        errorResponse.error["detail"] = e.base().what();
-        callback(errorResponse);
-      });
+    gnp::dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "User account locked successfully";
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    if (e.base().what() ==
+        std::string("Unexpected row number")) { // findOne throws if not found
+      errorResponse.message = "User not found";
+      errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+    } else {
+      errorResponse.message = "Failed to lock user account";
+      errorResponse.error["code"] = constants::ERR_DB_QUERY;
+      errorResponse.error["detail"] = e.base().what();
+    }
+    co_return errorResponse;
+  }
 }
 
 void UserService::unlockUserAccount(
@@ -1576,7 +1561,8 @@ void UserService::setPassword(
       "GET %s", sessionId.c_str());
 }
 
-drogon::Task<gnp::dto::BaseApiResponse> UserService::registerProspectiveUser(const dto::CreateUserDto &userDto) {
+drogon::Task<gnp::dto::BaseApiResponse>
+UserService::registerProspectiveUser(const dto::CreateUserDto &userDto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mp(dbClient);
@@ -1586,7 +1572,8 @@ drogon::Task<gnp::dto::BaseApiResponse> UserService::registerProspectiveUser(con
 
   try {
     // 1. Check if user exists
-    co_await mp.findOne(Criteria(Users::Cols::_email, CompareOperator::EQ, userDto.getEmail()));
+    co_await mp.findOne(
+        Criteria(Users::Cols::_email, CompareOperator::EQ, userDto.getEmail()));
 
     // If findOne succeeds, user exists
     userExists = true;

@@ -76,8 +76,7 @@ void UsersController::createUser(
   });
 }
 
-drogon::Task<HttpResponsePtr>
-UsersController::registerProspectiveUser(HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> UsersController::registerProspectiveUser(HttpRequestPtr req) {
 
   auto jsonPtr = req->getJsonObject();
 
@@ -159,10 +158,8 @@ void UsersController::loginViaPasskeys(
       });
 }
 
-void UsersController::lockUserAccount(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
-  // Extract user ID from the path parameters
+drogon::Task<HttpResponsePtr> UsersController::lockUserAccount(const HttpRequestPtr req) {
+
   auto userId = req->getParameter("id");
 
   if (userId.empty()) {
@@ -171,27 +168,16 @@ void UsersController::lockUserAccount(
     response.error["message"] = "User ID is required";
     auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
     resp->setStatusCode(k400BadRequest);
-    callback(resp);
-    return;
+    co_return resp;
   }
 
   // Get the user service from the plugin
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &userService = plugin->getUserService();
 
-  // Call the service to lock the user account
-  userService.lockUserAccount(
-      userId, [callback](const gnp::dto::BaseApiResponse &result) {
-        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-        resp->setStatusCode(
-            result.success ? k200OK
-                           : (result.error.isMember("code") &&
-                                      result.error["code"].asInt() ==
-                                          gnp::constants::ERR_RESOURCE_NOT_FOUND
-                                  ? k404NotFound
-                                  : k500InternalServerError));
-        callback(resp);
-      });
+  auto apiResp = co_await userService.lockUserAccount(userId);
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+
 }
 
 void UsersController::unLockUserAccount(

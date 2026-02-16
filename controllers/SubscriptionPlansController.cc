@@ -5,8 +5,7 @@
 
 using namespace gnp;
 
-drogon::Task<HttpResponsePtr>
-SubscriptionPlansController::getAllPlans(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> SubscriptionPlansController::getAllPlans(const HttpRequestPtr req) {
 
   int pageNo = 1;
   int pageSize = 10;
@@ -35,8 +34,7 @@ SubscriptionPlansController::getAllPlans(const HttpRequestPtr req) {
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr>
-SubscriptionPlansController::create(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> SubscriptionPlansController::create(const HttpRequestPtr req) {
   auto jsonBody = req->getJsonObject();
 
   if (!jsonBody) {

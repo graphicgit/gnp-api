@@ -454,8 +454,7 @@ SubscriptionService::completeGuestOneTimeBuyAsync(
       if (!alreadyExists) {
         Json::Value newEnt;
         newEnt["id"] = newPaperId;
-        newEnt["uniqueId"] =
-            gnp::utils::IdGeneratorUtils::generateAlphanumericId();
+        newEnt["uniqueId"] =  gnp::utils::IdGeneratorUtils::generateAlphanumericId();
         entitlements.append(newEnt);
       }
 

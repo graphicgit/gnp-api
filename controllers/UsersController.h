@@ -30,7 +30,7 @@ public:
   void registerPasskeys(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   void generateAuthToken(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   void loginViaPasskeys(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
-  void lockUserAccount(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+  drogon::Task<HttpResponsePtr> lockUserAccount(HttpRequestPtr req);
   void unLockUserAccount(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   void updateUser(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   void activate(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
