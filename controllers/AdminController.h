@@ -158,8 +158,7 @@ public:
   drogon::Task<HttpResponsePtr> deleteNewsPaper(const HttpRequestPtr req);
 
   // users...
-  void getAllUsers(const HttpRequestPtr &req,
-                   std::function<void(const HttpResponsePtr &)> &&callback);
+  drogon::Task<HttpResponsePtr> getAllUsers(const HttpRequestPtr req);
   void createUser(const HttpRequestPtr &req,
                   std::function<void(const HttpResponsePtr &)> &&callback);
   void getUserDetails(const HttpRequestPtr &req,
@@ -205,9 +204,7 @@ public:
   // commercial partners ...
   void getAllPartners(const HttpRequestPtr &req,
                       std::function<void(const HttpResponsePtr &)> &&callback);
-  void getPartnerSubscribers(
-      const HttpRequestPtr &req,
-      std::function<void(const HttpResponsePtr &)> &&callback);
+  drogon::Task<HttpResponsePtr> getPartnerSubscribers(const HttpRequestPtr req);
   void getPartnerSubscriptionSummary(
       const HttpRequestPtr &req,
       std::function<void(const HttpResponsePtr &)> &&callback);

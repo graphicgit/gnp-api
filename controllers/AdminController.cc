@@ -131,7 +131,8 @@ AdminController::unPublishNewsPaper(const HttpRequestPtr req) {
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr> AdminController::IngestNewsPaper(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr>
+AdminController::IngestNewsPaper(const HttpRequestPtr req) {
   auto jsonBody = req->getJsonObject();
 
   if (!jsonBody) {
@@ -182,9 +183,8 @@ AdminController::deleteNewsPaper(const HttpRequestPtr req) {
 
 // users
 
-void AdminController::getAllUsers(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
+drogon::Task<HttpResponsePtr>
+AdminController::getAllUsers(const HttpRequestPtr req) {
 
   int pageSize = 10; // Default page size
   int pageNo = 1;    //  Default page number
@@ -215,12 +215,9 @@ void AdminController::getAllUsers(
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &userService = plugin->getUserService();
 
-  userService.getAdminUsers(
-      pageNo, pageSize, query,
-      [callback](const gnp::dto::BaseApiResponse &result) {
-        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-        callback(resp);
-      });
+  auto result = co_await userService.getAdminUsers(pageNo, pageSize, query);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
 }
 
 void AdminController::createUser(
@@ -589,9 +586,8 @@ void AdminController::getAllPartners(
       });
 }
 
-void AdminController::getPartnerSubscribers(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
+drogon::Task<HttpResponsePtr>
+AdminController::getPartnerSubscribers(const HttpRequestPtr req) {
 
   int pageSize = 10; // Default page size
   int pageNo = 1;    //  Default page number
@@ -624,12 +620,10 @@ void AdminController::getPartnerSubscribers(
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &userService = plugin->getUserService();
 
-  userService.getPartnerSubscribers(
-      partnerId, pageNo, pageSize, query,
-      [callback](const gnp::dto::BaseApiResponse &result) {
-        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-        callback(resp);
-      });
+  auto result = co_await userService.getPartnerSubscribers(partnerId, pageNo,
+                                                           pageSize, query);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
 }
 
 void AdminController::getPartnerSubscriptionSummary(

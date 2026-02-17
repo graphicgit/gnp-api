@@ -155,7 +155,6 @@ Task<HttpResponsePtr> AffiliateController::getAllAffiliateCommissions(HttpReques
     auto apiResp = co_await affiliateService.getAllCommissions(pageNo, pageSize, affiliateId, startDate, endDate);
     co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 
-
 }
 
 Task<HttpResponsePtr> AffiliateController::getAllAffiliatePayouts(HttpRequestPtr req)

@@ -790,6 +790,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> AffiliateService::getAffiliateCommissi
   }
 }
 
+
 drogon::Task<::gnp::dto::BaseApiResponse> AffiliateService::getAffiliatePayouts(const std::string &affiliateId) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Affiliates> affiliateMapper(dbClient);

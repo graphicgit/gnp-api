@@ -22,349 +22,255 @@ using drogon_model::Gnp::Users;
 
 namespace gnp::services {
 
-void UserService::getAll(
-    int pageNo, int pageSize, const std::string &query,
-    const std::function<void(const dto::BaseApiResponse &)> &callback) {
-
+drogon::Task<dto::BaseApiResponse>
+UserService::getAll(int pageNo, int pageSize, const std::string &query) {
   auto dbClient = drogon::app().getDbClient();
-  auto mp = std::make_shared<Mapper<Users>>(dbClient);
+  auto mp = CoroMapper<Users>(dbClient);
 
   // 1. Build the search criteria
   Criteria searchCriteria;
   if (!query.empty()) {
     std::string likeQuery = "%" + query + "%";
-
     searchCriteria =
         Criteria(Users::Cols::_first_name, CompareOperator::Like, likeQuery) ||
         Criteria(Users::Cols::_email, CompareOperator::Like, likeQuery) ||
         Criteria(Users::Cols::_last_name, CompareOperator::Like, likeQuery);
   }
 
-  // 2. Asynchronously get the total count matching the criteria
-  mp->count(
-      searchCriteria,
-      [=](const size_t totalCount) {
-        if (totalCount == 0) {
-          dto::BaseApiResponse response;
-          response.success = true;
-          response.result["data"] = Json::arrayValue;
-          response.result["totalCount"] = 0;
-          callback(response);
-          return;
-        }
+  dto::BaseApiResponse response;
+  try {
+    // 2. Get the total count matching the criteria
+    size_t totalCount = co_await mp.count(searchCriteria);
+    if (totalCount == 0) {
+      response.success = true;
+      response.result["data"] = Json::arrayValue;
+      response.result["totalCount"] = 0;
+      co_return response;
+    }
 
-        // 3. Asynchronously find the paginated data
-        int offset = (pageNo - 1) * pageSize;
-        mp->limit(pageSize).offset(offset).findBy(
-            searchCriteria,
-            [=](const std::vector<Users> &users) {
-              // 4. Build the final response inside the callback
-              dto::BaseApiResponse response;
-              response.success = true;
-              response.result["totalCount"] = (Json::UInt64)totalCount;
-              response.result["pageNo"] = pageNo;
-              response.result["pageSize"] = pageSize;
-              response.result["totalPages"] =
-                  (int)((totalCount + pageSize - 1) / pageSize);
+    // 3. Find the paginated data
+    int offset = (pageNo - 1) * pageSize;
+    auto users =
+        co_await mp.limit(pageSize).offset(offset).findBy(searchCriteria);
 
-              Json::Value data = Json::arrayValue;
-              for (const auto &role : users) {
-                Json::Value roleJson = role.toJson();
+    // 4. Build the final response
+    response.success = true;
+    response.result["totalCount"] = (Json::UInt64)totalCount;
+    response.result["pageNo"] = pageNo;
+    response.result["pageSize"] = pageSize;
+    response.result["totalPages"] =
+        (int)((totalCount + pageSize - 1) / pageSize);
 
-                // Convert snake_case to camelCase
-                Json::Value camelCaseRole;
-                camelCaseRole["id"] = roleJson["id"];
-                camelCaseRole["firstName"] = roleJson["first_name"];
-                camelCaseRole["lastName"] = roleJson["last_name"];
-                camelCaseRole["email"] = roleJson["email"];
-                camelCaseRole["phoneNumber"] = roleJson["phone_number"];
-                camelCaseRole["country"] = roleJson["country"];
-                camelCaseRole["profileImageUrl"] =
-                    roleJson["profile_image_url"];
-                camelCaseRole["isLockedOut"] = roleJson["is_locked_out"];
-                camelCaseRole["isActive"] = roleJson["is_active"];
-                camelCaseRole["createdAt"] = roleJson["created_at"];
-                camelCaseRole["updatedAt"] = roleJson["updated_at"];
-
-                data.append(camelCaseRole);
-              }
-              response.result["data"] = data;
-              callback(response);
-            },
-            [callback](const DrogonDbException &e) {
-              // Handle find error
-              dto::BaseApiResponse errorResponse;
-              errorResponse.success = false;
-              errorResponse.error["message"] =
-                  "Database error while fetching users.";
-              errorResponse.error["detail"] = e.base().what();
-              callback(errorResponse);
-            });
-      },
-      [callback](const DrogonDbException &e) {
-        // Handle count error
-        dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.error["code"] = constants::ERR_DB_QUERY;
-        errorResponse.error["message"] = "Database error while fetching users.";
-        errorResponse.error["detail"] = e.base().what();
-        callback(errorResponse);
-      });
+    Json::Value data = Json::arrayValue;
+    for (const auto &role : users) {
+      Json::Value roleJson = role.toJson();
+      Json::Value camelCaseRole;
+      camelCaseRole["id"] = roleJson["id"];
+      camelCaseRole["firstName"] = roleJson["first_name"];
+      camelCaseRole["lastName"] = roleJson["last_name"];
+      camelCaseRole["email"] = roleJson["email"];
+      camelCaseRole["phoneNumber"] = roleJson["phone_number"];
+      camelCaseRole["country"] = roleJson["country"];
+      camelCaseRole["profileImageUrl"] = roleJson["profile_image_url"];
+      camelCaseRole["isLockedOut"] = roleJson["is_locked_out"];
+      camelCaseRole["isActive"] = roleJson["is_active"];
+      camelCaseRole["createdAt"] = roleJson["created_at"];
+      camelCaseRole["updatedAt"] = roleJson["updated_at"];
+      data.append(camelCaseRole);
+    }
+    response.result["data"] = data;
+  } catch (const DrogonDbException &e) {
+    response.success = false;
+    response.error["message"] = "Database error while fetching users.";
+    response.error["detail"] = e.base().what();
+  }
+  co_return response;
 }
 
-void UserService::getAdminUsers(
-    int pageNo, int pageSize, const std::string &query,
-    const std::function<void(const dto::BaseApiResponse &)> &callback) {
-
+drogon::Task<dto::BaseApiResponse>
+UserService::getAdminUsers(int pageNo, int pageSize, const std::string &query) {
   auto dbClient = drogon::app().getDbClient();
-
-  auto mp = std::make_shared<Mapper<Users>>(dbClient);
+  auto mp = CoroMapper<Users>(dbClient);
 
   // 1. Build the search criteria
   Criteria criteria(Users::Cols::_is_admin_user, CompareOperator::EQ, true);
-
   if (!query.empty()) {
-
     std::string likeQuery = "%" + query + "%";
-
     Criteria searchCriteria =
         Criteria(Users::Cols::_first_name, CompareOperator::Like, likeQuery) ||
         Criteria(Users::Cols::_email, CompareOperator::Like, likeQuery) ||
         Criteria(Users::Cols::_last_name, CompareOperator::Like, likeQuery);
-
     criteria = criteria && searchCriteria;
   }
 
-  // 2. Asynchronously get the total count matching the criteria
-  mp->count(
-      criteria,
-      [=](const size_t totalCount) {
-        if (totalCount == 0) {
-          dto::BaseApiResponse response;
-          response.success = true;
-          response.result["data"] = Json::arrayValue;
-          response.result["totalCount"] = 0;
-          callback(response);
-          return;
-        }
+  dto::BaseApiResponse response;
+  try {
+    // 2. Get the total count matching the criteria
+    size_t totalCount = co_await mp.count(criteria);
+    if (totalCount == 0) {
+      response.success = true;
+      response.result["data"] = Json::arrayValue;
+      response.result["totalCount"] = 0;
+      co_return response;
+    }
 
-        // 3. Asynchronously find the paginated data
-        int offset = (pageNo - 1) * pageSize;
-        mp->limit(pageSize).offset(offset).findBy(
-            criteria,
-            [=](const std::vector<Users> &users) {
-              // 4. Build the final response inside the callback
-              dto::BaseApiResponse response;
-              response.success = true;
-              response.result["totalCount"] = (Json::UInt64)totalCount;
-              response.result["pageNo"] = pageNo;
-              response.result["pageSize"] = pageSize;
-              response.result["totalPages"] =
-                  (int)((totalCount + pageSize - 1) / pageSize);
+    // 3. Find the paginated data
+    int offset = (pageNo - 1) * pageSize;
+    auto users = co_await mp.limit(pageSize).offset(offset).findBy(criteria);
 
-              Json::Value data = Json::arrayValue;
-              for (const auto &role : users) {
-                Json::Value roleJson = role.toJson();
+    // 4. Build the final response
+    response.success = true;
+    response.result["totalCount"] = (Json::UInt64)totalCount;
+    response.result["pageNo"] = pageNo;
+    response.result["pageSize"] = pageSize;
+    response.result["totalPages"] =
+        (int)((totalCount + pageSize - 1) / pageSize);
 
-                // Convert snake_case to camelCase
-                Json::Value camelCaseRole;
-                camelCaseRole["id"] = roleJson["id"];
-                camelCaseRole["firstName"] = roleJson["first_name"];
-                camelCaseRole["lastName"] = roleJson["last_name"];
-                camelCaseRole["email"] = roleJson["email"];
-                camelCaseRole["phoneNumber"] = roleJson["phone_number"];
-                camelCaseRole["country"] = roleJson["country"];
-                camelCaseRole["profileImageUrl"] =
-                    roleJson["profile_image_url"];
-                camelCaseRole["isLockedOut"] = roleJson["is_locked_out"];
-                camelCaseRole["isActive"] = roleJson["is_active"];
-                camelCaseRole["createdAt"] = roleJson["created_at"];
-                camelCaseRole["updatedAt"] = roleJson["updated_at"];
-
-                data.append(camelCaseRole);
-              }
-              response.result["data"] = data;
-              callback(response);
-            },
-            [callback](const DrogonDbException &e) {
-              // Handle find error
-              dto::BaseApiResponse errorResponse;
-              errorResponse.success = false;
-              errorResponse.error["message"] =
-                  "Database error while fetching users.";
-              errorResponse.error["detail"] = e.base().what();
-              callback(errorResponse);
-            });
-      },
-      [callback](const DrogonDbException &e) {
-        // Handle count error
-        dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.error["code"] = constants::ERR_DB_QUERY;
-        errorResponse.error["message"] = "Database error while fetching users.";
-        errorResponse.error["detail"] = e.base().what();
-        callback(errorResponse);
-      });
+    Json::Value data = Json::arrayValue;
+    for (const auto &role : users) {
+      Json::Value roleJson = role.toJson();
+      Json::Value camelCaseRole;
+      camelCaseRole["id"] = roleJson["id"];
+      camelCaseRole["firstName"] = roleJson["first_name"];
+      camelCaseRole["lastName"] = roleJson["last_name"];
+      camelCaseRole["email"] = roleJson["email"];
+      camelCaseRole["phoneNumber"] = roleJson["phone_number"];
+      camelCaseRole["country"] = roleJson["country"];
+      camelCaseRole["profileImageUrl"] = roleJson["profile_image_url"];
+      camelCaseRole["isLockedOut"] = roleJson["is_locked_out"];
+      camelCaseRole["isActive"] = roleJson["is_active"];
+      camelCaseRole["createdAt"] = roleJson["created_at"];
+      camelCaseRole["updatedAt"] = roleJson["updated_at"];
+      data.append(camelCaseRole);
+    }
+    response.result["data"] = data;
+  } catch (const DrogonDbException &e) {
+    response.success = false;
+    response.error["code"] = constants::ERR_DB_QUERY;
+    response.error["message"] = "Database error while fetching users.";
+    response.error["detail"] = e.base().what();
+  }
+  co_return response;
 }
 
-void UserService::getPartnerSubscribers(
-    const std::string &partnerId, int pageNo, int pageSize,
-    const std::string &query,
-    const std::function<void(const dto::BaseApiResponse &)> &callback) {
-
+drogon::Task<dto::BaseApiResponse>
+UserService::getPartnerSubscribers(const std::string &partnerId, int pageNo,
+                                   int pageSize, const std::string &query) {
   auto dbClient = drogon::app().getDbClient();
-  auto mp = std::make_shared<Mapper<Users>>(dbClient);
+  auto mp = CoroMapper<Users>(dbClient);
 
   // 1. Build the search criteria
   Criteria criteria(Users::Cols::_partner_id, CompareOperator::EQ, partnerId);
-
   if (!query.empty()) {
     std::string likeQuery = "%" + query + "%";
-
     Criteria searchCriteria =
         Criteria(Users::Cols::_first_name, CompareOperator::Like, likeQuery) ||
         Criteria(Users::Cols::_email, CompareOperator::Like, likeQuery) ||
         Criteria(Users::Cols::_last_name, CompareOperator::Like, likeQuery);
-
     criteria = criteria && searchCriteria;
   }
 
-  // 2. Asynchronously get the total count matching the criteria
-  mp->count(
-      criteria,
-      [=](const size_t totalCount) {
-        if (totalCount == 0) {
-          dto::BaseApiResponse response;
-          response.success = true;
-          response.result["data"] = Json::arrayValue;
-          response.result["totalCount"] = 0;
-          callback(response);
-          return;
+  dto::BaseApiResponse response;
+  try {
+    // 2. Get the total count matching the criteria
+    size_t totalCount = co_await mp.count(criteria);
+    if (totalCount == 0) {
+      response.success = true;
+      response.result["data"] = Json::arrayValue;
+      response.result["totalCount"] = 0;
+      co_return response;
+    }
+
+    // 3. Find the paginated data
+    int offset = (pageNo - 1) * pageSize;
+    auto users = co_await mp.limit(pageSize).offset(offset).findBy(criteria);
+
+    // 4. Build the final response
+    response.success = true;
+    response.result["totalCount"] = (Json::UInt64)totalCount;
+    response.result["pageNo"] = pageNo;
+    response.result["pageSize"] = pageSize;
+    response.result["totalPages"] =
+        (int)((totalCount + pageSize - 1) / pageSize);
+
+    if (users.empty()) {
+      response.result["data"] = Json::arrayValue;
+      co_return response;
+    }
+
+    // Extract user IDs to fetch subscription descriptions
+    std::string userIdsCondition = "(";
+    for (size_t i = 0; i < users.size(); ++i) {
+      userIdsCondition += "'" + users[i].getValueOfId() + "'";
+      if (i < users.size() - 1) {
+        userIdsCondition += ",";
+      }
+    }
+    userIdsCondition += ")";
+
+    std::string sql = "SELECT user_id, subscription_plan_description "
+                      "FROM user_subscriptions "
+                      "WHERE is_active = true AND user_id IN " +
+                      userIdsCondition;
+
+    try {
+      auto res = co_await dbClient->execSqlCoro(sql);
+      std::map<std::string, std::string> subMap;
+      for (const auto &row : res) {
+        subMap[row["user_id"].as<std::string>()] =
+            row["subscription_plan_description"].isNull()
+                ? "No Description"
+                : row["subscription_plan_description"].as<std::string>();
+      }
+
+      Json::Value data = Json::arrayValue;
+      for (const auto &role : users) {
+        Json::Value roleJson = role.toJson();
+        Json::Value camelCaseRole;
+        camelCaseRole["id"] = roleJson["id"];
+        camelCaseRole["firstName"] = roleJson["first_name"];
+        camelCaseRole["lastName"] = roleJson["last_name"];
+        camelCaseRole["email"] = roleJson["email"];
+        camelCaseRole["phoneNumber"] = roleJson["phone_number"];
+        camelCaseRole["country"] = roleJson["country"];
+        camelCaseRole["profileImageUrl"] = roleJson["profile_image_url"];
+        camelCaseRole["partnerId"] = roleJson["partner_id"];
+        camelCaseRole["isActive"] = roleJson["is_active"];
+        camelCaseRole["createdAt"] = roleJson["created_at"];
+        camelCaseRole["updatedAt"] = roleJson["updated_at"];
+
+        std::string userId = roleJson["id"].asString();
+        if (subMap.find(userId) != subMap.end()) {
+          camelCaseRole["subscriptionPlanDescription"] = subMap[userId];
+        } else {
+          camelCaseRole["subscriptionPlanDescription"] =
+              "No Active Subscription";
         }
-
-        // 3. Asynchronously find the paginated data
-        int offset = (pageNo - 1) * pageSize;
-        mp->limit(pageSize).offset(offset).findBy(
-            criteria,
-            [=](const std::vector<Users> &users) {
-              // 4. Build the final response inside the callback
-              dto::BaseApiResponse response;
-              response.success = true;
-              response.result["totalCount"] = (Json::UInt64)totalCount;
-              response.result["pageNo"] = pageNo;
-              response.result["pageSize"] = pageSize;
-              response.result["totalPages"] =
-                  (int)((totalCount + pageSize - 1) / pageSize);
-
-              if (users.empty()) {
-                response.result["data"] = Json::arrayValue;
-                callback(response);
-                return;
-              }
-
-              // Extract user IDs to fetch subscription descriptions
-              std::string userIdsCondition = "(";
-              for (size_t i = 0; i < users.size(); ++i) {
-                userIdsCondition += "'" + users[i].getValueOfId() + "'";
-                if (i < users.size() - 1) {
-                  userIdsCondition += ",";
-                }
-              }
-              userIdsCondition += ")";
-
-              std::string sql = "SELECT user_id, subscription_plan_description "
-                                "FROM user_subscriptions "
-                                "WHERE is_active = true AND user_id IN " +
-                                userIdsCondition;
-
-              auto dbClient = drogon::app().getDbClient();
-              dbClient->execSqlAsync(
-                  sql,
-                  [=](const drogon::orm::Result &res) mutable {
-                    std::map<std::string, std::string> subMap;
-                    for (const auto &row : res) {
-                      subMap[row["user_id"].as<std::string>()] =
-                          row["subscription_plan_description"].isNull()
-                              ? "No Description"
-                              : row["subscription_plan_description"]
-                                    .as<std::string>();
-                    }
-
-                    Json::Value data = Json::arrayValue;
-                    for (const auto &role : users) {
-                      Json::Value roleJson = role.toJson();
-
-                      // Convert snake_case to camelCase
-                      Json::Value camelCaseRole;
-                      camelCaseRole["id"] = roleJson["id"];
-                      camelCaseRole["firstName"] = roleJson["first_name"];
-                      camelCaseRole["lastName"] = roleJson["last_name"];
-                      camelCaseRole["email"] = roleJson["email"];
-                      camelCaseRole["phoneNumber"] = roleJson["phone_number"];
-                      camelCaseRole["country"] = roleJson["country"];
-                      camelCaseRole["profileImageUrl"] =
-                          roleJson["profile_image_url"];
-                      camelCaseRole["partnerId"] = roleJson["partner_id"];
-                      camelCaseRole["isActive"] = roleJson["is_active"];
-                      camelCaseRole["createdAt"] = roleJson["created_at"];
-                      camelCaseRole["updatedAt"] = roleJson["updated_at"];
-
-                      // Add subscription plan description
-                      std::string userId = roleJson["id"].asString();
-                      if (subMap.find(userId) != subMap.end()) {
-                        camelCaseRole["subscriptionPlanDescription"] =
-                            subMap[userId];
-                      } else {
-                        camelCaseRole["subscriptionPlanDescription"] =
-                            "No Active Subscription";
-                      }
-
-                      data.append(camelCaseRole);
-                    }
-                    response.result["data"] = data;
-                    callback(response);
-                  },
-                  [callback](const drogon::orm::DrogonDbException &e) {
-                    dto::BaseApiResponse errorResponse;
-                    errorResponse.success = false;
-                    errorResponse.error["message"] =
-                        "Database error while fetching subscription "
-                        "descriptions.";
-                    errorResponse.error["detail"] = e.base().what();
-                    callback(errorResponse);
-                  });
-            },
-            [callback](const DrogonDbException &e) {
-              // Handle find error
-              dto::BaseApiResponse errorResponse;
-              errorResponse.success = false;
-              errorResponse.error["message"] =
-                  "Database error while fetching users.";
-              errorResponse.error["detail"] = e.base().what();
-              callback(errorResponse);
-            });
-      },
-      [callback](const DrogonDbException &e) {
-        // Handle count error
-        dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.error["code"] = constants::ERR_DB_QUERY;
-        errorResponse.error["message"] = "Database error while fetching users.";
-        errorResponse.error["detail"] = e.base().what();
-        callback(errorResponse);
-      });
+        data.append(camelCaseRole);
+      }
+      response.result["data"] = data;
+    } catch (const DrogonDbException &e) {
+      response.success = false;
+      response.error["message"] =
+          "Database error while fetching subscription descriptions.";
+      response.error["detail"] = e.base().what();
+    }
+  } catch (const DrogonDbException &e) {
+    response.success = false;
+    response.error["code"] = constants::ERR_DB_QUERY;
+    response.error["message"] = "Database error while fetching users.";
+    response.error["detail"] = e.base().what();
+  }
+  co_return response;
 }
 
-void UserService::create(
-    const dto::CreateUserDto &userDto,
-    const std::function<void(const dto::BaseApiResponse &)> &callback) {
+drogon::Task<gnp::dto::BaseApiResponse>
+UserService::create(const dto::CreateUserDto &userDto) {
 
   auto dbClient = drogon::app().getDbClient();
-
-  Mapper<Users> mp(dbClient);
+  CoroMapper<Users> mp(dbClient);
 
   Users newUser;
-
   newUser.setFirstName(userDto.getFirstName());
   newUser.setLastName(userDto.getLastName());
   newUser.setEmail(userDto.getEmail());
@@ -376,195 +282,135 @@ void UserService::create(
   newUser.setIsLockedOut(false);
   newUser.setCreatedAt(trantor::Date::now());
 
-  mp.insert(
-      newUser,
-      [callback](const drogon_model::Gnp::Users &publication) {
-        // 5. Prepare success response
-        dto::BaseApiResponse successResponse;
-        successResponse.success = true;
-        successResponse.message = "User created successfully";
-        successResponse.result["id"] = publication.getValueOfId();
-
-        callback(successResponse);
-      },
-      [callback](const drogon::orm::DrogonDbException &e) {
-        dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.message = "Database error while creating user";
-        errorResponse.error["code"] = constants::ERR_DB_QUERY;
-        callback(errorResponse);
-      });
+  gnp::dto::BaseApiResponse response;
+  try {
+    Users publication = co_await mp.insert(newUser);
+    response.success = true;
+    response.message = "User created successfully";
+    response.result["id"] = publication.getValueOfId();
+  } catch (const drogon::orm::DrogonDbException &e) {
+    response.success = false;
+    response.message = "Database error while creating user";
+    response.error["code"] = constants::ERR_DB_QUERY;
+  }
+  co_return response;
 }
 
-void UserService::registerUserPasskeys(
-    const dto::RegisterUserPasskeysDto &passKeysDto,
-    const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {
+drogon::Task<gnp::dto::BaseApiResponse> UserService::registerUserPasskeys(
+    const dto::RegisterUserPasskeysDto &passKeysDto) {
 
   auto dbClient = drogon::app().getDbClient();
-  Mapper<Users> mp(dbClient);
+  CoroMapper<Users> mp(dbClient);
 
-  mp.findOne(
-      Criteria(Users::Cols::_id, CompareOperator::EQ, passKeysDto.getUserId()),
-      [=](const Users &foundUser) {
-        Users user = foundUser;
+  gnp::dto::BaseApiResponse response;
+  try {
+    Users foundUser = co_await mp.findOne(Criteria(
+        Users::Cols::_id, CompareOperator::EQ, passKeysDto.getUserId()));
 
-        // Helper to ensure Base64 is standard (url-safe replacement)
-        auto toStandardBase64 = [](std::string s) {
-          for (char &c : s) {
-            if (c == '-')
-              c = '+';
-            else if (c == '_')
-              c = '/';
-          }
-          while (s.length() % 4 != 0)
-            s += '=';
-          return s;
-        };
+    Users user = foundUser;
 
-        std::string credIdStr = toStandardBase64(passKeysDto.getCredentialId());
-        std::string pubKeyStr = toStandardBase64(passKeysDto.getPublicKey());
+    // Helper to ensure Base64 is standard (url-safe replacement)
+    auto toStandardBase64 = [](std::string s) {
+      for (char &c : s) {
+        if (c == '-')
+          c = '+';
+        else if (c == '_')
+          c = '/';
+      }
+      while (s.length() % 4 != 0)
+        s += '=';
+      return s;
+    };
 
-        user.setCredentialId(drogon::utils::base64DecodeToVector(credIdStr));
-        user.setPublicKey(drogon::utils::base64DecodeToVector(pubKeyStr));
-        user.setPublicKeyAlgorithm(passKeysDto.getPublicKeyAlgorithm());
+    std::string credIdStr = toStandardBase64(passKeysDto.getCredentialId());
+    std::string pubKeyStr = toStandardBase64(passKeysDto.getPublicKey());
 
-        // Passkey fields
-        // Extract signCount from attestationObject (CBOR map) if available
-        int64_t initialSignCount = 0;
+    user.setCredentialId(drogon::utils::base64DecodeToVector(credIdStr));
+    user.setPublicKey(drogon::utils::base64DecodeToVector(pubKeyStr));
+    user.setPublicKeyAlgorithm(passKeysDto.getPublicKeyAlgorithm());
 
-        try {
+    // Passkey fields
+    // Extract signCount from attestationObject (CBOR map) if available
+    int64_t initialSignCount = 0;
 
-          std::string attObjStr =
-              toStandardBase64(passKeysDto.getAttestationObject());
-          std::vector<char> attObjBytes =
-              drogon::utils::base64DecodeToVector(attObjStr);
+    try {
+      std::string attObjStr =
+          toStandardBase64(passKeysDto.getAttestationObject());
+      std::vector<char> attObjBytes =
+          drogon::utils::base64DecodeToVector(attObjStr);
 
-          // Simple CBOR 'authData' finder
-          // Search for key "authData" string: 0x68 'a' 'u' 't' 'h' 'D' 'a' 't'
-          // 'a'
-          const std::string authDataKey = "authData";
-          const char authDataKeyHeader =
-              0x60 | (char)authDataKey.length(); // 0x68
+      // Simple CBOR 'authData' finder
+      const std::string authDataKey = "authData";
+      const char authDataKeyHeader = 0x60 | (char)authDataKey.length(); // 0x68
 
-          auto it = std::search(attObjBytes.begin(), attObjBytes.end(),
-                                authDataKey.begin(), authDataKey.end());
+      auto it = std::search(attObjBytes.begin(), attObjBytes.end(),
+                            authDataKey.begin(), authDataKey.end());
 
-          if (it != attObjBytes.end() && it != attObjBytes.begin()) {
-            // Check if preceded by string header 0x68
-            if (*(it - 1) == authDataKeyHeader) {
-              LOG_DEBUG << "Found authData key in attestationObject";
-              auto valueStart = it + authDataKey.length();
-              if (valueStart < attObjBytes.end()) {
-                // Decode byte string header
-                size_t dataLen = 0;
-                auto dataIt = valueStart;
-                uint8_t head = (uint8_t)*dataIt;
+      if (it != attObjBytes.end() && it != attObjBytes.begin()) {
+        if (*(it - 1) == authDataKeyHeader) {
+          auto valueStart = it + authDataKey.length();
+          if (valueStart < attObjBytes.end()) {
+            size_t dataLen = 0;
+            auto dataIt = valueStart;
+            uint8_t head = (uint8_t)*dataIt;
+            dataIt++;
+
+            if (head >= 0x40 && head <= 0x57) {
+              dataLen = head - 0x40;
+            } else if (head == 0x58) {
+              if (dataIt < attObjBytes.end()) {
+                dataLen = (uint8_t)*dataIt;
                 dataIt++;
-
-                if (head >= 0x40 && head <= 0x57) {
-                  dataLen = head - 0x40;
-                } else if (head == 0x58) {
-                  if (dataIt < attObjBytes.end()) {
-                    dataLen = (uint8_t)*dataIt;
-                    dataIt++;
-                  }
-                } else if (head == 0x59) {
-                  if (dataIt + 1 < attObjBytes.end()) {
-                    dataLen =
-                        ((uint8_t)*dataIt << 8) | (uint8_t) * (dataIt + 1);
-                    dataIt += 2;
-                  }
-                }
-                LOG_DEBUG << "authData length: " << dataLen;
-
-                // authData structure:
-                // 32 bytes rpIdHash
-                // 1 byte flags
-                // 4 bytes signCount (big endian)
-                if (dataLen >= 37 &&
-                    (size_t)std::distance(dataIt, attObjBytes.end()) >=
-                        dataLen) {
-                  auto scIt = dataIt + 32 + 1; // start of signCount
-                  uint32_t sc =
-                      ((uint8_t)*scIt << 24) | ((uint8_t) * (scIt + 1) << 16) |
-                      ((uint8_t) * (scIt + 2) << 8) | (uint8_t) * (scIt + 3);
-                  initialSignCount = sc;
-                  LOG_DEBUG << "Extracted signCount: " << sc;
-                } else {
-                  LOG_WARN << "authData too short to contain signCount";
-                }
               }
-            } else {
-              LOG_DEBUG << "Found 'authData' string but header mismatch. Byte "
-                           "before: "
-                        << (int)(*(it - 1));
+            } else if (head == 0x59) {
+              if (dataIt + 1 < attObjBytes.end()) {
+                dataLen = ((uint8_t)*dataIt << 8) | (uint8_t) * (dataIt + 1);
+                dataIt += 2;
+              }
             }
-          } else {
-            LOG_WARN << "Could not find 'authData' key in attestationObject";
+
+            if (dataLen >= 37 &&
+                (size_t)std::distance(dataIt, attObjBytes.end()) >= dataLen) {
+              auto scIt = dataIt + 32 + 1; // start of signCount
+              uint32_t sc =
+                  ((uint8_t)*scIt << 24) | ((uint8_t) * (scIt + 1) << 16) |
+                  ((uint8_t) * (scIt + 2) << 8) | (uint8_t) * (scIt + 3);
+              initialSignCount = sc;
+            }
           }
-        } catch (const std::exception &e) {
-          LOG_ERROR << "Failed to parse attestationObject for signCount: "
-                    << e.what();
-        } catch (...) {
-          LOG_ERROR << "Unknown error parsing attestationObject";
         }
+      }
+    } catch (...) {
+      // Log or handle parsing error if necessary, but don't fail registration
+    }
 
-        user.setSignCount(initialSignCount);
-        user.setCredentialType(passKeysDto.getCredentialType());
-        user.setTransports(passKeysDto.getTransports());
-        user.setUpdatedAt(trantor::Date::now());
+    user.setSignCount(initialSignCount);
+    user.setCredentialType(passKeysDto.getCredentialType());
+    user.setTransports(passKeysDto.getTransports());
+    user.setUpdatedAt(trantor::Date::now());
 
-        // Use userId as userHandle (convert string to char vector)
-        std::string uId = user.getValueOfId();
-        std::vector<char> handleVec(uId.begin(), uId.end());
-        user.setUserHandle(handleVec);
+    std::string uId = user.getValueOfId();
+    std::vector<char> handleVec(uId.begin(), uId.end());
+    user.setUserHandle(handleVec);
 
-        Mapper<Users> updateMp(dbClient);
-        updateMp.update(
-            user,
-            [callback](const size_t count) {
-              gnp::dto::BaseApiResponse response;
-              response.success = true;
-              response.message = "Passkeys registered successfully";
-              callback(response);
-            },
-            [callback](const DrogonDbException &e) {
-              gnp::dto::BaseApiResponse response;
-              response.success = false;
-              response.message = "Database error updating passkeys";
-              response.error["code"] = constants::ERR_DB_QUERY;
-              response.error["detail"] = e.base().what();
-              callback(response);
-            });
-      },
-      [callback](const DrogonDbException &e) {
-        gnp::dto::BaseApiResponse response;
-        response.success = false;
-        response.message = "User not found";
-        response.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
-        response.error["detail"] = e.base().what();
-        callback(response);
-      });
+    co_await mp.update(user);
+
+    response.success = true;
+    response.message = "Passkeys registered successfully";
+
+  } catch (const DrogonDbException &e) {
+    response.success = false;
+    response.message = "Database error or user not found";
+    response.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+  }
+  co_return response;
 }
 
-void UserService::validateUserPasskeys(
-    const dto::LoginUserPasskeyDto &passkeyDto,
-    const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {
+drogon::Task<gnp::dto::BaseApiResponse>
+UserService::validateUserPasskeys(const dto::LoginUserPasskeyDto &passkeyDto) {
 
   auto dbClient = drogon::app().getDbClient();
-  Mapper<Users> mp(dbClient);
-
-  // Find user by credential ID
-  // DTO credentialId is likely base64url or plain string depending on client.
-  // In DB we store as bytea. DTO has string.
-  // If client sends base64url, we need to convert to standard base64 then
-  // decode to bytes However, findBy expects us to query against the column
-  // type.
-
-  // To be safe, we'll try to match against encoded version or decoded version?
-  // The DB column `credential_id` is defined as `bytea` in postgres but
-  // `vector<char>` in model. And `toStandardBase64` logic is available inside
-  // the function scope? No, we should duplicate helper or move it.
+  CoroMapper<Users> mp(dbClient);
 
   auto toStandardBase64 = [](std::string s) {
     for (char &c : s) {
@@ -582,48 +428,13 @@ void UserService::validateUserPasskeys(
   std::vector<char> credIdBytes =
       drogon::utils::base64DecodeToVector(credIdStr);
 
-  // Need to use findOne with criteria checking byte comparison
-  // But `Users` model uses `vector<char>` for `credential_id`.
-  // We can iterate or use a criteria that supports byte comparison?
-  // Drogon ORM `Criteria` with `EQ` on vector<char> should work if supported,
-  // otherwise manually. Actually, `Users::Cols::_credential_id` is the column
-  // name.
-
-  // Using a custom SQL query might be safer for bytea comparison if ORM is
-  // tricky with vectors, but let's try ORM first. Wait, ORM `createdAt` etc are
-  // strings in `Criteria` usually? Let's rely on `findOne` with strict
-  // matching.
-
-  // Actually, simpler: The `register` flow stored it as bytes.
-  // `credIdBytes` is what we expect to be in DB.
-
-  // IMPORTANT: ORM Criteria with binary data is tricky.
-  // Let's use `findBy` with a custom valid criteria or just use `findOne` with
-  // encoded string? No, `bytea` in postgres matches binary.
-
-  // Let's try `findOne` passing the vector. If it fails to compile or run, we
-  // fallback. Note: `Criteria` constructor for `std::vector` might not exist.
-  // We'll trust Drogon ORM supports it or we use `find` by primary key if we
-  // had it, but we don't.
-
-  // ALTERNATIVE: Use `userHandle` if provided to find user first, then check
-  // credential ID? `userHandle` in our case IS the `userId` (UUID).
-
   std::string userId = passkeyDto.getUserHandle();
-  // If userHandle is empty/missing, we must rely on credentialId.
-  // But `userHandle` is recommended for this flow.
-  // Let's try to use userHandle first if it looks like a UUID.
 
   Criteria userCriteria;
   bool hasUserHandle = !userId.empty();
 
+  dto::BaseApiResponse response;
   if (hasUserHandle) {
-    // Maybe userId is base64 encoded if it came from arraybuffer?
-    // Our register logic: `user.setUserHandle(handleVec)` where handleVec was
-    // chars of UUID string. So client `userHandle` (ArrayBuffer) -> Base64 ->
-    // DTO string. We decode base64 -> string (UUID).
-
-    // Check if userId looks like uuid or base64
     if (userId.length() > 36) { // rudimentary check
       std::string handleStr = toStandardBase64(userId);
       auto handleBytes = drogon::utils::base64DecodeToVector(handleStr);
@@ -631,196 +442,147 @@ void UserService::validateUserPasskeys(
     }
     userCriteria = Criteria(Users::Cols::_id, CompareOperator::EQ, userId);
   } else {
-    // Fallback or error? Spec says userHandle should be present for "resident
-    // keys" (discoverable credentials). For non-discoverable, we use
-    // credentialId list allowed. Let's assume userHandle is present for
-    // simplicity as per our register implementation. If not, we'd need to
-    // implementing lookup by credential_id which is `bytea`. Let's try looking
-    // up by credential_id encoded? No, ORM.
-
-    // For now, let's assume we can fetch by Credential ID if UserHandle is
-    // missing Converting byte vector to string for the sake of Criteria? No
-    // that matches text. We will return error if no userHandle for now to stay
-    // safe with ORM.
-    gnp::dto::BaseApiResponse response;
     response.success = false;
     response.message = "User Handle is required for passkey login.";
-    callback(response);
-    return;
+    co_return response;
   }
 
-  mp.findOne(
-      userCriteria,
-      [=](const Users &user) {
-        // Found user. Now verify passkey.
+  try {
+    Users user = co_await mp.findOne(userCriteria);
+    // Found user. Now verify passkey.
 
-        // 1. Verify Credential ID matches (if we found by userHandle)
-        auto storedCredId = user.getValueOfCredentialId();
-        if (credIdBytes != storedCredId) {
-          // Passkey doesn't belong to this user or changed
-          gnp::dto::BaseApiResponse response;
-          response.success = false;
-          response.message = "Invalid credential ID.";
-          callback(response);
-          return;
-        }
+    // 1. Verify Credential ID matches (if we found by userHandle)
+    auto storedCredId = user.getValueOfCredentialId();
+    if (credIdBytes != storedCredId) {
+      // Passkey doesn't belong to this user or changed
+      response.success = false;
+      response.message = "Invalid credential ID.";
+      co_return response;
+    }
 
-        // 2. Cryptographic Verification
-        // SignedData = authenticatorData + sha256(clientDataJSON)
+    // 2. Cryptographic Verification
+    // SignedData = authenticatorData + sha256(clientDataJSON)
 
-        std::string authDataStr =
-            toStandardBase64(passkeyDto.getAuthenticatorData());
-        std::vector<char> authData =
-            drogon::utils::base64DecodeToVector(authDataStr);
+    std::string authDataStr =
+        toStandardBase64(passkeyDto.getAuthenticatorData());
+    std::vector<char> authData =
+        drogon::utils::base64DecodeToVector(authDataStr);
 
-        std::string clientDataStr =
-            toStandardBase64(passkeyDto.getClientDataJSON());
-        std::vector<char> clientData =
-            drogon::utils::base64DecodeToVector(clientDataStr);
+    std::string clientDataStr =
+        toStandardBase64(passkeyDto.getClientDataJSON());
+    std::vector<char> clientData =
+        drogon::utils::base64DecodeToVector(clientDataStr);
 
-        unsigned char clientDataHash[SHA256_DIGEST_LENGTH];
-        SHA256((const unsigned char *)clientData.data(), clientData.size(),
-               clientDataHash);
+    unsigned char clientDataHash[SHA256_DIGEST_LENGTH];
+    SHA256((const unsigned char *)clientData.data(), clientData.size(),
+           clientDataHash);
 
-        std::vector<unsigned char> signedData;
-        signedData.reserve(authData.size() + SHA256_DIGEST_LENGTH);
-        signedData.insert(signedData.end(), authData.begin(), authData.end());
-        signedData.insert(signedData.end(), clientDataHash,
-                          clientDataHash + SHA256_DIGEST_LENGTH);
+    std::vector<unsigned char> signedData;
+    signedData.reserve(authData.size() + SHA256_DIGEST_LENGTH);
+    signedData.insert(signedData.end(), authData.begin(), authData.end());
+    signedData.insert(signedData.end(), clientDataHash,
+                      clientDataHash + SHA256_DIGEST_LENGTH);
 
-        // Public Key from DB
-        auto pubKeyBytes = user.getValueOfPublicKey();
-        // It's in COSE format or raw?
-        // In register:
-        // `user.setPublicKey(drogon::utils::base64DecodeToVector(pubKeyStr));`
-        // The client sent `credential.response.publicKey` which usually is SPKI
-        // (DER) or COSE. WebAuthn API `getPublicKey()` returns SPKI DER. If it
-        // is SPKI DER, `d2i_PUBKEY` can read it.
+    // Public Key from DB
+    auto pubKeyBytes = user.getValueOfPublicKey();
 
-        const unsigned char *p = (const unsigned char *)pubKeyBytes.data();
-        EVP_PKEY *pkey = d2i_PUBKEY(NULL, &p, pubKeyBytes.size());
+    const unsigned char *p = (const unsigned char *)pubKeyBytes.data();
+    EVP_PKEY *pkey = d2i_PUBKEY(NULL, &p, pubKeyBytes.size());
 
-        if (!pkey) {
-          gnp::dto::BaseApiResponse response;
-          response.success = false;
-          response.message = "Failed to load stored public key.";
-          callback(response);
-          return;
-        }
+    if (!pkey) {
+      response.success = false;
+      response.message = "Failed to load stored public key.";
+      co_return response;
+    }
 
-        EVP_MD_CTX *ctx = EVP_MD_CTX_new();
-        EVP_DigestVerifyInit(ctx, NULL, EVP_sha256(), NULL, pkey);
+    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+    EVP_DigestVerifyInit(ctx, NULL, EVP_sha256(), NULL, pkey);
 
-        // Verification
-        // signature from DTO
-        std::string sigStr = toStandardBase64(passkeyDto.getSignature());
-        std::vector<char> sigBytes =
-            drogon::utils::base64DecodeToVector(sigStr);
+    // Verification
+    // signature from DTO
+    std::string sigStr = toStandardBase64(passkeyDto.getSignature());
+    std::vector<char> sigBytes = drogon::utils::base64DecodeToVector(sigStr);
 
-        int verifyResult = EVP_DigestVerify(
-            ctx, (const unsigned char *)sigBytes.data(), sigBytes.size(),
-            signedData.data(), signedData.size());
+    int verifyResult =
+        EVP_DigestVerify(ctx, (const unsigned char *)sigBytes.data(),
+                         sigBytes.size(), signedData.data(), signedData.size());
 
-        EVP_MD_CTX_free(ctx);
-        EVP_PKEY_free(pkey);
+    EVP_MD_CTX_free(ctx);
+    EVP_PKEY_free(pkey);
 
-        if (verifyResult != 1) {
-          gnp::dto::BaseApiResponse response;
-          response.success = false;
-          response.message = "Signature verification failed.";
-          callback(response);
-          return;
-        }
+    if (verifyResult != 1) {
+      response.success = false;
+      response.message = "Signature verification failed.";
+      co_return response;
+    }
 
-        // 3. Clone Check (Sign Count)
-        // Extract signCount from authData (bytes 33-36)
-        if (authData.size() < 37) {
-          gnp::dto::BaseApiResponse response;
-          response.success = false;
-          response.message = "Authenticator data too short.";
-          callback(response);
-          return;
-        }
+    // 3. Clone Check (Sign Count)
+    // Extract signCount from authData (bytes 33-36)
+    if (authData.size() < 37) {
+      response.success = false;
+      response.message = "Authenticator data too short.";
+      co_return response;
+    }
 
-        uint32_t newSignCount =
-            ((uint8_t)authData[33] << 24) | ((uint8_t)authData[34] << 16) |
-            ((uint8_t)authData[35] << 8) | (uint8_t)authData[36];
+    uint32_t newSignCount =
+        ((uint8_t)authData[33] << 24) | ((uint8_t)authData[34] << 16) |
+        ((uint8_t)authData[35] << 8) | (uint8_t)authData[36];
 
-        int64_t storedCount = user.getValueOfSignCount();
+    int64_t storedCount = user.getValueOfSignCount();
 
-        if (newSignCount > 0 && newSignCount <= storedCount) {
-          // Potential clone attack!
-          gnp::dto::BaseApiResponse response;
-          response.success = false;
-          response.message = "Invalid sign count (possible clone detected).";
-          callback(response);
-          return;
-        }
+    if (newSignCount > 0 && newSignCount <= storedCount) {
+      // Potential clone attack!
+      response.success = false;
+      response.message = "Invalid sign count (possible clone detected).";
+      co_return response;
+    }
 
-        // 4. Update Sign Count & Issue Token
-        Users userToUpdate = user;
-        userToUpdate.setSignCount(newSignCount);
+    // 4. Update Sign Count & Issue Token
+    Users userToUpdate = user;
+    userToUpdate.setSignCount(newSignCount);
 
-        Mapper<Users> updateMp(dbClient);
-        updateMp.update(
-            userToUpdate,
-            [=](const size_t count) {
-              // Issue Token (Reuse logic from validateUserCredentials usually,
-              // but copying here for scope)
-              auto &app = drogon::app();
-              auto customConfig = app.getCustomConfig();
-              std::string jwtSecurityKey =
-                  customConfig["JwtBearer"]["JwtSecurityKey"].asString();
-              std::string jwtIssuer =
-                  customConfig["JwtBearer"]["JwtIssuer"].asString();
+    co_await mp.update(userToUpdate);
 
-              auto token =
-                  jwt::create()
-                      .set_issuer(jwtIssuer)
-                      .set_type("JWT")
-                      .set_issued_at(std::chrono::system_clock::now())
-                      .set_expires_at(std::chrono::system_clock::now() +
-                                      std::chrono::hours(24 * 120))
-                      .set_payload_claim("userId",
-                                         jwt::claim(user.getValueOfId()))
-                      .set_payload_claim("username",
-                                         jwt::claim(user.getValueOfUsername()))
-                      .set_payload_claim("email",
-                                         jwt::claim(user.getValueOfEmail()))
-                      .sign(jwt::algorithm::hs256{jwtSecurityKey});
+    // Issue Token
+    auto &app = drogon::app();
+    auto customConfig = app.getCustomConfig();
+    std::string jwtSecurityKey =
+        customConfig["JwtBearer"]["JwtSecurityKey"].asString();
+    std::string jwtIssuer = customConfig["JwtBearer"]["JwtIssuer"].asString();
 
-              gnp::dto::BaseApiResponse response;
-              response.success = true;
-              response.message = "Authentication successful";
-              response.result["token"] = token;
-              response.result["userId"] = user.getValueOfId();
-              response.result["username"] = user.getValueOfUsername();
-              response.result["fullName"] =
-                  user.getValueOfFirstName() + " " + user.getValueOfLastName();
-              response.result["email"] = user.getValueOfEmail();
-              callback(response);
-            },
-            [callback](const DrogonDbException &e) {
-              gnp::dto::BaseApiResponse response;
-              response.success = false;
-              response.message = "Database error updating sign count.";
-              callback(response);
-            });
-      },
-      [callback](const DrogonDbException &e) {
-        gnp::dto::BaseApiResponse response;
-        response.success = false;
-        response.message = "User not found or invalid credentials.";
-        callback(response);
-      });
+    auto token =
+        jwt::create()
+            .set_issuer(jwtIssuer)
+            .set_type("JWT")
+            .set_issued_at(std::chrono::system_clock::now())
+            .set_expires_at(std::chrono::system_clock::now() +
+                            std::chrono::hours(24 * 120))
+            .set_payload_claim("userId", jwt::claim(user.getValueOfId()))
+            .set_payload_claim("username",
+                               jwt::claim(user.getValueOfUsername()))
+            .set_payload_claim("email", jwt::claim(user.getValueOfEmail()))
+            .sign(jwt::algorithm::hs256{jwtSecurityKey});
+
+    response.success = true;
+    response.message = "Authentication successful";
+    response.result["token"] = token;
+    response.result["userId"] = user.getValueOfId();
+    response.result["username"] = user.getValueOfUsername();
+    response.result["fullName"] =
+        user.getValueOfFirstName() + " " + user.getValueOfLastName();
+    response.result["email"] = user.getValueOfEmail();
+
+  } catch (const DrogonDbException &e) {
+    response.success = false;
+    response.message = "User not found or invalid credentials.";
+  }
+  co_return response;
 }
 
-void UserService::validateUserCredentials(
-    const dto::SigninDto &signin_dto,
-    const std::function<void(const dto::BaseApiResponse &)> &callback) {
+drogon::Task<dto::BaseApiResponse>
+UserService::validateUserCredentials(const dto::SigninDto &signin_dto) {
   auto dbClient = drogon::app().getDbClient();
-
-  Mapper<Users> mapper(dbClient);
+  CoroMapper<Users> mapper(dbClient);
 
   Criteria criteria =
       (Criteria(Users::Cols::_username, CompareOperator::EQ,
@@ -830,72 +592,61 @@ void UserService::validateUserCredentials(
       Criteria(Users::Cols::_is_active, CompareOperator::EQ, true) &&
       Criteria(Users::Cols::_is_locked_out, CompareOperator::EQ, false);
 
-  mapper.findOne(
-      criteria,
-      [=](const Users &user) {
-        bool passwordMatches = bcrypt::validatePassword(
-            signin_dto.getPassword(), user.getValueOfPasswordHash());
+  dto::BaseApiResponse response;
+  try {
+    Users user = co_await mapper.findOne(criteria);
+    bool passwordMatches = bcrypt::validatePassword(
+        signin_dto.getPassword(), user.getValueOfPasswordHash());
 
-        if (passwordMatches) {
-          // Password is correct, generate JWT token
-          auto &app = drogon::app();
-          auto customConfig = app.getCustomConfig();
-          std::string jwtSecurityKey =
-              customConfig["JwtBearer"]["JwtSecurityKey"].asString();
-          std::string jwtIssuer =
-              customConfig["JwtBearer"]["JwtIssuer"].asString();
+    if (passwordMatches) {
+      // Password is correct, generate JWT token
+      auto &app = drogon::app();
+      auto customConfig = app.getCustomConfig();
+      std::string jwtSecurityKey =
+          customConfig["JwtBearer"]["JwtSecurityKey"].asString();
+      std::string jwtIssuer = customConfig["JwtBearer"]["JwtIssuer"].asString();
 
-          auto token =
-              jwt::create()
-                  .set_issuer(jwtIssuer)
-                  .set_type("JWT")
-                  .set_issued_at(std::chrono::system_clock::now())
-                  .set_expires_at(std::chrono::system_clock::now() +
-                                  std::chrono::hours(24 * 120))
-                  .set_payload_claim("userId", jwt::claim(user.getValueOfId()))
-                  .set_payload_claim("username",
-                                     jwt::claim(user.getValueOfUsername()))
-                  .set_payload_claim("email",
-                                     jwt::claim(user.getValueOfEmail()))
-                  .sign(jwt::algorithm::hs256{jwtSecurityKey});
+      auto token =
+          jwt::create()
+              .set_issuer(jwtIssuer)
+              .set_type("JWT")
+              .set_issued_at(std::chrono::system_clock::now())
+              .set_expires_at(std::chrono::system_clock::now() +
+                              std::chrono::hours(24 * 120))
+              .set_payload_claim("userId", jwt::claim(user.getValueOfId()))
+              .set_payload_claim("username",
+                                 jwt::claim(user.getValueOfUsername()))
+              .set_payload_claim("email", jwt::claim(user.getValueOfEmail()))
+              .sign(jwt::algorithm::hs256{jwtSecurityKey});
 
-          gnp::dto::BaseApiResponse response;
-          response.success = true;
-          response.message = "Authentication successful";
-          response.result["token"] = token;
-          response.result["userId"] = user.getValueOfId();
-          response.result["username"] = user.getValueOfUsername();
-          response.result["fullName"] =
-              user.getValueOfFirstName() + " " + user.getValueOfLastName();
-          response.result["email"] = user.getValueOfEmail();
-
-          callback(response);
-        } else {
-          // Password is incorrect
-          gnp::dto::BaseApiResponse response;
-          response.success = false;
-          response.message = "Invalid credentials";
-          response.error["code"] = constants::ERR_AUTH_INVALID_CREDENTIALS;
-          callback(response);
-        }
-      },
-      [callback](const DrogonDbException &e) {
-        // Database error or user not found
-        gnp::dto::BaseApiResponse response;
-        response.success = false;
-        response.message = "User not found";
-        response.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
-        response.error["message"] = "User not found";
-        callback(response);
-      });
+      response.success = true;
+      response.message = "Authentication successful";
+      response.result["token"] = token;
+      response.result["userId"] = user.getValueOfId();
+      response.result["username"] = user.getValueOfUsername();
+      response.result["fullName"] =
+          user.getValueOfFirstName() + " " + user.getValueOfLastName();
+      response.result["email"] = user.getValueOfEmail();
+    } else {
+      // Password is incorrect
+      response.success = false;
+      response.message = "Invalid credentials";
+      response.error["code"] = constants::ERR_AUTH_INVALID_CREDENTIALS;
+    }
+  } catch (const DrogonDbException &e) {
+    // User not found
+    response.success = false;
+    response.message = "User not found";
+    response.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+    response.error["message"] = "User not found";
+  }
+  co_return response;
 }
 
-void UserService::validateAdminUserCredentials(
-    const dto::SigninDto &signin_dto,
-    const std::function<void(const dto::BaseApiResponse &)> &callback) {
+drogon::Task<gnp::dto::BaseApiResponse>
+UserService::validateAdminUserCredentials(const dto::SigninDto &signin_dto) {
   auto dbClient = drogon::app().getDbClient();
-
-  Mapper<Users> mapper(dbClient);
+  CoroMapper<Users> mapper(dbClient);
 
   Criteria criteria =
       (Criteria(Users::Cols::_username, CompareOperator::EQ,
@@ -906,67 +657,59 @@ void UserService::validateAdminUserCredentials(
       Criteria(Users::Cols::_is_admin_user, CompareOperator::EQ, true) &&
       Criteria(Users::Cols::_is_locked_out, CompareOperator::EQ, false);
 
-  mapper.findOne(
-      criteria,
-      [=](const Users &user) {
-        bool passwordMatches = bcrypt::validatePassword(
-            signin_dto.getPassword(), user.getValueOfPasswordHash());
+  gnp::dto::BaseApiResponse response;
+  try {
+    Users user = co_await mapper.findOne(criteria);
+    bool passwordMatches = bcrypt::validatePassword(
+        signin_dto.getPassword(), user.getValueOfPasswordHash());
 
-        if (passwordMatches) {
-          // Password is correct, generate JWT token
-          auto &app = drogon::app();
-          auto customConfig = app.getCustomConfig();
-          std::string jwtSecurityKey =
-              customConfig["JwtBearer"]["JwtSecurityKey"].asString();
-          std::string jwtIssuer =
-              customConfig["JwtBearer"]["JwtIssuer"].asString();
+    if (passwordMatches) {
+      // Password is correct, generate JWT token
+      auto &app = drogon::app();
+      auto customConfig = app.getCustomConfig();
+      std::string jwtSecurityKey =
+          customConfig["JwtBearer"]["JwtSecurityKey"].asString();
+      std::string jwtIssuer = customConfig["JwtBearer"]["JwtIssuer"].asString();
 
-          auto token =
-              jwt::create()
-                  .set_issuer(jwtIssuer)
-                  .set_type("JWT")
-                  .set_issued_at(std::chrono::system_clock::now())
-                  .set_expires_at(std::chrono::system_clock::now() +
-                                  std::chrono::hours(24 * 30))
-                  .set_payload_claim("userId", jwt::claim(user.getValueOfId()))
-                  .set_payload_claim("username",
-                                     jwt::claim(user.getValueOfUsername()))
-                  .set_payload_claim("email",
-                                     jwt::claim(user.getValueOfEmail()))
-                  .sign(jwt::algorithm::hs256{jwtSecurityKey});
+      auto token =
+          jwt::create()
+              .set_issuer(jwtIssuer)
+              .set_type("JWT")
+              .set_issued_at(std::chrono::system_clock::now())
+              .set_expires_at(std::chrono::system_clock::now() +
+                              std::chrono::hours(24 * 30))
+              .set_payload_claim("userId", jwt::claim(user.getValueOfId()))
+              .set_payload_claim("username",
+                                 jwt::claim(user.getValueOfUsername()))
+              .set_payload_claim("email", jwt::claim(user.getValueOfEmail()))
+              .sign(jwt::algorithm::hs256{jwtSecurityKey});
 
-          gnp::dto::BaseApiResponse response;
-          response.success = true;
-          response.message = "Authentication successful";
-          response.result["token"] = token;
-          response.result["userId"] = user.getValueOfId();
-          response.result["username"] = user.getValueOfUsername();
-          response.result["fullName"] =
-              user.getValueOfFirstName() + " " + user.getValueOfLastName();
-          response.result["email"] = user.getValueOfEmail();
-
-          callback(response);
-        } else {
-          // Password is incorrect
-          gnp::dto::BaseApiResponse response;
-          response.success = false;
-          response.message = "Invalid credentials";
-          response.error["code"] = constants::ERR_AUTH_INVALID_CREDENTIALS;
-          callback(response);
-        }
-      },
-      [callback](const DrogonDbException &e) {
-        // Database error or user not found
-        gnp::dto::BaseApiResponse response;
-        response.success = false;
-        response.message = "User not found";
-        response.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
-        response.error["message"] = "User not found";
-        callback(response);
-      });
+      response.success = true;
+      response.message = "Authentication successful";
+      response.result["token"] = token;
+      response.result["userId"] = user.getValueOfId();
+      response.result["username"] = user.getValueOfUsername();
+      response.result["fullName"] =
+          user.getValueOfFirstName() + " " + user.getValueOfLastName();
+      response.result["email"] = user.getValueOfEmail();
+    } else {
+      // Password is incorrect
+      response.success = false;
+      response.message = "Invalid credentials";
+      response.error["code"] = constants::ERR_AUTH_INVALID_CREDENTIALS;
+    }
+  } catch (const DrogonDbException &e) {
+    // Database error or user not found
+    response.success = false;
+    response.message = "User not found";
+    response.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+    response.error["message"] = "User not found";
+  }
+  co_return response;
 }
 
-drogon::Task<gnp::dto::BaseApiResponse> UserService::lockUserAccount(const std::string &userId) {
+drogon::Task<gnp::dto::BaseApiResponse>
+UserService::lockUserAccount(const std::string &userId) {
   auto dbClient = drogon::app().getDbClient();
   auto mp = drogon::orm::CoroMapper<Users>(dbClient);
 
@@ -1005,231 +748,132 @@ drogon::Task<gnp::dto::BaseApiResponse> UserService::lockUserAccount(const std::
   }
 }
 
-void UserService::unlockUserAccount(
-    const std::string &userId,
-    const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {
+drogon::Task<gnp::dto::BaseApiResponse>
+UserService::unlockUserAccount(const std::string &userId) {
 
   auto dbClient = drogon::app().getDbClient();
-  Mapper<Users> mp(dbClient);
+  CoroMapper<Users> mp(dbClient);
 
-  // Create criteria to find the user with specified ID in the tenant
-  Criteria criteria = Criteria(Users::Cols::_id, CompareOperator::EQ, userId);
+  gnp::dto::BaseApiResponse response;
+  try {
+    Users user = co_await mp.findOne(
+        Criteria(Users::Cols::_id, CompareOperator::EQ, userId));
 
-  // Find the user first
-  mp.findOne(
-      criteria,
-      [=](Users user) {
-        if (!user.getValueOfIsLockedOut()) {
+    if (!user.getValueOfIsLockedOut()) {
+      response.success = true;
+      response.message = "User account is already unlocked.";
+      co_return response;
+    }
 
-          dto::BaseApiResponse response;
-          response.success = true;
-          response.message = "User account is already unlocked.";
-          callback(response);
-          return;
-        }
+    user.setIsLockedOut(false);
+    co_await mp.update(user);
 
-        // Set the user as not locked out
-        user.setIsLockedOut(false);
+    response.success = true;
+    response.message = "User account unlocked successfully";
 
-        // Update the user in the database
-        Mapper<Users> updateMp(dbClient);
-        updateMp.update(
-            user,
-            [callback](const size_t count) {
-              // Successfully updated
-              gnp::dto::BaseApiResponse response;
-              response.success = true;
-              response.message = "User account unlocked successfully";
-              callback(response);
-            },
-            [=](const DrogonDbException &e) {
-              // Error during update
-              gnp::dto::BaseApiResponse errorResponse;
-              errorResponse.success = false;
-              errorResponse.message = "Failed to unlock user account";
-              errorResponse.error["code"] = constants::ERR_DB_QUERY;
-              errorResponse.error["detail"] = e.base().what();
-              callback(errorResponse);
-            });
-      },
-      [callback](const DrogonDbException &e) {
-        // User not found
-        gnp::dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.message = "User not found";
-        errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
-        errorResponse.error["detail"] = e.base().what();
-        callback(errorResponse);
-      });
+  } catch (const DrogonDbException &e) {
+    response.success = false;
+    response.message = "User not found or database error";
+    response.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+  }
+  co_return response;
 }
 
-void UserService::activateUserAccount(
-    const std::string &userId,
-    const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {
+drogon::Task<gnp::dto::BaseApiResponse>
+UserService::activateUserAccount(const std::string &userId) {
+
   auto dbClient = drogon::app().getDbClient();
-  Mapper<Users> mp(dbClient);
+  CoroMapper<Users> mp(dbClient);
 
-  // Create criteria to find the user with specified ID in the tenant
-  Criteria criteria = Criteria(Users::Cols::_id, CompareOperator::EQ, userId);
+  gnp::dto::BaseApiResponse response;
+  try {
+    Users user = co_await mp.findOne(
+        Criteria(Users::Cols::_id, CompareOperator::EQ, userId));
 
-  // Find the user first
-  mp.findOne(
-      criteria,
-      [=](Users user) {
-        if (user.getValueOfIsActive()) {
+    if (user.getValueOfIsActive()) {
+      response.success = true;
+      response.message = "User account is already active.";
+      co_return response;
+    }
 
-          dto::BaseApiResponse response;
-          response.success = true;
-          response.message = "User account is already active.";
-          callback(response);
-          return;
-        }
+    user.setIsActive(true);
+    co_await mp.update(user);
 
-        // Set the user as active
-        user.setIsActive(true);
+    response.success = true;
+    response.message = "User account activated successfully";
 
-        // Update the user in the database
-        Mapper<Users> updateMp(dbClient);
-        updateMp.update(
-            user,
-            [callback](const size_t count) {
-              // Successfully updated
-              gnp::dto::BaseApiResponse response;
-              response.success = true;
-              response.message = "User account activated successfully";
-              callback(response);
-            },
-            [=](const DrogonDbException &e) {
-              // Error during update
-              gnp::dto::BaseApiResponse errorResponse;
-              errorResponse.success = false;
-              errorResponse.message = "Failed to activate user account";
-              errorResponse.error["code"] = constants::ERR_DB_QUERY;
-              errorResponse.error["detail"] = e.base().what();
-              callback(errorResponse);
-            });
-      },
-      [callback](const DrogonDbException &e) {
-        // User not found
-        gnp::dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.message = "User not found";
-        errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
-        errorResponse.error["detail"] = e.base().what();
-        callback(errorResponse);
-      });
+  } catch (const DrogonDbException &e) {
+    response.success = false;
+    response.message = "User not found or database error";
+    response.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+  }
+  co_return response;
 }
 
-void UserService::deactivateUserAccount(
-    const std::string &userId,
-    const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {
+drogon::Task<gnp::dto::BaseApiResponse>
+UserService::deactivateUserAccount(const std::string &userId) {
+
   auto dbClient = drogon::app().getDbClient();
-  Mapper<Users> mp(dbClient);
+  CoroMapper<Users> mp(dbClient);
 
-  // Create criteria to find the user with specified ID in the tenant
-  Criteria criteria = Criteria(Users::Cols::_id, CompareOperator::EQ, userId);
+  gnp::dto::BaseApiResponse response;
+  try {
+    Users user = co_await mp.findOne(
+        Criteria(Users::Cols::_id, CompareOperator::EQ, userId));
 
-  // Find the user first
-  mp.findOne(
-      criteria,
-      [=](Users user) {
-        if (!user.getValueOfIsActive()) {
+    if (!user.getValueOfIsActive()) {
+      response.success = true;
+      response.message = "User account is already inactive.";
+      co_return response;
+    }
 
-          dto::BaseApiResponse response;
-          response.success = true;
-          response.message = "User account is already inactive.";
-          callback(response);
-          return;
-        }
+    user.setIsActive(false);
+    co_await mp.update(user);
 
-        // Set the user as inactive
-        user.setIsActive(false);
+    response.success = true;
+    response.message = "User account deactivated successfully";
 
-        // Update the user in the database
-        Mapper<Users> updateMp(dbClient);
-        updateMp.update(
-            user,
-            [callback](const size_t count) {
-              // Successfully updated
-              gnp::dto::BaseApiResponse response;
-              response.success = true;
-              response.message = "User account deactivated successfully";
-              callback(response);
-            },
-            [=](const DrogonDbException &e) {
-              // Error during update
-              gnp::dto::BaseApiResponse errorResponse;
-              errorResponse.success = false;
-              errorResponse.message = "Failed to deactivate user account";
-              errorResponse.error["code"] = constants::ERR_DB_QUERY;
-              errorResponse.error["detail"] = e.base().what();
-              callback(errorResponse);
-            });
-      },
-      [callback](const DrogonDbException &e) {
-        // User not found
-        gnp::dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.message = "User not found";
-        errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
-        errorResponse.error["detail"] = e.base().what();
-        callback(errorResponse);
-      });
+  } catch (const DrogonDbException &e) {
+    response.success = false;
+    response.message = "User not found or database error";
+    response.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+  }
+  co_return response;
 }
 
-void UserService::deleteUser(
-    const std::string &userId,
-    const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {
+drogon::Task<gnp::dto::BaseApiResponse>
+UserService::deleteUser(const std::string &userId) {
 
   auto dbClient = drogon::app().getDbClient();
-  Mapper<Users> mp(dbClient);
+  CoroMapper<Users> mp(dbClient);
 
-  // Create criteria to find the user with specified ID in the tenant
-  Criteria criteria = Criteria(Users::Cols::_id, CompareOperator::EQ, userId);
+  gnp::dto::BaseApiResponse response;
+  try {
+    // Check if user exists first
+    co_await mp.findOne(
+        Criteria(Users::Cols::_id, CompareOperator::EQ, userId));
 
-  // First verify the user exists
-  mp.findOne(
-      criteria,
-      [=](const Users &user) {
-        // User found, proceed with deletion
-        Mapper<Users> deleteMp(dbClient);
-        deleteMp.deleteBy(
-            criteria,
-            [=](const size_t count) {
-              if (count > 0) {
-                // Successfully deleted
-                gnp::dto::BaseApiResponse response;
-                response.success = true;
-                response.message = "User deleted successfully";
-                callback(response);
-              } else {
-                // No rows were deleted (shouldn't happen if we found the user)
-                gnp::dto::BaseApiResponse errorResponse;
-                errorResponse.success = false;
-                errorResponse.message = "Failed to delete user";
-                errorResponse.error["code"] = constants::ERR_DB_QUERY;
-                callback(errorResponse);
-              }
-            },
-            [=](const DrogonDbException &e) {
-              // Error during deletion
-              gnp::dto::BaseApiResponse errorResponse;
-              errorResponse.success = false;
-              errorResponse.message = "Failed to delete user";
-              errorResponse.error["code"] = constants::ERR_DB_QUERY;
-              errorResponse.error["detail"] = e.base().what();
-              callback(errorResponse);
-            });
-      },
-      [=](const DrogonDbException &e) {
-        // User not found
-        gnp::dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.message = "User not found";
-        errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
-        errorResponse.error["detail"] = e.base().what();
-        callback(errorResponse);
-      });
+    // Delete the user
+    size_t count = co_await mp.deleteBy(
+        Criteria(Users::Cols::_id, CompareOperator::EQ, userId));
+
+    if (count > 0) {
+      response.success = true;
+      response.message = "User deleted successfully";
+    } else {
+      // This part should technically not be reached if findOne succeeded,
+      // but added for completeness.
+      response.success = false;
+      response.message = "Failed to delete user";
+      response.error["code"] = constants::ERR_DB_QUERY;
+    }
+
+  } catch (const DrogonDbException &e) {
+    response.success = false;
+    response.message = "User not found or database error";
+    response.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+  }
+  co_return response;
 }
 
 // auth
