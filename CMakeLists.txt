@@ -65,6 +65,15 @@ add_executable(${PROJECT_NAME} main.cc
         filters/JwtAuthFilter.h
         controllers/PartnerApiController.h
         constants/PartnerApiScopes.h
+        services/hubtel_sms/HubtelSmsApi.cc
+        controllers/CampaignsController.h
+        services/quartz/QuartzApi.h
+        services/quartz/QuartzApi.cc
+        services/affiliates/AffiliateService.h
+        services/affiliates/AffiliateService.cc
+        dto/CreateAffiliateDto.h
+        dto/UpdateAffiliateDto.h
+        controllers/AffiliateController.cc
 )
 
 # ##############################################################################

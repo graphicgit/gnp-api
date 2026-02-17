@@ -36,7 +36,7 @@ public:
 
   drogon::Task<gnp::dto::BaseApiResponse> listAllAsync(int pageNo, int pageSize, const std::string &publicationId,
                const std::string &startDate, const std::string &endDate,
-               const std::string &query);
+               const std::string &query, const std::string &status);
 
   drogon::Task<gnp::dto::BaseApiResponse> ingestAsync(const dto::IngestNewsPaperDto &dto);
 

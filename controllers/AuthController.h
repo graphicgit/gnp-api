@@ -31,20 +31,14 @@ public:
                      std::function<void(const HttpResponsePtr &)> &&callback);
   void sendOtp(const HttpRequestPtr &req,
                std::function<void(const HttpResponsePtr &)> &&callback);
-  void
-  registerPasskeys(const HttpRequestPtr &req,
-                   std::function<void(const HttpResponsePtr &)> &&callback);
+  drogon::Task<HttpResponsePtr> registerPasskeys(HttpRequestPtr req);
   void verifyOtp(const HttpRequestPtr &req,
                  std::function<void(const HttpResponsePtr &)> &&callback);
   void setPassword(const HttpRequestPtr &req,
                    std::function<void(const HttpResponsePtr &)> &&callback);
-  void signIn(const HttpRequestPtr &req,
-              std::function<void(const HttpResponsePtr &)> &&callback);
-  void
-  loginViaPasskeys(const HttpRequestPtr &req,
-                   std::function<void(const HttpResponsePtr &)> &&callback);
-  void adminSignIn(const HttpRequestPtr &req,
-                   std::function<void(const HttpResponsePtr &)> &&callback);
+  drogon::Task<HttpResponsePtr> signIn(HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> loginViaPasskeys(HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> adminSignIn(HttpRequestPtr req);
 
 private:
   void setAuthCookie(const HttpResponsePtr &resp, const std::string &token);

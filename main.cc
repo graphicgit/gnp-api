@@ -7,15 +7,13 @@ int main() {
   printf("Starting GnpApi...\n");
   // Load config file
   //drogon::app().loadConfigFile("../config.json");
-   drogon::app().loadConfigFile("config.json");
+  drogon::app().loadConfigFile("config.json");
 
   drogon::app().registerPostHandlingAdvice(
       [](const drogon::HttpRequestPtr &req,
          const drogon::HttpResponsePtr &resp) {
         // Array of allowed origins
         const std::vector<std::string> allowedOrigins = {
-            "http://localhost:3000",
-            "http://localhost:3001",
             "http://localhost:3009",
             "https://dev.graphicnewsplus.com",
             "https://graphicnewsplus.com",

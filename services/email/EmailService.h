@@ -6,21 +6,21 @@
 #define EMAILSERVICE_H
 
 #include "dto/BaseApiResponse.h"
-#include <drogon/drogon.h>
 #include "dto/SendEmailDto.h"
+#include <drogon/drogon.h>
 
 namespace gnp::services {
 
-    class EmailService {
+class EmailService {
 
-    public:
-        void sendEmail(const dto::SendEmailDto& dto,
-                 const std::function<void(const dto::BaseApiResponse&)>& callback);
+public:
+  void
+  sendEmail(const dto::SendEmailDto &dto,
+            const std::function<void(const dto::BaseApiResponse &)> &callback);
 
+  drogon::Task<dto::BaseApiResponse>
+  sendEmailAsync(const dto::SendEmailDto &dto);
+};
 
-
-    };
-
-
-}
-#endif //EMAILSERVICE_H
+} // namespace gnp::services
+#endif // EMAILSERVICE_H

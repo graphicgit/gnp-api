@@ -172,56 +172,46 @@ void AuthController::setPassword(
       });
 }
 
-void AuthController::signIn(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
+drogon::Task<HttpResponsePtr> AuthController::signIn(HttpRequestPtr req) {
   auto jsonBody = req->getJsonObject();
 
   if (!jsonBody) {
-
     gnp::dto::BaseApiResponse response;
     response.success = false;
     response.error["message"] = "Invalid JSON body";
     auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
     resp->setStatusCode(k400BadRequest);
-    callback(resp);
-    return;
+    co_return resp;
   }
 
   gnp::dto::SigninDto signin_dto;
 
   try {
-
     signin_dto.fromJson(*jsonBody);
-
   } catch (const std::exception &e) {
     gnp::dto::BaseApiResponse response;
     response.success = false;
     response.error["message"] = "Missing or invalid required fields";
     auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
     resp->setStatusCode(k400BadRequest);
-    callback(resp);
-    return;
+    co_return resp;
   }
 
   auto userService = std::make_shared<gnp::services::UserService>();
+  auto result = co_await userService->validateUserCredentials(signin_dto);
 
-  userService->validateUserCredentials(
-      signin_dto, [this, callback](const gnp::dto::BaseApiResponse &result) {
-        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-        resp->setStatusCode(result.success ? k200OK : k500InternalServerError);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  resp->setStatusCode(result.success ? k200OK : k500InternalServerError);
 
-        if (result.success) {
-          setAuthCookie(resp, result.result["token"].asString());
-        }
+  if (result.success) {
+    setAuthCookie(resp, result.result["token"].asString());
+  }
 
-        callback(resp);
-      });
+  co_return resp;
 }
 
-void AuthController::registerPasskeys(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
+drogon::Task<HttpResponsePtr>
+AuthController::registerPasskeys(HttpRequestPtr req) {
 
   auto jsonBody = req->getJsonObject();
 
@@ -231,34 +221,28 @@ void AuthController::registerPasskeys(
     response.error["message"] = "Invalid JSON body";
     auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
     resp->setStatusCode(k400BadRequest);
-    callback(resp);
-    return;
+    co_return resp;
   }
 
   gnp::dto::RegisterUserPasskeysDto dto;
-
   dto.fromJson(*jsonBody);
 
   // Get tenant service from plugin
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &userService = plugin->getUserService();
 
-  userService.registerUserPasskeys(
-      dto, [this, callback](const gnp::dto::BaseApiResponse &result) {
-        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  auto result = co_await userService.registerUserPasskeys(dto);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
 
-        if (result.success && result.result.isMember("token")) {
-          setAuthCookie(resp, result.result["token"].asString());
-        }
+  if (result.success && result.result.isMember("token")) {
+    setAuthCookie(resp, result.result["token"].asString());
+  }
 
-        callback(resp);
-      });
+  co_return resp;
 }
 
-void AuthController::loginViaPasskeys(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
-
+drogon::Task<HttpResponsePtr>
+AuthController::loginViaPasskeys(HttpRequestPtr req) {
   auto jsonBody = req->getJsonObject();
 
   if (!jsonBody) {
@@ -267,74 +251,61 @@ void AuthController::loginViaPasskeys(
     response.error["message"] = "Invalid JSON body";
     auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
     resp->setStatusCode(k400BadRequest);
-    callback(resp);
-    return;
+    co_return resp;
   }
 
   gnp::dto::LoginUserPasskeyDto dto;
-
   dto.fromJson(*jsonBody);
 
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &userService = plugin->getUserService();
 
-  userService.validateUserPasskeys(
-      dto, [this, callback](const gnp::dto::BaseApiResponse &result) {
-        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  auto result = co_await userService.validateUserPasskeys(dto);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
 
-        if (result.success && result.result.isMember("token")) {
-          setAuthCookie(resp, result.result["token"].asString());
-        }
+  if (result.success && result.result.isMember("token")) {
+    setAuthCookie(resp, result.result["token"].asString());
+  }
 
-        callback(resp);
-      });
+  co_return resp;
 }
 
-void AuthController::adminSignIn(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
+drogon::Task<HttpResponsePtr> AuthController::adminSignIn(HttpRequestPtr req) {
   auto jsonBody = req->getJsonObject();
 
   if (!jsonBody) {
-
     gnp::dto::BaseApiResponse response;
     response.success = false;
     response.error["message"] = "Invalid JSON body";
     auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
     resp->setStatusCode(k400BadRequest);
-    callback(resp);
-    return;
+    co_return resp;
   }
 
   gnp::dto::SigninDto signin_dto;
 
   try {
-
     signin_dto.fromJson(*jsonBody);
-
   } catch (const std::exception &e) {
     gnp::dto::BaseApiResponse response;
     response.success = false;
     response.error["message"] = "Missing or invalid required fields";
     auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
     resp->setStatusCode(k400BadRequest);
-    callback(resp);
-    return;
+    co_return resp;
   }
 
   auto userService = std::make_shared<gnp::services::UserService>();
+  auto result = co_await userService->validateAdminUserCredentials(signin_dto);
 
-  userService->validateAdminUserCredentials(
-      signin_dto, [this, callback](const gnp::dto::BaseApiResponse &result) {
-        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-        resp->setStatusCode(result.success ? k200OK : k500InternalServerError);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  resp->setStatusCode(result.success ? k200OK : k500InternalServerError);
 
-        if (result.success) {
-          setAuthCookie(resp, result.result["token"].asString());
-        }
+  if (result.success) {
+    setAuthCookie(resp, result.result["token"].asString());
+  }
 
-        callback(resp);
-      });
+  co_return resp;
 }
 
 void AuthController::setAuthCookie(const HttpResponsePtr &resp,

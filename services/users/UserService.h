@@ -15,65 +15,52 @@ namespace gnp::services {
 
 class UserService {
 public:
-  void getAll(
-      int pageNo, int pageSize, const std::string &query,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse> getAll(int pageNo, int pageSize,
+                                                 const std::string &query);
 
-  void getAdminUsers(
-      int pageNo, int pageSize, const std::string &query,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse>
+  getAdminUsers(int pageNo, int pageSize, const std::string &query);
 
-  void getPartnerSubscribers(
-      const std::string &partnerId, int pageNo, int pageSize,
-      const std::string &query,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse>
+  getPartnerSubscribers(const std::string &partnerId, int pageNo, int pageSize,
+                        const std::string &query);
 
-  void create(
-      const dto::CreateUserDto &userDto,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse>
+  create(const dto::CreateUserDto &userDto);
 
-  void registerUserPasskeys(
-      const dto::RegisterUserPasskeysDto &userDto,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse>
+  registerUserPasskeys(const dto::RegisterUserPasskeysDto &passKeysDto);
 
   void updateProfileImage(
       const std::string &userId,
       const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
-  void lockUserAccount(
-      const std::string &userId,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse>
+  lockUserAccount(const std::string &userId);
 
-  drogon::Task<gnp::dto::BaseApiResponse> registerProspectiveUser(const dto::CreateUserDto &userDto);
+  drogon::Task<gnp::dto::BaseApiResponse>
+  registerProspectiveUser(const dto::CreateUserDto &userDto);
 
-  void unlockUserAccount(
-      const std::string &userId,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse>
+  unlockUserAccount(const std::string &userId);
 
-  void activateUserAccount(
-      const std::string &userId,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse>
+  activateUserAccount(const std::string &userId);
 
-  void deactivateUserAccount(
-      const std::string &userId,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse>
+  deactivateUserAccount(const std::string &userId);
 
-  void deleteUser(
-      const std::string &userId,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse> deleteUser(const std::string &userId);
 
   // auth
-  void validateUserCredentials(
-      const dto::SigninDto &signin_dto,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse>
+  validateUserCredentials(const dto::SigninDto &signin_dto);
 
-  void validateUserPasskeys(
-      const dto::LoginUserPasskeyDto &passkeyDto,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse>
+  validateUserPasskeys(const dto::LoginUserPasskeyDto &passkeyDto);
 
-  void validateAdminUserCredentials(
-      const dto::SigninDto &signin_dto,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse>
+  validateAdminUserCredentials(const dto::SigninDto &signin_dto);
 
   void checkAccountStatus(
       const std::string &identifier, const std::string &identifierType,

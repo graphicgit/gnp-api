@@ -1,9 +1,15 @@
 #include "AdminController.h"
-#include "dto/GeneratePartnerApiKeyDto.h"
 #include "dto/AssignPartnerSubscriberPlanDto.h"
 #include "dto/CreateCampaignDto.h"
+#include "dto/GeneratePartnerApiKeyDto.h"
 #include "plugins/GnpServicePlugin.h"
 #include "services/campaigns/CampaignService.h"
+#include "services/ingestion_jobs/IngestionJobService.h"
+#include "services/newspapers/NewspaperService.h"
+#include "services/partners/CommercialPartnerService.h"
+#include "services/payments/PaymentService.h"
+#include "services/subscription_plans/SubscriptionPlanService.h"
+#include "services/users/UserService.h"
 
 drogon::Task<HttpResponsePtr>
 AdminController::getAllNewsPapers(const HttpRequestPtr req) {
@@ -48,11 +54,16 @@ AdminController::getAllNewsPapers(const HttpRequestPtr req) {
     endDate = ""; //
   }
 
+  std::string status = req->getParameter("status");
+  if (status.empty()) {
+    status = ""; //
+  }
+
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
   auto result = co_await newsPaperService.listAllAsync(
-      pageNo, pageSize, publicationId, startDate, endDate, query);
+      pageNo, pageSize, publicationId, startDate, endDate, query, status);
 
   auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
   co_return resp;
@@ -71,7 +82,7 @@ AdminController::getNewsPaperFullDetails(const HttpRequestPtr req) {
 
   std::string id = req->getParameter("id");
 
-  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
   auto result = co_await newsPaperService.getFullDetailsAsync(id);
@@ -136,7 +147,7 @@ AdminController::IngestNewsPaper(const HttpRequestPtr req) {
   gnp::dto::IngestNewsPaperDto dto;
   dto.fromJson(*jsonBody);
 
-  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
   auto result = co_await newsPaperService.ingestAsync(dto);
@@ -163,7 +174,7 @@ AdminController::deleteNewsPaper(const HttpRequestPtr req) {
   std::string id = req->getParameter("id");
 
   // Get tenant service from plugin
-  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
   auto result = co_await newsPaperService.deleteNewspaperAsync(id);
@@ -172,9 +183,8 @@ AdminController::deleteNewsPaper(const HttpRequestPtr req) {
 
 // users
 
-void AdminController::getAllUsers(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
+drogon::Task<HttpResponsePtr>
+AdminController::getAllUsers(const HttpRequestPtr req) {
 
   int pageSize = 10; // Default page size
   int pageNo = 1;    //  Default page number
@@ -205,12 +215,9 @@ void AdminController::getAllUsers(
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &userService = plugin->getUserService();
 
-  userService.getAdminUsers(
-      pageNo, pageSize, query,
-      [callback](const gnp::dto::BaseApiResponse &result) {
-        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-        callback(resp);
-      });
+  auto result = co_await userService.getAdminUsers(pageNo, pageSize, query);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
 }
 
 void AdminController::createUser(
@@ -318,7 +325,7 @@ AdminController::createSubscriptionPlan(HttpRequestPtr req) {
 
   dto.fromJson(*jsonBody);
 
-  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &subscriptionPlanService = plugin->getSubscriptionPlanService();
 
   auto result = co_await subscriptionPlanService.createPlanAsync(dto);
@@ -344,7 +351,7 @@ AdminController::updateSubscriptionPlan(HttpRequestPtr req) {
 
   dto.fromJson(*jsonBody);
 
-  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &subscriptionPlanService = plugin->getSubscriptionPlanService();
 
   auto result = co_await subscriptionPlanService.updatePlanAsync(dto);
@@ -366,7 +373,7 @@ AdminController::deleteSubscriptionPlan(HttpRequestPtr req) {
     co_return resp;
   }
 
-  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &subscriptionPlanService = plugin->getSubscriptionPlanService();
 
   auto result = co_await subscriptionPlanService.deletePlanAsync(id);
@@ -396,9 +403,8 @@ void AdminController::renewUserSubscription(
 
 // campaigns
 
-void AdminController::getAllCampaigns(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
+drogon::Task<HttpResponsePtr>
+AdminController::getAllCampaigns(const HttpRequestPtr req) {
 
   int pageSize = 10; // Default page size
   int pageNo = 1;    //  Default page number
@@ -434,12 +440,10 @@ void AdminController::getAllCampaigns(
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &campaignService = plugin->getCampaignService();
 
-  campaignService.getAll(pageNo, pageSize, query, channel,
-                         [callback](const gnp::dto::BaseApiResponse &result) {
-                           auto resp = HttpResponse::newHttpJsonResponse(
-                               result.toJson());
-                           callback(resp);
-                         });
+  auto result =
+      co_await campaignService.getAll(pageNo, pageSize, query, channel);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
 }
 
 drogon::Task<HttpResponsePtr>
@@ -463,32 +467,26 @@ AdminController::createCampaign(HttpRequestPtr req) {
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
-void AdminController::publishCampaign(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
+Task<HttpResponsePtr>
+AdminController::publishCampaign(const HttpRequestPtr req) {
 
   auto campaignId = req->getParameter("campaignId");
   if (campaignId.empty()) {
     auto resp = HttpResponse::newHttpResponse();
     resp->setStatusCode(k400BadRequest);
     resp->setBody("Missing required parameter: id");
-    callback(resp);
-    return;
+    co_return resp;
   }
 
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &campaignService = plugin->getCampaignService();
 
-  campaignService.publishCampaign(
-      campaignId, [callback](const gnp::dto::BaseApiResponse &apiResp) {
-        auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
-        callback(resp);
-      });
+  auto result = co_await campaignService.publishCampaign(campaignId);
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
-void AdminController::deleteCampaign(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
+drogon::Task<HttpResponsePtr>
+AdminController::deleteCampaign(const HttpRequestPtr req) {
 
   auto campaignId = req->getParameter("campaignId");
 
@@ -496,18 +494,14 @@ void AdminController::deleteCampaign(
     auto resp = HttpResponse::newHttpResponse();
     resp->setStatusCode(k400BadRequest);
     resp->setBody("Missing required parameter: id");
-    callback(resp);
-    return;
+    co_return resp;
   }
 
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &campaignService = plugin->getCampaignService();
 
-  campaignService.deleteCampaign(
-      campaignId, [callback](const gnp::dto::BaseApiResponse &apiResp) {
-        auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
-        callback(resp);
-      });
+  auto apiResp = co_await campaignService.deleteCampaign(campaignId);
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
 // commercial partners
@@ -592,9 +586,8 @@ void AdminController::getAllPartners(
       });
 }
 
-void AdminController::getPartnerSubscribers(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
+drogon::Task<HttpResponsePtr>
+AdminController::getPartnerSubscribers(const HttpRequestPtr req) {
 
   int pageSize = 10; // Default page size
   int pageNo = 1;    //  Default page number
@@ -627,12 +620,10 @@ void AdminController::getPartnerSubscribers(
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &userService = plugin->getUserService();
 
-  userService.getPartnerSubscribers(
-      partnerId, pageNo, pageSize, query,
-      [callback](const gnp::dto::BaseApiResponse &result) {
-        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-        callback(resp);
-      });
+  auto result = co_await userService.getPartnerSubscribers(partnerId, pageNo,
+                                                           pageSize, query);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
 }
 
 void AdminController::getPartnerSubscriptionSummary(
@@ -969,14 +960,15 @@ void AdminController::deleteIngestionJob(
   if (jobId.empty()) {
     auto resp = HttpResponse::newHttpResponse();
     resp->setStatusCode(k400BadRequest);
-    resp->setBody("Missing required parameter: id");
+    resp->setBody("Missing required parameter: jobId");
     callback(resp);
     return;
   }
 
-  gnp::services::IngestionJobService service;
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &ingestionJobService = plugin->getIngestionJobService();
 
-  service.deleteJob(
+  ingestionJobService.deleteJob(
       jobId, [callback](const gnp::dto::BaseApiResponse &apiResp) {
         auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
         callback(resp);
@@ -1004,8 +996,8 @@ AdminController::deletePartnerSubscriber(HttpRequestPtr req) {
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
-
-drogon::Task<HttpResponsePtr> AdminController::getPartnerApiKeys(HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr>
+AdminController::getPartnerApiKeys(HttpRequestPtr req) {
   auto partnerId = req->getParameter("partnerId");
 
   if (partnerId.empty()) {
@@ -1024,7 +1016,8 @@ drogon::Task<HttpResponsePtr> AdminController::getPartnerApiKeys(HttpRequestPtr 
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
-drogon::Task<HttpResponsePtr> AdminController::generatePartnerApiKey(HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr>
+AdminController::generatePartnerApiKey(HttpRequestPtr req) {
   auto jsonPtr = req->getJsonObject();
   if (!jsonPtr) {
     gnp::dto::BaseApiResponse response;
@@ -1075,7 +1068,8 @@ AdminController::revokePartnerApiKey(HttpRequestPtr req) {
       co_await partnerService.revokePartnerApiKey(partnerId, clientId);
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
-drogon::Task<HttpResponsePtr> AdminController::updatePartnerApiKey(HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr>
+AdminController::updatePartnerApiKey(HttpRequestPtr req) {
   auto json = req->getJsonObject();
   if (!json) {
     gnp::dto::BaseApiResponse response;

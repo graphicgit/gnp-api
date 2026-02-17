@@ -34,7 +34,7 @@ namespace gnp::dto {
         std::string name_;
         std::string description_;
         std::string price_;
-        int type_;
+        int type_ = 0;
 
     };
 

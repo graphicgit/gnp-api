@@ -147,8 +147,7 @@ SubscriptionPlanService::createPlanAsync(
   }
 }
 
-drogon::Task<gnp::dto::BaseApiResponse>
-SubscriptionPlanService::updatePlanAsync(
+drogon::Task<gnp::dto::BaseApiResponse> SubscriptionPlanService::updatePlanAsync(
     const gnp::dto::UpdateSubscriptionPlanDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();

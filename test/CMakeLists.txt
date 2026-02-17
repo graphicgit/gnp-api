@@ -15,6 +15,8 @@ file(GLOB PAYSTACK_SVC "../services/paystack/*.cc")
 file(GLOB HUBTEL_SVC "../services/hubtel_sms/*.cc")
 file(GLOB PAYMENT_SVC "../services/payments/*.cc")
 file(GLOB CAMPAIGN_SVC "../services/campaigns/*.cc")
+file(GLOB QUARTZ_SVC "../services/quartz/*.cc")
+file(GLOB AFFILIATE_SVC "../services/affiliates/*.cc")
 file(GLOB INGESTION_JOB_SVC "../services/ingestion_jobs/*.cc")
 file(GLOB SUB_PLAN_SVC "../services/subscription_plans/*.cc")
 file(GLOB PARTNER_SVC "../services/partners/*.cc")
@@ -36,6 +38,8 @@ add_executable(${PROJECT_NAME} test_main.cc
     ${HUBTEL_SVC}
     ${SUB_PLAN_SVC}
     ${CAMPAIGN_SVC}
+    ${QUARTZ_SVC}
+    ${AFFILIATE_SVC}
     ${INGESTION_JOB_SVC}
     ${PAYMENT_SVC}
     ${PARTNER_SVC}

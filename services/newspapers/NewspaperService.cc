@@ -463,7 +463,8 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::getFreeNewsPaperDetail
 drogon::Task<dto::BaseApiResponse> NewspaperService::listAllAsync(
     int pageNo, int pageSize, const std::string &publicationId,
     const std::string &startDate, const std::string &endDate,
-    const std::string &query) {
+    const std::string &query, const std::string &status) {
+
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Newspapers> mp(dbClient);
 
@@ -475,8 +476,8 @@ drogon::Task<dto::BaseApiResponse> NewspaperService::listAllAsync(
     std::string likeQuery = "%" + query + "%";
     searchCriteria =
         Criteria(Newspapers::Cols::_title, CompareOperator::Like, likeQuery) ||
-        Criteria(Newspapers::Cols::_full_description, CompareOperator::Like,
-                 likeQuery);
+        Criteria(Newspapers::Cols::_full_description, CompareOperator::Like, likeQuery) ||
+          Criteria(Newspapers::Cols::_slug, CompareOperator::Like, likeQuery);
   } else {
     searchCriteria = Criteria(); // empty criteria
   }
@@ -500,6 +501,13 @@ drogon::Task<dto::BaseApiResponse> NewspaperService::listAllAsync(
     searchCriteria =
         searchCriteria && Criteria(Newspapers::Cols::_publication_date,
                                    CompareOperator::LE, endDate);
+  }
+
+  // status
+  if (!status.empty()) {
+    bool isPublished = (status == "published");
+    searchCriteria = searchCriteria &&
+        Criteria(Newspapers::Cols::_is_published, CompareOperator::EQ, isPublished);
   }
 
   try {
