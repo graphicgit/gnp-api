@@ -25,14 +25,11 @@ public:
 
   drogon::Task<dto::BaseApiResponse> publishCampaign(const std::string &campaignId);
 
-  drogon::Task<dto::BaseApiResponse> updateCampaignStats(const std::string &campaignId,
-                      const std::string &metricsType);
+  drogon::Task<dto::BaseApiResponse> updateCampaignStats(const std::string &campaignId, const std::string &metricsType);
 
-  drogon::Task<dto::BaseApiResponse>
-  deleteCampaign(const std::string &campaignId);
+  drogon::Task<dto::BaseApiResponse> deleteCampaign(const std::string &campaignId);
 
-  drogon::Task<::gnp::dto::BaseApiResponse>
-  runScheduledCampaign(const std::string &campaignId);
+  drogon::Task<::gnp::dto::BaseApiResponse> runScheduledCampaign(const std::string &campaignId);
 
 private:
   std::string replaceTokens(const std::string &templateStr,

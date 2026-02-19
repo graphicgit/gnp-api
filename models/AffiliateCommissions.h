@@ -45,6 +45,7 @@ class AffiliateCommissions
     struct Cols
     {
         static const std::string _id;
+        static const std::string _affiliate_id;
         static const std::string _affiliate_name;
         static const std::string _amount;
         static const std::string _order_id;
@@ -112,6 +113,15 @@ class AffiliateCommissions
     void setId(const std::string &pId) noexcept;
     void setId(std::string &&pId) noexcept;
 
+    /**  For column affiliate_id  */
+    ///Get the value of the column affiliate_id, returns the default value if the column is null
+    const std::string &getValueOfAffiliateId() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getAffiliateId() const noexcept;
+    ///Set the value of the column affiliate_id
+    void setAffiliateId(const std::string &pAffiliateId) noexcept;
+    void setAffiliateId(std::string &&pAffiliateId) noexcept;
+
     /**  For column affiliate_name  */
     ///Get the value of the column affiliate_name, returns the default value if the column is null
     const std::string &getValueOfAffiliateName() const noexcept;
@@ -177,7 +187,7 @@ class AffiliateCommissions
     void setUpdatedAtToNull() noexcept;
 
 
-    static size_t getColumnNumber() noexcept {  return 8;  }
+    static size_t getColumnNumber() noexcept {  return 9;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -200,6 +210,7 @@ class AffiliateCommissions
     ///For mysql or sqlite3
     void updateId(const uint64_t id);
     std::shared_ptr<std::string> id_;
+    std::shared_ptr<std::string> affiliateId_;
     std::shared_ptr<std::string> affiliateName_;
     std::shared_ptr<std::string> amount_;
     std::shared_ptr<std::string> orderId_;
@@ -218,7 +229,7 @@ class AffiliateCommissions
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[8]={ false };
+    bool dirtyFlag_[9]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -244,37 +255,42 @@ class AffiliateCommissions
         }
         if(dirtyFlag_[1])
         {
+            sql += "affiliate_id,";
+            ++parametersCount;
+        }
+        if(dirtyFlag_[2])
+        {
             sql += "affiliate_name,";
             ++parametersCount;
         }
         sql += "amount,";
         ++parametersCount;
-        if(!dirtyFlag_[2])
+        if(!dirtyFlag_[3])
         {
             needSelection=true;
         }
-        if(dirtyFlag_[3])
+        if(dirtyFlag_[4])
         {
             sql += "order_id,";
             ++parametersCount;
         }
-        if(dirtyFlag_[4])
+        if(dirtyFlag_[5])
         {
             sql += "transaction_reference,";
             ++parametersCount;
         }
-        if(dirtyFlag_[5])
+        if(dirtyFlag_[6])
         {
             sql += "status,";
             ++parametersCount;
         }
         sql += "created_at,";
         ++parametersCount;
-        if(!dirtyFlag_[6])
+        if(!dirtyFlag_[7])
         {
             needSelection=true;
         }
-        if(dirtyFlag_[7])
+        if(dirtyFlag_[8])
         {
             sql += "updated_at,";
             ++parametersCount;
@@ -309,14 +325,14 @@ class AffiliateCommissions
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
-        else
-        {
-            sql +="default,";
-        }
         if(dirtyFlag_[3])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
         }
         if(dirtyFlag_[4])
         {
@@ -333,11 +349,16 @@ class AffiliateCommissions
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
+        if(dirtyFlag_[7])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
         else
         {
             sql +="default,";
         }
-        if(dirtyFlag_[7])
+        if(dirtyFlag_[8])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);

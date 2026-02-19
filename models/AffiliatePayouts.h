@@ -45,6 +45,7 @@ class AffiliatePayouts
     struct Cols
     {
         static const std::string _id;
+        static const std::string _affiliate_id;
         static const std::string _affiliate_name;
         static const std::string _total_amount;
         static const std::string _account_type;
@@ -113,6 +114,15 @@ class AffiliatePayouts
     ///Set the value of the column id
     void setId(const std::string &pId) noexcept;
     void setId(std::string &&pId) noexcept;
+
+    /**  For column affiliate_id  */
+    ///Get the value of the column affiliate_id, returns the default value if the column is null
+    const std::string &getValueOfAffiliateId() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getAffiliateId() const noexcept;
+    ///Set the value of the column affiliate_id
+    void setAffiliateId(const std::string &pAffiliateId) noexcept;
+    void setAffiliateId(std::string &&pAffiliateId) noexcept;
 
     /**  For column affiliate_name  */
     ///Get the value of the column affiliate_name, returns the default value if the column is null
@@ -197,7 +207,7 @@ class AffiliatePayouts
     void setUpdatedAtToNull() noexcept;
 
 
-    static size_t getColumnNumber() noexcept {  return 10;  }
+    static size_t getColumnNumber() noexcept {  return 11;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -220,6 +230,7 @@ class AffiliatePayouts
     ///For mysql or sqlite3
     void updateId(const uint64_t id);
     std::shared_ptr<std::string> id_;
+    std::shared_ptr<std::string> affiliateId_;
     std::shared_ptr<std::string> affiliateName_;
     std::shared_ptr<std::string> totalAmount_;
     std::shared_ptr<std::string> accountType_;
@@ -240,7 +251,7 @@ class AffiliatePayouts
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[10]={ false };
+    bool dirtyFlag_[11]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -266,47 +277,52 @@ class AffiliatePayouts
         }
         if(dirtyFlag_[1])
         {
+            sql += "affiliate_id,";
+            ++parametersCount;
+        }
+        if(dirtyFlag_[2])
+        {
             sql += "affiliate_name,";
             ++parametersCount;
         }
         sql += "total_amount,";
         ++parametersCount;
-        if(!dirtyFlag_[2])
+        if(!dirtyFlag_[3])
         {
             needSelection=true;
         }
-        if(dirtyFlag_[3])
+        if(dirtyFlag_[4])
         {
             sql += "account_type,";
             ++parametersCount;
         }
-        if(dirtyFlag_[4])
+        if(dirtyFlag_[5])
         {
             sql += "account_name,";
             ++parametersCount;
         }
-        if(dirtyFlag_[5])
+        if(dirtyFlag_[6])
         {
             sql += "account_provider,";
             ++parametersCount;
         }
-        if(dirtyFlag_[6])
+        if(dirtyFlag_[7])
         {
             sql += "status,";
             ++parametersCount;
         }
-        if(dirtyFlag_[7])
+        if(dirtyFlag_[8])
         {
             sql += "platforms,";
             ++parametersCount;
         }
         sql += "created_at,";
         ++parametersCount;
-        if(!dirtyFlag_[8])
+        if(!dirtyFlag_[9])
         {
             needSelection=true;
         }
-        if(dirtyFlag_[9])
+        if(dirtyFlag_[10])
         {
             sql += "updated_at,";
             ++parametersCount;
@@ -341,14 +357,14 @@ class AffiliatePayouts
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
-        else
-        {
-            sql +="default,";
-        }
         if(dirtyFlag_[3])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
         }
         if(dirtyFlag_[4])
         {
@@ -375,11 +391,16 @@ class AffiliatePayouts
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
+        if(dirtyFlag_[9])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
         else
         {
             sql +="default,";
         }
-        if(dirtyFlag_[9])
+        if(dirtyFlag_[10])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);

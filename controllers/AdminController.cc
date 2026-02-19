@@ -232,16 +232,48 @@ void AdminController::getUserDetails(
   // write your application logic here
 }
 
-void AdminController::lockUserAccount(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
-  // write your application logic here
+drogon::Task<HttpResponsePtr> AdminController::lockUserAccount(const HttpRequestPtr req) {
+
+  auto userId = req->getParameter("id");
+
+  if (userId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "User ID is required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  // Get the user service from the plugin
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &userService = plugin->getUserService();
+
+  auto apiResp = co_await userService.lockUserAccount(userId);
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+
 }
 
-void AdminController::unLockUserAccount(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
-  // write your application logic here
+drogon::Task<HttpResponsePtr> AdminController::unLockUserAccount(const HttpRequestPtr req) {
+
+  auto userId = req->getParameter("id");
+
+  if (userId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "User ID is required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  // Get the user service from the plugin
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &userService = plugin->getUserService();
+
+  auto apiResp = co_await userService.unlockUserAccount(userId);
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+
 }
 
 void AdminController::updateUser(

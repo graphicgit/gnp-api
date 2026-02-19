@@ -308,6 +308,44 @@ drogon::Task<HttpResponsePtr> AuthController::adminSignIn(HttpRequestPtr req) {
   co_return resp;
 }
 
+drogon::Task<HttpResponsePtr> AuthController::affiliateSignIn(HttpRequestPtr req) {
+  auto jsonBody = req->getJsonObject();
+
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  gnp::dto::SigninDto signin_dto;
+
+  try {
+    signin_dto.fromJson(*jsonBody);
+  } catch (const std::exception &e) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Missing or invalid required fields";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto userService = std::make_shared<gnp::services::UserService>();
+  auto result = co_await userService->validateAdminUserCredentials(signin_dto);
+
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  resp->setStatusCode(result.success ? k200OK : k500InternalServerError);
+
+  if (result.success) {
+    setAuthCookie(resp, result.result["token"].asString());
+  }
+
+  co_return resp;
+}
+
 void AuthController::setAuthCookie(const HttpResponsePtr &resp,
                                    const std::string &token) {
   drogon::Cookie cookie("auth_token", token);

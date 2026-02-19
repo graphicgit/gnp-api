@@ -139,8 +139,7 @@ UsersController::loginViaPasskeys(const HttpRequestPtr req) {
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
-drogon::Task<HttpResponsePtr>
-UsersController::lockUserAccount(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> UsersController::lockUserAccount(const HttpRequestPtr req) {
 
   auto userId = req->getParameter("id");
 
