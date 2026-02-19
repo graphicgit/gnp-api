@@ -77,5 +77,4 @@ inline void CreateAffiliateDto::fromJson(const Json::Value &json) {
 
 } // namespace gnp::dto
 
-
 #endif // GNPAPI_CREATEAFFILIATEDTO_H

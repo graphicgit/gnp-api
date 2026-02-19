@@ -74,6 +74,10 @@ add_executable(${PROJECT_NAME} main.cc
         dto/CreateAffiliateDto.h
         dto/UpdateAffiliateDto.h
         controllers/AffiliateController.cc
+        services/coupons/CouponService.h
+        services/coupons/CouponService.cc
+        dto/CreateCouponDto.h
+        dto/UpdateCouponDto.h
 )
 
 # ##############################################################################

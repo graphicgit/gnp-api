@@ -21,8 +21,7 @@ using drogon_model::Gnp::Users;
 
 namespace gnp::services {
 
-drogon::Task<dto::BaseApiResponse>
-CampaignService::getAll(int pageNo, int pageSize, const std::string &query,
+drogon::Task<dto::BaseApiResponse> CampaignService::getAll(int pageNo, int pageSize, const std::string &query,
                         const std::string &channel) {
 
   auto dbClient = drogon::app().getDbClient();

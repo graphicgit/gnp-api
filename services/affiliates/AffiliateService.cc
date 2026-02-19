@@ -4,9 +4,13 @@
 
 #include "AffiliateService.h"
 #include "constants/ErrorCodes.h"
+#include "dto/CreateUserDto.h"
+#include "dto/SendEmailDto.h"
 #include "models/AffiliateCommissions.h"
 #include "models/AffiliatePayouts.h"
 #include "models/Affiliates.h"
+#include "services/email/EmailService.h"
+#include "services/users/UserService.h"
 #include <drogon/orm/CoroMapper.h>
 #include <drogon/orm/Mapper.h>
 
@@ -160,18 +164,61 @@ AffiliateService::createAsync(const ::gnp::dto::CreateAffiliateDto &dto) {
 
   try {
 
+    // 1. Build a CreateUserDto from the affiliate data
+    gnp::dto::CreateUserDto userDto;
+
+    // Split name into first and last name
+    const std::string &fullName = dto.getName();
+    auto spacePos = fullName.find(' ');
+    if (spacePos != std::string::npos) {
+      userDto.setFirstName(fullName.substr(0, spacePos));
+      userDto.setLastName(fullName.substr(spacePos + 1));
+    } else {
+      userDto.setFirstName(fullName);
+      userDto.setLastName("");
+    }
+
+    if (dto.getEmail().has_value()) {
+      userDto.setEmail(dto.getEmail().value());
+    }
+    userDto.setPhoneNumber(dto.getPhone());
+
+    // Generate a username from the affiliate ID prefix + name
+    std::string affiliateId = utils::IdGeneratorUtils::generateAlphanumericId();
+    userDto.setUsername(dto.getEmail().value());
+
+    // Generate a temporary random password (the affiliate can reset it later)
+    userDto.setPassword(utils::IdGeneratorUtils::generateAlphanumericId());
+
+    // 2. Create the user first
+    gnp::services::UserService userService;
+    auto userResponse = co_await userService.create(userDto);
+
+    if (!userResponse.success) {
+      // Propagate the user creation error
+      dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.error["code"] = constants::ERR_DB_QUERY;
+      errorResponse.error["message"] =
+          "Failed to create user account for affiliate.";
+      errorResponse.error["detail"] = userResponse.error["message"];
+      co_return errorResponse;
+    }
+
+    // 3. Extract the user_id from the user creation response
+    std::string userId = userResponse.result["id"].asString();
+
+    // 4. Build and insert the affiliate record using the user_id
     Affiliates affiliate;
     affiliate.setName(dto.getName());
     if (dto.getEmail().has_value()) {
       affiliate.setEmail(dto.getEmail().value());
     }
     affiliate.setPhone(dto.getPhone());
-    affiliate.setStatus(dto.getStatus().empty() ? "active" : dto.getStatus());
+    affiliate.setStatus(dto.getStatus().empty() ? "Active" : dto.getStatus());
     affiliate.setWebsite(dto.getWebsite());
-
-    std::string affiliateId = utils::IdGeneratorUtils::generateAlphanumericId();
-
     affiliate.setAffiliateId(affiliateId);
+    affiliate.setUserId(userId);
 
     if (dto.getPlatforms().has_value()) {
       Json::FastWriter writer;
@@ -184,9 +231,129 @@ AffiliateService::createAsync(const ::gnp::dto::CreateAffiliateDto &dto) {
 
     co_await mapper.insert(affiliate);
 
+    // 5. Send welcome email with login credentials
+    const std::string tempPassword = userDto.getPassword();
+    const std::string loginUrl =
+        "https://dev.graphicnewsplus.com/affiliates/login";
+
+    const std::string htmlBody =
+        "<!DOCTYPE html>"
+        "<html lang=\"en\"><head><meta charset=\"UTF-8\">"
+        "<meta name=\"viewport\" "
+        "content=\"width=device-width,initial-scale=1.0\">"
+        "<title>Welcome to Graphic News Plus Affiliates</title></head>"
+        "<body "
+        "style=\"margin:0;padding:0;background-color:#f4f4f7;font-family:Arial,"
+        "sans-serif;\">"
+
+        // Outer wrapper
+        "<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" "
+        "style=\"background-color:#f4f4f7;padding:40px 0;\">"
+        "<tr><td align=\"center\">"
+
+        // Card
+        "<table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" "
+        "style=\"background-color:#ffffff;border-radius:8px;"
+        "overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);\">"
+
+        // Header
+        "<tr><td style=\"background-color:#1a1a2e;padding:32px "
+        "40px;text-align:center;\">"
+        "<h1 "
+        "style=\"margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-"
+        "spacing:0.5px;\">"
+        "Graphic News Plus</h1>"
+        "<p style=\"margin:6px 0 0;color:#a0a8c0;font-size:13px;\">Affiliate "
+        "Program</p>"
+        "</td></tr>"
+
+        // Body
+        "<tr><td style=\"padding:36px 40px;\">"
+        "<p style=\"margin:0 0 16px;font-size:16px;color:#333333;\">Dear "
+        "<strong>" +
+        dto.getName() +
+        "</strong>,</p>"
+        "<p style=\"margin:0 0 "
+        "16px;font-size:15px;color:#555555;line-height:1.6;\">"
+        "Welcome aboard! Your affiliate account has been created successfully. "
+        "Below are your login credentials for the <strong>Affiliate "
+        "Dashboard</strong>.</p>"
+
+        // Credentials box
+        "<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" "
+        "style=\"background-color:#f0f4ff;"
+        "border-radius:6px;border:1px solid #dce3f5;margin:24px 0;\">"
+        "<tr><td style=\"padding:20px 24px;\">"
+        "<table width=\"100%\" cellpadding=\"6\" cellspacing=\"0\">"
+        "<tr>"
+        "<td style=\"font-size:13px;color:#888888;width:120px;\">Login URL</td>"
+        "<td style=\"font-size:13px;color:#1a1a2e;\"><a href=\"" +
+        loginUrl + "\" style=\"color:#4f6ef7;text-decoration:none;\">" +
+        loginUrl +
+        "</a></td>"
+        "</tr>"
+        "<tr>"
+        "<td style=\"font-size:13px;color:#888888;\">Username</td>"
+        "<td style=\"font-size:13px;color:#1a1a2e;font-family:monospace;\">" +
+        userDto.getUsername() +
+        "</td>"
+        "</tr>"
+        "<tr>"
+        "<td style=\"font-size:13px;color:#888888;\">Password</td>"
+        "<td style=\"font-size:13px;color:#1a1a2e;font-family:monospace;\">" +
+        tempPassword +
+        "</td>"
+        "</tr>"
+        "</table>"
+        "</td></tr></table>"
+
+        // CTA button
+        "<div style=\"text-align:center;margin:28px 0;\">"
+        "<a href=\"" +
+        loginUrl +
+        "\" "
+        "style=\"display:inline-block;background-color:#4f6ef7;color:#ffffff;"
+        "text-decoration:none;font-size:15px;font-weight:600;padding:14px 36px;"
+        "border-radius:6px;letter-spacing:0.3px;\">Go to Affiliate "
+        "Dashboard</a>"
+        "</div>"
+
+        "<p style=\"margin:0 0 "
+        "8px;font-size:13px;color:#888888;line-height:1.6;\">"
+        "&#128274; For your security, please change your password immediately "
+        "after your first login.</p>"
+        "<p style=\"margin:0;font-size:13px;color:#888888;line-height:1.6;\">"
+        "If you have any questions, feel free to reach out to our support "
+        "team.</p>"
+        "</td></tr>"
+
+        // Footer
+        "<tr><td style=\"background-color:#f8f9fc;padding:20px "
+        "40px;text-align:center;"
+        "border-top:1px solid #e8eaf0;\">"
+        "<p style=\"margin:0;font-size:12px;color:#aaaaaa;\">"
+        "&copy; 2026 Graphic News Plus. All rights reserved.</p>"
+        "</td></tr>"
+
+        "</table>"
+        "</td></tr></table>"
+        "</body></html>";
+
+    dto::SendEmailDto emailDto;
+    emailDto.setTo(dto.getEmail().value_or(""));
+    emailDto.setSubject("Welcome to the Graphic News Plus Affiliate Program!");
+    emailDto.setBody(htmlBody);
+
+    if (!emailDto.getTo().empty()) {
+      gnp::services::EmailService emailService;
+      co_await emailService.sendEmailAsync(emailDto);
+    }
+
     dto::BaseApiResponse response;
     response.success = true;
     response.result["message"] = "Affiliate created successfully.";
+    response.result["userId"] = userId;
+    response.result["affiliateId"] = affiliateId;
     co_return response;
 
   } catch (const DrogonDbException &e) {
@@ -733,7 +900,8 @@ AffiliateService::issueAffiliatePayout(const std::string &affiliateId) {
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse> AffiliateService::getAffiliateCommissions(const std::string &affiliateId) {
+drogon::Task<::gnp::dto::BaseApiResponse>
+AffiliateService::getAffiliateCommissions(const std::string &affiliateId) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Affiliates> affiliateMapper(dbClient);
   CoroMapper<AffiliateCommissions> commissionMapper(dbClient);
@@ -790,8 +958,8 @@ drogon::Task<::gnp::dto::BaseApiResponse> AffiliateService::getAffiliateCommissi
   }
 }
 
-
-drogon::Task<::gnp::dto::BaseApiResponse> AffiliateService::getAffiliatePayouts(const std::string &affiliateId) {
+drogon::Task<::gnp::dto::BaseApiResponse>
+AffiliateService::getAffiliatePayouts(const std::string &affiliateId) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Affiliates> affiliateMapper(dbClient);
   CoroMapper<AffiliatePayouts> payoutMapper(dbClient);

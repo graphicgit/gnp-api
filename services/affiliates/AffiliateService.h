@@ -39,8 +39,8 @@ public:
 
   drogon::Task<::gnp::dto::BaseApiResponse> issueBulkPayout();
 
-  // affiliate news paper sales
-  //-> retrieve latest news papers by affiliateid
+  //   affiliate news paper sales
+  //-> retrieve latest news papers by affiliateId
   //-> initialize buy news paper from  an affiliate : complete payment and manage commissions as well
   //->
 };

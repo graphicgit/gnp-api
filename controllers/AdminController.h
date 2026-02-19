@@ -11,138 +11,141 @@ public:
   METHOD_LIST_BEGIN
   // newspaper
   ADD_METHOD_TO(AdminController::getAllNewsPapers,
-                std::string(PREFIX) + "/get-all-newspapers", Get, Options);
+                std::string(PREFIX) + "/get-all-newspapers", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::getNewsPaperFullDetails,
-                std::string(PREFIX) + "/get-full-details", Get, Options);
+                std::string(PREFIX) + "/get-full-details", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::publishNewsPaper,
-                std::string(PREFIX) + "/publish-newspaper", Get, Options);
+                std::string(PREFIX) + "/publish-newspaper", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::unPublishNewsPaper,
-                std::string(PREFIX) + "/unpublish-newspaper", Get, Options);
+                std::string(PREFIX) + "/unpublish-newspaper", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::IngestNewsPaper,
-                std::string(PREFIX) + "/ingest-newspaper", Post, Options);
+                std::string(PREFIX) + "/ingest-newspaper", Post, Options, "JwtAuthFilter");
 
   ADD_METHOD_TO(AdminController::updateNewsPaper,
-                std::string(PREFIX) + "/update-newspaper", Post, Options);
+                std::string(PREFIX) + "/update-newspaper", Post, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::deleteNewsPaper,
-                std::string(PREFIX) + "/delete-newspaper", Delete, Options);
+                std::string(PREFIX) + "/delete-newspaper", Delete, Options, "JwtAuthFilter");
   // users
   ADD_METHOD_TO(AdminController::getAllUsers,
-                std::string(PREFIX) + "/get-all-users", Get, Options);
+                std::string(PREFIX) + "/get-all-users", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::getUserDetails,
-                std::string(PREFIX) + "/get-user-details", Get, Options);
+                std::string(PREFIX) + "/get-user-details", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::lockUserAccount,
-                std::string(PREFIX) + "/lock-account", Get, Options);
+                std::string(PREFIX) + "/lock-account", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::unLockUserAccount,
-                std::string(PREFIX) + "/unlock-account", Get, Options);
+                std::string(PREFIX) + "/unlock-account", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::activate, std::string(PREFIX) + "/activate",
-                Get, Options);
+                Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::deactivate,
-                std::string(PREFIX) + "/deactivate", Get, Options);
+                std::string(PREFIX) + "/deactivate", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::createUser, std::string(PREFIX) + "/create",
-                Post, Options);
+                Post, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::updateUser, std::string(PREFIX) + "/update",
-                Post, Options);
+                Post, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::updateUser,
-                std::string(PREFIX) + "/update-profile-image", Post, Options);
+                std::string(PREFIX) + "/update-profile-image", Post, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::deleteUser, std::string(PREFIX) + "/delete",
-                Delete, Options);
+                Delete, Options, "JwtAuthFilter");
 
   // subscription plans
   ADD_METHOD_TO(AdminController::getAllSubscriptionPlans,
                 std::string(PREFIX) + "/get-all-subscription-plans", Get,
-                Options);
+                Options, "JwtAuthFilter");
 
   ADD_METHOD_TO(AdminController::createSubscriptionPlan,
                 std::string(PREFIX) + "/create-subscription-plan", Post,
-                Options);
+                Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::updateSubscriptionPlan,
                 std::string(PREFIX) + "/update-subscription-plan", Post,
-                Options);
+                Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::deleteSubscriptionPlan,
                 std::string(PREFIX) + "/delete-subscription-plan", Delete,
-                Options);
+                Options, "JwtAuthFilter");
 
   // user subscription
   ADD_METHOD_TO(AdminController::getAllUserSubscriptions,
-                std::string(PREFIX) + "/get-all-subscriptions", Get);
+                std::string(PREFIX) + "/get-all-subscriptions", Get, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::getUserSubscriptionDetails,
-                std::string(PREFIX) + "/get-user-subscription-details", Get);
+                std::string(PREFIX) + "/get-user-subscription-details", Get, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::renewUserSubscription,
-                std::string(PREFIX) + "/renew-user-subscription", Post);
+                std::string(PREFIX) + "/renew-user-subscription", Post, "JwtAuthFilter");
 
   // campaigns
   ADD_METHOD_TO(AdminController::getAllCampaigns,
-                std::string(PREFIX) + "/get-all-campaigns", Get, Options);
+                std::string(PREFIX) + "/get-all-campaigns", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::createCampaign,
-                std::string(PREFIX) + "/create-campaign", Post, Options);
+                std::string(PREFIX) + "/create-campaign", Post, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::publishCampaign,
-                std::string(PREFIX) + "/publish-campaign", Get, Options);
+                std::string(PREFIX) + "/publish-campaign", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::deleteCampaign,
-                std::string(PREFIX) + "/delete-campaign", Get, Options);
+                std::string(PREFIX) + "/delete-campaign", Get, Options, "JwtAuthFilter");
 
   // commercial partners
   ADD_METHOD_TO(AdminController::getAllPartners,
-                std::string(PREFIX) + "/get-all-partners", Get, Options);
+                std::string(PREFIX) + "/get-all-partners", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::getPartnerSubscribers,
-                std::string(PREFIX) + "/get-partner-subscribers", Get, Options);
+                std::string(PREFIX) + "/get-partner-subscribers", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::getPartnerSubscriptionSummary,
                 std::string(PREFIX) + "/get-partner-subscription-summary", Get,
-                Options);
+                Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::getPartnerStats,
-                std::string(PREFIX) + "/get-partner-stats", Get, Options);
+                std::string(PREFIX) + "/get-partner-stats", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::getPartnerDetails,
-                std::string(PREFIX) + "/get-partner-details", Get, Options);
+                std::string(PREFIX) + "/get-partner-details", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::createPartner,
-                std::string(PREFIX) + "/create-partner", Post, Options);
+                std::string(PREFIX) + "/create-partner", Post, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::createPartnerSubscriber,
                 std::string(PREFIX) + "/create-partner-subscriber", Post,
-                Options);
+                Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::assignPartnerSubscribersPlan,
                 std::string(PREFIX) + "/assign-partner-subscribers-plan", Post,
-                Options);
+                Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::updatePartner,
-                std::string(PREFIX) + "/update-partner", Post, Options);
+                std::string(PREFIX) + "/update-partner", Post, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::updatePartnerStatus,
-                std::string(PREFIX) + "/update-partner-status", Get, Options);
+                std::string(PREFIX) + "/update-partner-status", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::deletePartner,
-                std::string(PREFIX) + "/delete-partner", Delete, Options);
+                std::string(PREFIX) + "/delete-partner", Delete, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::deletePartnerSubscriber,
                 std::string(PREFIX) + "/delete-partner-subscriber", Delete,
-                Options);
+                Options, "JwtAuthFilter");
 
   ADD_METHOD_TO(AdminController::enablePartnerSubaccount,
                 std::string(PREFIX) + "/enable-partner-subaccount", Get,
-                Options);
+                Options, "JwtAuthFilter");
 
   ADD_METHOD_TO(AdminController::disablePartnerSubaccount,
                 std::string(PREFIX) + "/disable-partner-subaccount", Get,
-                Options);
+                Options, "JwtAuthFilter");
 
   ADD_METHOD_TO(AdminController::getPartnerApiKeys,
-                std::string(PREFIX) + "/get-partner-api-keys", Get, Options);
+                std::string(PREFIX) + "/get-partner-api-keys", Get, Options, "JwtAuthFilter");
 
   ADD_METHOD_TO(AdminController::generatePartnerApiKey,
                 std::string(PREFIX) + "/generate-partner-api-key", Post,
-                Options);
+                Options, "JwtAuthFilter");
 
   ADD_METHOD_TO(AdminController::updatePartnerApiKey,
-                std::string(PREFIX) + "/update-partner-api-key", Post, Options);
+                std::string(PREFIX) + "/update-partner-api-key", Post, Options, "JwtAuthFilter");
 
   ADD_METHOD_TO(AdminController::revokePartnerApiKey,
                 std::string(PREFIX) + "/revoke-partner-api-key", Delete,
-                Options);
+                Options, "JwtAuthFilter");
 
   // payments
   ADD_METHOD_TO(AdminController::getAllPayments,
-                std::string(PREFIX) + "/get-all-payments", Get, Options);
+                std::string(PREFIX) + "/get-all-payments", Get, Options, "JwtAuthFilter");
 
   // ingestion jobs
   ADD_METHOD_TO(AdminController::getAllIngestionJobs,
-                std::string(PREFIX) + "/get-all-ingestion-jobs", Get, Options);
+                std::string(PREFIX) + "/get-all-ingestion-jobs", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::createIngestionJob,
-                std::string(PREFIX) + "/create-ingestion-job", Post, Options);
+                std::string(PREFIX) + "/create-ingestion-job", Post, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::deleteIngestionJob,
-                std::string(PREFIX) + "/delete-ingestion-job", Get, Options);
+                std::string(PREFIX) + "/delete-ingestion-job", Get, Options, "JwtAuthFilter");
+
+  // affiliates
+
 
   METHOD_LIST_END
 
@@ -163,11 +166,9 @@ public:
                   std::function<void(const HttpResponsePtr &)> &&callback);
   void getUserDetails(const HttpRequestPtr &req,
                       std::function<void(const HttpResponsePtr &)> &&callback);
-  void lockUserAccount(const HttpRequestPtr &req,
-                       std::function<void(const HttpResponsePtr &)> &&callback);
-  void
-  unLockUserAccount(const HttpRequestPtr &req,
-                    std::function<void(const HttpResponsePtr &)> &&callback);
+  drogon::Task<HttpResponsePtr> lockUserAccount(HttpRequestPtr req);
+
+  drogon::Task<HttpResponsePtr> unLockUserAccount(HttpRequestPtr req);
   void updateUser(const HttpRequestPtr &req,
                   std::function<void(const HttpResponsePtr &)> &&callback);
   void activate(const HttpRequestPtr &req,
@@ -259,4 +260,11 @@ public:
   void
   deleteIngestionJob(const HttpRequestPtr &req,
                      std::function<void(const HttpResponsePtr &)> &&callback);
+
+    // coupons
+    //drogon::Task<HttpResponsePtr> getAllCoupons(const HttpRequestPtr req);
+    //drogon::Task<HttpResponsePtr> createCampaign(HttpRequestPtr req);
+    //drogon::Task<HttpResponsePtr> updateCampaign(HttpRequestPtr req);
+    //drogon::Task<HttpResponsePtr> deleteCoupon(const HttpRequestPtr req);
+
 };

@@ -70,6 +70,7 @@ class Users
         static const std::string _user_handle;
         static const std::string _transports;
         static const std::string _credential_type;
+        static const std::string _is_affiliate;
     };
 
     static const int primaryKeyNumber;
@@ -370,8 +371,17 @@ class Users
     void setCredentialType(std::string &&pCredentialType) noexcept;
     void setCredentialTypeToNull() noexcept;
 
+    /**  For column is_affiliate  */
+    ///Get the value of the column is_affiliate, returns the default value if the column is null
+    const bool &getValueOfIsAffiliate() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<bool> &getIsAffiliate() const noexcept;
+    ///Set the value of the column is_affiliate
+    void setIsAffiliate(const bool &pIsAffiliate) noexcept;
+    void setIsAffiliateToNull() noexcept;
 
-    static size_t getColumnNumber() noexcept {  return 26;  }
+
+    static size_t getColumnNumber() noexcept {  return 27;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -419,6 +429,7 @@ class Users
     std::shared_ptr<std::vector<char>> userHandle_;
     std::shared_ptr<std::string> transports_;
     std::shared_ptr<std::string> credentialType_;
+    std::shared_ptr<bool> isAffiliate_;
     struct MetaData
     {
         const std::string colName_;
@@ -430,7 +441,7 @@ class Users
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[26]={ false };
+    bool dirtyFlag_[27]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -585,6 +596,12 @@ class Users
         {
             sql += "credential_type,";
             ++parametersCount;
+        }
+        sql += "is_affiliate,";
+        ++parametersCount;
+        if(!dirtyFlag_[26])
+        {
+            needSelection=true;
         }
         if(parametersCount > 0)
         {
@@ -758,6 +775,15 @@ class Users
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[26])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
         }
         if(parametersCount > 0)
         {

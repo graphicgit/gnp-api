@@ -22,8 +22,8 @@ public:
                 std::string(PREFIX) + "/login-via-pass-keys", Post, Options);
   ADD_METHOD_TO(AuthController::registerPasskeys,
                 std::string(PREFIX) + "/register-pass-keys", Post, Options);
-  ADD_METHOD_TO(AuthController::adminSignIn,
-                std::string(PREFIX) + "/admin-login", Post, Options);
+  ADD_METHOD_TO(AuthController::adminSignIn, std::string(PREFIX) + "/admin-login", Post, Options);
+  ADD_METHOD_TO(AuthController::affiliateSignIn, std::string(PREFIX) + "/affiliate-login", Post, Options);
   METHOD_LIST_END
 
   void
@@ -39,6 +39,7 @@ public:
   drogon::Task<HttpResponsePtr> signIn(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> loginViaPasskeys(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> adminSignIn(HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> affiliateSignIn(HttpRequestPtr req);
 
 private:
   void setAuthCookie(const HttpResponsePtr &resp, const std::string &token);
