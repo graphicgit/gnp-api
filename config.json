@@ -339,6 +339,11 @@
         "QuartzSchedulerApi": {
             "BaseUrl": "https://scheduler.richcreationsdevelopment.com",
             "CampaignCallBackUrl": "https://dev-api.graphicnewsplus.com/api/v1/campaigns/run-scheduled-campaign"
+        },
+        "MtnMomoApi": {
+            "BaseUrl": "https://sandbox.mtnmomo.com/collection/v1_0",
+            "CollectionsSubscriptionKey": "4f87849cbaf74ef0ba52e7b425897e78",
+            "DisbursementSubscriptionKey": "b544de9587de4fe0805ecfdcb7fcdfb3"
         }
     }
 }

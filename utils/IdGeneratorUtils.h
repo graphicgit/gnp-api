@@ -7,8 +7,8 @@
 
 #include <string>
 
-namespace gnp {
-namespace utils {
+
+namespace gnp::utils {
 
 class IdGeneratorUtils {
 public:
@@ -32,7 +32,7 @@ public:
   static std::string generateAlphanumericId(size_t length = 6);
 };
 
-} // namespace utils
-} // namespace gnp
+} // namespace gnp::utils
+
 
 #endif // IDGENERATORUTILS_H

@@ -85,8 +85,7 @@ void SubscriptionService::manageGuestSubscription(
               gnp::dto::InitializePaymentRequest initReq;
               initReq.setAmount("0.1");
               initReq.setPhone(guestSubscriptionDto.getPhoneNumber());
-              std::string clientReference =
-                  gnp::utils::IdGeneratorUtils::generateGuid();
+              std::string clientReference = gnp::utils::IdGeneratorUtils::generateGuid();
 
               initReq.setClientReference(clientReference);
               initReq.setCallBackUrl("https://gnp-api.com/paystack/callback");
@@ -1277,8 +1276,7 @@ SubscriptionService::buyCopy(const std::string &userId,
   co_return response;
 }
 
-drogon::Task<gnp::dto::BaseApiResponse>
-SubscriptionService::fulFillBuyCopy(const std::string &reference) {
+drogon::Task<gnp::dto::BaseApiResponse> SubscriptionService::fulFillBuyCopy(const std::string &reference) {
   auto dbClient = drogon::app().getDbClient();
   dto::BaseApiResponse response;
 
@@ -1408,10 +1406,16 @@ SubscriptionService::fulFillBuyCopy(const std::string &reference) {
         user.setPasswordHash(newPasswordHash);
         co_await userMapper.update(user);
 
+        std::string messageContent =
+          "Hello, someone purchased a copy of the newspaper for you. Your digital newspaper copy is ready. Access it here: "
+          "https://dev.graphicnewsplus.com/newspapers/" +
+          uniqueId + "/open . Login using Phone: " + phoneNumber +
+          " & Password: " + password;
+
         // Send an SMS containing a uniqueId to the newspaper: add the password
         // to their account in their message
         auto &hubtelSmsApi = plugin->getHubtelSmsApi();
-        co_await hubtelSmsApi.sendSms(phoneNumber, uniqueId, password);
+        co_await hubtelSmsApi.sendSms(phoneNumber, messageContent);
       } else {
         // Existing User - Maybe send a notification email?
         // For now, we stay silent or generic success message.

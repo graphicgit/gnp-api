@@ -6,8 +6,7 @@
 
 using namespace gnp;
 
-drogon::Task<HttpResponsePtr>
-UsersController::getUsers(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> UsersController::getUsers(HttpRequestPtr req) {
   int pageSize = 10; // Default page size
   int pageNo = 1;    //  Default page number
 
@@ -43,6 +42,7 @@ UsersController::getUsers(const HttpRequestPtr req) {
 }
 
 drogon::Task<HttpResponsePtr> UsersController::createUser(HttpRequestPtr req) {
+
   auto jsonBody = req->getJsonObject();
 
   if (!jsonBody) {
@@ -66,8 +66,7 @@ drogon::Task<HttpResponsePtr> UsersController::createUser(HttpRequestPtr req) {
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr>
-UsersController::registerProspectiveUser(HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> UsersController::registerProspectiveUser(HttpRequestPtr req) {
 
   auto jsonPtr = req->getJsonObject();
 
@@ -88,8 +87,7 @@ UsersController::registerProspectiveUser(HttpRequestPtr req) {
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
-drogon::Task<HttpResponsePtr>
-UsersController::registerPasskeys(HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> UsersController::registerPasskeys(HttpRequestPtr req) {
 
   auto jsonBody = req->getJsonObject();
 
@@ -114,8 +112,7 @@ UsersController::registerPasskeys(HttpRequestPtr req) {
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr>
-UsersController::loginViaPasskeys(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> UsersController::loginViaPasskeys(const HttpRequestPtr req) {
 
   auto jsonBody = req->getJsonObject();
 
@@ -160,8 +157,7 @@ drogon::Task<HttpResponsePtr> UsersController::lockUserAccount(const HttpRequest
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
-drogon::Task<HttpResponsePtr>
-UsersController::unLockUserAccount(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> UsersController::unLockUserAccount(const HttpRequestPtr req) {
   // Extract user ID from the path parameters
   auto userId = req->getParameter("id");
 
@@ -188,8 +184,7 @@ void UsersController::updateUser(
   // write your application logic here
 }
 
-drogon::Task<HttpResponsePtr>
-UsersController::generateAuthToken(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> UsersController::generateAuthToken(const HttpRequestPtr req) {
 
   auto jsonBody = req->getJsonObject();
 

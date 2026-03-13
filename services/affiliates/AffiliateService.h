@@ -7,7 +7,6 @@
 
 #include "dto/BaseApiResponse.h"
 #include "dto/CreateAffiliateDto.h"
-#include "dto/CreateCampaignDto.h"
 #include "dto/UpdateAffiliateDto.h"
 #include <drogon/drogon.h>
 #include <drogon/utils/coroutine.h>

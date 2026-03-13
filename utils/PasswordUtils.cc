@@ -21,4 +21,14 @@ std::string PasswordUtils::generateRandomPassword(int length) {
   return password;
 }
 
+  std::string PasswordUtils::normalizeBcryptHash(std::string hash) {
+
+  // Convert PHP bcrypt variant to OpenBSD variant
+  if (hash.rfind("$2y$", 0) == 0) {
+    hash.replace(0, 4, "$2b$");
+  }
+  return hash;
+
+}
+
 } // namespace gnp::utils

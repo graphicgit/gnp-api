@@ -133,8 +133,77 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::getAllAsync(
   }
 }
 
-drogon::Task<gnp::dto::BaseApiResponse>
-NewspaperService::getRedactedDetailsAsync(const std::string &id) {
+drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::getLatestNewsPapers(int pageNo, int pageSize) {
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<Newspapers> mp(dbClient);
+
+  // 1. Build the search criteria: Only published newspapers
+  Criteria searchCriteria = Criteria(Newspapers::Cols::_is_published, CompareOperator::EQ, true);
+
+  try {
+    size_t totalCount = co_await mp.count(searchCriteria);
+
+    if (totalCount == 0) {
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.result["data"] = Json::arrayValue;
+      response.result["totalCount"] = 0;
+      co_return response;
+    }
+
+    int offset = (pageNo - 1) * pageSize;
+    auto publications =
+        co_await mp.limit(pageSize)
+            .offset(offset)
+            .orderBy(Newspapers::Cols::_publication_date, SortOrder::DESC)
+            .findBy(searchCriteria);
+
+    dto::BaseApiResponse response;
+    auto totalPages = (totalCount + pageSize - 1) / pageSize;
+
+    response.success = true;
+    response.result["totalCount"] = (Json::UInt64)totalCount;
+    response.result["pageNo"] = pageNo;
+    response.result["pageSize"] = pageSize;
+    response.result["lowerBound"] = pageSize * (pageNo - 1) + 1;
+    response.result["upperBound"] = Json::Value(
+        (int)totalPages == pageNo ? (Json::UInt64)totalCount
+                                  : (Json::UInt64)(pageNo * pageSize));
+    response.result["totalPages"] = (int)totalPages;
+
+    Json::Value data = Json::arrayValue;
+    for (const auto &newspaper : publications) {
+      Json::Value newsPaperJson = newspaper.toJson();
+
+      // Convert snake_case to camelCase
+      Json::Value camelCaseRole;
+      camelCaseRole["id"] = newsPaperJson["id"];
+      camelCaseRole["title"] = newsPaperJson["title"];
+      camelCaseRole["slug"] = newsPaperJson["slug"];
+      camelCaseRole["price"] = newsPaperJson["price"];
+      camelCaseRole["editionNumber"] = newsPaperJson["edition_number"];
+      camelCaseRole["thumbnailId"] = newsPaperJson["thumbnail_id"];
+      camelCaseRole["fileType"] = newsPaperJson["file_type"];
+      camelCaseRole["isFree"] = newsPaperJson["is_free"];
+      camelCaseRole["publicationDate"] = newsPaperJson["publication_date"];
+
+      data.append(camelCaseRole);
+    }
+
+    response.result["data"] = data;
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["message"] =  "Database error while fetching latest newspapers.";
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::getRedactedDetailsAsync(const std::string &id) {
   auto dbClient = drogon::app().getDbClient();
   auto mp = drogon::orm::CoroMapper<drogon_model::Gnp::Newspapers>(dbClient);
 

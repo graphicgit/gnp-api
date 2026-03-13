@@ -4,14 +4,8 @@
 
 namespace gnp::services {
 
-drogon::Task<void> HubtelSmsApi::sendSms(const std::string &phoneNumber,
-                                         const std::string &uniqueId,
-                                         const std::string &password) {
-  std::string messageContent =
-      "Hello, someone purchased a copy of the newspaper for you. Your digital newspaper copy is ready. Access it here: "
-      "https://dev.graphicnewsplus.com/newspapers/" +
-      uniqueId + "/open . Login using Phone: " + phoneNumber +
-      " & Password: " + password;
+drogon::Task<bool> HubtelSmsApi::sendSms(const std::string &phoneNumber, const std::string &messageContent) {
+
 
   LOG_INFO << "smsMessage => " << messageContent;
 
@@ -32,14 +26,17 @@ drogon::Task<void> HubtelSmsApi::sendSms(const std::string &phoneNumber,
 
     // The API returns the response body which we should log
     std::string smsNotificationResponse = std::string(resp->getBody());
-    LOG_INFO << "hubtelSmsApiResponse => " << smsNotificationResponse;
+    LOG_INFO << "hubtelSmsApiResponse => " << smsNotificationResponse << ",phoneNo => " << phoneNumber  ;
 
-    if (resp->getStatusCode() != drogon::k200OK) {
+    if (resp->getStatusCode() != drogon::k201Created) {
       LOG_ERROR << "Hubtel SMS request failed. Status: " << resp->getStatusCode();
+      co_return false;
     }
+    co_return true;
 
   } catch (const std::exception &e) {
     LOG_ERROR << "Exception sending SMS: " << e.what();
+    co_return false;
   }
 }
 

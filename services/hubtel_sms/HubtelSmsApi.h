@@ -8,9 +8,7 @@ namespace gnp::services {
 
 class HubtelSmsApi {
 public:
-  drogon::Task<void> sendSms(const std::string &phoneNumber,
-                             const std::string &uniqueId,
-                             const std::string &password);
+  drogon::Task<bool> sendSms(const std::string &phoneNumber, const std::string &messageContent);
 };
 
 } // namespace gnp::services

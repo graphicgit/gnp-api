@@ -13,6 +13,7 @@ using drogon_model::Gnp::Coupons;
 
 namespace gnp::services {
 
+
 drogon::Task<dto::BaseApiResponse> CouponService::getAll(int pageNo, int pageSize, const std::string &status, const std::string &expiry,  const std::string &couponCode) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -103,8 +104,10 @@ drogon::Task<dto::BaseApiResponse> CouponService::getAll(int pageNo, int pageSiz
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-CouponService::createAsync(const ::gnp::dto::CreateCouponDto &dto) {
+
+
+
+drogon::Task<::gnp::dto::BaseApiResponse> CouponService::createAsync(const ::gnp::dto::CreateCouponDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Coupons> mapper(dbClient);

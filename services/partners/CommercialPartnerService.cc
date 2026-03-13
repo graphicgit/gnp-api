@@ -170,8 +170,7 @@ void CommercialPartnerService::createPartner(
       newCampaign,
       [callback, dto](const CommercialPartners &commercialPartner) {
         // Generate random 8-character password
-        std::string password =
-            gnp::utils::PasswordUtils::generateRandomPassword(8);
+        std::string password = gnp::utils::PasswordUtils::generateRandomPassword(8);
 
         // Create admin user for the partner
         auto dbClient = drogon::app().getDbClient();
@@ -1170,8 +1169,7 @@ void CommercialPartnerService::updateStatus(
       });
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-CommercialPartnerService::deletePartnerSubscriberAsync(
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::deletePartnerSubscriberAsync(
     const std::string &partnerId, const std::string &subscriberId) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -1213,8 +1211,7 @@ CommercialPartnerService::deletePartnerSubscriberAsync(
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-CommercialPartnerService::getPartnerApiKeys(const std::string &partnerId) {
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerApiKeys(const std::string &partnerId) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> mp(dbClient);
 
@@ -1292,8 +1289,7 @@ CommercialPartnerService::getPartnerApiKeys(const std::string &partnerId) {
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-CommercialPartnerService::generatePartnerApiKey(
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::generatePartnerApiKey(
     const ::gnp::dto::GeneratePartnerApiKeyDto &dto) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> mp(dbClient);
@@ -1372,8 +1368,7 @@ CommercialPartnerService::generatePartnerApiKey(
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-CommercialPartnerService::revokePartnerApiKey(const std::string &partnerId,
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::revokePartnerApiKey(const std::string &partnerId,
                                               const std::string &clientId) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> mp(dbClient);
@@ -1403,8 +1398,7 @@ CommercialPartnerService::revokePartnerApiKey(const std::string &partnerId,
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-CommercialPartnerService::updatePartnerApiKey(
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::updatePartnerApiKey(
     const ::gnp::dto::UpdatePartnerApiKeyDto &dto) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> mp(dbClient);
@@ -1448,8 +1442,7 @@ CommercialPartnerService::updatePartnerApiKey(
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-CommercialPartnerService::onboardSubscriberAsync(
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubscriberAsync(
     const std::string &clientId, const std::string &clientSecret,
     const ::gnp::dto::PartnerOnboardingDto &dto) {
   auto dbClient = drogon::app().getDbClient();
@@ -1519,7 +1512,16 @@ CommercialPartnerService::onboardSubscriberAsync(
       co_await partnerMapper.update(partner);
     }
 
-    // send email to the user
+    // 4. Send welcome SMS to the user
+    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto &hubtelSmsApi = plugin->getHubtelSmsApi();
+
+    std::string messageContent =
+        "Welcome to Graphic News Plus! Your corporate account has been created. "
+        "Username: " + dto.getPhoneNumber() + " & Password: " + password +
+        ". Log in now to explore engaging content. https://dev.graphicnewsplus.com";
+
+    co_await hubtelSmsApi.sendSms(dto.getPhoneNumber(), messageContent);
 
     gnp::dto::BaseApiResponse response;
     response.success = true;
@@ -1530,6 +1532,174 @@ CommercialPartnerService::onboardSubscriberAsync(
     gnp::dto::BaseApiResponse errorResponse;
     errorResponse.success = false;
     errorResponse.message = "Onboarding failed or unauthorized";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::checkSubscriberStatus(const std::string &clientId,
+                                                const std::string &clientSecret,
+                                                const std::string &phoneNumber) {
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> apiKeyMapper(
+      dbClient);
+
+  try {
+    // 1. Verify API Key
+    auto apiKey = co_await apiKeyMapper.findOne(
+        Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_client_id,
+                 CompareOperator::EQ, clientId) &&
+        Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_is_active,
+                 CompareOperator::EQ, true));
+
+    if (!bcrypt::validatePassword(clientSecret,
+                                  apiKey.getValueOfClientSecretHash())) {
+      gnp::dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.message = "Invalid ClientSecret";
+      errorResponse.error["code"] = constants::ERR_UNAUTHORIZED;
+      co_return errorResponse;
+    }
+
+    // Update last used at
+    apiKey.setLastUsedAt(trantor::Date::now());
+    co_await apiKeyMapper.update(apiKey);
+
+    // 2. Find User
+    CoroMapper<drogon_model::Gnp::Users> userMapper(dbClient);
+    Criteria userCriteria =
+        Criteria(drogon_model::Gnp::Users::Cols::_phone_number,
+                 CompareOperator::EQ, phoneNumber) &&
+        Criteria(drogon_model::Gnp::Users::Cols::_partner_id,
+                 CompareOperator::EQ, apiKey.getValueOfPartnerId());
+
+    auto users = co_await userMapper.findBy(userCriteria);
+    if (users.empty()) {
+      gnp::dto::BaseApiResponse response;
+      response.success = true; // Request successful, but user doesn't exist
+      response.message = "Subscriber not found";
+      response.result["exists"] = false;
+      response.result["status"] = "None";
+      co_return response;
+    }
+
+    auto user = users[0];
+
+    // 3. Check Subscription Status
+    CoroMapper<drogon_model::Gnp::UserSubscriptions> subMapper(dbClient);
+    Criteria subCriteria =
+        Criteria(drogon_model::Gnp::UserSubscriptions::Cols::_user_id,
+                 CompareOperator::EQ, user.getValueOfId()) &&
+        Criteria(drogon_model::Gnp::UserSubscriptions::Cols::_is_active,
+                 CompareOperator::EQ, true);
+
+    auto subs = co_await subMapper.findBy(subCriteria);
+
+    gnp::dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Subscriber status retrieved successfully";
+
+    Json::Value subscriber;
+    subscriber["firstName"] = user.getValueOfFirstName();
+    subscriber["lastName"] = user.getValueOfLastName();
+    subscriber["email"] = user.getValueOfEmail();
+    subscriber["phoneNumber"] = user.getValueOfPhoneNumber();
+
+    Json::Value subscription;
+    subscription["exists"] = true;
+    subscription["subscriptionPlan"] = "Corporate (Daily Graphic & Graphic Business)";
+    subscription["subscriptionType"] = "Bundle";
+    subscription["billingCycle"] = "Monthly";
+    //subscription["isActive"] = !subs.empty();
+    //subscription["status"] = !subs.empty() ? "Active" : "Inactive";
+
+    if (!subs.empty()) {
+      auto sub = subs[0];
+      subscription["subscriptionPlan"] = sub.getValueOfSubscriptionPlanDescription();
+      subscription["subscriptionId"] = sub.getValueOfSubscriptionIdentifier();
+    }
+
+    response.result["subscriber"] = subscriber;
+    response.result["subscription"] = subscription;
+
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to check subscriber status";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::retrieveSubscriberDetails(
+    const std::string &clientId, const std::string &clientSecret,
+    const std::string &phoneNumber) {
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> apiKeyMapper(
+      dbClient);
+
+  try {
+    // 1. Verify API Key
+    auto apiKey = co_await apiKeyMapper.findOne(
+        Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_client_id,
+                 CompareOperator::EQ, clientId) &&
+        Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_is_active,
+                 CompareOperator::EQ, true));
+
+    if (!bcrypt::validatePassword(clientSecret, apiKey.getValueOfClientSecretHash())) {
+      gnp::dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.message = "Invalid ClientSecret";
+      errorResponse.error["code"] = constants::ERR_UNAUTHORIZED;
+      co_return errorResponse;
+    }
+
+    // Update last used at
+    apiKey.setLastUsedAt(trantor::Date::now());
+    co_await apiKeyMapper.update(apiKey);
+
+    // 2. Find User
+    CoroMapper<drogon_model::Gnp::Users> userMapper(dbClient);
+    Criteria userCriteria =
+        Criteria(drogon_model::Gnp::Users::Cols::_phone_number,
+                 CompareOperator::EQ, phoneNumber) &&
+        Criteria(drogon_model::Gnp::Users::Cols::_partner_id,
+                 CompareOperator::EQ, apiKey.getValueOfPartnerId());
+
+    auto users = co_await userMapper.findBy(userCriteria);
+    if (users.empty()) {
+      gnp::dto::BaseApiResponse response;
+      response.success = false;
+      response.message = "Subscriber not found";
+      response.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+      co_return response;
+    }
+
+    auto user = users[0];
+
+    // 3. Construct response with details
+    gnp::dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Subscriber details retrieved successfully";
+
+    Json::Value data;
+    data["firstName"] = user.getValueOfFirstName();
+    data["lastName"] = user.getValueOfLastName();
+    data["email"] = user.getValueOfEmail();
+    data["phoneNumber"] = user.getValueOfPhoneNumber();
+    data["createdAt"] = user.getValueOfCreatedAt().toDbString();
+
+    response.result = data;
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to retrieve subscriber details";
     errorResponse.error["code"] = constants::ERR_DB_QUERY;
     errorResponse.error["detail"] = e.base().what();
     co_return errorResponse;

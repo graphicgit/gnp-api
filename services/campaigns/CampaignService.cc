@@ -114,8 +114,7 @@ drogon::Task<dto::BaseApiResponse> CampaignService::getAll(int pageNo, int pageS
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-CampaignService::createAsync(const ::gnp::dto::CreateCampaignDto &dto) {
+drogon::Task<::gnp::dto::BaseApiResponse> CampaignService::createAsync(const ::gnp::dto::CreateCampaignDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<::drogon_model::Gnp::Campaigns> mp(dbClient);
@@ -149,8 +148,7 @@ CampaignService::createAsync(const ::gnp::dto::CreateCampaignDto &dto) {
     auto &quartzApi = plugin->getQuartzApi();
 
     ::gnp::dto::QuartzJobDto jobDto;
-    jobDto.name =
-        campaign.getValueOfName(); // Using Name as the unique identifier name
+    jobDto.name = campaign.getValueOfName(); // Using Name as the unique identifier name
     jobDto.description = campaign.getValueOfSubject();
     jobDto.customData.uniqueId = campaign.getValueOfId();
     // Default or empty callbackUrl as not specified by user context
