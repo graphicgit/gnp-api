@@ -5,9 +5,8 @@ namespace gnp::signalr {
 std::mutex NotificationsHub::_connMutex;
 std::unordered_set<WebSocketConnectionPtr> NotificationsHub::_connections;
 
-void NotificationsHub::handleNewMessage(const WebSocketConnectionPtr &wsConnPtr,
-                                        std::string &&message,
-                                        const WebSocketMessageType &type) {
+void NotificationsHub::handleNewMessage(const WebSocketConnectionPtr &wsConnPtr, std::string &&message, const WebSocketMessageType &type) {
+
   LOG_DEBUG << "new message: " << message;
   if (message == "notify-new-content") {
     Json::Value reply;
@@ -34,8 +33,7 @@ void NotificationsHub::handleNewMessage(const WebSocketConnectionPtr &wsConnPtr,
   // wsConnPtr->send(Json::writeString(w, reply));
 }
 
-void NotificationsHub::handleNewConnection(
-    const HttpRequestPtr &req, const WebSocketConnectionPtr &wsConnPtr) {
+void NotificationsHub::handleNewConnection(const HttpRequestPtr &req, const WebSocketConnectionPtr &wsConnPtr) {
 
   LOG_DEBUG << "new connection!";
 
@@ -47,8 +45,7 @@ void NotificationsHub::handleNewConnection(
   wsConnPtr->send("Welcome to NotificationsHub!");
 }
 
-void NotificationsHub::handleConnectionClosed(
-    const WebSocketConnectionPtr &wsConnPtr) {
+void NotificationsHub::handleConnectionClosed(const WebSocketConnectionPtr &wsConnPtr) {
 
   LOG_DEBUG << "connection closed!";
   {

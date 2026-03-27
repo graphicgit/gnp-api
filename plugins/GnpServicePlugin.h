@@ -14,6 +14,7 @@
 #include "services/email/EmailService.h"
 #include "services/hubtel_sms/HubtelSmsApi.h"
 #include "services/ingestion_jobs/IngestionJobService.h"
+#include "services/media/MediaService.h"
 #include "services/newspapers/NewspaperService.h"
 #include "services/partners/CommercialPartnerService.h"
 #include "services/payments/PaymentService.h"
@@ -65,6 +66,7 @@ public:
   ::gnp::services::PaystackApi &getPaystackApi() { return paystackApi_; }
   ::gnp::services::HubtelSmsApi &getHubtelSmsApi() { return hubtelSmsApi_; }
   ::gnp::services::QuartzApi &getQuartzApi() { return quartzApi_; }
+  ::gnp::services::MediaService &getMediaService() { return mediaService_; }
 
 private:
   ::gnp::services::AffiliateService affiliate_service_;
@@ -81,6 +83,7 @@ private:
   ::gnp::services::PaystackApi paystackApi_;
   ::gnp::services::HubtelSmsApi hubtelSmsApi_;
   ::gnp::services::QuartzApi quartzApi_;
+  ::gnp::services::MediaService mediaService_;
 };
 
 } // namespace gnp::plugins

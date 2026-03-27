@@ -80,6 +80,9 @@ add_executable(${PROJECT_NAME} main.cc
         dto/UpdateCouponDto.h
         services/mtn_api/MtnMomoApi.h
         dto/AccessTokenDto.h
+        services/media/MediaService.h
+        services/media/MediaService.cc
+        dto/MediaMetadataDto.h
 )
 
 # ##############################################################################
