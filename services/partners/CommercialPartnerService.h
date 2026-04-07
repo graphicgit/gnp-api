@@ -91,6 +91,14 @@ public:
     drogon::Task<::gnp::dto::BaseApiResponse> retrieveSubscriberDetails(const std::string &clientId,
                         const std::string &clientSecret,
                         const std::string &phoneNumber);
+
+    drogon::Task<::gnp::dto::BaseApiResponse> getPartnerOverviewStats(const std::string &partnerId);
+
+    drogon::Task<::gnp::dto::BaseApiResponse> getPartnerEngagementReport(const std::string &partnerId, const std::string &period);
+
+    drogon::Task<::gnp::dto::BaseApiResponse> getPartnerAnalyticsCharts(const std::string &partnerId, const std::string &period);
+
+
 };
 
 }

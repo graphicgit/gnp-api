@@ -403,8 +403,7 @@ drogon::Task<gnp::dto::BaseApiResponse> UserService::registerUserPasskeys(
   co_return response;
 }
 
-drogon::Task<gnp::dto::BaseApiResponse>
-UserService::validateUserPasskeys(const dto::LoginUserPasskeyDto &passkeyDto) {
+drogon::Task<gnp::dto::BaseApiResponse> UserService::validateUserPasskeys(const dto::LoginUserPasskeyDto &passkeyDto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mp(dbClient);

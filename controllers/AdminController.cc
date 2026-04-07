@@ -11,8 +11,7 @@
 #include "services/subscription_plans/SubscriptionPlanService.h"
 #include "services/users/UserService.h"
 
-drogon::Task<HttpResponsePtr>
-AdminController::getAllNewsPapers(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::getAllNewsPapers(const HttpRequestPtr req) {
   int pageSize = 10; // Default page size
   int pageNo = 1;    //  Default page number
 
@@ -69,8 +68,7 @@ AdminController::getAllNewsPapers(const HttpRequestPtr req) {
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr>
-AdminController::getNewsPaperFullDetails(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::getNewsPaperFullDetails(const HttpRequestPtr req) {
   if (req->getParameter("id").empty()) {
     gnp::dto::BaseApiResponse response;
     response.success = false;
@@ -89,8 +87,7 @@ AdminController::getNewsPaperFullDetails(const HttpRequestPtr req) {
   co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
-drogon::Task<HttpResponsePtr>
-AdminController::publishNewsPaper(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::publishNewsPaper(const HttpRequestPtr req) {
   if (req->getParameter("id").empty()) {
     gnp::dto::BaseApiResponse response;
     response.success = false;
@@ -110,8 +107,7 @@ AdminController::publishNewsPaper(const HttpRequestPtr req) {
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr>
-AdminController::unPublishNewsPaper(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::unPublishNewsPaper(const HttpRequestPtr req) {
   if (req->getParameter("id").empty()) {
     gnp::dto::BaseApiResponse response;
     response.success = false;
@@ -131,8 +127,7 @@ AdminController::unPublishNewsPaper(const HttpRequestPtr req) {
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr>
-AdminController::IngestNewsPaper(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::IngestNewsPaper(const HttpRequestPtr req) {
   auto jsonBody = req->getJsonObject();
 
   if (!jsonBody) {
@@ -160,8 +155,7 @@ void AdminController::updateNewsPaper(
   // write your application logic here
 }
 
-drogon::Task<HttpResponsePtr>
-AdminController::deleteNewsPaper(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::deleteNewsPaper(const HttpRequestPtr req) {
   if (req->getParameter("id").empty()) {
     gnp::dto::BaseApiResponse response;
     response.success = false;
@@ -183,8 +177,7 @@ AdminController::deleteNewsPaper(const HttpRequestPtr req) {
 
 // users
 
-drogon::Task<HttpResponsePtr>
-AdminController::getAllUsers(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::getAllUsers(const HttpRequestPtr req) {
 
   int pageSize = 10; // Default page size
   int pageNo = 1;    //  Default page number
@@ -215,7 +208,7 @@ AdminController::getAllUsers(const HttpRequestPtr req) {
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &userService = plugin->getUserService();
 
-  auto result = co_await userService.getAdminUsers(pageNo, pageSize, query);
+  auto result = co_await userService.getAll(pageNo, pageSize, query);
   auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
   co_return resp;
 }
@@ -301,8 +294,7 @@ void AdminController::deleteUser(
 }
 
 // subscription plans
-drogon::Task<HttpResponsePtr>
-AdminController::getAllSubscriptionPlans(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::getAllSubscriptionPlans(const HttpRequestPtr req) {
 
   int pageSize = 10; // Default page size
   int pageNo = 1;    //  Default page number
@@ -339,8 +331,7 @@ AdminController::getAllSubscriptionPlans(const HttpRequestPtr req) {
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr>
-AdminController::createSubscriptionPlan(HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::createSubscriptionPlan(HttpRequestPtr req) {
 
   auto jsonBody = req->getJsonObject();
 
@@ -365,8 +356,7 @@ AdminController::createSubscriptionPlan(HttpRequestPtr req) {
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr>
-AdminController::updateSubscriptionPlan(HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::updateSubscriptionPlan(HttpRequestPtr req) {
 
   auto jsonBody = req->getJsonObject();
 
@@ -391,8 +381,7 @@ AdminController::updateSubscriptionPlan(HttpRequestPtr req) {
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr>
-AdminController::deleteSubscriptionPlan(HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::deleteSubscriptionPlan(HttpRequestPtr req) {
 
   auto id = req->getParameter("id");
 
@@ -412,6 +401,128 @@ AdminController::deleteSubscriptionPlan(HttpRequestPtr req) {
   auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
   co_return resp;
 }
+
+
+//coupons
+
+drogon::Task<HttpResponsePtr> AdminController::getAllCoupons(HttpRequestPtr req) {
+
+  int pageSize = 10; // Default page size
+  int pageNo = 1;    //  Default page number
+
+  if (!req->getParameter("pageSize").empty()) {
+    try {
+      pageSize = std::stoi(req->getParameter("pageSize"));
+      pageSize = std::max(1, std::min(100, pageSize)); // Limit between 1-100
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  if (!req->getParameter("pageNo").empty()) {
+    try {
+      pageNo = std::stoi(req->getParameter("pageNo"));
+      pageNo = std::max(1, pageNo); // Ensure page number is at least 1
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  std::string status = req->getParameter("status");
+  if (status.empty()) {
+    status = "";
+  }
+
+  std::string expiry = req->getParameter("expiry");
+  if (expiry.empty()) {
+    expiry = "";
+  }
+
+  std::string couponCode = req->getParameter("couponCode");
+  if (couponCode.empty()) {
+    couponCode = "";
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &couponService = plugin->getCouponService();
+
+  auto result = co_await couponService.getAll(pageNo, pageSize, status, expiry, couponCode);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+}
+
+Task<HttpResponsePtr> AdminController::createCoupon(HttpRequestPtr req) {
+
+  auto jsonBody = req->getJsonObject();
+
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  gnp::dto::CreateCouponDto dto;
+
+  dto.fromJson(*jsonBody);
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &couponService = plugin->getCouponService();
+
+  auto result = co_await couponService.createAsync(dto);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+}
+
+drogon::Task<HttpResponsePtr> AdminController::updateCoupon(HttpRequestPtr req) {
+
+  auto jsonBody = req->getJsonObject();
+
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  gnp::dto::UpdateCouponDto dto;
+
+  dto.fromJson(*jsonBody);
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &couponService = plugin->getCouponService();
+
+  auto result = co_await couponService.updateAsync(dto);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+}
+
+drogon::Task<HttpResponsePtr> AdminController::deleteCoupon(HttpRequestPtr req) {
+
+  auto id = req->getParameter("id");
+
+  if (id.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Missing required parameter: id";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &couponService = plugin->getCouponService();
+
+  auto result = co_await couponService.deleteCoupon(id);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+}
+
+
 
 // user subscription
 
@@ -674,9 +785,7 @@ void AdminController::getPartnerSubscriptionSummary(
       });
 }
 
-void AdminController::createPartner(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
+void AdminController::createPartner(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback) {
 
   auto jsonPtr = req->getJsonObject();
   if (!jsonPtr) {
@@ -1078,8 +1187,7 @@ AdminController::generatePartnerApiKey(HttpRequestPtr req) {
   auto apiResp = co_await partnerService.generatePartnerApiKey(dto);
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
-drogon::Task<HttpResponsePtr>
-AdminController::revokePartnerApiKey(HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::revokePartnerApiKey(HttpRequestPtr req) {
   auto partnerId = req->getParameter("partnerId");
   auto clientId = req->getParameter("clientId");
 
@@ -1100,8 +1208,8 @@ AdminController::revokePartnerApiKey(HttpRequestPtr req) {
       co_await partnerService.revokePartnerApiKey(partnerId, clientId);
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
-drogon::Task<HttpResponsePtr>
-AdminController::updatePartnerApiKey(HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::updatePartnerApiKey(HttpRequestPtr req) {
+
   auto json = req->getJsonObject();
   if (!json) {
     gnp::dto::BaseApiResponse response;
@@ -1130,3 +1238,6 @@ AdminController::updatePartnerApiKey(HttpRequestPtr req) {
   auto apiResp = co_await partnerService.updatePartnerApiKey(dto);
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
+
+//
+

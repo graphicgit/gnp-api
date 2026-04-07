@@ -8,6 +8,8 @@
 #include "SubscriptionPlans.h"
 #include "UserSubscriptions.h"
 #include "Users.h"
+#include "PublicationReads.h"
+#include "UserSessions.h"
 #include "bcrypt.h"
 #include "constants/ErrorCodes.h"
 #include "dto/BaseApiResponse.h"
@@ -25,6 +27,8 @@ using ::drogon_model::Gnp::CommercialPartners;
 using ::drogon_model::Gnp::SubscriptionPlans;
 using ::drogon_model::Gnp::Users;
 using ::drogon_model::Gnp::UserSubscriptions;
+using ::drogon_model::Gnp::PublicationReads;
+using ::drogon_model::Gnp::UserSessions;
 
 namespace gnp::services {
 
@@ -1700,6 +1704,259 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::retrieveSubs
     gnp::dto::BaseApiResponse errorResponse;
     errorResponse.success = false;
     errorResponse.message = "Failed to retrieve subscriber details";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+drogon::Task<::gnp::dto::BaseApiResponse>
+CommercialPartnerService::getPartnerOverviewStats(
+    const std::string &partnerId) {
+  auto dbClient = drogon::app().getDbClient();
+  try {
+    // 1. Get Active Members
+    CoroMapper<UserSubscriptions> subMapper(dbClient);
+    auto activeMembers = co_await subMapper.count(
+        Criteria(UserSubscriptions::Cols::_partner_id, CompareOperator::EQ,
+                 partnerId) &&
+        Criteria(UserSubscriptions::Cols::_is_active, CompareOperator::EQ,
+                 true));
+
+    // 2. Get Total Quota
+    CoroMapper<CommercialPartners> partnerMapper(dbClient);
+    auto partner = co_await partnerMapper.findByPrimaryKey(partnerId);
+    auto totalQuota = partner.getValueOfSubscriberQuota();
+    auto remainingQuota = partner.getValueOfRemainingQuota();
+
+    // 3. Get Active Sessions
+    CoroMapper<UserSessions> sessionMapper(dbClient);
+    auto activeSessions = co_await sessionMapper.count(
+        Criteria(UserSessions::Cols::_partner_id, CompareOperator::EQ,
+                 partnerId) &&
+        Criteria(UserSessions::Cols::_is_active, CompareOperator::EQ, true));
+
+    // 4. Get Engagement Rate (Active Readers (30d) / Total Members)
+    auto now = trantor::Date::now();
+    auto thirtyDaysAgo = now.after(-30 * 24 * 3600);
+
+    std::string sql = "SELECT COUNT(DISTINCT user_id) FROM publication_reads "
+                      "WHERE partner_id = $1 AND read_at >= $2";
+    auto result = co_await dbClient->execSqlCoro(sql, partnerId, thirtyDaysAgo);
+    long activeReaders = 0;
+    if (result.size() > 0 && !result[0][0].isNull())
+      activeReaders = result[0][0].as<long>();
+
+    auto totalMembers = co_await subMapper.count(
+        Criteria(UserSubscriptions::Cols::_partner_id, CompareOperator::EQ,
+                 partnerId));
+
+    double engagementRate = 0.0;
+    if (totalMembers > 0) {
+      engagementRate = (double)activeReaders / totalMembers * 100.0;
+    }
+
+    gnp::dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Overview stats retrieved successfully";
+
+    Json::Value data;
+    data["activeMembers"] = (Json::UInt64)activeMembers;
+    data["totalQuota"] = (Json::UInt64)totalQuota;
+    data["remainingQuota"] = (Json::UInt64)remainingQuota;
+    data["engagementRate"] = std::round(engagementRate * 10) / 10.0;
+    data["activeSessions"] = (Json::UInt64)activeSessions;
+
+    response.result = data;
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to retrieve overview stats";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+drogon::Task<::gnp::dto::BaseApiResponse>
+CommercialPartnerService::getPartnerEngagementReport(
+    const std::string &partnerId, const std::string &period) {
+  auto dbClient = drogon::app().getDbClient();
+  try {
+    int days = (period == "30d") ? 30 : 7;
+    auto now = trantor::Date::now();
+    auto periodStart = now.after(-days * 24 * 3600);
+    auto prevPeriodStart = now.after(-2 * days * 24 * 3600);
+
+    // 1. Total Reads
+    std::string readsSql = "SELECT "
+                           "(SELECT COUNT(*) FROM publication_reads WHERE "
+                           "partner_id = $1 AND read_at >= $2) as current, "
+                           "(SELECT COUNT(*) FROM publication_reads WHERE "
+                           "partner_id = $1 AND read_at >= $3 AND read_at < "
+                           "$2) as previous";
+    auto readsRes = co_await dbClient->execSqlCoro(readsSql, partnerId,
+                                                  periodStart, prevPeriodStart);
+    long currentReads = readsRes[0]["current"].as<long>();
+    long prevReads = readsRes[0]["previous"].as<long>();
+
+    // 2. Avg Session Duration
+    std::string sessionSql =
+        "SELECT "
+        "(SELECT AVG(duration_seconds) FROM user_sessions WHERE partner_id = "
+        "$1 AND session_start >= $2) as current, "
+        "(SELECT AVG(duration_seconds) FROM user_sessions WHERE partner_id = "
+        "$1 AND session_start >= $3 AND session_start < $2) as previous";
+    auto sessionRes = co_await dbClient->execSqlCoro(
+        sessionSql, partnerId, periodStart, prevPeriodStart);
+    double currentAvgSec = sessionRes[0]["current"].isNull()
+                               ? 0.0
+                               : sessionRes[0]["current"].as<double>();
+    double prevAvgSec = sessionRes[0]["previous"].isNull()
+                            ? 0.0
+                            : sessionRes[0]["previous"].as<double>();
+
+    // 3. New Members Onboarded
+    std::string membersSql =
+        "SELECT "
+        "(SELECT COUNT(*) FROM users WHERE partner_id = $1 AND created_at >= "
+        "$2) as current, "
+        "(SELECT COUNT(*) FROM users WHERE partner_id = $1 AND created_at >= "
+        "$3 AND created_at < $2) as previous";
+    auto membersRes = co_await dbClient->execSqlCoro(
+        membersSql, partnerId, periodStart, prevPeriodStart);
+    long currentMembers = membersRes[0]["current"].as<long>();
+    long prevMembers = membersRes[0]["previous"].as<long>();
+
+    // 4. Active Readers
+    std::string activeReadersSql =
+        "SELECT "
+        "(SELECT COUNT(DISTINCT user_id) FROM publication_reads WHERE "
+        "partner_id = $1 AND read_at >= $2) as current, "
+        "(SELECT COUNT(DISTINCT user_id) FROM publication_reads WHERE "
+        "partner_id = $1 AND read_at >= $3 AND read_at < $2) as previous";
+    auto activeRes = co_await dbClient->execSqlCoro(
+        activeReadersSql, partnerId, periodStart, prevPeriodStart);
+    long currentActive = activeRes[0]["current"].as<long>();
+    long prevActive = activeRes[0]["previous"].as<long>();
+
+    auto calculateChange = [](long current, long previous) -> double {
+      if (previous == 0)
+        return current > 0 ? 100.0 : 0.0;
+      return ((double)(current - previous) / previous) * 100.0;
+    };
+
+    auto formatDuration = [](double seconds) -> std::string {
+      int s = (int)seconds;
+      int m = s / 60;
+      s = s % 60;
+      return std::to_string(m) + "m " + std::to_string(s) + "s";
+    };
+
+    gnp::dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Engagement report retrieved successfully";
+
+    Json::Value result;
+
+    Json::Value totalReads;
+    totalReads["value"] = std::to_string(currentReads / 1000.0).substr(0, 4) + "k";
+    if (currentReads < 1000) totalReads["value"] = (Json::UInt64)currentReads;
+    totalReads["change"] = calculateChange(currentReads, prevReads);
+    result["totalReads"] = totalReads;
+
+    Json::Value avgDuration;
+    avgDuration["value"] = formatDuration(currentAvgSec);
+    avgDuration["change"] = calculateChange((long)currentAvgSec, (long)prevAvgSec);
+    result["avgSessionDuration"] = avgDuration;
+
+    Json::Value newMembers;
+    newMembers["value"] = (Json::UInt64)currentMembers;
+    newMembers["change"] = calculateChange(currentMembers, prevMembers);
+    result["newMembersOnboarded"] = newMembers;
+
+    Json::Value activeReaders;
+    activeReaders["value"] = (Json::UInt64)currentActive;
+    activeReaders["change"] = calculateChange(currentActive, prevActive);
+    result["activeReaders"] = activeReaders;
+
+    response.result = result;
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to retrieve engagement report";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+drogon::Task<::gnp::dto::BaseApiResponse>
+CommercialPartnerService::getPartnerAnalyticsCharts(
+    const std::string &partnerId, const std::string &period) {
+  auto dbClient = drogon::app().getDbClient();
+  try {
+    int days = (period == "30d") ? 30 : 7;
+    auto now = trantor::Date::now();
+    auto periodStart = now.after(-days * 24 * 3600);
+
+    // 1. Engagement Over Time (Reads by Day)
+    std::string timeSql = "SELECT DATE(read_at) as read_date, COUNT(*) as "
+                          "read_count FROM publication_reads "
+                          "WHERE partner_id = $1 AND read_at >= $2 "
+                          "GROUP BY read_date ORDER BY read_date ASC";
+    auto timeRes = co_await dbClient->execSqlCoro(timeSql, partnerId, periodStart);
+
+    Json::Value engagementOverTime = Json::arrayValue;
+    for (const auto &row : timeRes) {
+      Json::Value item;
+      item["date"] = row["read_date"].as<std::string>();
+      item["readsCount"] = (Json::UInt64)row["read_count"].as<long>();
+      engagementOverTime.append(item);
+    }
+
+    // 2. Top Publications
+    std::string topPubsSql =
+        "SELECT p.title, COUNT(pr.id) as read_count "
+        "FROM publication_reads pr "
+        "JOIN publications p ON pr.publication_id = p.id "
+        "WHERE pr.partner_id = $1 AND pr.read_at >= $2 "
+        "GROUP BY p.title ORDER BY read_count DESC LIMIT 5";
+    auto topRes = co_await dbClient->execSqlCoro(topPubsSql, partnerId, periodStart);
+
+    // Total reads in period for % calculation
+    long totalReads = 0;
+    for (const auto &row : topRes) totalReads += row["read_count"].as<long>();
+
+    Json::Value topPublications = Json::arrayValue;
+    for (const auto &row : topRes) {
+      Json::Value item;
+      item["title"] = row["title"].as<std::string>();
+      long reads = row["read_count"].as<long>();
+      item["reads"] = (Json::UInt64)reads;
+      item["percentage"] = totalReads > 0 ? (int)((double)reads / totalReads * 100) : 0;
+      topPublications.append(item);
+    }
+
+    gnp::dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Analytics charts retrieved successfully";
+
+    Json::Value result;
+    result["engagementOverTime"] = engagementOverTime;
+    result["topPublications"] = topPublications;
+
+    response.result = result;
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to retrieve analytics charts";
     errorResponse.error["code"] = constants::ERR_DB_QUERY;
     errorResponse.error["detail"] = e.base().what();
     co_return errorResponse;

@@ -20,6 +20,7 @@ file(GLOB AFFILIATE_SVC "../services/affiliates/*.cc")
 file(GLOB INGESTION_JOB_SVC "../services/ingestion_jobs/*.cc")
 file(GLOB SUB_PLAN_SVC "../services/subscription_plans/*.cc")
 file(GLOB PARTNER_SVC "../services/partners/*.cc")
+file(GLOB COUPON_SVC "../services/coupons/*.cc")
 file(GLOB MEDIA_SVC "../services/media/*.cc")
 file(GLOB UTILS_SVC "../utils/*.cc")
 
@@ -44,6 +45,7 @@ add_executable(${PROJECT_NAME} test_main.cc
     ${INGESTION_JOB_SVC}
     ${PAYMENT_SVC}
     ${MEDIA_SVC}
+    ${COUPON_SVC}
     ${PARTNER_SVC}
     ${UTILS_SVC}
 )

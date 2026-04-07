@@ -24,7 +24,8 @@ namespace gnp::dto {
         [[nodiscard]] const std::string& getUsername() const { return user_name_; }
         [[nodiscard]] const std::string& getDiscount() const { return discount_; }
         [[nodiscard]] const std::string& getValidTill() const { return valid_till_; }
-        [[nodiscard]] int getUsageQuota() const { return usage_count_; }
+        [[nodiscard]] const std::string& getDescription() const { return description; }
+        [[nodiscard]] int getUsageQuota() const { return usage_quota_; }
         [[nodiscard]] bool getDiscountAsPercentage() const { return discount_as_percentage_; }
 
 
@@ -35,8 +36,9 @@ namespace gnp::dto {
         void setUsername(const std::string& value) { user_name_ = value; }
         void setDiscount(const std::string& value) { discount_ = value; }
         void setValidTill(const std::string& value) { valid_till_ = value; }
-        void setUsageQuota(int value) { usage_count_ = value; }
-        void setDiscountAsPercentage(bool value) { discount_as_percentage_ = value; }
+        void setDescription(const std::string& value) { description = value; }
+        void setUsageQuota(const int value) { usage_quota_ = value; }
+        void setDiscountAsPercentage(const bool value) { discount_as_percentage_ = value; }
 
 
     private:
@@ -47,8 +49,8 @@ namespace gnp::dto {
         std::string user_name_;
         std::string discount_;
         std::string valid_till_;
+        std::string description;
         int usage_quota_ = 0;
-        int usage_count_ = 0;
         bool discount_as_percentage_ = false;
 
     };
@@ -63,12 +65,12 @@ namespace gnp::dto {
             code_ = json["code"].asString();
         }
 
-        if (json.isMember("contactName") && !json["contactName"].isNull()) {
-            user_id_ = json["contactName"].asString();
+        if (json.isMember("userId") && !json["userId"].isNull()) {
+            user_id_ = json["userId"].asString();
         }
 
-        if (json.isMember("contactEmail") && !json["contactEmail"].isNull()) {
-            user_name_ = json["contactEmail"].asString();
+        if (json.isMember("username") && !json["username"].isNull()) {
+            user_name_ = json["username"].asString();
         }
 
         if (json.isMember("discount") && !json["discount"].isNull()) {
@@ -79,10 +81,13 @@ namespace gnp::dto {
             valid_till_ = json["validTill"].asString();
         }
 
+        if (json.isMember("description") && !json["description"].isNull()) {
+            description = json["description"].asString();
+        }
+
         if (json.isMember("usageQuota") && !json["usageQuota"].isNull()) {
             usage_quota_ = json["usageQuota"].asInt();
         }
-
 
         if (json.isMember("discountAsPercentage") && !json["discountAsPercentage"].isNull()) {
             discount_as_percentage_ = json["discountAsPercentage"].asBool();
