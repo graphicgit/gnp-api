@@ -20,6 +20,7 @@
 #include "utils/IdGeneratorUtils.h"
 #include "utils/PasswordUtils.h"
 #include <drogon/orm/CoroMapper.h>
+#include <cmath>
 
 using namespace drogon::orm;
 
