@@ -17,6 +17,7 @@ const std::string Coupons::Cols::_id = "\"id\"";
 const std::string Coupons::Cols::_code = "\"code\"";
 const std::string Coupons::Cols::_user_id = "\"user_id\"";
 const std::string Coupons::Cols::_username = "\"username\"";
+const std::string Coupons::Cols::_description = "\"description\"";
 const std::string Coupons::Cols::_discount = "\"discount\"";
 const std::string Coupons::Cols::_discount_as_percentage = "\"discount_as_percentage\"";
 const std::string Coupons::Cols::_valid_till = "\"valid_till\"";
@@ -34,6 +35,7 @@ const std::vector<typename Coupons::MetaData> Coupons::metaData_={
 {"code","std::string","character varying",20,0,0,1},
 {"user_id","std::string","uuid",0,0,0,0},
 {"username","std::string","character varying",150,0,0,0},
+{"description","std::string","character varying",250,0,0,0},
 {"discount","std::string","numeric",0,0,0,1},
 {"discount_as_percentage","bool","boolean",1,0,0,1},
 {"valid_till","::trantor::Date","timestamp without time zone",0,0,0,0},
@@ -67,6 +69,10 @@ Coupons::Coupons(const Row &r, const ssize_t indexOffset) noexcept
         if(!r["username"].isNull())
         {
             username_=std::make_shared<std::string>(r["username"].as<std::string>());
+        }
+        if(!r["description"].isNull())
+        {
+            description_=std::make_shared<std::string>(r["description"].as<std::string>());
         }
         if(!r["discount"].isNull())
         {
@@ -158,7 +164,7 @@ Coupons::Coupons(const Row &r, const ssize_t indexOffset) noexcept
     else
     {
         size_t offset = (size_t)indexOffset;
-        if(offset + 12 > r.size())
+        if(offset + 13 > r.size())
         {
             LOG_FATAL << "Invalid SQL result for this model";
             return;
@@ -187,14 +193,19 @@ Coupons::Coupons(const Row &r, const ssize_t indexOffset) noexcept
         index = offset + 4;
         if(!r[index].isNull())
         {
-            discount_=std::make_shared<std::string>(r[index].as<std::string>());
+            description_=std::make_shared<std::string>(r[index].as<std::string>());
         }
         index = offset + 5;
         if(!r[index].isNull())
         {
-            discountAsPercentage_=std::make_shared<bool>(r[index].as<bool>());
+            discount_=std::make_shared<std::string>(r[index].as<std::string>());
         }
         index = offset + 6;
+        if(!r[index].isNull())
+        {
+            discountAsPercentage_=std::make_shared<bool>(r[index].as<bool>());
+        }
+        index = offset + 7;
         if(!r[index].isNull())
         {
             auto timeStr = r[index].as<std::string>();
@@ -217,22 +228,22 @@ Coupons::Coupons(const Row &r, const ssize_t indexOffset) noexcept
                 validTill_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
-        index = offset + 7;
+        index = offset + 8;
         if(!r[index].isNull())
         {
             usageQuota_=std::make_shared<int32_t>(r[index].as<int32_t>());
         }
-        index = offset + 8;
+        index = offset + 9;
         if(!r[index].isNull())
         {
             usageCount_=std::make_shared<int32_t>(r[index].as<int32_t>());
         }
-        index = offset + 9;
+        index = offset + 10;
         if(!r[index].isNull())
         {
             status_=std::make_shared<std::string>(r[index].as<std::string>());
         }
-        index = offset + 10;
+        index = offset + 11;
         if(!r[index].isNull())
         {
             auto timeStr = r[index].as<std::string>();
@@ -255,7 +266,7 @@ Coupons::Coupons(const Row &r, const ssize_t indexOffset) noexcept
                 createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
-        index = offset + 11;
+        index = offset + 12;
         if(!r[index].isNull())
         {
             auto timeStr = r[index].as<std::string>();
@@ -284,7 +295,7 @@ Coupons::Coupons(const Row &r, const ssize_t indexOffset) noexcept
 
 Coupons::Coupons(const Json::Value &pJson, const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 12)
+    if(pMasqueradingVector.size() != 13)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -326,7 +337,7 @@ Coupons::Coupons(const Json::Value &pJson, const std::vector<std::string> &pMasq
         dirtyFlag_[4] = true;
         if(!pJson[pMasqueradingVector[4]].isNull())
         {
-            discount_=std::make_shared<std::string>(pJson[pMasqueradingVector[4]].asString());
+            description_=std::make_shared<std::string>(pJson[pMasqueradingVector[4]].asString());
         }
     }
     if(!pMasqueradingVector[5].empty() && pJson.isMember(pMasqueradingVector[5]))
@@ -334,7 +345,7 @@ Coupons::Coupons(const Json::Value &pJson, const std::vector<std::string> &pMasq
         dirtyFlag_[5] = true;
         if(!pJson[pMasqueradingVector[5]].isNull())
         {
-            discountAsPercentage_=std::make_shared<bool>(pJson[pMasqueradingVector[5]].asBool());
+            discount_=std::make_shared<std::string>(pJson[pMasqueradingVector[5]].asString());
         }
     }
     if(!pMasqueradingVector[6].empty() && pJson.isMember(pMasqueradingVector[6]))
@@ -342,7 +353,15 @@ Coupons::Coupons(const Json::Value &pJson, const std::vector<std::string> &pMasq
         dirtyFlag_[6] = true;
         if(!pJson[pMasqueradingVector[6]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[6]].asString();
+            discountAsPercentage_=std::make_shared<bool>(pJson[pMasqueradingVector[6]].asBool());
+        }
+    }
+    if(!pMasqueradingVector[7].empty() && pJson.isMember(pMasqueradingVector[7]))
+    {
+        dirtyFlag_[7] = true;
+        if(!pJson[pMasqueradingVector[7]].isNull())
+        {
+            auto timeStr = pJson[pMasqueradingVector[7]].asString();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -363,20 +382,12 @@ Coupons::Coupons(const Json::Value &pJson, const std::vector<std::string> &pMasq
             }
         }
     }
-    if(!pMasqueradingVector[7].empty() && pJson.isMember(pMasqueradingVector[7]))
-    {
-        dirtyFlag_[7] = true;
-        if(!pJson[pMasqueradingVector[7]].isNull())
-        {
-            usageQuota_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[7]].asInt64());
-        }
-    }
     if(!pMasqueradingVector[8].empty() && pJson.isMember(pMasqueradingVector[8]))
     {
         dirtyFlag_[8] = true;
         if(!pJson[pMasqueradingVector[8]].isNull())
         {
-            usageCount_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[8]].asInt64());
+            usageQuota_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[8]].asInt64());
         }
     }
     if(!pMasqueradingVector[9].empty() && pJson.isMember(pMasqueradingVector[9]))
@@ -384,7 +395,7 @@ Coupons::Coupons(const Json::Value &pJson, const std::vector<std::string> &pMasq
         dirtyFlag_[9] = true;
         if(!pJson[pMasqueradingVector[9]].isNull())
         {
-            status_=std::make_shared<std::string>(pJson[pMasqueradingVector[9]].asString());
+            usageCount_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[9]].asInt64());
         }
     }
     if(!pMasqueradingVector[10].empty() && pJson.isMember(pMasqueradingVector[10]))
@@ -392,7 +403,15 @@ Coupons::Coupons(const Json::Value &pJson, const std::vector<std::string> &pMasq
         dirtyFlag_[10] = true;
         if(!pJson[pMasqueradingVector[10]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[10]].asString();
+            status_=std::make_shared<std::string>(pJson[pMasqueradingVector[10]].asString());
+        }
+    }
+    if(!pMasqueradingVector[11].empty() && pJson.isMember(pMasqueradingVector[11]))
+    {
+        dirtyFlag_[11] = true;
+        if(!pJson[pMasqueradingVector[11]].isNull())
+        {
+            auto timeStr = pJson[pMasqueradingVector[11]].asString();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -413,12 +432,12 @@ Coupons::Coupons(const Json::Value &pJson, const std::vector<std::string> &pMasq
             }
         }
     }
-    if(!pMasqueradingVector[11].empty() && pJson.isMember(pMasqueradingVector[11]))
+    if(!pMasqueradingVector[12].empty() && pJson.isMember(pMasqueradingVector[12]))
     {
-        dirtyFlag_[11] = true;
-        if(!pJson[pMasqueradingVector[11]].isNull())
+        dirtyFlag_[12] = true;
+        if(!pJson[pMasqueradingVector[12]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[11]].asString();
+            auto timeStr = pJson[pMasqueradingVector[12]].asString();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -475,9 +494,17 @@ Coupons::Coupons(const Json::Value &pJson) noexcept(false)
             username_=std::make_shared<std::string>(pJson["username"].asString());
         }
     }
-    if(pJson.isMember("discount"))
+    if(pJson.isMember("description"))
     {
         dirtyFlag_[4]=true;
+        if(!pJson["description"].isNull())
+        {
+            description_=std::make_shared<std::string>(pJson["description"].asString());
+        }
+    }
+    if(pJson.isMember("discount"))
+    {
+        dirtyFlag_[5]=true;
         if(!pJson["discount"].isNull())
         {
             discount_=std::make_shared<std::string>(pJson["discount"].asString());
@@ -485,7 +512,7 @@ Coupons::Coupons(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("discount_as_percentage"))
     {
-        dirtyFlag_[5]=true;
+        dirtyFlag_[6]=true;
         if(!pJson["discount_as_percentage"].isNull())
         {
             discountAsPercentage_=std::make_shared<bool>(pJson["discount_as_percentage"].asBool());
@@ -493,7 +520,7 @@ Coupons::Coupons(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("valid_till"))
     {
-        dirtyFlag_[6]=true;
+        dirtyFlag_[7]=true;
         if(!pJson["valid_till"].isNull())
         {
             auto timeStr = pJson["valid_till"].asString();
@@ -519,7 +546,7 @@ Coupons::Coupons(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("usage_quota"))
     {
-        dirtyFlag_[7]=true;
+        dirtyFlag_[8]=true;
         if(!pJson["usage_quota"].isNull())
         {
             usageQuota_=std::make_shared<int32_t>((int32_t)pJson["usage_quota"].asInt64());
@@ -527,7 +554,7 @@ Coupons::Coupons(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("usage_count"))
     {
-        dirtyFlag_[8]=true;
+        dirtyFlag_[9]=true;
         if(!pJson["usage_count"].isNull())
         {
             usageCount_=std::make_shared<int32_t>((int32_t)pJson["usage_count"].asInt64());
@@ -535,7 +562,7 @@ Coupons::Coupons(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("status"))
     {
-        dirtyFlag_[9]=true;
+        dirtyFlag_[10]=true;
         if(!pJson["status"].isNull())
         {
             status_=std::make_shared<std::string>(pJson["status"].asString());
@@ -543,7 +570,7 @@ Coupons::Coupons(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("created_at"))
     {
-        dirtyFlag_[10]=true;
+        dirtyFlag_[11]=true;
         if(!pJson["created_at"].isNull())
         {
             auto timeStr = pJson["created_at"].asString();
@@ -569,7 +596,7 @@ Coupons::Coupons(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("updated_at"))
     {
-        dirtyFlag_[11]=true;
+        dirtyFlag_[12]=true;
         if(!pJson["updated_at"].isNull())
         {
             auto timeStr = pJson["updated_at"].asString();
@@ -598,7 +625,7 @@ Coupons::Coupons(const Json::Value &pJson) noexcept(false)
 void Coupons::updateByMasqueradedJson(const Json::Value &pJson,
                                             const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 12)
+    if(pMasqueradingVector.size() != 13)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -639,7 +666,7 @@ void Coupons::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[4] = true;
         if(!pJson[pMasqueradingVector[4]].isNull())
         {
-            discount_=std::make_shared<std::string>(pJson[pMasqueradingVector[4]].asString());
+            description_=std::make_shared<std::string>(pJson[pMasqueradingVector[4]].asString());
         }
     }
     if(!pMasqueradingVector[5].empty() && pJson.isMember(pMasqueradingVector[5]))
@@ -647,7 +674,7 @@ void Coupons::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[5] = true;
         if(!pJson[pMasqueradingVector[5]].isNull())
         {
-            discountAsPercentage_=std::make_shared<bool>(pJson[pMasqueradingVector[5]].asBool());
+            discount_=std::make_shared<std::string>(pJson[pMasqueradingVector[5]].asString());
         }
     }
     if(!pMasqueradingVector[6].empty() && pJson.isMember(pMasqueradingVector[6]))
@@ -655,7 +682,15 @@ void Coupons::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[6] = true;
         if(!pJson[pMasqueradingVector[6]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[6]].asString();
+            discountAsPercentage_=std::make_shared<bool>(pJson[pMasqueradingVector[6]].asBool());
+        }
+    }
+    if(!pMasqueradingVector[7].empty() && pJson.isMember(pMasqueradingVector[7]))
+    {
+        dirtyFlag_[7] = true;
+        if(!pJson[pMasqueradingVector[7]].isNull())
+        {
+            auto timeStr = pJson[pMasqueradingVector[7]].asString();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -676,20 +711,12 @@ void Coupons::updateByMasqueradedJson(const Json::Value &pJson,
             }
         }
     }
-    if(!pMasqueradingVector[7].empty() && pJson.isMember(pMasqueradingVector[7]))
-    {
-        dirtyFlag_[7] = true;
-        if(!pJson[pMasqueradingVector[7]].isNull())
-        {
-            usageQuota_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[7]].asInt64());
-        }
-    }
     if(!pMasqueradingVector[8].empty() && pJson.isMember(pMasqueradingVector[8]))
     {
         dirtyFlag_[8] = true;
         if(!pJson[pMasqueradingVector[8]].isNull())
         {
-            usageCount_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[8]].asInt64());
+            usageQuota_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[8]].asInt64());
         }
     }
     if(!pMasqueradingVector[9].empty() && pJson.isMember(pMasqueradingVector[9]))
@@ -697,7 +724,7 @@ void Coupons::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[9] = true;
         if(!pJson[pMasqueradingVector[9]].isNull())
         {
-            status_=std::make_shared<std::string>(pJson[pMasqueradingVector[9]].asString());
+            usageCount_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[9]].asInt64());
         }
     }
     if(!pMasqueradingVector[10].empty() && pJson.isMember(pMasqueradingVector[10]))
@@ -705,7 +732,15 @@ void Coupons::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[10] = true;
         if(!pJson[pMasqueradingVector[10]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[10]].asString();
+            status_=std::make_shared<std::string>(pJson[pMasqueradingVector[10]].asString());
+        }
+    }
+    if(!pMasqueradingVector[11].empty() && pJson.isMember(pMasqueradingVector[11]))
+    {
+        dirtyFlag_[11] = true;
+        if(!pJson[pMasqueradingVector[11]].isNull())
+        {
+            auto timeStr = pJson[pMasqueradingVector[11]].asString();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -726,12 +761,12 @@ void Coupons::updateByMasqueradedJson(const Json::Value &pJson,
             }
         }
     }
-    if(!pMasqueradingVector[11].empty() && pJson.isMember(pMasqueradingVector[11]))
+    if(!pMasqueradingVector[12].empty() && pJson.isMember(pMasqueradingVector[12]))
     {
-        dirtyFlag_[11] = true;
-        if(!pJson[pMasqueradingVector[11]].isNull())
+        dirtyFlag_[12] = true;
+        if(!pJson[pMasqueradingVector[12]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[11]].asString();
+            auto timeStr = pJson[pMasqueradingVector[12]].asString();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -787,9 +822,17 @@ void Coupons::updateByJson(const Json::Value &pJson) noexcept(false)
             username_=std::make_shared<std::string>(pJson["username"].asString());
         }
     }
-    if(pJson.isMember("discount"))
+    if(pJson.isMember("description"))
     {
         dirtyFlag_[4] = true;
+        if(!pJson["description"].isNull())
+        {
+            description_=std::make_shared<std::string>(pJson["description"].asString());
+        }
+    }
+    if(pJson.isMember("discount"))
+    {
+        dirtyFlag_[5] = true;
         if(!pJson["discount"].isNull())
         {
             discount_=std::make_shared<std::string>(pJson["discount"].asString());
@@ -797,7 +840,7 @@ void Coupons::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("discount_as_percentage"))
     {
-        dirtyFlag_[5] = true;
+        dirtyFlag_[6] = true;
         if(!pJson["discount_as_percentage"].isNull())
         {
             discountAsPercentage_=std::make_shared<bool>(pJson["discount_as_percentage"].asBool());
@@ -805,7 +848,7 @@ void Coupons::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("valid_till"))
     {
-        dirtyFlag_[6] = true;
+        dirtyFlag_[7] = true;
         if(!pJson["valid_till"].isNull())
         {
             auto timeStr = pJson["valid_till"].asString();
@@ -831,7 +874,7 @@ void Coupons::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("usage_quota"))
     {
-        dirtyFlag_[7] = true;
+        dirtyFlag_[8] = true;
         if(!pJson["usage_quota"].isNull())
         {
             usageQuota_=std::make_shared<int32_t>((int32_t)pJson["usage_quota"].asInt64());
@@ -839,7 +882,7 @@ void Coupons::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("usage_count"))
     {
-        dirtyFlag_[8] = true;
+        dirtyFlag_[9] = true;
         if(!pJson["usage_count"].isNull())
         {
             usageCount_=std::make_shared<int32_t>((int32_t)pJson["usage_count"].asInt64());
@@ -847,7 +890,7 @@ void Coupons::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("status"))
     {
-        dirtyFlag_[9] = true;
+        dirtyFlag_[10] = true;
         if(!pJson["status"].isNull())
         {
             status_=std::make_shared<std::string>(pJson["status"].asString());
@@ -855,7 +898,7 @@ void Coupons::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("created_at"))
     {
-        dirtyFlag_[10] = true;
+        dirtyFlag_[11] = true;
         if(!pJson["created_at"].isNull())
         {
             auto timeStr = pJson["created_at"].asString();
@@ -881,7 +924,7 @@ void Coupons::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("updated_at"))
     {
-        dirtyFlag_[11] = true;
+        dirtyFlag_[12] = true;
         if(!pJson["updated_at"].isNull())
         {
             auto timeStr = pJson["updated_at"].asString();
@@ -1010,6 +1053,33 @@ void Coupons::setUsernameToNull() noexcept
     dirtyFlag_[3] = true;
 }
 
+const std::string &Coupons::getValueOfDescription() const noexcept
+{
+    static const std::string defaultValue = std::string();
+    if(description_)
+        return *description_;
+    return defaultValue;
+}
+const std::shared_ptr<std::string> &Coupons::getDescription() const noexcept
+{
+    return description_;
+}
+void Coupons::setDescription(const std::string &pDescription) noexcept
+{
+    description_ = std::make_shared<std::string>(pDescription);
+    dirtyFlag_[4] = true;
+}
+void Coupons::setDescription(std::string &&pDescription) noexcept
+{
+    description_ = std::make_shared<std::string>(std::move(pDescription));
+    dirtyFlag_[4] = true;
+}
+void Coupons::setDescriptionToNull() noexcept
+{
+    description_.reset();
+    dirtyFlag_[4] = true;
+}
+
 const std::string &Coupons::getValueOfDiscount() const noexcept
 {
     static const std::string defaultValue = std::string();
@@ -1024,12 +1094,12 @@ const std::shared_ptr<std::string> &Coupons::getDiscount() const noexcept
 void Coupons::setDiscount(const std::string &pDiscount) noexcept
 {
     discount_ = std::make_shared<std::string>(pDiscount);
-    dirtyFlag_[4] = true;
+    dirtyFlag_[5] = true;
 }
 void Coupons::setDiscount(std::string &&pDiscount) noexcept
 {
     discount_ = std::make_shared<std::string>(std::move(pDiscount));
-    dirtyFlag_[4] = true;
+    dirtyFlag_[5] = true;
 }
 
 const bool &Coupons::getValueOfDiscountAsPercentage() const noexcept
@@ -1046,7 +1116,7 @@ const std::shared_ptr<bool> &Coupons::getDiscountAsPercentage() const noexcept
 void Coupons::setDiscountAsPercentage(const bool &pDiscountAsPercentage) noexcept
 {
     discountAsPercentage_ = std::make_shared<bool>(pDiscountAsPercentage);
-    dirtyFlag_[5] = true;
+    dirtyFlag_[6] = true;
 }
 
 const ::trantor::Date &Coupons::getValueOfValidTill() const noexcept
@@ -1063,12 +1133,12 @@ const std::shared_ptr<::trantor::Date> &Coupons::getValidTill() const noexcept
 void Coupons::setValidTill(const ::trantor::Date &pValidTill) noexcept
 {
     validTill_ = std::make_shared<::trantor::Date>(pValidTill);
-    dirtyFlag_[6] = true;
+    dirtyFlag_[7] = true;
 }
 void Coupons::setValidTillToNull() noexcept
 {
     validTill_.reset();
-    dirtyFlag_[6] = true;
+    dirtyFlag_[7] = true;
 }
 
 const int32_t &Coupons::getValueOfUsageQuota() const noexcept
@@ -1085,7 +1155,7 @@ const std::shared_ptr<int32_t> &Coupons::getUsageQuota() const noexcept
 void Coupons::setUsageQuota(const int32_t &pUsageQuota) noexcept
 {
     usageQuota_ = std::make_shared<int32_t>(pUsageQuota);
-    dirtyFlag_[7] = true;
+    dirtyFlag_[8] = true;
 }
 
 const int32_t &Coupons::getValueOfUsageCount() const noexcept
@@ -1102,7 +1172,7 @@ const std::shared_ptr<int32_t> &Coupons::getUsageCount() const noexcept
 void Coupons::setUsageCount(const int32_t &pUsageCount) noexcept
 {
     usageCount_ = std::make_shared<int32_t>(pUsageCount);
-    dirtyFlag_[8] = true;
+    dirtyFlag_[9] = true;
 }
 
 const std::string &Coupons::getValueOfStatus() const noexcept
@@ -1119,17 +1189,17 @@ const std::shared_ptr<std::string> &Coupons::getStatus() const noexcept
 void Coupons::setStatus(const std::string &pStatus) noexcept
 {
     status_ = std::make_shared<std::string>(pStatus);
-    dirtyFlag_[9] = true;
+    dirtyFlag_[10] = true;
 }
 void Coupons::setStatus(std::string &&pStatus) noexcept
 {
     status_ = std::make_shared<std::string>(std::move(pStatus));
-    dirtyFlag_[9] = true;
+    dirtyFlag_[10] = true;
 }
 void Coupons::setStatusToNull() noexcept
 {
     status_.reset();
-    dirtyFlag_[9] = true;
+    dirtyFlag_[10] = true;
 }
 
 const ::trantor::Date &Coupons::getValueOfCreatedAt() const noexcept
@@ -1146,7 +1216,7 @@ const std::shared_ptr<::trantor::Date> &Coupons::getCreatedAt() const noexcept
 void Coupons::setCreatedAt(const ::trantor::Date &pCreatedAt) noexcept
 {
     createdAt_ = std::make_shared<::trantor::Date>(pCreatedAt);
-    dirtyFlag_[10] = true;
+    dirtyFlag_[11] = true;
 }
 
 const ::trantor::Date &Coupons::getValueOfUpdatedAt() const noexcept
@@ -1163,12 +1233,12 @@ const std::shared_ptr<::trantor::Date> &Coupons::getUpdatedAt() const noexcept
 void Coupons::setUpdatedAt(const ::trantor::Date &pUpdatedAt) noexcept
 {
     updatedAt_ = std::make_shared<::trantor::Date>(pUpdatedAt);
-    dirtyFlag_[11] = true;
+    dirtyFlag_[12] = true;
 }
 void Coupons::setUpdatedAtToNull() noexcept
 {
     updatedAt_.reset();
-    dirtyFlag_[11] = true;
+    dirtyFlag_[12] = true;
 }
 
 void Coupons::updateId(const uint64_t id)
@@ -1182,6 +1252,7 @@ const std::vector<std::string> &Coupons::insertColumns() noexcept
         "code",
         "user_id",
         "username",
+        "description",
         "discount",
         "discount_as_percentage",
         "valid_till",
@@ -1242,6 +1313,17 @@ void Coupons::outputArgs(drogon::orm::internal::SqlBinder &binder) const
     }
     if(dirtyFlag_[4])
     {
+        if(getDescription())
+        {
+            binder << getValueOfDescription();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[5])
+    {
         if(getDiscount())
         {
             binder << getValueOfDiscount();
@@ -1251,7 +1333,7 @@ void Coupons::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[5])
+    if(dirtyFlag_[6])
     {
         if(getDiscountAsPercentage())
         {
@@ -1262,7 +1344,7 @@ void Coupons::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[6])
+    if(dirtyFlag_[7])
     {
         if(getValidTill())
         {
@@ -1273,7 +1355,7 @@ void Coupons::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[7])
+    if(dirtyFlag_[8])
     {
         if(getUsageQuota())
         {
@@ -1284,7 +1366,7 @@ void Coupons::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[8])
+    if(dirtyFlag_[9])
     {
         if(getUsageCount())
         {
@@ -1295,7 +1377,7 @@ void Coupons::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[9])
+    if(dirtyFlag_[10])
     {
         if(getStatus())
         {
@@ -1306,7 +1388,7 @@ void Coupons::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[10])
+    if(dirtyFlag_[11])
     {
         if(getCreatedAt())
         {
@@ -1317,7 +1399,7 @@ void Coupons::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[11])
+    if(dirtyFlag_[12])
     {
         if(getUpdatedAt())
         {
@@ -1381,6 +1463,10 @@ const std::vector<std::string> Coupons::updateColumns() const
     {
         ret.push_back(getColumnName(11));
     }
+    if(dirtyFlag_[12])
+    {
+        ret.push_back(getColumnName(12));
+    }
     return ret;
 }
 
@@ -1432,6 +1518,17 @@ void Coupons::updateArgs(drogon::orm::internal::SqlBinder &binder) const
     }
     if(dirtyFlag_[4])
     {
+        if(getDescription())
+        {
+            binder << getValueOfDescription();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[5])
+    {
         if(getDiscount())
         {
             binder << getValueOfDiscount();
@@ -1441,7 +1538,7 @@ void Coupons::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[5])
+    if(dirtyFlag_[6])
     {
         if(getDiscountAsPercentage())
         {
@@ -1452,7 +1549,7 @@ void Coupons::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[6])
+    if(dirtyFlag_[7])
     {
         if(getValidTill())
         {
@@ -1463,7 +1560,7 @@ void Coupons::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[7])
+    if(dirtyFlag_[8])
     {
         if(getUsageQuota())
         {
@@ -1474,7 +1571,7 @@ void Coupons::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[8])
+    if(dirtyFlag_[9])
     {
         if(getUsageCount())
         {
@@ -1485,7 +1582,7 @@ void Coupons::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[9])
+    if(dirtyFlag_[10])
     {
         if(getStatus())
         {
@@ -1496,7 +1593,7 @@ void Coupons::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[10])
+    if(dirtyFlag_[11])
     {
         if(getCreatedAt())
         {
@@ -1507,7 +1604,7 @@ void Coupons::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[11])
+    if(dirtyFlag_[12])
     {
         if(getUpdatedAt())
         {
@@ -1553,6 +1650,14 @@ Json::Value Coupons::toJson() const
     else
     {
         ret["username"]=Json::Value();
+    }
+    if(getDescription())
+    {
+        ret["description"]=getValueOfDescription();
+    }
+    else
+    {
+        ret["description"]=Json::Value();
     }
     if(getDiscount())
     {
@@ -1630,7 +1735,7 @@ Json::Value Coupons::toMasqueradedJson(
     const std::vector<std::string> &pMasqueradingVector) const
 {
     Json::Value ret;
-    if(pMasqueradingVector.size() == 12)
+    if(pMasqueradingVector.size() == 13)
     {
         if(!pMasqueradingVector[0].empty())
         {
@@ -1678,9 +1783,9 @@ Json::Value Coupons::toMasqueradedJson(
         }
         if(!pMasqueradingVector[4].empty())
         {
-            if(getDiscount())
+            if(getDescription())
             {
-                ret[pMasqueradingVector[4]]=getValueOfDiscount();
+                ret[pMasqueradingVector[4]]=getValueOfDescription();
             }
             else
             {
@@ -1689,9 +1794,9 @@ Json::Value Coupons::toMasqueradedJson(
         }
         if(!pMasqueradingVector[5].empty())
         {
-            if(getDiscountAsPercentage())
+            if(getDiscount())
             {
-                ret[pMasqueradingVector[5]]=getValueOfDiscountAsPercentage();
+                ret[pMasqueradingVector[5]]=getValueOfDiscount();
             }
             else
             {
@@ -1700,9 +1805,9 @@ Json::Value Coupons::toMasqueradedJson(
         }
         if(!pMasqueradingVector[6].empty())
         {
-            if(getValidTill())
+            if(getDiscountAsPercentage())
             {
-                ret[pMasqueradingVector[6]]=getValidTill()->toDbStringLocal();
+                ret[pMasqueradingVector[6]]=getValueOfDiscountAsPercentage();
             }
             else
             {
@@ -1711,9 +1816,9 @@ Json::Value Coupons::toMasqueradedJson(
         }
         if(!pMasqueradingVector[7].empty())
         {
-            if(getUsageQuota())
+            if(getValidTill())
             {
-                ret[pMasqueradingVector[7]]=getValueOfUsageQuota();
+                ret[pMasqueradingVector[7]]=getValidTill()->toDbStringLocal();
             }
             else
             {
@@ -1722,9 +1827,9 @@ Json::Value Coupons::toMasqueradedJson(
         }
         if(!pMasqueradingVector[8].empty())
         {
-            if(getUsageCount())
+            if(getUsageQuota())
             {
-                ret[pMasqueradingVector[8]]=getValueOfUsageCount();
+                ret[pMasqueradingVector[8]]=getValueOfUsageQuota();
             }
             else
             {
@@ -1733,9 +1838,9 @@ Json::Value Coupons::toMasqueradedJson(
         }
         if(!pMasqueradingVector[9].empty())
         {
-            if(getStatus())
+            if(getUsageCount())
             {
-                ret[pMasqueradingVector[9]]=getValueOfStatus();
+                ret[pMasqueradingVector[9]]=getValueOfUsageCount();
             }
             else
             {
@@ -1744,9 +1849,9 @@ Json::Value Coupons::toMasqueradedJson(
         }
         if(!pMasqueradingVector[10].empty())
         {
-            if(getCreatedAt())
+            if(getStatus())
             {
-                ret[pMasqueradingVector[10]]=getCreatedAt()->toDbStringLocal();
+                ret[pMasqueradingVector[10]]=getValueOfStatus();
             }
             else
             {
@@ -1755,13 +1860,24 @@ Json::Value Coupons::toMasqueradedJson(
         }
         if(!pMasqueradingVector[11].empty())
         {
-            if(getUpdatedAt())
+            if(getCreatedAt())
             {
-                ret[pMasqueradingVector[11]]=getUpdatedAt()->toDbStringLocal();
+                ret[pMasqueradingVector[11]]=getCreatedAt()->toDbStringLocal();
             }
             else
             {
                 ret[pMasqueradingVector[11]]=Json::Value();
+            }
+        }
+        if(!pMasqueradingVector[12].empty())
+        {
+            if(getUpdatedAt())
+            {
+                ret[pMasqueradingVector[12]]=getUpdatedAt()->toDbStringLocal();
+            }
+            else
+            {
+                ret[pMasqueradingVector[12]]=Json::Value();
             }
         }
         return ret;
@@ -1798,6 +1914,14 @@ Json::Value Coupons::toMasqueradedJson(
     else
     {
         ret["username"]=Json::Value();
+    }
+    if(getDescription())
+    {
+        ret["description"]=getValueOfDescription();
+    }
+    else
+    {
+        ret["description"]=Json::Value();
     }
     if(getDiscount())
     {
@@ -1893,44 +2017,49 @@ bool Coupons::validateJsonForCreation(const Json::Value &pJson, std::string &err
         if(!validJsonOfField(3, "username", pJson["username"], err, true))
             return false;
     }
+    if(pJson.isMember("description"))
+    {
+        if(!validJsonOfField(4, "description", pJson["description"], err, true))
+            return false;
+    }
     if(pJson.isMember("discount"))
     {
-        if(!validJsonOfField(4, "discount", pJson["discount"], err, true))
+        if(!validJsonOfField(5, "discount", pJson["discount"], err, true))
             return false;
     }
     if(pJson.isMember("discount_as_percentage"))
     {
-        if(!validJsonOfField(5, "discount_as_percentage", pJson["discount_as_percentage"], err, true))
+        if(!validJsonOfField(6, "discount_as_percentage", pJson["discount_as_percentage"], err, true))
             return false;
     }
     if(pJson.isMember("valid_till"))
     {
-        if(!validJsonOfField(6, "valid_till", pJson["valid_till"], err, true))
+        if(!validJsonOfField(7, "valid_till", pJson["valid_till"], err, true))
             return false;
     }
     if(pJson.isMember("usage_quota"))
     {
-        if(!validJsonOfField(7, "usage_quota", pJson["usage_quota"], err, true))
+        if(!validJsonOfField(8, "usage_quota", pJson["usage_quota"], err, true))
             return false;
     }
     if(pJson.isMember("usage_count"))
     {
-        if(!validJsonOfField(8, "usage_count", pJson["usage_count"], err, true))
+        if(!validJsonOfField(9, "usage_count", pJson["usage_count"], err, true))
             return false;
     }
     if(pJson.isMember("status"))
     {
-        if(!validJsonOfField(9, "status", pJson["status"], err, true))
+        if(!validJsonOfField(10, "status", pJson["status"], err, true))
             return false;
     }
     if(pJson.isMember("created_at"))
     {
-        if(!validJsonOfField(10, "created_at", pJson["created_at"], err, true))
+        if(!validJsonOfField(11, "created_at", pJson["created_at"], err, true))
             return false;
     }
     if(pJson.isMember("updated_at"))
     {
-        if(!validJsonOfField(11, "updated_at", pJson["updated_at"], err, true))
+        if(!validJsonOfField(12, "updated_at", pJson["updated_at"], err, true))
             return false;
     }
     return true;
@@ -1939,7 +2068,7 @@ bool Coupons::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                                                  const std::vector<std::string> &pMasqueradingVector,
                                                  std::string &err)
 {
-    if(pMasqueradingVector.size() != 12)
+    if(pMasqueradingVector.size() != 13)
     {
         err = "Bad masquerading vector";
         return false;
@@ -2046,6 +2175,14 @@ bool Coupons::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                   return false;
           }
       }
+      if(!pMasqueradingVector[12].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[12]))
+          {
+              if(!validJsonOfField(12, pMasqueradingVector[12], pJson[pMasqueradingVector[12]], err, true))
+                  return false;
+          }
+      }
     }
     catch(const Json::LogicError &e)
     {
@@ -2081,44 +2218,49 @@ bool Coupons::validateJsonForUpdate(const Json::Value &pJson, std::string &err)
         if(!validJsonOfField(3, "username", pJson["username"], err, false))
             return false;
     }
+    if(pJson.isMember("description"))
+    {
+        if(!validJsonOfField(4, "description", pJson["description"], err, false))
+            return false;
+    }
     if(pJson.isMember("discount"))
     {
-        if(!validJsonOfField(4, "discount", pJson["discount"], err, false))
+        if(!validJsonOfField(5, "discount", pJson["discount"], err, false))
             return false;
     }
     if(pJson.isMember("discount_as_percentage"))
     {
-        if(!validJsonOfField(5, "discount_as_percentage", pJson["discount_as_percentage"], err, false))
+        if(!validJsonOfField(6, "discount_as_percentage", pJson["discount_as_percentage"], err, false))
             return false;
     }
     if(pJson.isMember("valid_till"))
     {
-        if(!validJsonOfField(6, "valid_till", pJson["valid_till"], err, false))
+        if(!validJsonOfField(7, "valid_till", pJson["valid_till"], err, false))
             return false;
     }
     if(pJson.isMember("usage_quota"))
     {
-        if(!validJsonOfField(7, "usage_quota", pJson["usage_quota"], err, false))
+        if(!validJsonOfField(8, "usage_quota", pJson["usage_quota"], err, false))
             return false;
     }
     if(pJson.isMember("usage_count"))
     {
-        if(!validJsonOfField(8, "usage_count", pJson["usage_count"], err, false))
+        if(!validJsonOfField(9, "usage_count", pJson["usage_count"], err, false))
             return false;
     }
     if(pJson.isMember("status"))
     {
-        if(!validJsonOfField(9, "status", pJson["status"], err, false))
+        if(!validJsonOfField(10, "status", pJson["status"], err, false))
             return false;
     }
     if(pJson.isMember("created_at"))
     {
-        if(!validJsonOfField(10, "created_at", pJson["created_at"], err, false))
+        if(!validJsonOfField(11, "created_at", pJson["created_at"], err, false))
             return false;
     }
     if(pJson.isMember("updated_at"))
     {
-        if(!validJsonOfField(11, "updated_at", pJson["updated_at"], err, false))
+        if(!validJsonOfField(12, "updated_at", pJson["updated_at"], err, false))
             return false;
     }
     return true;
@@ -2127,7 +2269,7 @@ bool Coupons::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
                                                const std::vector<std::string> &pMasqueradingVector,
                                                std::string &err)
 {
-    if(pMasqueradingVector.size() != 12)
+    if(pMasqueradingVector.size() != 13)
     {
         err = "Bad masquerading vector";
         return false;
@@ -2196,6 +2338,11 @@ bool Coupons::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
       if(!pMasqueradingVector[11].empty() && pJson.isMember(pMasqueradingVector[11]))
       {
           if(!validJsonOfField(11, pMasqueradingVector[11], pJson[pMasqueradingVector[11]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[12].empty() && pJson.isMember(pMasqueradingVector[12]))
+      {
+          if(!validJsonOfField(12, pMasqueradingVector[12], pJson[pMasqueradingVector[12]], err, false))
               return false;
       }
     }
@@ -2279,6 +2426,25 @@ bool Coupons::validJsonOfField(size_t index,
         case 4:
             if(pJson.isNull())
             {
+                return true;
+            }
+            if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            if(pJson.isString() && std::strlen(pJson.asCString()) > 250)
+            {
+                err="String length exceeds limit for the " +
+                    fieldName +
+                    " field (the maximum value is 250)";
+                return false;
+            }
+
+            break;
+        case 5:
+            if(pJson.isNull())
+            {
                 err="The " + fieldName + " column cannot be null";
                 return false;
             }
@@ -2288,7 +2454,7 @@ bool Coupons::validJsonOfField(size_t index,
                 return false;
             }
             break;
-        case 5:
+        case 6:
             if(pJson.isNull())
             {
                 err="The " + fieldName + " column cannot be null";
@@ -2300,24 +2466,12 @@ bool Coupons::validJsonOfField(size_t index,
                 return false;
             }
             break;
-        case 6:
+        case 7:
             if(pJson.isNull())
             {
                 return true;
             }
             if(!pJson.isString())
-            {
-                err="Type error in the "+fieldName+" field";
-                return false;
-            }
-            break;
-        case 7:
-            if(pJson.isNull())
-            {
-                err="The " + fieldName + " column cannot be null";
-                return false;
-            }
-            if(!pJson.isInt())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;
@@ -2338,6 +2492,18 @@ bool Coupons::validJsonOfField(size_t index,
         case 9:
             if(pJson.isNull())
             {
+                err="The " + fieldName + " column cannot be null";
+                return false;
+            }
+            if(!pJson.isInt())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 10:
+            if(pJson.isNull())
+            {
                 return true;
             }
             if(!pJson.isString())
@@ -2354,7 +2520,7 @@ bool Coupons::validJsonOfField(size_t index,
             }
 
             break;
-        case 10:
+        case 11:
             if(pJson.isNull())
             {
                 err="The " + fieldName + " column cannot be null";
@@ -2366,7 +2532,7 @@ bool Coupons::validJsonOfField(size_t index,
                 return false;
             }
             break;
-        case 11:
+        case 12:
             if(pJson.isNull())
             {
                 return true;

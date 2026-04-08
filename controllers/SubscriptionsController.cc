@@ -1,5 +1,5 @@
 #include "SubscriptionsController.h"
-
+#include <chrono>
 #include "dto/GrantNewsPaperAccessDto.h"
 #include "dto/GuestSubscriptionDto.h"
 #include "plugins/GnpServicePlugin.h"
@@ -48,8 +48,7 @@ void SubscriptionsController::manageGuestSubscription(
       });
 }
 
-Task<HttpResponsePtr>
-SubscriptionsController::manageGuestOneTimeBuy(const HttpRequestPtr req) {
+Task<HttpResponsePtr> SubscriptionsController::manageGuestOneTimeBuy(const HttpRequestPtr req) {
   auto jsonBody = req->getJsonObject();
 
   if (!jsonBody) {
@@ -75,8 +74,7 @@ SubscriptionsController::manageGuestOneTimeBuy(const HttpRequestPtr req) {
   co_return resp;
 }
 
-Task<HttpResponsePtr>
-SubscriptionsController::manageUserOneTimeBuy(const HttpRequestPtr req) {
+Task<HttpResponsePtr> SubscriptionsController::manageUserOneTimeBuy(const HttpRequestPtr req) {
 
   auto newsPaperId = req->getParameter("newsPaperId");
 
@@ -111,8 +109,7 @@ SubscriptionsController::manageUserOneTimeBuy(const HttpRequestPtr req) {
   co_return resp;
 }
 
-Task<HttpResponsePtr>
-SubscriptionsController::fulfillGuestOneTimeBuy(const HttpRequestPtr req) {
+Task<HttpResponsePtr> SubscriptionsController::fulfillGuestOneTimeBuy(const HttpRequestPtr req) {
 
   auto reference = req->getParameter("reference");
 
@@ -136,8 +133,7 @@ SubscriptionsController::fulfillGuestOneTimeBuy(const HttpRequestPtr req) {
   co_return resp;
 }
 
-Task<HttpResponsePtr>
-SubscriptionsController::fulfillUserOneTimeBuy(const HttpRequestPtr req) {
+Task<HttpResponsePtr> SubscriptionsController::fulfillUserOneTimeBuy(const HttpRequestPtr req) {
 
   auto reference = req->getParameter("reference");
 
@@ -188,8 +184,7 @@ Task<HttpResponsePtr> SubscriptionsController::validateNewsPaperEntitlement(
   co_return resp;
 }
 
-Task<HttpResponsePtr>
-SubscriptionsController::getNewsPaperRedactedDetailsViaUniqueId(
+Task<HttpResponsePtr> SubscriptionsController::getNewsPaperRedactedDetailsViaUniqueId(
     const HttpRequestPtr req) {
 
   auto uniqueId = req->getParameter("id");
@@ -246,8 +241,7 @@ void SubscriptionsController::grantNewsPaperAccess(
       });
 }
 
-Task<HttpResponsePtr>
-SubscriptionsController::findNewsPaperByDateAndPublication(
+Task<HttpResponsePtr> SubscriptionsController::findNewsPaperByDateAndPublication(
     const HttpRequestPtr req) {
   auto publicationId = req->getParameter("publicationId");
   auto publicationDate = req->getParameter("publicationDate");
@@ -288,8 +282,50 @@ void SubscriptionsController::renew(
   // write your application logic here
 }
 
-Task<HttpResponsePtr>
-SubscriptionsController::buyCopy(const HttpRequestPtr req) {
+
+Task<HttpResponsePtr> SubscriptionsController::renewSubscriptionViaDirectDebit(const HttpRequestPtr req) {
+
+  //scans the database for subscription
+  // initialize direct direct debit for each of the subscription records: either using actors or rabbit mq consumer or other efficient means in drogon c++
+  // send receipt as sms notification to each user per subscription
+
+  auto now = std::chrono::system_clock::now();
+  auto expiryTime = now + std::chrono::hours(24 * 7);
+
+  // Convert to time_t for formatting
+  auto expiryTimeT = std::chrono::system_clock::to_time_t(expiryTime);
+  std::tm* expiryTm = std::localtime(&expiryTimeT);
+
+  // Format the date as a string (e.g., "04-Mar-2026" or "2026-03-11")
+  char buffer[20];
+  std::strftime(buffer, sizeof(buffer), "%d-%b-%Y", expiryTm);
+  std::string expiryDate = buffer;
+
+  std::string messageContent =
+    "Your subscription has been renewed successfully. "
+    "Package: Daily Graphic (Weekly), Amount: GHS 9.90. "
+    "Valid till:" + expiryDate + ". Thank you! - GNP";
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &hubtelSmsApi = plugin->getHubtelSmsApi();
+  co_await hubtelSmsApi.sendSms("0242573763", messageContent);
+  co_await hubtelSmsApi.sendSms("0242602262", messageContent);
+
+  //schedule on quartz one week ahead
+
+  //sample response
+  gnp::dto::BaseApiResponse response;
+  response.success = false;
+  response.error["message"] = "Subscription Renewal Processed successfully.";
+  auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+  resp->setStatusCode(k200OK);
+  co_return resp;
+
+
+
+}
+
+Task<HttpResponsePtr> SubscriptionsController::buyCopy(const HttpRequestPtr req) {
   auto jsonBody = req->getJsonObject();
 
   if (!jsonBody) {
@@ -325,8 +361,7 @@ SubscriptionsController::buyCopy(const HttpRequestPtr req) {
   co_return resp;
 }
 
-Task<HttpResponsePtr>
-SubscriptionsController::fulfillBuyCopy(const HttpRequestPtr req) {
+Task<HttpResponsePtr> SubscriptionsController::fulfillBuyCopy(const HttpRequestPtr req) {
   auto reference = req->getParameter("reference");
 
   if (reference.empty()) {

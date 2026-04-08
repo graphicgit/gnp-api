@@ -14,16 +14,14 @@ namespace gnp::services {
 class NewspaperService {
 
 public:
-  drogon::Task<gnp::dto::BaseApiResponse>
-  getAllAsync(int pageNo, int pageSize, const std::string &publicationId,
+  drogon::Task<gnp::dto::BaseApiResponse> getAllAsync(int pageNo, int pageSize, const std::string &publicationId,
               const std::string &startDate, const std::string &endDate,
               const std::string &query);
 
-  // void getLatest(const std::function<void(const gnp::dto::BaseApiResponse&)>&
-  // callback);
 
-  // void getRelatedContent(const std::string& newsPaperId, const
-  // std::function<void(const gnp::dto::BaseApiResponse&)>& callback);
+    //drogon::Task<gnp::dto::BaseApiResponse> getRelatedContent(int pageNo, int pageSize);
+
+  drogon::Task<gnp::dto::BaseApiResponse> getLatestNewsPapers(int pageNo, int pageSize);
 
   drogon::Task<gnp::dto::BaseApiResponse> getRedactedDetailsAsync(const std::string &id);
 

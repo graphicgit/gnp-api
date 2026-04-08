@@ -6,8 +6,8 @@
 #include <random>
 #include <sstream>
 
-namespace gnp {
-namespace utils {
+
+namespace gnp::utils {
 
 std::string IdGeneratorUtils::generateGuid() {
   std::random_device rd;
@@ -59,5 +59,5 @@ std::string IdGeneratorUtils::generateAlphanumericId(size_t length) {
   return id;
 }
 
-} // namespace utils
-} // namespace gnp
+} // namespace gnp::utils
+

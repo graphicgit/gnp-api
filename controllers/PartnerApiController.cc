@@ -41,14 +41,67 @@ drogon::Task<HttpResponsePtr> PartnerApiController::onboardSubscriber(HttpReques
 
 }
 
-void PartnerApiController::checkSubscriberStatus(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
-  // write your application logic here
+drogon::Task<HttpResponsePtr> PartnerApiController::checkSubscriberStatus(HttpRequestPtr req) {
+
+  auto clientId = req->getHeader("ClientId");
+  auto clientSecret = req->getHeader("ClientSecret");
+
+  if (clientId.empty() || clientSecret.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Missing required authentication headers";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto phoneNumber = req->getParameter("phoneNumber");
+
+  if (phoneNumber.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Subscriber Phone Number is required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &partnerService = plugin->getCommercialPartnerService();
+
+  auto apiResp = co_await partnerService.checkSubscriberStatus(clientId, clientSecret, phoneNumber);
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+
 }
 
-void PartnerApiController::retrieveSubscriberDetails(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
-  // write your application logic here
+drogon::Task<HttpResponsePtr> PartnerApiController::retrieveSubscriberDetails(HttpRequestPtr req) {
+
+  auto clientId = req->getHeader("ClientId");
+  auto clientSecret = req->getHeader("ClientSecret");
+
+  if (clientId.empty() || clientSecret.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Missing required authentication headers";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto phoneNumber = req->getParameter("phoneNumber");
+
+  if (phoneNumber.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Subscriber Phone Number is required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &partnerService = plugin->getCommercialPartnerService();
+
+  auto apiResp = co_await partnerService.retrieveSubscriberDetails(clientId, clientSecret, phoneNumber);
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }

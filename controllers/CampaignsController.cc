@@ -8,7 +8,6 @@ drogon::Task<HttpResponsePtr> CampaignsController::runScheduledCampaign(const Ht
     auto jsonBody = req->getJsonObject();
 
 
-
     std::string campaignId;
 
     if (jsonBody->isString()) {

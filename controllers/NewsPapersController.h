@@ -12,6 +12,7 @@ public:
     static constexpr const char *PREFIX = "/api/v1/news-papers";
   METHOD_LIST_BEGIN
   ADD_METHOD_TO(NewsPapersController::getAll, std::string(PREFIX) + "/get-all", Get, Options);
+  ADD_METHOD_TO(NewsPapersController::getLatest, std::string(PREFIX) + "/get-latest", Get, Options);
   ADD_METHOD_TO(NewsPapersController::getRedactedDetails, std::string(PREFIX) + "/get-redacted-details", Get, Options);
   ADD_METHOD_TO(NewsPapersController::getFullDetails, std::string(PREFIX) + "/get-full-details", Get);
 
@@ -29,15 +30,16 @@ public:
   METHOD_LIST_END
 
   // handler methods
-  drogon::Task<HttpResponsePtr> getAll(const HttpRequestPtr req);
-  drogon::Task<HttpResponsePtr> getRedactedDetails(const HttpRequestPtr req);
-  drogon::Task<HttpResponsePtr> getFullDetails(const HttpRequestPtr req);
-  drogon::Task<HttpResponsePtr> GetFreeNewsPaperDetailsByPublication(const HttpRequestPtr req);
-  drogon::Task<HttpResponsePtr> GetPaidNewsPaperDetailsByPublication(const HttpRequestPtr req);
-  drogon::Task<HttpResponsePtr> publish(const HttpRequestPtr req);
-  drogon::Task<HttpResponsePtr> unPublish(const HttpRequestPtr req);
-  drogon::Task<HttpResponsePtr> ingestPublication(const HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> getAll(HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> getLatest(HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> getRedactedDetails(HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> getFullDetails(HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> GetFreeNewsPaperDetailsByPublication(HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> GetPaidNewsPaperDetailsByPublication(HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> publish(HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> unPublish(HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> ingestPublication(HttpRequestPtr req);
   void  incrementViewCount(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   void update(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
-  drogon::Task<HttpResponsePtr> deleteNewsPaper(const HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> deleteNewsPaper(HttpRequestPtr req);
 };

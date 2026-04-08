@@ -16,12 +16,9 @@ void EmailService::sendEmail(
   auto &app = drogon::app();
   auto customConfig = app.getCustomConfig();
   std::string host = customConfig["MailConfiguration"]["Host"].asString();
-  std::string userName =
-      customConfig["MailConfiguration"]["UserName"].asString();
-  std::string password =
-      customConfig["MailConfiguration"]["Password"].asString();
-  std::string senderName =
-      customConfig["MailConfiguration"]["SenderName"].asString();
+  std::string userName = customConfig["MailConfiguration"]["UserName"].asString();
+  std::string password = customConfig["MailConfiguration"]["Password"].asString();
+  std::string senderName = customConfig["MailConfiguration"]["SenderName"].asString();
 
   Json::Value jsonBody;
   jsonBody["To"] = dto.getTo();

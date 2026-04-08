@@ -26,65 +26,48 @@ public:
   ADD_METHOD_TO(SubscriptionsController::fulfillUserOneTimeBuy,
                 std::string(PREFIX) + "/fulfill-user-onetime", Get, Options,
                 "JwtAuthFilter");
-  ADD_METHOD_TO(SubscriptionsController::validateNewsPaperEntitlement,
-                std::string(PREFIX) + "/validate-newspaper-entitlement", Get,
+  ADD_METHOD_TO(SubscriptionsController::validateNewsPaperEntitlement, std::string(PREFIX) + "/validate-newspaper-entitlement", Get,
                 Options, "JwtAuthFilter");
-  ADD_METHOD_TO(SubscriptionsController::grantNewsPaperAccess,
-                std::string(PREFIX) + "/grant-newspaper-access", Post, Options);
-  ADD_METHOD_TO(SubscriptionsController::getNewsPaperRedactedDetailsViaUniqueId,
-                std::string(PREFIX) +
-                    "/get-newspaper-redacted-details-via-unique-id",
-                Get, Options, "JwtAuthFilter");
-  ADD_METHOD_TO(SubscriptionsController::findNewsPaperByDateAndPublication,
-                std::string(PREFIX) + "/find-newspaper-by-date", Get, Options,
-                "JwtAuthFilter");
-  ADD_METHOD_TO(SubscriptionsController::buyCopy,
-                std::string(PREFIX) + "/buy-copy", Post, Options,
-                "JwtAuthFilter");
-  ADD_METHOD_TO(SubscriptionsController::fulfillBuyCopy,
-                std::string(PREFIX) + "/fulfill-buy-copy", Get, Options);
-  ADD_METHOD_TO(SubscriptionsController::manageUserSubscription,
-                std::string(PREFIX) + "/user", Post);
-  ADD_METHOD_TO(SubscriptionsController::renew, std::string(PREFIX) + "/renew",
-                Post);
+  ADD_METHOD_TO(SubscriptionsController::grantNewsPaperAccess, std::string(PREFIX) + "/grant-newspaper-access", Post, Options);
+  ADD_METHOD_TO(SubscriptionsController::getNewsPaperRedactedDetailsViaUniqueId, std::string(PREFIX) + "/get-newspaper-redacted-details-via-unique-id", Get, Options, "JwtAuthFilter");
+  ADD_METHOD_TO(SubscriptionsController::findNewsPaperByDateAndPublication, std::string(PREFIX) + "/find-newspaper-by-date", Get, Options, "JwtAuthFilter");
+  ADD_METHOD_TO(SubscriptionsController::buyCopy, std::string(PREFIX) + "/buy-copy", Post, Options, "JwtAuthFilter");
+  ADD_METHOD_TO(SubscriptionsController::fulfillBuyCopy, std::string(PREFIX) + "/fulfill-buy-copy", Get, Options);
+  ADD_METHOD_TO(SubscriptionsController::manageUserSubscription, std::string(PREFIX) + "/user", Post);
+  ADD_METHOD_TO(SubscriptionsController::renew, std::string(PREFIX) + "/renew", Post);
+  ADD_METHOD_TO(SubscriptionsController::renewSubscriptionViaDirectDebit, std::string(PREFIX) + "/renew-subscription-via-direct-debit", Get);
   METHOD_LIST_END
 
   // handler methods
-  void getAll(const HttpRequestPtr &req,
-              std::function<void(const HttpResponsePtr &)> &&callback);
-  void
-  getUserSubscription(const HttpRequestPtr &req,
-                      std::function<void(const HttpResponsePtr &)> &&callback);
-  void manageGuestSubscription(
-      const HttpRequestPtr &req,
-      std::function<void(const HttpResponsePtr &)> &&callback);
+  void getAll(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
 
-  Task<HttpResponsePtr> manageGuestOneTimeBuy(const HttpRequestPtr req);
+  void getUserSubscription(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
 
-  Task<HttpResponsePtr> manageUserOneTimeBuy(const HttpRequestPtr req);
+  void manageGuestSubscription(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
 
-  Task<HttpResponsePtr> fulfillGuestOneTimeBuy(const HttpRequestPtr req);
+  Task<HttpResponsePtr> manageGuestOneTimeBuy(HttpRequestPtr req);
 
-  Task<HttpResponsePtr> fulfillUserOneTimeBuy(const HttpRequestPtr req);
+  Task<HttpResponsePtr> manageUserOneTimeBuy(HttpRequestPtr req);
 
-  Task<HttpResponsePtr> buyCopy(const HttpRequestPtr req);
+  Task<HttpResponsePtr> fulfillGuestOneTimeBuy(HttpRequestPtr req);
 
-  Task<HttpResponsePtr> fulfillBuyCopy(const HttpRequestPtr req);
+  Task<HttpResponsePtr> fulfillUserOneTimeBuy(HttpRequestPtr req);
 
-  void manageUserSubscription(
-      const HttpRequestPtr &req,
-      std::function<void(const HttpResponsePtr &)> &&callback);
+  Task<HttpResponsePtr> buyCopy(HttpRequestPtr req);
 
-  Task<HttpResponsePtr> validateNewsPaperEntitlement(const HttpRequestPtr req);
+  Task<HttpResponsePtr> fulfillBuyCopy(HttpRequestPtr req);
 
-  void
-  grantNewsPaperAccess(const HttpRequestPtr &req,
-                       std::function<void(const HttpResponsePtr &)> &&callback);
+  void manageUserSubscription(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
 
-  Task<HttpResponsePtr>
-  getNewsPaperRedactedDetailsViaUniqueId(const HttpRequestPtr req);
-  Task<HttpResponsePtr>
-  findNewsPaperByDateAndPublication(const HttpRequestPtr req);
-  void renew(const HttpRequestPtr &req,
-             std::function<void(const HttpResponsePtr &)> &&callback);
+  Task<HttpResponsePtr> validateNewsPaperEntitlement(HttpRequestPtr req);
+
+  void grantNewsPaperAccess(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+
+  Task<HttpResponsePtr> getNewsPaperRedactedDetailsViaUniqueId(HttpRequestPtr req);
+
+  Task<HttpResponsePtr> findNewsPaperByDateAndPublication(HttpRequestPtr req);
+
+  void renew(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+
+    Task<HttpResponsePtr> renewSubscriptionViaDirectDebit(HttpRequestPtr req);
 };

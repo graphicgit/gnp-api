@@ -7,11 +7,13 @@
 #include "models/Coupons.h"
 #include <drogon/orm/CoroMapper.h>
 #include <drogon/orm/Mapper.h>
+#include <algorithm>
 
 using namespace drogon::orm;
 using drogon_model::Gnp::Coupons;
 
 namespace gnp::services {
+
 
 drogon::Task<dto::BaseApiResponse> CouponService::getAll(int pageNo, int pageSize, const std::string &status, const std::string &expiry,  const std::string &couponCode) {
 
@@ -61,9 +63,7 @@ drogon::Task<dto::BaseApiResponse> CouponService::getAll(int pageNo, int pageSiz
     response.result["pageSize"] = pageSize;
     response.result["totalPages"] = (int)totalPages;
     response.result["lowerBound"] = pageSize * (pageNo - 1) + 1;
-    response.result["upperBound"] = (int)totalPages == pageNo
-                                        ? (Json::UInt64)totalCount
-                                        : (Json::UInt64)(pageNo * pageSize);
+    response.result["upperBound"] = (int)totalPages == pageNo ? (Json::UInt64)totalCount  : (Json::UInt64)(pageNo * pageSize);
 
     Json::Value data = Json::arrayValue;
     for (const auto &coupon : coupons) {
@@ -76,11 +76,11 @@ drogon::Task<dto::BaseApiResponse> CouponService::getAll(int pageNo, int pageSiz
       item["discount"] = j["discount"];
       item["discountAsPercentage"] = j["discount_as_percentage"];
       item["validTill"] = j["valid_till"];
+      item["description"] = j["description"];
       item["usageQuota"] = j["usage_quota"];
       item["usageCount"] = j["usage_count"];
       item["status"] = j["status"];
       item["createdAt"] = j["created_at"];
-      item["updatedAt"] = j["updated_at"];
       data.append(item);
     }
     response.result["data"] = data;
@@ -103,8 +103,10 @@ drogon::Task<dto::BaseApiResponse> CouponService::getAll(int pageNo, int pageSiz
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-CouponService::createAsync(const ::gnp::dto::CreateCouponDto &dto) {
+
+
+
+drogon::Task<::gnp::dto::BaseApiResponse> CouponService::createAsync(const ::gnp::dto::CreateCouponDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Coupons> mapper(dbClient);
@@ -113,10 +115,10 @@ CouponService::createAsync(const ::gnp::dto::CreateCouponDto &dto) {
     Coupons coupon;
     coupon.setCode(dto.getCode());
 
-    if (!dto.getUserId().empty()) {
-      coupon.setUserId(dto.getUserId());
+    if (dto.getUserId() == "*") {
+      coupon.setUsernameToNull(); // set to empty Guid using util functions: means every user can use the coupon.
     } else {
-      coupon.setUserIdToNull();
+      coupon.setUserId(dto.getUserId());
     }
 
     if (!dto.getUsername().empty()) {
@@ -126,13 +128,23 @@ CouponService::createAsync(const ::gnp::dto::CreateCouponDto &dto) {
     }
 
     coupon.setDiscount(dto.getDiscount());
+    coupon.setDescription(dto.getDescription());
     coupon.setDiscountAsPercentage(dto.getDiscountAsPercentage());
 
-    if (!dto.getValidTill().empty()) {
-      coupon.setValidTill(trantor::Date::fromDbStringLocal(dto.getValidTill()));
-    } else {
-      coupon.setValidTillToNull();
+    std::string validTill = dto.getValidTill();
+    if (!validTill.empty()) {
+      // Normalize 'T' to ' ' for trantor compatibility
+      std::replace(validTill.begin(), validTill.end(), 'T', ' ');
+
+      // If only date is provided (YYYY-MM-DD), append default end of day
+      if (validTill.find(' ') == std::string::npos) {
+        validTill += " 23:59:59";
+      } else if (validTill.length() == 16) {
+        // If time is provided WITHOUT seconds (YYYY-MM-DD HH:MM), append :00
+        validTill += ":00";
+      }
     }
+    coupon.setValidTill(trantor::Date::fromDbStringLocal(validTill));
 
     coupon.setUsageQuota(dto.getUsageQuota());
     coupon.setUsageCount(0);
@@ -165,8 +177,7 @@ CouponService::createAsync(const ::gnp::dto::CreateCouponDto &dto) {
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-CouponService::updateAsync(const ::gnp::dto::UpdateCouponDto &dto) {
+drogon::Task<::gnp::dto::BaseApiResponse> CouponService::updateAsync(const ::gnp::dto::UpdateCouponDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Coupons> mapper(dbClient);
@@ -184,20 +195,26 @@ CouponService::updateAsync(const ::gnp::dto::UpdateCouponDto &dto) {
       co_return response;
     }
 
-    if (!dto.getCode().empty()) {
-      coupon.setCode(dto.getCode());
-    }
-    if (!dto.getUserId().empty()) {
-      coupon.setUserId(dto.getUserId());
-    }
-    if (!dto.getUsername().empty()) {
-      coupon.setUsername(dto.getUsername());
-    }
-    if (!dto.getDiscount().empty()) {
-      coupon.setDiscount(dto.getDiscount());
-    }
+
+    coupon.setCode(dto.getCode());
+    coupon.setUserId(dto.getUserId());
+    coupon.setUsername(dto.getUsername());
+    coupon.setDiscount(dto.getDiscount());
+    coupon.setDescription(dto.getDescription());
+
     if (!dto.getValidTill().empty()) {
-      coupon.setValidTill(trantor::Date::fromDbStringLocal(dto.getValidTill()));
+      std::string validTill = dto.getValidTill();
+      // Normalize 'T' to ' ' for trantor compatibility
+      std::replace(validTill.begin(), validTill.end(), 'T', ' ');
+
+      // If only date is provided (YYYY-MM-DD), append default end of day
+      if (validTill.find(' ') == std::string::npos) {
+        validTill += " 23:59:59";
+      } else if (validTill.length() == 16) {
+        // If time is provided WITHOUT seconds (YYYY-MM-DD HH:MM), append :00
+        validTill += ":00";
+      }
+      coupon.setValidTill(trantor::Date::fromDbStringLocal(validTill));
     }
     if (dto.getUsageQuota() > 0) {
       coupon.setUsageQuota(dto.getUsageQuota());

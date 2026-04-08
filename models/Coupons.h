@@ -48,6 +48,7 @@ class Coupons
         static const std::string _code;
         static const std::string _user_id;
         static const std::string _username;
+        static const std::string _description;
         static const std::string _discount;
         static const std::string _discount_as_percentage;
         static const std::string _valid_till;
@@ -145,6 +146,16 @@ class Coupons
     void setUsername(std::string &&pUsername) noexcept;
     void setUsernameToNull() noexcept;
 
+    /**  For column description  */
+    ///Get the value of the column description, returns the default value if the column is null
+    const std::string &getValueOfDescription() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getDescription() const noexcept;
+    ///Set the value of the column description
+    void setDescription(const std::string &pDescription) noexcept;
+    void setDescription(std::string &&pDescription) noexcept;
+    void setDescriptionToNull() noexcept;
+
     /**  For column discount  */
     ///Get the value of the column discount, returns the default value if the column is null
     const std::string &getValueOfDiscount() const noexcept;
@@ -215,7 +226,7 @@ class Coupons
     void setUpdatedAtToNull() noexcept;
 
 
-    static size_t getColumnNumber() noexcept {  return 12;  }
+    static size_t getColumnNumber() noexcept {  return 13;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -241,6 +252,7 @@ class Coupons
     std::shared_ptr<std::string> code_;
     std::shared_ptr<std::string> userId_;
     std::shared_ptr<std::string> username_;
+    std::shared_ptr<std::string> description_;
     std::shared_ptr<std::string> discount_;
     std::shared_ptr<bool> discountAsPercentage_;
     std::shared_ptr<::trantor::Date> validTill_;
@@ -260,7 +272,7 @@ class Coupons
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[12]={ false };
+    bool dirtyFlag_[13]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -300,47 +312,52 @@ class Coupons
             sql += "username,";
             ++parametersCount;
         }
-        sql += "discount,";
-        ++parametersCount;
-        if(!dirtyFlag_[4])
+        if(dirtyFlag_[4])
         {
-            needSelection=true;
+            sql += "description,";
+            ++parametersCount;
         }
-        sql += "discount_as_percentage,";
+        sql += "discount,";
         ++parametersCount;
         if(!dirtyFlag_[5])
         {
             needSelection=true;
         }
-        if(dirtyFlag_[6])
+        sql += "discount_as_percentage,";
+        ++parametersCount;
+        if(!dirtyFlag_[6])
+        {
+            needSelection=true;
+        }
+        if(dirtyFlag_[7])
         {
             sql += "valid_till,";
             ++parametersCount;
         }
         sql += "usage_quota,";
         ++parametersCount;
-        if(!dirtyFlag_[7])
+        if(!dirtyFlag_[8])
         {
             needSelection=true;
         }
         sql += "usage_count,";
         ++parametersCount;
-        if(!dirtyFlag_[8])
+        if(!dirtyFlag_[9])
         {
             needSelection=true;
         }
-        if(dirtyFlag_[9])
+        if(dirtyFlag_[10])
         {
             sql += "status,";
             ++parametersCount;
         }
         sql += "created_at,";
         ++parametersCount;
-        if(!dirtyFlag_[10])
+        if(!dirtyFlag_[11])
         {
             needSelection=true;
         }
-        if(dirtyFlag_[11])
+        if(dirtyFlag_[12])
         {
             sql += "updated_at,";
             ++parametersCount;
@@ -389,10 +406,6 @@ class Coupons
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
-        else
-        {
-            sql +="default,";
-        }
         if(dirtyFlag_[5])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
@@ -407,14 +420,14 @@ class Coupons
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
+        else
+        {
+            sql +="default,";
+        }
         if(dirtyFlag_[7])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
-        }
-        else
-        {
-            sql +="default,";
         }
         if(dirtyFlag_[8])
         {
@@ -430,7 +443,16 @@ class Coupons
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
+        else
+        {
+            sql +="default,";
+        }
         if(dirtyFlag_[10])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[11])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
@@ -439,7 +461,7 @@ class Coupons
         {
             sql +="default,";
         }
-        if(dirtyFlag_[11])
+        if(dirtyFlag_[12])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);

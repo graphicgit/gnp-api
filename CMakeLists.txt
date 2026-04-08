@@ -78,6 +78,14 @@ add_executable(${PROJECT_NAME} main.cc
         services/coupons/CouponService.cc
         dto/CreateCouponDto.h
         dto/UpdateCouponDto.h
+        services/mtn_api/MtnMomoApi.h
+        dto/AccessTokenDto.h
+        services/media/MediaService.h
+        services/media/MediaService.cc
+        dto/MediaMetadataDto.h
+        controllers/PartnerController.h
+        filters/PartnerJwtAuthFilter.h
+        services/enms/EnmsApi.h
 )
 
 # ##############################################################################

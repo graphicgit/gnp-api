@@ -17,6 +17,7 @@ public:
    * @return A random password string
    */
   static std::string generateRandomPassword(int length = 8);
+  static std::string normalizeBcryptHash(std::string hash);
 };
 
 } // namespace gnp::utils

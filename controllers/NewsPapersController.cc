@@ -6,8 +6,7 @@
 #include "plugins/GnpServicePlugin.h"
 #include "services/newspapers/NewspaperService.h"
 
-drogon::Task<HttpResponsePtr>
-NewsPapersController::getAll(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> NewsPapersController::getAll(const HttpRequestPtr req) {
   int pageSize = 10; // Default page size
   int pageNo = 1;    //  Default page number
 
@@ -59,8 +58,40 @@ NewsPapersController::getAll(const HttpRequestPtr req) {
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr>
-NewsPapersController::getRedactedDetails(const HttpRequestPtr req) {
+
+drogon::Task<HttpResponsePtr> NewsPapersController::getLatest(const HttpRequestPtr req) {
+  int pageSize = 10; // Default page size
+  int pageNo = 1;    //  Default page number
+
+  if (!req->getParameter("pageSize").empty()) {
+    try {
+      pageSize = std::stoi(req->getParameter("pageSize"));
+      pageSize = std::max(1, std::min(100, pageSize)); // Limit between 1-100
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  if (!req->getParameter("pageNo").empty()) {
+    try {
+      pageNo = std::stoi(req->getParameter("pageNo"));
+      pageNo = std::max(1, pageNo); // Ensure page number is at least 1
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &newsPaperService = plugin->getNewsPaperService();
+
+  auto result = co_await newsPaperService.getLatestNewsPapers(pageNo, pageSize);
+
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+}
+
+
+drogon::Task<HttpResponsePtr> NewsPapersController::getRedactedDetails(const HttpRequestPtr req) {
   if (req->getParameter("id").empty()) {
 
     gnp::dto::BaseApiResponse response;
@@ -274,8 +305,7 @@ void NewsPapersController::update(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) {}
 
-drogon::Task<HttpResponsePtr>
-NewsPapersController::deleteNewsPaper(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> NewsPapersController::deleteNewsPaper(const HttpRequestPtr req) {
 
   if (req->getParameter("id").empty()) {
     // Missing tenant ID - return early

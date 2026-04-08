@@ -38,7 +38,7 @@ public:
   }
   [[nodiscard]] int getReach() const { return reach_; }
   [[nodiscard]] int getClicks() const { return clicks_; }
-  [[nodiscard]] const std::string &getHtmlTemplate() const {
+  [[nodiscard]] const std::string& getHtmlTemplate() const {
     return html_template_;
   }
 
@@ -52,9 +52,7 @@ public:
   void setStatus(const std::string &value) { status_ = value; }
   void setCampaignType(const std::string &value) { campaign_type_ = value; }
   void setEngagement(int value) { engagement_ = value; }
-  void setScheduledTime(const ::trantor::Date &value) {
-    scheduled_time_ = value;
-  }
+  void setScheduledTime(const ::trantor::Date &value) {  scheduled_time_ = value; }
   void setReach(int value) { reach_ = value; }
   void setClicks(int value) { clicks_ = value; }
   void setHtmlTemplate(const std::string &value) { html_template_ = value; }
