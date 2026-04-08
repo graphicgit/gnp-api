@@ -136,16 +136,16 @@ public:
   // commercial partners ...
   drogon::Task<HttpResponsePtr> getAllPartners(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> getPartnerSubscribers(HttpRequestPtr req);
-  void getPartnerSubscriptionSummary(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
-  void getPartnerStats(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+  drogon::Task<HttpResponsePtr> getPartnerSubscriptionSummary(const HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> getPartnerStats(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> createPartner(HttpRequestPtr req);
-  void createPartnerSubscriber(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
-  void assignPartnerSubscribersPlan(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
-  void updatePartner(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+  drogon::Task<HttpResponsePtr> createPartnerSubscriber(const HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> assignPartnerSubscribersPlan(HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> updatePartner(const HttpRequestPtr req);
   void getPartnerDetails(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   void
   updatePartnerStatus(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
-  void deletePartner(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+  drogon::Task<HttpResponsePtr> deletePartner(HttpRequestPtr req);
 
   drogon::Task<HttpResponsePtr> deletePartnerSubscriber(HttpRequestPtr req);
 

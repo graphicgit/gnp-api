@@ -86,6 +86,7 @@ add_executable(${PROJECT_NAME} main.cc
         controllers/PartnerController.h
         filters/PartnerJwtAuthFilter.h
         services/enms/EnmsApi.h
+        dto/UpdatePartnerSubscriberDto.h
 )
 
 # ##############################################################################

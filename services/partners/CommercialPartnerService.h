@@ -17,37 +17,30 @@
 #include "dto/GeneratePartnerApiKeyDto.h"
 #include "dto/PartnerOnboardingDto.h"
 #include "dto/UpdatePartnerApiKeyDto.h"
+#include "dto/UpdatePartnerSubscriberDto.h"
 
 namespace gnp::services {
 
 class CommercialPartnerService {
 
 public:
-  drogon::Task< ::gnp::dto::BaseApiResponse>
-  getAll(int pageNo, int pageSize, const std::string &query);
+  drogon::Task< ::gnp::dto::BaseApiResponse> getAll(int pageNo, int pageSize, const std::string &query);
 
-  drogon::Task< ::gnp::dto::BaseApiResponse> createPartner(
-      const dto::CreatePartnerDto &dto);
+  drogon::Task< ::gnp::dto::BaseApiResponse> getAllSubscribers(int pageNo, int pageSize, const std::string &query, const std::string &partnerId);
 
-  void createPartnerSubscriber(
-      const dto::CreatePartnerSubscriberDto &dto,
-      const std::function<void(const dto::BaseApiResponse &)> &callback);
+  drogon::Task< ::gnp::dto::BaseApiResponse> createPartner(const dto::CreatePartnerDto &dto);
 
-  void assignPartnerSubscribersToPlan(
-      const dto::AssignPartnerSubscriberPlanDto &dto,
-      const std::function<void(const dto::BaseApiResponse &)> &callback);
+  drogon::Task<dto::BaseApiResponse> createPartnerSubscriber(const dto::CreatePartnerSubscriberDto &dto);
 
-  void getPartnerSubscriptionSummary(
-      const std::string &partnerId,
-      const std::function<void(const dto::BaseApiResponse &)> &callback);
+  drogon::Task<dto::BaseApiResponse> updatePartnerSubscriber(const dto::UpdatePartnerSubscriberDto &dto);
 
-  void updatePartner(
-      const dto::UpdatePartnerDto &dto,
-      const std::function<void(const dto::BaseApiResponse &)> &callback);
+  drogon::Task<dto::BaseApiResponse> assignPartnerSubscribersToPlan(const dto::AssignPartnerSubscriberPlanDto &dto);
 
-  void deletePartner(
-      const std::string &id,
-      const std::function<void(const dto::BaseApiResponse &)> &callback);
+  drogon::Task<dto::BaseApiResponse> getPartnerSubscriptionSummary(const std::string &partnerId);
+
+  drogon::Task<dto::BaseApiResponse> updatePartner(const dto::UpdatePartnerDto &dto);
+
+  drogon::Task<dto::BaseApiResponse> deletePartner(const std::string &id);
 
   void enableSubaccount(
       const std::string &id,
@@ -63,9 +56,8 @@ public:
 
   void updateStatus(const std::string &partnerId, const std::string &status, const std::function<void(const dto::BaseApiResponse &)> &callback);
 
-  void getPartnerStats(const std::function<void(const dto::BaseApiResponse &)> &callback);
 
-  void deletePartnerSubscriber(const std::string &partnerId, const std::string &subscriberId, const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  drogon::Task<::gnp::dto::BaseApiResponse> getPartnerStats();
 
   drogon::Task<::gnp::dto::BaseApiResponse> deletePartnerSubscriberAsync(const std::string &partnerId, const std::string &subscriberId);
 

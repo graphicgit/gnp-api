@@ -112,6 +112,73 @@ drogon::Task<gnp::dto::BaseApiResponse> CommercialPartnerService::getAll(int pag
   }
 }
 
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getAllSubscribers(int pageNo, int pageSize, const std::string &query, const std::string &partnerId) {
+
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<Users> mp(dbClient);
+
+  // 1. Build the search criteria
+  Criteria searchCriteria = Criteria(Users::Cols::_partner_id, CompareOperator::EQ, partnerId);
+  
+  if (!query.empty()) {
+    std::string likeQuery = "%" + query + "%";
+
+    searchCriteria = searchCriteria && (
+                     Criteria(Users::Cols::_first_name, CompareOperator::Like, likeQuery) ||
+                     Criteria(Users::Cols::_last_name, CompareOperator::Like, likeQuery) ||
+                     Criteria(Users::Cols::_email, CompareOperator::Like, likeQuery) ||
+                     Criteria(Users::Cols::_username, CompareOperator::Like, likeQuery) ||
+                     Criteria(Users::Cols::_phone_number, CompareOperator::Like, likeQuery));
+  }
+
+  try {
+    size_t totalCount = co_await mp.count(searchCriteria);
+    if (totalCount == 0) {
+      gnp::dto::BaseApiResponse response;
+      response.success = true;
+      response.result["data"] = Json::arrayValue;
+      response.result["totalCount"] = 0;
+      co_return response;
+    }
+
+    // 3. Find the paginated data
+    int offset = (pageNo - 1) * pageSize;
+    auto users = co_await mp.limit(pageSize).offset(offset).orderBy(Users::Cols::_created_at, SortOrder::DESC).findBy(searchCriteria);
+
+    // 4. Build the final response
+    gnp::dto::BaseApiResponse response;
+    auto totalPages = (totalCount + pageSize - 1) / pageSize;
+
+    response.success = true;
+    response.result["totalCount"] = (Json::UInt64)totalCount;
+    response.result["pageNo"] = pageNo;
+    response.result["pageSize"] = pageSize;
+    response.result["totalPages"] = (int)totalPages;
+
+    Json::Value data = Json::arrayValue;
+
+    for (const auto &user : users) {
+      Json::Value userJson = user.toJson();
+      
+      // Sanitization: Remove sensitive data
+      userJson.removeMember("password_hash");
+      
+      data.append(userJson);
+    }
+
+    response.result["data"] = data;
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["message"] = "Database error while fetching subscribers.";
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
 drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::createPartner(const dto::CreatePartnerDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -240,322 +307,254 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::createPartne
   }
 }
 
-void CommercialPartnerService::createPartnerSubscriber(
-    const dto::CreatePartnerSubscriberDto &userDto,
-    const std::function<void(const dto::BaseApiResponse &)> &callback) {
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartnerSubscriber(const dto::CreatePartnerSubscriberDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
-
-  Mapper<Users> mp(dbClient);
+  CoroMapper<Users> mp(dbClient);
 
   std::string password = gnp::utils::PasswordUtils::generateRandomPassword(8);
 
   Users newUser;
 
-  newUser.setFirstName(userDto.getFirstName());
-  newUser.setLastName(userDto.getLastName());
-  newUser.setEmail(userDto.getEmail());
-  newUser.setUsername(userDto.getEmail());
-  newUser.setPhoneNumber(userDto.getPhoneNumber());
-  newUser.setPartnerId(userDto.getPartnerId());
+  newUser.setFirstName(dto.getFirstName());
+  newUser.setLastName(dto.getLastName());
+  newUser.setEmail(dto.getEmail());
+  newUser.setUsername(dto.getEmail());
+  newUser.setPhoneNumber(dto.getPhoneNumber());
+  newUser.setPartnerId(dto.getPartnerId());
   newUser.setCountry("GH");
   newUser.setPasswordHash(bcrypt::generateHash(password));
   newUser.setIsActive(true);
   newUser.setIsLockedOut(false);
   newUser.setCreatedAt(trantor::Date::now());
 
-  mp.insert(
-      newUser,
-      [callback, userDto, password](const drogon_model::Gnp::Users &user) {
-        // Send email with credentials
-        auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
-        auto &emailService = plugin->getEmailService();
+  try {
+    auto user = co_await mp.insert(newUser);
 
-        gnp::dto::SendEmailDto emailDto;
-        emailDto.setTo(userDto.getEmail());
-        emailDto.setSubject("Graphic News Plus Account Details");
+    // Send email with credentials
+    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto &emailService = plugin->getEmailService();
 
-        std::string emailBody =
-            R"(
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                    <style>
-                      body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
-                      .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-                      .header { background-color: #D32F2F; color: #ffffff; padding: 20px; text-align: center; }
-                      .content { padding: 30px; color: #333333; }
-                      .credentials { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; }
-                      .credential-item { margin: 10px 0; }
-                      .credential-label { font-weight: bold; color: #666; }
-                      .credential-value { font-size: 18px; color: #D32F2F; font-family: monospace; }
-                      .footer { background-color: #f4f4f4; color: #666666; padding: 10px; text-align: center; font-size: 12px; }
-                    </style>
-                    </head>
-                    <body>
-                    <div class="container">
-                      <div class="header">
-                        <h1>Graphic News Plus</h1>
+    gnp::dto::SendEmailDto emailDto;
+    emailDto.setTo(dto.getEmail());
+    emailDto.setSubject("Graphic News Plus Account Details");
+
+    std::string emailBody =
+        R"(
+                <!DOCTYPE html>
+                <html>
+                <head>
+                <style>
+                  body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+                  .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+                  .header { background-color: #D32F2F; color: #ffffff; padding: 20px; text-align: center; }
+                  .content { padding: 30px; color: #333333; }
+                  .credentials { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; }
+                  .credential-item { margin: 10px 0; }
+                  .credential-label { font-weight: bold; color: #666; }
+                  .credential-value { font-size: 18px; color: #D32F2F; font-family: monospace; }
+                  .footer { background-color: #f4f4f4; color: #666666; padding: 10px; text-align: center; font-size: 12px; }
+                </style>
+                </head>
+                <body>
+                <div class="container">
+                  <div class="header">
+                    <h1>Graphic News Plus</h1>
+                  </div>
+                  <div class="content">
+                    <p>Hello )" +
+        dto.getFirstName() + R"(,</p>
+                    <p>Welcome to Graphic News Plus! Your corporate account has been created successfully.</p>
+                    <p>Below are your login credentials:</p>
+                    <div class="credentials">
+                      <div class="credential-item">
+                        <div class="credential-label">Username (Email):</div>
+                        <div class="credential-value">)" +
+        dto.getEmail() + R"(</div>
                       </div>
-                      <div class="content">
-                        <p>Hello )" +
-            userDto.getFirstName() + R"(,</p>
-                        <p>Welcome to Graphic News Plus! Your corporate account has been created successfully.</p>
-                        <p>Below are your login credentials:</p>
-                        <div class="credentials">
-                          <div class="credential-item">
-                            <div class="credential-label">Username (Email):</div>
-                            <div class="credential-value">)" +
-            userDto.getEmail() + R"(</div>
-                          </div>
-                          <div class="credential-item">
-                            <div class="credential-label">Password:</div>
-                            <div class="credential-value">)" +
-            password + R"(</div>
-                          </div>
-                        </div>
-                        <p>Please keep these credentials secure and change your password after your first login.</p>
-                        <p>You’re all set! Log in now to explore more engaging content made just for you.</p>
-                      </div>
-                      <div class="footer">
-                        &copy; )" +
-            trantor::Date::now().toCustomFormattedString("%Y") +
-            R"( Graphic News Plus. All rights reserved.
+                      <div class="credential-item">
+                        <div class="credential-label">Password:</div>
+                        <div class="credential-value">)" +
+        password + R"(</div>
                       </div>
                     </div>
-                    </body>
-                    </html>
-                  )";
+                    <p>Please keep these credentials secure and change your password after your first login.</p>
+                    <p>You’re all set! Log in now to explore more engaging content made just for you.</p>
+                  </div>
+                  <div class="footer">
+                    &copy; )" +
+        trantor::Date::now().toCustomFormattedString("%Y") +
+        R"( Graphic News Plus. All rights reserved.
+                  </div>
+                </div>
+                </body>
+                </html>
+              )";
 
-        emailDto.setBody(emailBody);
+    emailDto.setBody(emailBody);
 
-        emailService.sendEmail(emailDto,
-                               [](const gnp::dto::BaseApiResponse &resp) {});
+    co_await emailService.sendEmailAsync(emailDto);
 
-        // 5. Prepare success response
-        dto::BaseApiResponse successResponse;
-        successResponse.success = true;
-        successResponse.message = "Subscriber created successfully";
-        successResponse.result["id"] = user.getValueOfId();
+    // 6. Reduce subscriber slots for commercial partner
+    CoroMapper<CommercialPartners> partnerMapper(dbClient);
+    try {
+      auto partner = co_await partnerMapper.findOne(Criteria(CommercialPartners::Cols::_id, CompareOperator::EQ,dto.getPartnerId()));
 
-        // 6. Reduce subscriber slots for commercial partner
-        auto dbClient = drogon::app().getDbClient();
-        Mapper<CommercialPartners> partnerMapper(dbClient);
-        partnerMapper.findOne(
-            Criteria(CommercialPartners::Cols::_id, CompareOperator::EQ,
-                     userDto.getPartnerId()),
-            [partnerMapper](CommercialPartners partner) mutable {
-              auto remainingQuota = partner.getValueOfRemainingQuota();
-              if (remainingQuota > 0) {
-                partner.setRemainingQuota(remainingQuota - 1);
-                partnerMapper.update(
-                    partner, [](const size_t count) {},
-                    [](const DrogonDbException &e) {
-                      LOG_ERROR << "Failed to update partner quota: "
-                                << e.base().what();
-                    });
-              }
-            },
-            [](const DrogonDbException &e) {
-              LOG_ERROR << "Failed to find partner for quota update: "
-                        << e.base().what();
-            });
+      auto remainingQuota = partner.getValueOfRemainingQuota();
+      if (remainingQuota > 0) {
+        partner.setRemainingQuota(remainingQuota - 1);
+        co_await partnerMapper.update(partner);
+      }
+    } catch (const DrogonDbException &e) {
+      LOG_ERROR << "Failed to update partner quota: " << e.base().what();
+    }
 
-        callback(successResponse);
-      },
-      [callback](const drogon::orm::DrogonDbException &e) {
-        dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.message = "Database error while creating Subscriber";
-        errorResponse.error["code"] = constants::ERR_DB_QUERY;
-        callback(errorResponse);
-      });
+    // 5. Prepare success response
+    dto::BaseApiResponse successResponse;
+    successResponse.success = true;
+    successResponse.message = "Subscriber created successfully";
+    successResponse.result["id"] = user.getValueOfId();
+
+    co_return successResponse;
+
+  } catch (const drogon::orm::DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Database error while creating Subscriber";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
 }
 
-void CommercialPartnerService::assignPartnerSubscribersToPlan(
-    const dto::AssignPartnerSubscriberPlanDto &dto,
-    const std::function<void(const dto::BaseApiResponse &)> &callback) {
+
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::updatePartnerSubscriber(const dto::UpdatePartnerSubscriberDto &dto) {
+
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<Users> mp(dbClient);
+
+  try {
+    // Find the user by ID and Partner ID to ensure ownership
+    auto user = co_await mp.findOne(
+        Criteria(Users::Cols::_id, CompareOperator::EQ, dto.getId()) &&
+        Criteria(Users::Cols::_partner_id, CompareOperator::EQ, dto.getPartnerId()));
+
+
+    user.setFirstName(dto.getFirstName());
+    user.setLastName(dto.getLastName());
+    user.setPhoneNumber(dto.getPhoneNumber());
+
+    // If email changes, update both email and username
+    if (!dto.getEmail().empty()) {
+      user.setEmail(dto.getEmail());
+      user.setUsername(dto.getEmail());
+    }
+
+    co_await mp.update(user);
+
+    dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Partner subscriber info updated successfully";
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to update partner subscriber";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::assignPartnerSubscribersToPlan(const dto::AssignPartnerSubscriberPlanDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
 
-  // 1. Validate that the partner exists
-  Mapper<CommercialPartners> partnerMapper(dbClient);
-  Criteria partnerCriteria = Criteria(CommercialPartners::Cols::_id,
-                                      CompareOperator::EQ, dto.getPartnerId());
+  try {
+    // 1. Validate that the partner exists
+    CoroMapper<CommercialPartners> partnerMapper(dbClient);
+    co_await partnerMapper.findOne(Criteria(CommercialPartners::Cols::_id, CompareOperator::EQ, dto.getPartnerId()));
 
-  partnerMapper.findOne(
-      partnerCriteria,
-      [dbClient, dto, callback](const CommercialPartners &partner) {
-        // 2. Validate that the subscription plan exists
-        Mapper<SubscriptionPlans> planMapper(dbClient);
-        Criteria planCriteria = Criteria(SubscriptionPlans::Cols::_id,
-                                         CompareOperator::EQ, dto.getPlanId());
+    // 2. Validate that the subscription plan exists
+    CoroMapper<SubscriptionPlans> planMapper(dbClient);
+    co_await planMapper.findOne(Criteria(SubscriptionPlans::Cols::_id, CompareOperator::EQ, dto.getPlanId()));
 
-        planMapper.findOne(
-            planCriteria,
-            [dbClient, dto, callback, partner](const SubscriptionPlans &plan) {
-              // 3. Process each subscriber
-              auto subscriberIds = dto.getSubscriberIds();
-              auto successCount = std::make_shared<int>(0);
-              auto failureCount = std::make_shared<int>(0);
-              auto totalCount = std::make_shared<int>(subscriberIds.size());
-              auto failedUsers = std::make_shared<std::vector<std::string>>();
+    // 3. Process each subscriber
+    auto subscriberIds = dto.getSubscriberIds();
+    int successCount = 0;
+    int failureCount = 0;
+    std::vector<std::string> failedUsers;
 
-              if (subscriberIds.empty()) {
-                dto::BaseApiResponse response;
-                response.success = true;
-                response.message = "No subscribers to assign";
-                response.result["successCount"] = 0;
-                response.result["failureCount"] = 0;
-                callback(response);
-                return;
-              }
+    if (subscriberIds.empty()) {
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.message = "No subscribers to assign";
+      response.result["successCount"] = 0;
+      response.result["failureCount"] = 0;
+      co_return response;
+    }
 
-              for (const auto &userId : subscriberIds) {
-                // Verify user exists and belongs to the partner
-                Mapper<Users> userMapper(dbClient);
-                Criteria userCriteria =
-                    Criteria(Users::Cols::_id, CompareOperator::EQ, userId) &&
-                    Criteria(Users::Cols::_partner_id, CompareOperator::EQ,
-                             dto.getPartnerId());
+    CoroMapper<Users> userMapper(dbClient);
+    CoroMapper<UserSubscriptions> subscriptionMapper(dbClient);
 
-                userMapper.findOne(
-                    userCriteria,
-                    [dbClient, dto, callback, successCount, failureCount,
-                     totalCount, failedUsers, plan, userId](const Users &user) {
-                      // Create subscription record
-                      UserSubscriptions subscription;
-                      subscription.setUserId(userId);
-                      subscription.setSubscriptionPlanDescription(
-                          dto.getSubscriptionPlanDescription());
-                      subscription.setEmail(user.getValueOfEmail());
-                      subscription.setIsActive(true);
-                      subscription.setCreatedAt(trantor::Date::now());
+    for (const auto &userId : subscriberIds) {
+      try {
+        // Verify user exists and belongs to the partner
+        Criteria userCriteria = Criteria(Users::Cols::_id, CompareOperator::EQ, userId) &&
+                                Criteria(Users::Cols::_partner_id, CompareOperator::EQ, dto.getPartnerId());
 
-                      // Get newspaper entitlements from plan's
-                      // target_publications
-                      // subscription.setNewspaperEntitlements();
-                      subscription.setPartnerId(dto.getPartnerId());
-                      subscription.setBillingCycle(dto.getBillingCycle());
-                      subscription.setSubscriptionIdentifier(
-                          gnp::utils::IdGeneratorUtils::
-                              generateRandomSixDigit());
-                      subscription.setSubscriptionPlanId(dto.getPlanId());
+        auto user = co_await userMapper.findOne(userCriteria);
 
-                      Mapper<UserSubscriptions> subscriptionMapper(dbClient);
-                      subscriptionMapper.insert(
-                          subscription,
-                          [successCount, failureCount, totalCount, callback,
-                           failedUsers](const UserSubscriptions &inserted) {
-                            (*successCount)++;
+        // Create subscription record
+        UserSubscriptions subscription;
+        subscription.setUserId(userId);
+        subscription.setSubscriptionPlanDescription(dto.getSubscriptionPlanDescription());
+        subscription.setEmail(user.getValueOfEmail());
+        subscription.setIsActive(true);
+        subscription.setCreatedAt(trantor::Date::now());
+        subscription.setPartnerId(dto.getPartnerId());
+        subscription.setBillingCycle(dto.getBillingCycle());
+        subscription.setSubscriptionIdentifier(gnp::utils::IdGeneratorUtils::generateRandomSixDigit());
+        subscription.setSubscriptionPlanId(dto.getPlanId());
 
-                            // Check if all subscribers have been processed
-                            if ((*successCount + *failureCount) >=
-                                *totalCount) {
-                              dto::BaseApiResponse response;
-                              response.success = true;
-                              response.message =
-                                  "Subscriber assignment completed";
-                              response.result["successCount"] = *successCount;
-                              response.result["failureCount"] = *failureCount;
+        co_await subscriptionMapper.insert(subscription);
+        successCount++;
 
-                              if (*failureCount > 0) {
-                                Json::Value failedArray = Json::arrayValue;
-                                for (const auto &failedUserId : *failedUsers) {
-                                  failedArray.append(failedUserId);
-                                }
-                                response.result["failedUsers"] = failedArray;
-                              }
+      } catch (const DrogonDbException &) {
+        failureCount++;
+        failedUsers.push_back(userId);
+      }
+    }
 
-                              // produce payload to a background processor to
-                              // set news paper entitlements for the
-                              // subscription plan based on the date purchased
+    dto::BaseApiResponse response;
+    response.success = (failureCount < subscriberIds.size());
+    response.message = failureCount == 0 ? "Subscriber assignment completed" : "Subscriber assignment completed with errors";
+    response.result["successCount"] = successCount;
+    response.result["failureCount"] = failureCount;
 
-                              // payload -> subscriberIds, subscriptionPlanId,
-                              // billingCycle
+    if (failureCount > 0) {
+      Json::Value failedArray = Json::arrayValue;
+      for (const auto &failedUserId : failedUsers) {
+        failedArray.append(failedUserId);
+      }
+      response.result["failedUsers"] = failedArray;
+    }
 
-                              callback(response);
-                            }
-                          },
-                          [successCount, failureCount, totalCount, callback,
-                           failedUsers, userId](const DrogonDbException &e) {
-                            (*failureCount)++;
-                            failedUsers->push_back(userId);
+    co_return response;
 
-                            // Check if all subscribers have been processed
-                            if ((*successCount + *failureCount) >=
-                                *totalCount) {
-                              dto::BaseApiResponse response;
-                              response.success = *failureCount < *totalCount;
-                              response.message =
-                                  "Subscriber assignment completed with errors";
-                              response.result["successCount"] = *successCount;
-                              response.result["failureCount"] = *failureCount;
-
-                              if (*failureCount > 0) {
-                                Json::Value failedArray = Json::arrayValue;
-                                for (const auto &failedUserId : *failedUsers) {
-                                  failedArray.append(failedUserId);
-                                }
-                                response.result["failedUsers"] = failedArray;
-                              }
-
-                              callback(response);
-                            }
-                          });
-                    },
-                    [successCount, failureCount, totalCount, callback,
-                     failedUsers, userId](const DrogonDbException &e) {
-                      // User not found or doesn't belong to partner
-                      (*failureCount)++;
-                      failedUsers->push_back(userId);
-
-                      // Check if all subscribers have been processed
-                      if ((*successCount + *failureCount) >= *totalCount) {
-                        dto::BaseApiResponse response;
-                        response.success = *failureCount < *totalCount;
-                        response.message =
-                            "Subscriber assignment completed with errors";
-                        response.result["successCount"] = *successCount;
-                        response.result["failureCount"] = *failureCount;
-
-                        if (*failureCount > 0) {
-                          Json::Value failedArray = Json::arrayValue;
-                          for (const auto &failedUserId : *failedUsers) {
-                            failedArray.append(failedUserId);
-                          }
-                          response.result["failedUsers"] = failedArray;
-                        }
-
-                        callback(response);
-                      }
-                    });
-              }
-            },
-            [callback](const DrogonDbException &e) {
-              // Subscription plan not found
-              dto::BaseApiResponse errorResponse;
-              errorResponse.success = false;
-              errorResponse.message = "Subscription plan not found";
-              errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
-              errorResponse.error["detail"] = e.base().what();
-              callback(errorResponse);
-            });
-      },
-      [callback](const DrogonDbException &e) {
-        // Partner not found
-        dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.message = "Commercial Partners not found";
-        errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
-        errorResponse.error["detail"] = e.base().what();
-        callback(errorResponse);
-      });
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to assign subscribers to plan";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
 }
 
-void CommercialPartnerService::getPartnerSubscriptionSummary(
-    const std::string &partnerId,
-    const std::function<void(const dto::BaseApiResponse &)> &callback) {
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::getPartnerSubscriptionSummary(const std::string &partnerId) {
 
   auto dbClient = drogon::app().getDbClient();
 
@@ -564,328 +563,227 @@ void CommercialPartnerService::getPartnerSubscriptionSummary(
                     "WHERE partner_id = $1 GROUP BY "
                     "subscription_plan_description";
 
-  dbClient->execSqlAsync(
-      sql,
-      [callback](const drogon::orm::Result &result) {
-        dto::BaseApiResponse response;
-        response.success = true;
-        response.message = "Partner subscription summary fetched successfully";
+  try {
+    auto result = co_await dbClient->execSqlCoro(sql, partnerId);
 
-        Json::Value data = Json::arrayValue;
-        for (const auto &row : result) {
-          Json::Value item;
-          item["subscriptionPlanDescription"] =
-              row["subscription_plan_description"].isNull()
-                  ? "No Description"
-                  : row["subscription_plan_description"].as<std::string>();
-          item["subscriberCount"] =
-              (Json::Int64)row["subscriber_count"].as<long>();
+    dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Partner subscription summary fetched successfully";
 
-          data.append(item);
-        }
+    Json::Value data = Json::arrayValue;
+    for (const auto &row : result) {
+      Json::Value item;
+      item["subscriptionPlanDescription"] = row["subscription_plan_description"].isNull()
+                                                ? "No Description"
+                                                : row["subscription_plan_description"].as<std::string>();
+      item["subscriberCount"] = (Json::Int64)row["subscriber_count"].as<long>();
 
-        response.result = data;
-        callback(response);
-      },
-      [callback](const drogon::orm::DrogonDbException &e) {
-        dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.message = "Failed to fetch partner subscription summary";
-        errorResponse.error["code"] = constants::ERR_DB_QUERY;
-        errorResponse.error["detail"] = e.base().what();
-        callback(errorResponse);
-      },
-      partnerId);
+      data.append(item);
+    }
+
+    response.result = data;
+    co_return response;
+
+  } catch (const drogon::orm::DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to fetch partner subscription summary";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
 }
 
-void CommercialPartnerService::updatePartner(
-    const dto::UpdatePartnerDto &dto,
-    const std::function<void(const dto::BaseApiResponse &)> &callback) {
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::updatePartner(const dto::UpdatePartnerDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
-  auto mp = std::make_shared<Mapper<CommercialPartners>>(dbClient);
+  CoroMapper<CommercialPartners> mp(dbClient);
 
-  Criteria criteria =
-      Criteria(CommercialPartners::Cols::_id, CompareOperator::EQ, dto.getId());
+  try {
+    auto commercialPartner = co_await mp.findOne(Criteria(CommercialPartners::Cols::_id, CompareOperator::EQ, dto.getId()));
 
-  mp->findOne(
-      criteria,
-      [mp, dto, callback](CommercialPartners commercialPartner) {
-        if (!dto.getName().empty())
-          commercialPartner.setName(dto.getName());
-        if (!dto.getContactName().empty())
-          commercialPartner.setContactName(dto.getContactName());
-        if (!dto.getContactEmail().empty())
-          commercialPartner.setContactEmail(dto.getContactEmail());
-        if (!dto.getContactPhone().empty())
-          commercialPartner.setContactPhone(dto.getContactPhone());
-        if (!dto.getBillingEmail().empty())
-          commercialPartner.setBillingEmail(dto.getBillingEmail());
-        if (!dto.getBillingCycle().empty())
-          commercialPartner.setBillingCycle(dto.getBillingCycle());
-        if (!dto.getCurrency().empty())
-          commercialPartner.setCurrency(dto.getCurrency());
+    if (!dto.getName().empty())
+      commercialPartner.setName(dto.getName());
+    if (!dto.getContactName().empty())
+      commercialPartner.setContactName(dto.getContactName());
+    if (!dto.getContactEmail().empty())
+      commercialPartner.setContactEmail(dto.getContactEmail());
+    if (!dto.getContactPhone().empty())
+      commercialPartner.setContactPhone(dto.getContactPhone());
+    if (!dto.getBillingEmail().empty())
+      commercialPartner.setBillingEmail(dto.getBillingEmail());
+    if (!dto.getBillingCycle().empty())
+      commercialPartner.setBillingCycle(dto.getBillingCycle());
+    if (!dto.getCurrency().empty())
+      commercialPartner.setCurrency(dto.getCurrency());
 
-        commercialPartner.setSubscriberQuota(dto.getSubscriberQuota());
+    commercialPartner.setSubscriberQuota(dto.getSubscriberQuota());
 
-        if (dto.getSubaccountEnabled())
-          commercialPartner.setSubAccountEnabled(dto.getSubaccountEnabled());
+    if (dto.getSubaccountEnabled())
+      commercialPartner.setSubAccountEnabled(dto.getSubaccountEnabled());
 
-        mp->update(
-            commercialPartner,
-            [callback](const size_t count) {
-              gnp::dto::BaseApiResponse response;
-              response.success = true;
-              response.message = "Commercial Partner updated successfully";
-              callback(response);
-            },
-            [callback](const DrogonDbException &e) {
-              gnp::dto::BaseApiResponse errorResponse;
-              errorResponse.success = false;
-              errorResponse.message = "Failed to update Commercial Partner";
-              errorResponse.error["code"] = constants::ERR_DB_QUERY;
-              errorResponse.error["detail"] = e.base().what();
-              callback(errorResponse);
-            });
-      },
-      [callback](const DrogonDbException &e) {
-        gnp::dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.message = "Commercial Partner not found";
-        errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
-        errorResponse.error["detail"] = e.base().what();
-        callback(errorResponse);
-      });
+    co_await mp.update(commercialPartner);
+
+    dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Commercial Partner updated successfully";
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to update Commercial Partner";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
 }
 
-void CommercialPartnerService::deletePartner(
-    const std::string &partnerId,
-    const std::function<void(const dto::BaseApiResponse &)> &callback) {
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::deletePartner(const std::string &partnerId) {
 
   auto dbClient = drogon::app().getDbClient();
+  CoroMapper<CommercialPartners> mp(dbClient);
 
-  Mapper<CommercialPartners> mp(dbClient);
+  Criteria criteria = Criteria(CommercialPartners::Cols::_id, CompareOperator::EQ, partnerId);
 
-  // Create criteria to find the user with specified ID in the tenant
-  Criteria criteria =
-      Criteria(CommercialPartners::Cols::_id, CompareOperator::EQ, partnerId);
+  try {
+    // First verify the partner exists
+    co_await mp.findOne(criteria);
 
-  // First verify the user exists
-  mp.findOne(
-      criteria,
-      [=](const drogon_model::Gnp::CommercialPartners &commercialPartner) {
-        // User found, proceed with deletion
-        Mapper<CommercialPartners> deleteMp(dbClient);
-        deleteMp.deleteBy(
-            criteria,
-            [=](const size_t count) {
-              if (count > 0) {
-                // Successfully deleted
-                dto::BaseApiResponse response;
-                response.success = true;
-                response.message = "Commercial Partner deleted successfully";
-                callback(response);
-              } else {
-                // No rows were deleted (shouldn't happen if we found the user)
-                dto::BaseApiResponse errorResponse;
-                errorResponse.success = false;
-                errorResponse.message = "Failed to delete Commercial Partner";
-                errorResponse.error["code"] = constants::ERR_DB_QUERY;
-                callback(errorResponse);
-              }
-            },
-            [=](const DrogonDbException &e) {
-              // Error during deletion
-              dto::BaseApiResponse errorResponse;
-              errorResponse.success = false;
-              errorResponse.message = "Failed to delete Commercial Partner";
-              errorResponse.error["code"] = constants::ERR_DB_QUERY;
-              errorResponse.error["detail"] = e.base().what();
-              callback(errorResponse);
-            });
-      },
-      [=](const DrogonDbException &e) {
-        // User not found
-        dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.message = "Commercial Partner not found";
-        errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
-        errorResponse.error["detail"] = e.base().what();
-        callback(errorResponse);
-      });
+    // Partner found, proceed with deletion
+    const auto count = co_await mp.deleteBy(criteria);
+
+    dto::BaseApiResponse response;
+    if (count > 0) {
+      response.success = true;
+      response.message = "Commercial Partner deleted successfully";
+    } else {
+      response.success = false;
+      response.message = "Failed to delete Commercial Partner";
+      response.error["code"] = constants::ERR_DB_QUERY;
+    }
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Commercial Partner not found";
+    errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
 }
 
-void CommercialPartnerService::getPartnerStats(
-    const std::function<void(const dto::BaseApiResponse &)> &callback) {
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::getPartnerStats() {
+
   auto dbClient = drogon::app().getDbClient();
+  CoroMapper<CommercialPartners> mp(dbClient);
 
-  dbClient->execSqlAsync(
-      "SELECT SUM(invoice_amount - balance) FROM partner_invoice",
-      [dbClient, callback](const drogon::orm::Result &result) {
-        double totalRevenue = 0.0;
-        if (!result.empty() && !result[0][0].isNull()) {
-          totalRevenue = result[0][0].as<double>();
-        }
+  try {
+    // 1. Get Total Revenue
+    double totalRevenue = 0.0;
+    auto revenueResult = co_await dbClient->execSqlCoro("SELECT SUM(invoice_amount - balance) FROM partner_invoice");
+    if (!revenueResult.empty() && !revenueResult[0][0].isNull()) {
+      totalRevenue = revenueResult[0][0].as<double>();
+    }
 
-        // 2. Get Total Partners
-        Mapper<CommercialPartners> mp(dbClient);
-        mp.count(
-            Criteria(),
-            [dbClient, callback, totalRevenue](const size_t totalPartners) {
-              // 3. Get Active Partners
-              Mapper<CommercialPartners> mp2(dbClient);
-              mp2.count(
-                  Criteria(CommercialPartners::Cols::_status,
-                           CompareOperator::EQ, "Active"),
-                  [callback, totalRevenue,
-                   totalPartners](const size_t activePartners) {
-                    // 4. Get Total Subscriber Quota
-                    auto dbClient = drogon::app().getDbClient();
-                    dbClient->execSqlAsync(
-                        "SELECT SUM(subscriber_quota) FROM commercial_partners",
-                        [callback, totalRevenue, totalPartners, activePartners](
-                            const drogon::orm::Result &quotaResult) {
-                          long totalQuota = 0;
-                          if (!quotaResult.empty() &&
-                              !quotaResult[0][0].isNull()) {
-                            totalQuota = quotaResult[0][0].as<long>();
-                          }
+    // 2. Get Total Partners
+    const auto totalPartners = co_await mp.count(Criteria());
 
-                          // 5. Get Total Partner Users
-                          // users where is_partner_admin_user = false and
-                          // partner_id is not empty guid
-                          auto dbClient = drogon::app().getDbClient();
-                          dbClient->execSqlAsync(
-                              "SELECT COUNT(*) FROM users WHERE "
-                              "is_partner_admin_user = false "
-                              "AND partner_id != "
-                              "'00000000-0000-0000-0000-000000000000'",
-                              [callback, totalRevenue, totalPartners,
-                               activePartners, totalQuota](
-                                  const drogon::orm::Result &usersResult) {
-                                long totalPartnerUsers = 0;
-                                if (!usersResult.empty() &&
-                                    !usersResult[0][0].isNull()) {
-                                  totalPartnerUsers =
-                                      usersResult[0][0].as<long>();
-                                }
+    // 3. Get Active Partners
+    const auto activePartners = co_await mp.count(
+        Criteria(CommercialPartners::Cols::_status, CompareOperator::EQ, "Active"));
 
-                                // 6. Calculate Utilization
-                                double utilization = 0.0;
-                                if (totalQuota > 0) {
-                                  utilization =
-                                      ((double)totalPartnerUsers / totalQuota) *
-                                      100.0;
-                                }
+    // 4. Get Total Subscriber Quota
+    long totalQuota = 0;
+    auto quotaResult = co_await dbClient->execSqlCoro("SELECT SUM(subscriber_quota) FROM commercial_partners");
+    if (!quotaResult.empty() && !quotaResult[0][0].isNull()) {
+      totalQuota = quotaResult[0][0].as<long>();
+    }
 
-                                // 7. Construct Response
-                                dto::BaseApiResponse response;
-                                response.success = true;
-                                Json::Value data = Json::arrayValue;
+    // 5. Get Total Partner Users
+    long totalPartnerUsers = 0;
+    auto usersResult = co_await dbClient->execSqlCoro(
+        "SELECT COUNT(*) FROM users WHERE is_partner_admin_user = false "
+        "AND partner_id != '00000000-0000-0000-0000-000000000000'");
+    if (!usersResult.empty() && !usersResult[0][0].isNull()) {
+      totalPartnerUsers = usersResult[0][0].as<long>();
+    }
 
-                                // Total Revenue
-                                Json::Value revenueStat;
-                                revenueStat["name"] = "Total Revenue";
-                                revenueStat["value"] = totalRevenue;
-                                revenueStat["change"] = "+15%"; // Mocked
-                                revenueStat["changeType"] = "increase";
-                                revenueStat["icon"] = "BanknotesIcon";
-                                revenueStat["bgColor"] = "bg-green-50";
-                                revenueStat["iconColor"] = "text-green-600";
-                                revenueStat["prefix"] = "GHS ";
-                                revenueStat["suffix"] = "";
-                                data.append(revenueStat);
+    // 6. Calculate Seat Utilization
+    double utilization = 0.0;
+    if (totalQuota > 0) {
+      utilization = ((double)totalPartnerUsers / totalQuota) * 100.0;
+    }
 
-                                // Total Partners
-                                Json::Value totalPartnersStat;
-                                totalPartnersStat["name"] = "Total Partners";
-                                totalPartnersStat["value"] =
-                                    (Json::UInt64)totalPartners;
-                                totalPartnersStat["change"] = "+8.2%"; // Mocked
-                                totalPartnersStat["changeType"] = "increase";
-                                totalPartnersStat["icon"] = "CheckCircleIcon";
-                                totalPartnersStat["bgColor"] = "bg-blue-50";
-                                totalPartnersStat["iconColor"] =
-                                    "text-blue-600";
-                                totalPartnersStat["prefix"] = "";
-                                totalPartnersStat["suffix"] = "";
-                                data.append(totalPartnersStat);
+    // 7. Construct Response
+    dto::BaseApiResponse response;
+    response.success = true;
+    Json::Value data = Json::arrayValue;
 
-                                // Active Partners
-                                Json::Value activePartnersStat;
-                                activePartnersStat["name"] = "Active Partners";
-                                activePartnersStat["value"] =
-                                    (Json::UInt64)activePartners;
-                                activePartnersStat["change"] =
-                                    "-2.1%"; // Mocked
-                                activePartnersStat["changeType"] = "decrease";
-                                activePartnersStat["icon"] = "CheckCircleIcon";
-                                activePartnersStat["bgColor"] = "bg-yellow-50";
-                                activePartnersStat["iconColor"] =
-                                    "text-yellow-600";
-                                activePartnersStat["prefix"] = "";
-                                activePartnersStat["suffix"] = "";
-                                data.append(activePartnersStat);
+    // Total Revenue
+    Json::Value revenueStat;
+    revenueStat["name"] = "Total Revenue";
+    revenueStat["value"] = totalRevenue;
+    revenueStat["change"] = "+15%"; // Mocked
+    revenueStat["changeType"] = "increase";
+    revenueStat["icon"] = "BanknotesIcon";
+    revenueStat["bgColor"] = "bg-green-50";
+    revenueStat["iconColor"] = "text-green-600";
+    revenueStat["prefix"] = "GHS ";
+    revenueStat["suffix"] = "";
+    data.append(revenueStat);
 
-                                // Seat Utilization
-                                Json::Value seatStat;
-                                seatStat["name"] = "Seat Utilization";
-                                seatStat["value"] = (int)utilization;
-                                seatStat["change"] = "-14%"; // Mocked
-                                seatStat["changeType"] = "decrease";
-                                seatStat["icon"] = "ClockIcon";
-                                seatStat["bgColor"] = "bg-red-50";
-                                seatStat["iconColor"] = "text-red-600";
-                                seatStat["prefix"] = "";
-                                seatStat["suffix"] = "%";
-                                data.append(seatStat);
+    // Total Partners
+    Json::Value totalPartnersStat;
+    totalPartnersStat["name"] = "Total Partners";
+    totalPartnersStat["value"] = (Json::UInt64)totalPartners;
+    totalPartnersStat["change"] = "+8.2%"; // Mocked
+    totalPartnersStat["changeType"] = "increase";
+    totalPartnersStat["icon"] = "CheckCircleIcon";
+    totalPartnersStat["bgColor"] = "bg-blue-50";
+    totalPartnersStat["iconColor"] = "text-blue-600";
+    totalPartnersStat["prefix"] = "";
+    totalPartnersStat["suffix"] = "";
+    data.append(totalPartnersStat);
 
-                                response.result = data;
-                                callback(response);
-                              },
-                              [callback](const DrogonDbException &e) {
-                                dto::BaseApiResponse errorResponse;
-                                errorResponse.success = false;
-                                errorResponse.error["message"] =
-                                    "Database error querying partner users.";
-                                errorResponse.error["detail"] = e.base().what();
-                                callback(errorResponse);
-                              });
-                        },
-                        [callback](const DrogonDbException &e) {
-                          dto::BaseApiResponse errorResponse;
-                          errorResponse.success = false;
-                          errorResponse.error["message"] =
-                              "Database error querying subscriber quota.";
-                          errorResponse.error["detail"] = e.base().what();
-                          callback(errorResponse);
-                        });
-                  },
-                  [callback](const DrogonDbException &e) {
-                    dto::BaseApiResponse errorResponse;
-                    errorResponse.success = false;
-                    errorResponse.error["message"] =
-                        "Database error query active partners.";
-                    errorResponse.error["detail"] = e.base().what();
-                    callback(errorResponse);
-                  });
-            },
-            [callback](const DrogonDbException &e) {
-              dto::BaseApiResponse errorResponse;
-              errorResponse.success = false;
-              errorResponse.error["message"] =
-                  "Database error querying total partners.";
-              errorResponse.error["detail"] = e.base().what();
-              callback(errorResponse);
-            });
-      },
-      [callback](const DrogonDbException &e) {
-        dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.error["message"] = "Database error querying revenue.";
-        errorResponse.error["detail"] = e.base().what();
-        callback(errorResponse);
-      });
+    // Active Partners
+    Json::Value activePartnersStat;
+    activePartnersStat["name"] = "Active Partners";
+    activePartnersStat["value"] = (Json::UInt64)activePartners;
+    activePartnersStat["change"] = "-2.1%"; // Mocked
+    activePartnersStat["changeType"] = "decrease";
+    activePartnersStat["icon"] = "CheckCircleIcon";
+    activePartnersStat["bgColor"] = "bg-yellow-50";
+    activePartnersStat["iconColor"] = "text-yellow-600";
+    activePartnersStat["prefix"] = "";
+    activePartnersStat["suffix"] = "";
+    data.append(activePartnersStat);
+
+    // Seat Utilization
+    Json::Value seatStat;
+    seatStat["name"] = "Seat Utilization";
+    seatStat["value"] = (int)utilization;
+    seatStat["change"] = "-14%"; // Mocked
+    seatStat["changeType"] = "decrease";
+    seatStat["icon"] = "ClockIcon";
+    seatStat["bgColor"] = "bg-red-50";
+    seatStat["iconColor"] = "text-red-600";
+    seatStat["prefix"] = "";
+    seatStat["suffix"] = "%";
+    data.append(seatStat);
+
+    response.result = data;
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to fetch partner stats";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
 }
 
 void CommercialPartnerService::getPartnerDetails(
@@ -1728,8 +1626,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerOv
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-CommercialPartnerService::getPartnerEngagementReport(
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerEngagementReport(
     const std::string &partnerId, const std::string &period) {
   auto dbClient = drogon::app().getDbClient();
   try {
@@ -1843,8 +1740,7 @@ CommercialPartnerService::getPartnerEngagementReport(
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-CommercialPartnerService::getPartnerAnalyticsCharts(
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerAnalyticsCharts(
     const std::string &partnerId, const std::string &period) {
   auto dbClient = drogon::app().getDbClient();
   try {
