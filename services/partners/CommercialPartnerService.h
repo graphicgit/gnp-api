@@ -23,13 +23,11 @@ namespace gnp::services {
 class CommercialPartnerService {
 
 public:
-  void
-  getAll(int pageNo, int pageSize, const std::string &query,
-         const std::function<void(const dto::BaseApiResponse &)> &callback);
+  drogon::Task< ::gnp::dto::BaseApiResponse>
+  getAll(int pageNo, int pageSize, const std::string &query);
 
-  void createPartner(
-      const dto::CreatePartnerDto &dto,
-      const std::function<void(const dto::BaseApiResponse &)> &callback);
+  drogon::Task< ::gnp::dto::BaseApiResponse> createPartner(
+      const dto::CreatePartnerDto &dto);
 
   void createPartnerSubscriber(
       const dto::CreatePartnerSubscriberDto &dto,

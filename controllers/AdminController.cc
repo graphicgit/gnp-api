@@ -687,9 +687,8 @@ void AdminController::getPartnerDetails(
       });
 }
 
-void AdminController::getAllPartners(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
+drogon::Task<HttpResponsePtr>
+AdminController::getAllPartners(HttpRequestPtr req) {
 
   int pageSize = 10; // Default page size
   int pageNo = 1;    //  Default page number
@@ -721,12 +720,9 @@ void AdminController::getAllPartners(
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &commercialPartnerService = plugin->getCommercialPartnerService();
 
-  commercialPartnerService.getAll(
-      pageNo, pageSize, query,
-      [callback](const gnp::dto::BaseApiResponse &result) {
-        auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-        callback(resp);
-      });
+  auto result = co_await commercialPartnerService.getAll(pageNo, pageSize, query);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
 }
 
 drogon::Task<HttpResponsePtr>
@@ -785,15 +781,14 @@ void AdminController::getPartnerSubscriptionSummary(
       });
 }
 
-void AdminController::createPartner(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback) {
+drogon::Task<HttpResponsePtr> AdminController::createPartner(HttpRequestPtr req) {
 
   auto jsonPtr = req->getJsonObject();
   if (!jsonPtr) {
     auto resp = HttpResponse::newHttpResponse();
     resp->setStatusCode(k400BadRequest);
     resp->setBody("Invalid JSON format");
-    callback(resp);
-    return;
+    co_return resp;
   }
 
   gnp::dto::CreatePartnerDto dto;
@@ -802,11 +797,8 @@ void AdminController::createPartner(const HttpRequestPtr &req, std::function<voi
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &commercialPartnerService = plugin->getCommercialPartnerService();
 
-  commercialPartnerService.createPartner(
-      dto, [callback](const gnp::dto::BaseApiResponse &apiResp) {
-        auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
-        callback(resp);
-      });
+  auto apiResp = co_await commercialPartnerService.createPartner(dto);
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
 void AdminController::createPartnerSubscriber(
