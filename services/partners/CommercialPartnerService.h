@@ -57,8 +57,6 @@ public:
   void updateStatus(const std::string &partnerId, const std::string &status, const std::function<void(const dto::BaseApiResponse &)> &callback);
 
 
-  drogon::Task<::gnp::dto::BaseApiResponse> getPartnerStats();
-
   drogon::Task<::gnp::dto::BaseApiResponse> deletePartnerSubscriberAsync(const std::string &partnerId, const std::string &subscriberId);
 
   drogon::Task<::gnp::dto::BaseApiResponse> getPartnerApiKeys(const std::string &partnerId);
@@ -81,6 +79,9 @@ public:
     drogon::Task<::gnp::dto::BaseApiResponse> retrieveSubscriberDetails(const std::string &clientId,
                         const std::string &clientSecret,
                         const std::string &phoneNumber);
+
+    // getPartnerStats for admin use only
+    drogon::Task<::gnp::dto::BaseApiResponse> getPartnerStats();
 
     drogon::Task<::gnp::dto::BaseApiResponse> getPartnerOverviewStats(const std::string &partnerId);
 

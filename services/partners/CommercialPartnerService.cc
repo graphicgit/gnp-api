@@ -112,6 +112,7 @@ drogon::Task<gnp::dto::BaseApiResponse> CommercialPartnerService::getAll(int pag
   }
 }
 
+
 drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getAllSubscribers(int pageNo, int pageSize, const std::string &query, const std::string &partnerId) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -119,7 +120,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getAllSubscr
 
   // 1. Build the search criteria
   Criteria searchCriteria = Criteria(Users::Cols::_partner_id, CompareOperator::EQ, partnerId);
-  
+
   if (!query.empty()) {
     std::string likeQuery = "%" + query + "%";
 
@@ -153,20 +154,30 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getAllSubscr
     response.result["totalCount"] = (Json::UInt64)totalCount;
     response.result["pageNo"] = pageNo;
     response.result["pageSize"] = pageSize;
+    response.result["lowerBound"] = pageSize * (pageNo - 1) + 1;
+    response.result["upperBound"] = Json::Value((int)totalPages == pageNo ? (Json::UInt64)totalCount : (Json::UInt64)(pageNo * pageSize));
     response.result["totalPages"] = (int)totalPages;
 
     Json::Value data = Json::arrayValue;
 
     for (const auto &user : users) {
-      Json::Value userJson = user.toJson();
-      
-      // Sanitization: Remove sensitive data
-      userJson.removeMember("password_hash");
-      
-      data.append(userJson);
-    }
 
+      Json::Value userJson = user.toJson();
+      Json::Value camelCaseRole;
+      camelCaseRole["id"] = userJson["id"];
+      camelCaseRole["firstName"] = userJson["first_name"];
+      camelCaseRole["lastName"] = userJson["last_name"];
+      camelCaseRole["email"] = userJson["email"];
+      camelCaseRole["phoneNumber"] = userJson["phone_number"];
+      camelCaseRole["profileImageUrl"] = userJson["profile_image_url"];
+      camelCaseRole["isActive"] = userJson["is_active"];
+      camelCaseRole["lastActive"] = userJson["last_active"];
+
+      data.append(camelCaseRole);
+    }
     response.result["data"] = data;
+
+
     co_return response;
 
   } catch (const DrogonDbException &e) {
@@ -178,6 +189,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getAllSubscr
     co_return errorResponse;
   }
 }
+
 
 drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::createPartner(const dto::CreatePartnerDto &dto) {
 
@@ -674,6 +686,7 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::deletePartner(const
   }
 }
 
+  // for admin use
 drogon::Task<dto::BaseApiResponse> CommercialPartnerService::getPartnerStats() {
 
   auto dbClient = drogon::app().getDbClient();
@@ -691,8 +704,7 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::getPartnerStats() {
     const auto totalPartners = co_await mp.count(Criteria());
 
     // 3. Get Active Partners
-    const auto activePartners = co_await mp.count(
-        Criteria(CommercialPartners::Cols::_status, CompareOperator::EQ, "Active"));
+    const auto activePartners = co_await mp.count(Criteria(CommercialPartners::Cols::_status, CompareOperator::EQ, "Active"));
 
     // 4. Get Total Subscriber Quota
     long totalQuota = 0;
@@ -1557,50 +1569,88 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::retrieveSubs
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerOverviewStats(
-    const std::string &partnerId) {
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerOverviewStats(const std::string &partnerId) {
+
   auto dbClient = drogon::app().getDbClient();
   try {
-    // 1. Get Active Members
-    CoroMapper<UserSubscriptions> subMapper(dbClient);
-    auto activeMembers = co_await subMapper.count(
-        Criteria(UserSubscriptions::Cols::_partner_id, CompareOperator::EQ,
-                 partnerId) &&
-        Criteria(UserSubscriptions::Cols::_is_active, CompareOperator::EQ,
-                 true));
+    auto now = trantor::Date::now();
+    auto periodStart = now.after(-30 * 24 * 3600);
+    auto prevPeriodStart = now.after(-60 * 24 * 3600);
 
-    // 2. Get Total Quota
+    auto calculateChange = [](double current, double previous) -> double {
+      if (previous == 0) return current > 0 ? 100.0 : 0.0;
+      return ((current - previous) / previous) * 100.0;
+    };
+
+    auto getChangeType = [](double change) -> std::string {
+      if (change > 0) return "increase";
+      if (change < 0) return "decrease";
+      return "neutral";
+    };
+
+    // 1. Get Active Members (Snapshot count + new members trend)
+    CoroMapper<UserSubscriptions> subMapper(dbClient);
+    auto activeMembers = co_await subMapper.count(Criteria(UserSubscriptions::Cols::_partner_id, CompareOperator::EQ, partnerId) &&
+        Criteria(UserSubscriptions::Cols::_is_active, CompareOperator::EQ,true));
+
+    std::string newMembersSql = 
+        "SELECT "
+        "(SELECT COUNT(*) FROM user_subscriptions WHERE partner_id = $1 AND created_at >= $2) as current, "
+        "(SELECT COUNT(*) FROM user_subscriptions WHERE partner_id = $1 AND created_at >= $3 AND created_at < $2) as previous";
+    
+    auto membersRes = co_await dbClient->execSqlCoro(newMembersSql, partnerId, periodStart, prevPeriodStart);
+    long currentNewMembers = membersRes.size() > 0 && !membersRes[0]["current"].isNull() ? membersRes[0]["current"].as<long>() : 0;
+    long prevNewMembers = membersRes.size() > 0 && !membersRes[0]["previous"].isNull() ? membersRes[0]["previous"].as<long>() : 0;
+    double activeMembersChange = calculateChange(currentNewMembers, prevNewMembers);
+
+    // 2. Get Total Quota & Remaining
     CoroMapper<CommercialPartners> partnerMapper(dbClient);
     auto partner = co_await partnerMapper.findByPrimaryKey(partnerId);
     auto totalQuota = partner.getValueOfSubscriberQuota();
     auto remainingQuota = partner.getValueOfRemainingQuota();
 
-    // 3. Get Active Sessions
+    // 3. Get Active Sessions (Snapshot count + sessions started trend)
     CoroMapper<UserSessions> sessionMapper(dbClient);
     auto activeSessions = co_await sessionMapper.count(
-        Criteria(UserSessions::Cols::_partner_id, CompareOperator::EQ,
-                 partnerId) &&
+        Criteria(UserSessions::Cols::_partner_id, CompareOperator::EQ, partnerId) &&
         Criteria(UserSessions::Cols::_is_active, CompareOperator::EQ, true));
 
-    // 4. Get Engagement Rate (Active Readers (30d) / Total Members)
-    auto now = trantor::Date::now();
-    auto thirtyDaysAgo = now.after(-30 * 24 * 3600);
+    std::string sessionsChangeSql = 
+        "SELECT "
+        "(SELECT COUNT(*) FROM user_sessions WHERE partner_id = $1 AND session_start >= $2) as current, "
+        "(SELECT COUNT(*) FROM user_sessions WHERE partner_id = $1 AND session_start >= $3 AND session_start < $2) as previous";
+    
+    auto sessionsRes = co_await dbClient->execSqlCoro(sessionsChangeSql, partnerId, periodStart, prevPeriodStart);
+    long currentSessions = sessionsRes.size() > 0 && !sessionsRes[0]["current"].isNull() ? sessionsRes[0]["current"].as<long>() : 0;
+    long prevSessions = sessionsRes.size() > 0 && !sessionsRes[0]["previous"].isNull() ? sessionsRes[0]["previous"].as<long>() : 0;
+    double activeSessionsChange = calculateChange(currentSessions, prevSessions);
 
-    std::string sql = "SELECT COUNT(DISTINCT user_id) FROM publication_reads "
-                      "WHERE partner_id = $1 AND read_at >= $2";
-    auto result = co_await dbClient->execSqlCoro(sql, partnerId, thirtyDaysAgo);
-    long activeReaders = 0;
-    if (result.size() > 0 && !result[0][0].isNull())
-      activeReaders = result[0][0].as<long>();
+    // 4. Get Engagement Rate Change
+    std::string activeReadersSql = "SELECT "
+        "(SELECT COUNT(DISTINCT user_id) FROM publication_reads WHERE partner_id = $1 AND read_at >= $2) as current, "
+        "(SELECT COUNT(DISTINCT user_id) FROM publication_reads WHERE partner_id = $1 AND read_at >= $3 AND read_at < $2) as previous";
+        
+    auto readersRes = co_await dbClient->execSqlCoro(activeReadersSql, partnerId, periodStart, prevPeriodStart);
+    long currentActiveReaders = readersRes.size() > 0 && !readersRes[0]["current"].isNull() ? readersRes[0]["current"].as<long>() : 0;
+    long prevActiveReaders = readersRes.size() > 0 && !readersRes[0]["previous"].isNull() ? readersRes[0]["previous"].as<long>() : 0;
 
-    auto totalMembers = co_await subMapper.count(
-        Criteria(UserSubscriptions::Cols::_partner_id, CompareOperator::EQ,
-                 partnerId));
+    auto totalMembers = co_await subMapper.count(Criteria(UserSubscriptions::Cols::_partner_id, CompareOperator::EQ, partnerId));
+    
+    // Estimate members 30 days ago
+    long prevTotalMembers = totalMembers - currentNewMembers;
+    if (prevTotalMembers < 0) prevTotalMembers = 0;
 
-    double engagementRate = 0.0;
+    double currentEngagementRate = 0.0;
     if (totalMembers > 0) {
-      engagementRate = (double)activeReaders / totalMembers * 100.0;
+      currentEngagementRate = (double)currentActiveReaders / totalMembers * 100.0;
     }
+
+    double prevEngagementRate = 0.0;
+    if (prevTotalMembers > 0) {
+      prevEngagementRate = (double)prevActiveReaders / prevTotalMembers * 100.0;
+    }
+
+    double engagementRateChange = calculateChange(currentEngagementRate, prevEngagementRate);
 
     gnp::dto::BaseApiResponse response;
     response.success = true;
@@ -1608,10 +1658,19 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerOv
 
     Json::Value data;
     data["activeMembers"] = (Json::UInt64)activeMembers;
+    data["activeMembersChange"] = std::round(activeMembersChange * 10) / 10.0;
+    data["activeMembersChangeType"] = getChangeType(activeMembersChange);
+
     data["totalQuota"] = (Json::UInt64)totalQuota;
     data["remainingQuota"] = (Json::UInt64)remainingQuota;
-    data["engagementRate"] = std::round(engagementRate * 10) / 10.0;
+
+    data["engagementRate"] = std::round(currentEngagementRate * 10) / 10.0;
+    data["engagementRateChange"] = std::round(engagementRateChange * 10) / 10.0;
+    data["engagementRateChangeType"] = getChangeType(engagementRateChange);
+
     data["activeSessions"] = (Json::UInt64)activeSessions;
+    data["activeSessionsChange"] = std::round(activeSessionsChange * 10) / 10.0;
+    data["activeSessionsChangeType"] = getChangeType(activeSessionsChange);
 
     response.result = data;
     co_return response;
@@ -1626,8 +1685,8 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerOv
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerEngagementReport(
-    const std::string &partnerId, const std::string &period) {
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerEngagementReport(const std::string &partnerId, const std::string &period) {
+
   auto dbClient = drogon::app().getDbClient();
   try {
     int days = (period == "30d") ? 30 : 7;

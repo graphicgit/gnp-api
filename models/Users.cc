@@ -40,6 +40,7 @@ const std::string Users::Cols::_user_handle = "\"user_handle\"";
 const std::string Users::Cols::_transports = "\"transports\"";
 const std::string Users::Cols::_credential_type = "\"credential_type\"";
 const std::string Users::Cols::_is_affiliate = "\"is_affiliate\"";
+const std::string Users::Cols::_last_active = "\"last_active\"";
 const std::string Users::primaryKeyName = "id";
 const bool Users::hasPrimaryKey = true;
 const std::string Users::tableName = "\"users\"";
@@ -71,7 +72,8 @@ const std::vector<typename Users::MetaData> Users::metaData_={
 {"user_handle","std::vector<char>","bytea",0,0,0,0},
 {"transports","std::string","ARRAY",0,0,0,0},
 {"credential_type","std::string","text",0,0,0,0},
-{"is_affiliate","bool","boolean",1,0,0,0}
+{"is_affiliate","bool","boolean",1,0,0,0},
+{"last_active","::trantor::Date","timestamp with time zone",0,0,0,0}
 };
 const std::string &Users::getColumnName(size_t index) noexcept(false)
 {
@@ -277,11 +279,33 @@ Users::Users(const Row &r, const ssize_t indexOffset) noexcept
         {
             isAffiliate_=std::make_shared<bool>(r["is_affiliate"].as<bool>());
         }
+        if(!r["last_active"].isNull())
+        {
+            auto timeStr = r["last_active"].as<std::string>();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                lastActive_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
     }
     else
     {
         size_t offset = (size_t)indexOffset;
-        if(offset + 27 > r.size())
+        if(offset + 28 > r.size())
         {
             LOG_FATAL << "Invalid SQL result for this model";
             return;
@@ -509,13 +533,36 @@ Users::Users(const Row &r, const ssize_t indexOffset) noexcept
         {
             isAffiliate_=std::make_shared<bool>(r[index].as<bool>());
         }
+        index = offset + 27;
+        if(!r[index].isNull())
+        {
+            auto timeStr = r[index].as<std::string>();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                lastActive_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
     }
 
 }
 
 Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 27)
+    if(pMasqueradingVector.size() != 28)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -809,6 +856,32 @@ Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasquera
         if(!pJson[pMasqueradingVector[26]].isNull())
         {
             isAffiliate_=std::make_shared<bool>(pJson[pMasqueradingVector[26]].asBool());
+        }
+    }
+    if(!pMasqueradingVector[27].empty() && pJson.isMember(pMasqueradingVector[27]))
+    {
+        dirtyFlag_[27] = true;
+        if(!pJson[pMasqueradingVector[27]].isNull())
+        {
+            auto timeStr = pJson[pMasqueradingVector[27]].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                lastActive_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
         }
     }
 }
@@ -1106,12 +1179,38 @@ Users::Users(const Json::Value &pJson) noexcept(false)
             isAffiliate_=std::make_shared<bool>(pJson["is_affiliate"].asBool());
         }
     }
+    if(pJson.isMember("last_active"))
+    {
+        dirtyFlag_[27]=true;
+        if(!pJson["last_active"].isNull())
+        {
+            auto timeStr = pJson["last_active"].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                lastActive_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+    }
 }
 
 void Users::updateByMasqueradedJson(const Json::Value &pJson,
                                             const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 27)
+    if(pMasqueradingVector.size() != 28)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -1406,6 +1505,32 @@ void Users::updateByMasqueradedJson(const Json::Value &pJson,
             isAffiliate_=std::make_shared<bool>(pJson[pMasqueradingVector[26]].asBool());
         }
     }
+    if(!pMasqueradingVector[27].empty() && pJson.isMember(pMasqueradingVector[27]))
+    {
+        dirtyFlag_[27] = true;
+        if(!pJson[pMasqueradingVector[27]].isNull())
+        {
+            auto timeStr = pJson[pMasqueradingVector[27]].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                lastActive_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+    }
 }
 
 void Users::updateByJson(const Json::Value &pJson) noexcept(false)
@@ -1698,6 +1823,32 @@ void Users::updateByJson(const Json::Value &pJson) noexcept(false)
         if(!pJson["is_affiliate"].isNull())
         {
             isAffiliate_=std::make_shared<bool>(pJson["is_affiliate"].asBool());
+        }
+    }
+    if(pJson.isMember("last_active"))
+    {
+        dirtyFlag_[27] = true;
+        if(!pJson["last_active"].isNull())
+        {
+            auto timeStr = pJson["last_active"].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                lastActive_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
         }
     }
 }
@@ -2367,6 +2518,28 @@ void Users::setIsAffiliateToNull() noexcept
     dirtyFlag_[26] = true;
 }
 
+const ::trantor::Date &Users::getValueOfLastActive() const noexcept
+{
+    static const ::trantor::Date defaultValue = ::trantor::Date();
+    if(lastActive_)
+        return *lastActive_;
+    return defaultValue;
+}
+const std::shared_ptr<::trantor::Date> &Users::getLastActive() const noexcept
+{
+    return lastActive_;
+}
+void Users::setLastActive(const ::trantor::Date &pLastActive) noexcept
+{
+    lastActive_ = std::make_shared<::trantor::Date>(pLastActive);
+    dirtyFlag_[27] = true;
+}
+void Users::setLastActiveToNull() noexcept
+{
+    lastActive_.reset();
+    dirtyFlag_[27] = true;
+}
+
 void Users::updateId(const uint64_t id)
 {
 }
@@ -2400,7 +2573,8 @@ const std::vector<std::string> &Users::insertColumns() noexcept
         "user_handle",
         "transports",
         "credential_type",
-        "is_affiliate"
+        "is_affiliate",
+        "last_active"
     };
     return inCols;
 }
@@ -2704,6 +2878,17 @@ void Users::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[27])
+    {
+        if(getLastActive())
+        {
+            binder << getValueOfLastActive();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 
 const std::vector<std::string> Users::updateColumns() const
@@ -2816,6 +3001,10 @@ const std::vector<std::string> Users::updateColumns() const
     if(dirtyFlag_[26])
     {
         ret.push_back(getColumnName(26));
+    }
+    if(dirtyFlag_[27])
+    {
+        ret.push_back(getColumnName(27));
     }
     return ret;
 }
@@ -3119,6 +3308,17 @@ void Users::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[27])
+    {
+        if(getLastActive())
+        {
+            binder << getValueOfLastActive();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 Json::Value Users::toJson() const
 {
@@ -3339,6 +3539,14 @@ Json::Value Users::toJson() const
     {
         ret["is_affiliate"]=Json::Value();
     }
+    if(getLastActive())
+    {
+        ret["last_active"]=getLastActive()->toDbStringLocal();
+    }
+    else
+    {
+        ret["last_active"]=Json::Value();
+    }
     return ret;
 }
 
@@ -3351,7 +3559,7 @@ Json::Value Users::toMasqueradedJson(
     const std::vector<std::string> &pMasqueradingVector) const
 {
     Json::Value ret;
-    if(pMasqueradingVector.size() == 27)
+    if(pMasqueradingVector.size() == 28)
     {
         if(!pMasqueradingVector[0].empty())
         {
@@ -3650,6 +3858,17 @@ Json::Value Users::toMasqueradedJson(
                 ret[pMasqueradingVector[26]]=Json::Value();
             }
         }
+        if(!pMasqueradingVector[27].empty())
+        {
+            if(getLastActive())
+            {
+                ret[pMasqueradingVector[27]]=getLastActive()->toDbStringLocal();
+            }
+            else
+            {
+                ret[pMasqueradingVector[27]]=Json::Value();
+            }
+        }
         return ret;
     }
     LOG_ERROR << "Masquerade failed";
@@ -3869,6 +4088,14 @@ Json::Value Users::toMasqueradedJson(
     {
         ret["is_affiliate"]=Json::Value();
     }
+    if(getLastActive())
+    {
+        ret["last_active"]=getLastActive()->toDbStringLocal();
+    }
+    else
+    {
+        ret["last_active"]=Json::Value();
+    }
     return ret;
 }
 
@@ -4019,13 +4246,18 @@ bool Users::validateJsonForCreation(const Json::Value &pJson, std::string &err)
         if(!validJsonOfField(26, "is_affiliate", pJson["is_affiliate"], err, true))
             return false;
     }
+    if(pJson.isMember("last_active"))
+    {
+        if(!validJsonOfField(27, "last_active", pJson["last_active"], err, true))
+            return false;
+    }
     return true;
 }
 bool Users::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                                                const std::vector<std::string> &pMasqueradingVector,
                                                std::string &err)
 {
-    if(pMasqueradingVector.size() != 27)
+    if(pMasqueradingVector.size() != 28)
     {
         err = "Bad masquerading vector";
         return false;
@@ -4257,6 +4489,14 @@ bool Users::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                   return false;
           }
       }
+      if(!pMasqueradingVector[27].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[27]))
+          {
+              if(!validJsonOfField(27, pMasqueradingVector[27], pJson[pMasqueradingVector[27]], err, true))
+                  return false;
+          }
+      }
     }
     catch(const Json::LogicError &e)
     {
@@ -4407,13 +4647,18 @@ bool Users::validateJsonForUpdate(const Json::Value &pJson, std::string &err)
         if(!validJsonOfField(26, "is_affiliate", pJson["is_affiliate"], err, false))
             return false;
     }
+    if(pJson.isMember("last_active"))
+    {
+        if(!validJsonOfField(27, "last_active", pJson["last_active"], err, false))
+            return false;
+    }
     return true;
 }
 bool Users::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
                                              const std::vector<std::string> &pMasqueradingVector,
                                              std::string &err)
 {
-    if(pMasqueradingVector.size() != 27)
+    if(pMasqueradingVector.size() != 28)
     {
         err = "Bad masquerading vector";
         return false;
@@ -4557,6 +4802,11 @@ bool Users::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
       if(!pMasqueradingVector[26].empty() && pJson.isMember(pMasqueradingVector[26]))
       {
           if(!validJsonOfField(26, pMasqueradingVector[26], pJson[pMasqueradingVector[26]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[27].empty() && pJson.isMember(pMasqueradingVector[27]))
+      {
+          if(!validJsonOfField(27, pMasqueradingVector[27], pJson[pMasqueradingVector[27]], err, false))
               return false;
       }
     }
@@ -4938,6 +5188,17 @@ bool Users::validJsonOfField(size_t index,
                 return true;
             }
             if(!pJson.isBool())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 27:
+            if(pJson.isNull())
+            {
+                return true;
+            }
+            if(!pJson.isString())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;

@@ -133,7 +133,7 @@
             // "text/markdown": "md",
             // "text/gemini": ["gmi", "gemini"]
         },
-        //locations: An array of locations of static files for GET requests.
+        //locations: An array of locations of x  files for GET requests.
         "locations": [
             {
                 //uri_prefix: The URI prefix of the location prefixed with "/", the default value is "" that disables the location.
