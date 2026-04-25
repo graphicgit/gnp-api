@@ -22,7 +22,8 @@ namespace gnp::dto {
         [[nodiscard]] const std::string& getContactEmail() const { return contact_email_; }
         [[nodiscard]] const std::string& getContactPhone() const { return contact_phone_; }
         [[nodiscard]] const std::string& getBillingEmail() const { return billing_email_; }
-        [[nodiscard]] const std::string& getBillingCycle() const { return billing_cycle_; }
+        [[nodiscard]] const std::string& getDefaultSubscriptionPlanId() const { return default_subscription_plan_id; }
+        [[nodiscard]] const std::string& getDefaultSubscriptionPlanName() const { return default_subscription_plan_name; }
         [[nodiscard]] const std::string& getCurrency() const { return currency_; }
         [[nodiscard]] int getSubscriberQuota() const { return subscriber_quota_; }
         [[nodiscard]] bool getSubaccountEnabled() const { return sub_account_enabled_; }
@@ -34,7 +35,8 @@ namespace gnp::dto {
         void setContactEmail(const std::string& value) { contact_email_ = value; }
         void setContactPhone(const std::string& value) { contact_phone_ = value; }
         void setBillingEmail(const std::string& value) { billing_email_ = value; }
-        void setBillingCycle(const std::string& value) { billing_cycle_ = value; }
+        void setDefaultSubscriptionPlanId(const std::string& value) { default_subscription_plan_id = value; }
+        void setDefaultSubscriptionPlanName(const std::string& value) { default_subscription_plan_name = value; }
         void setCurrency(const std::string& value) { currency_ = value; }
         void setSubscriberQuota(int value) { subscriber_quota_ = value; }
         void setSubaccountEnabled(bool value) { sub_account_enabled_ = value; }
@@ -47,7 +49,8 @@ namespace gnp::dto {
         std::string contact_email_;
         std::string contact_phone_;
         std::string billing_email_;
-        std::string billing_cycle_;
+        std::string default_subscription_plan_id;
+        std::string default_subscription_plan_name;
         std::string currency_;
         int subscriber_quota_ = 0;
         bool sub_account_enabled_ = false;
@@ -76,8 +79,12 @@ namespace gnp::dto {
             billing_email_ = json["billingEmail"].asString();
         }
 
-        if (json.isMember("billingCycle") && !json["billingCycle"].isNull()) {
-            billing_cycle_ = json["billingCycle"].asString();
+        if (json.isMember("defaultSubscriptionPlanId") && !json["defaultSubscriptionPlanId"].isNull()) {
+            default_subscription_plan_id = json["defaultSubscriptionPlanId"].asString();
+        }
+
+        if (json.isMember("defaultSubscriptionPlanName") && !json["defaultSubscriptionPlanName"].isNull()) {
+            default_subscription_plan_name = json["defaultSubscriptionPlanName"].asString();
         }
 
         if (json.isMember("currency") && !json["currency"].isNull()) {

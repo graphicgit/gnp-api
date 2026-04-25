@@ -204,7 +204,8 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::createPartne
     newPartner.setContactEmail(dto.getContactEmail());
     newPartner.setContactPhone(dto.getContactPhone());
     newPartner.setBillingEmail(dto.getBillingEmail());
-    newPartner.setBillingCycle(dto.getBillingCycle());
+    newPartner.setDefaultSubscriptionPlanId(dto.getDefaultSubscriptionPlanId());
+    newPartner.setDefaultSubscriptionPlanDescription(dto.getDefaultSubscriptionPlanName());
     newPartner.setCurrency(dto.getCurrency());
     newPartner.setSubscriberQuota(dto.getSubscriberQuota());
     newPartner.setRemainingQuota(dto.getSubscriberQuota());
@@ -614,25 +615,16 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::updatePartner(const
   try {
     auto commercialPartner = co_await mp.findOne(Criteria(CommercialPartners::Cols::_id, CompareOperator::EQ, dto.getId()));
 
-    if (!dto.getName().empty())
-      commercialPartner.setName(dto.getName());
-    if (!dto.getContactName().empty())
-      commercialPartner.setContactName(dto.getContactName());
-    if (!dto.getContactEmail().empty())
-      commercialPartner.setContactEmail(dto.getContactEmail());
-    if (!dto.getContactPhone().empty())
-      commercialPartner.setContactPhone(dto.getContactPhone());
-    if (!dto.getBillingEmail().empty())
-      commercialPartner.setBillingEmail(dto.getBillingEmail());
-    if (!dto.getBillingCycle().empty())
-      commercialPartner.setBillingCycle(dto.getBillingCycle());
-    if (!dto.getCurrency().empty())
-      commercialPartner.setCurrency(dto.getCurrency());
-
+    commercialPartner.setName(dto.getName());
+    commercialPartner.setContactName(dto.getContactName());
+    commercialPartner.setContactEmail(dto.getContactEmail());
+    commercialPartner.setContactPhone(dto.getContactPhone());
+    commercialPartner.setBillingEmail(dto.getBillingEmail());
+    commercialPartner.setDefaultSubscriptionPlanId(dto.getDefaultSubscriptionPlanId());
+    commercialPartner.setDefaultSubscriptionPlanDescription(dto.getDefaultSubscriptionPlanName());
+    commercialPartner.setCurrency(dto.getCurrency());
     commercialPartner.setSubscriberQuota(dto.getSubscriberQuota());
-
-    if (dto.getSubaccountEnabled())
-      commercialPartner.setSubAccountEnabled(dto.getSubaccountEnabled());
+    commercialPartner.setSubAccountEnabled(dto.getSubaccountEnabled());
 
     co_await mp.update(commercialPartner);
 
@@ -920,9 +912,7 @@ void CommercialPartnerService::enableSubaccount(
       });
 }
 
-void CommercialPartnerService::disableSubaccount(
-    const std::string &partnerId,
-    const std::function<void(const dto::BaseApiResponse &)> &callback) {
+void CommercialPartnerService::disableSubaccount(const std::string &partnerId, const std::function<void(const dto::BaseApiResponse &)> &callback) {
 
   auto dbClient = drogon::app().getDbClient();
   Mapper<CommercialPartners> mp(dbClient);
@@ -1033,8 +1023,7 @@ void CommercialPartnerService::updateStatus(
       });
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::deletePartnerSubscriberAsync(
-    const std::string &partnerId, const std::string &subscriberId) {
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::deletePartnerSubscriberAsync(const std::string &partnerId, const std::string &subscriberId) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<::drogon_model::Gnp::Users> userMapper(dbClient);
@@ -1153,8 +1142,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerAp
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::generatePartnerApiKey(
-    const ::gnp::dto::GeneratePartnerApiKeyDto &dto) {
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::generatePartnerApiKey(const ::gnp::dto::GeneratePartnerApiKeyDto &dto) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> mp(dbClient);
 
@@ -1232,17 +1220,14 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::generatePart
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::revokePartnerApiKey(const std::string &partnerId,
-                                              const std::string &clientId) {
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::revokePartnerApiKey(const std::string &partnerId, const std::string &id) {
+
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> mp(dbClient);
 
   try {
-    auto apiKey = co_await mp.findOne(
-        Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_partner_id,
-                 CompareOperator::EQ, partnerId) &&
-        Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_client_id,
-                 CompareOperator::EQ, clientId));
+    auto apiKey = co_await mp.findOne(Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_partner_id,CompareOperator::EQ, partnerId) &&
+        Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_id, CompareOperator::EQ, id));
 
     apiKey.setIsActive(false);
     co_await mp.update(apiKey);
@@ -1262,9 +1247,73 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::revokePartne
   }
 }
 
+
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::activatePartnerApiKey(const std::string &partnerId, const std::string &id) {
+
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> mp(dbClient);
+
+  try {
+    auto apiKey = co_await mp.findOne(Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_partner_id,CompareOperator::EQ, partnerId) &&
+        Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_id, CompareOperator::EQ, id));
+
+    if (apiKey.getValueOfIsActive()) {
+
+      gnp::dto::BaseApiResponse response;
+      response.success = true;
+      response.message = "API key already active";
+      co_return response;
+    }
+
+    apiKey.setIsActive(true);
+    co_await mp.update(apiKey);
+
+    gnp::dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "API key activated successfully";
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to revoke API key";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+
+
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::deletePartnerApiKey(const std::string &id) {
+
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> mp(dbClient);
+
+  try {
+
+    co_await mp.deleteByPrimaryKey(id);
+
+    gnp::dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "API key deleted successfully";
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to delete API key";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+
+
 drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::updatePartnerApiKey(const ::gnp::dto::UpdatePartnerApiKeyDto &dto) {
 
-    auto dbClient = drogon::app().getDbClient();
+  auto dbClient = drogon::app().getDbClient();
   CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> mp(dbClient);
 
   try {
@@ -1306,9 +1355,9 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::updatePartne
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubscriberAsync(
-    const std::string &clientId, const std::string &clientSecret,
-    const ::gnp::dto::PartnerOnboardingDto &dto) {
+
+
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubscriberAsync(const std::string &clientId, const std::string &clientSecret, const ::gnp::dto::PartnerOnboardingDto &dto) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> apiKeyMapper(
       dbClient);
@@ -1321,8 +1370,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
         Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_is_active,
                  CompareOperator::EQ, true));
 
-    if (!bcrypt::validatePassword(clientSecret,
-                                  apiKey.getValueOfClientSecretHash())) {
+    if (!bcrypt::validatePassword(clientSecret, apiKey.getValueOfClientSecretHash())) {
       gnp::dto::BaseApiResponse errorResponse;
       errorResponse.success = false;
       errorResponse.message = "Invalid ClientSecret";
@@ -1334,7 +1382,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
     apiKey.setLastUsedAt(trantor::Date::now());
     co_await apiKeyMapper.update(apiKey);
 
-    // 2. Process Subscriber creation
+    // 2. Process Subscriber creation ...
     CoroMapper<drogon_model::Gnp::Users> userMapper(dbClient);
     std::string fullName = dto.getFullName();
     std::string firstName, lastName;
@@ -1402,9 +1450,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::checkSubscriberStatus(const std::string &clientId,
-                                                const std::string &clientSecret,
-                                                const std::string &phoneNumber) {
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::checkSubscriberStatus(const std::string &clientId, const std::string &clientSecret, const std::string &phoneNumber) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> apiKeyMapper(
       dbClient);
@@ -1499,19 +1545,16 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::checkSubscri
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::retrieveSubscriberDetails(
-    const std::string &clientId, const std::string &clientSecret,
-    const std::string &phoneNumber) {
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::retrieveSubscriberDetails(const std::string &clientId, const std::string &clientSecret, const std::string &phoneNumber) {
+
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> apiKeyMapper(dbClient);
 
   try {
     // 1. Verify API Key
     auto apiKey = co_await apiKeyMapper.findOne(
-        Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_client_id,
-                 CompareOperator::EQ, clientId) &&
-        Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_is_active,
-                 CompareOperator::EQ, true));
+        Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_client_id, CompareOperator::EQ, clientId) &&
+        Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_is_active, CompareOperator::EQ, true));
 
     if (!bcrypt::validatePassword(clientSecret, apiKey.getValueOfClientSecretHash())) {
       gnp::dto::BaseApiResponse errorResponse;
@@ -1528,10 +1571,8 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::retrieveSubs
     // 2. Find User
     CoroMapper<drogon_model::Gnp::Users> userMapper(dbClient);
     Criteria userCriteria =
-        Criteria(drogon_model::Gnp::Users::Cols::_phone_number,
-                 CompareOperator::EQ, phoneNumber) &&
-        Criteria(drogon_model::Gnp::Users::Cols::_partner_id,
-                 CompareOperator::EQ, apiKey.getValueOfPartnerId());
+        Criteria(drogon_model::Gnp::Users::Cols::_phone_number,CompareOperator::EQ, phoneNumber) &&
+        Criteria(drogon_model::Gnp::Users::Cols::_partner_id, CompareOperator::EQ, apiKey.getValueOfPartnerId());
 
     auto users = co_await userMapper.findBy(userCriteria);
     if (users.empty()) {
@@ -1799,8 +1840,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerEn
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerAnalyticsCharts(
-    const std::string &partnerId, const std::string &period) {
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerAnalyticsCharts(const std::string &partnerId, const std::string &period) {
   auto dbClient = drogon::app().getDbClient();
   try {
     int days = (period == "30d") ? 30 : 7;

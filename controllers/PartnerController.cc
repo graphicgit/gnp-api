@@ -25,6 +25,170 @@ drogon::Task<HttpResponsePtr> PartnerController::getStats(const HttpRequestPtr r
   co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
+Task<HttpResponsePtr> PartnerController::getApiKeys(const HttpRequestPtr req) {
+
+  auto partnerId = req->attributes()->get<std::string>("partnerId");
+
+  if (partnerId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Authorization token required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &partnerService = plugin->getCommercialPartnerService();
+
+  auto result = co_await partnerService.getPartnerApiKeys(partnerId);
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+}
+
+Task<HttpResponsePtr> PartnerController::revokeApiKey(const HttpRequestPtr req) {
+
+  auto partnerId = req->attributes()->get<std::string>("partnerId");
+  auto id = req->getParameter("id");
+
+  if (partnerId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Authorization token required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &partnerService = plugin->getCommercialPartnerService();
+
+  auto result = co_await partnerService.revokePartnerApiKey(partnerId,id);
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+}
+
+Task<HttpResponsePtr> PartnerController::activateApiKey(const HttpRequestPtr req) {
+
+  auto partnerId = req->attributes()->get<std::string>("partnerId");
+  auto id = req->getParameter("id");
+
+  if (partnerId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Authorization token required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &partnerService = plugin->getCommercialPartnerService();
+
+  auto result = co_await partnerService.activatePartnerApiKey(partnerId,id);
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+}
+
+Task<HttpResponsePtr> PartnerController::updatePartnerApiKey(HttpRequestPtr req)
+{
+
+  auto partnerId = req->attributes()->get<std::string>("partnerId");
+
+  if (partnerId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Authorization token required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto json = req->getJsonObject();
+  if (!json) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  gnp::dto::UpdatePartnerApiKeyDto dto;
+  dto.fromJson(*json);
+
+  if (dto.getId().empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Missing required parameter: id";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &partnerService = plugin->getCommercialPartnerService();
+
+  auto apiResp = co_await partnerService.updatePartnerApiKey(dto);
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+}
+
+Task<HttpResponsePtr> PartnerController::deleteApiKey(const HttpRequestPtr req) {
+
+  auto partnerId = req->attributes()->get<std::string>("partnerId");
+  auto id = req->getParameter("id");
+
+  if (partnerId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Authorization token required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &partnerService = plugin->getCommercialPartnerService();
+
+  auto result = co_await partnerService.deletePartnerApiKey(id);
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+}
+
+Task<HttpResponsePtr> PartnerController::generateApiKey(const HttpRequestPtr req) {
+
+  auto partnerId = req->attributes()->get<std::string>("partnerId");
+  auto partnerName = req->attributes()->get<std::string>("partnerName");
+
+  auto jsonBody = req->getJsonObject();
+
+  if (partnerId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Authorization token required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  gnp::dto::GeneratePartnerApiKeyDto dto;
+  dto.setPartnerId(partnerId);
+  dto.setPartnerName(partnerName);
+  dto.fromJson(*jsonBody);
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &partnerService = plugin->getCommercialPartnerService();
+
+  auto result = co_await partnerService.generatePartnerApiKey(dto);
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+
+}
+
 drogon::Task<HttpResponsePtr> PartnerController::getEngagementReport(const HttpRequestPtr req) {
 
   // Get partnerId from request attributes (set by PartnerJwtAuthFilter)

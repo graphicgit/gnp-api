@@ -1167,6 +1167,8 @@ drogon::Task<HttpResponsePtr> AdminController::revokePartnerApiKey(HttpRequestPt
       co_await partnerService.revokePartnerApiKey(partnerId, clientId);
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
+
+
 drogon::Task<HttpResponsePtr> AdminController::updatePartnerApiKey(HttpRequestPtr req) {
 
   auto json = req->getJsonObject();

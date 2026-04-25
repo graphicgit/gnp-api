@@ -65,8 +65,11 @@ public:
 
   drogon::Task<::gnp::dto::BaseApiResponse> updatePartnerApiKey(const ::gnp::dto::UpdatePartnerApiKeyDto &dto);
 
-  drogon::Task<::gnp::dto::BaseApiResponse> revokePartnerApiKey(const std::string &partnerId,
-                      const std::string &clientId);
+  drogon::Task<::gnp::dto::BaseApiResponse> revokePartnerApiKey(const std::string &partnerId, const std::string &id);
+
+  drogon::Task<::gnp::dto::BaseApiResponse> activatePartnerApiKey(const std::string &partnerId, const std::string &id);
+
+  drogon::Task<::gnp::dto::BaseApiResponse> deletePartnerApiKey(const std::string &id);
 
   drogon::Task<::gnp::dto::BaseApiResponse> onboardSubscriberAsync(const std::string &clientId,
                          const std::string &clientSecret,

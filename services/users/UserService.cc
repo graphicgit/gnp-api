@@ -755,6 +755,15 @@ drogon::Task<gnp::dto::BaseApiResponse> UserService::validatePartnerUserCredenti
 
       auto commercialPartner = co_await cpMapper.findByPrimaryKey(user.getValueOfPartnerId());
 
+      if (!commercialPartner.getSubAccountEnabled()) {
+
+        response.success = false;
+        response.message = "Access denied !";
+        response.error["code"] = constants::ERR_UNAUTHORIZED;
+        response.error["message"] = "Sub-account functionality is not enabled for " + commercialPartner.getValueOfName() + ". Please contact your administrator";
+        co_return response;
+
+      }
       auto token =
           jwt::create()
               .set_issuer(jwtIssuer)
