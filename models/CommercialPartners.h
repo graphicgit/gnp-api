@@ -51,7 +51,6 @@ class CommercialPartners
         static const std::string _contact_email;
         static const std::string _contact_phone;
         static const std::string _billing_email;
-        static const std::string _billing_cycle;
         static const std::string _currency;
         static const std::string _status;
         static const std::string _sub_account_enabled;
@@ -59,8 +58,10 @@ class CommercialPartners
         static const std::string _created_at;
         static const std::string _updated_at;
         static const std::string _remaining_quota;
-        static const std::string _subscription_plan_id;
-        static const std::string _subscription_plan_description;
+        static const std::string _default_subscription_plan_id;
+        static const std::string _default_subscription_plan_description;
+        static const std::string _require_two_factor_auth;
+        static const std::string _organization_logo;
     };
 
     static const int primaryKeyNumber;
@@ -179,16 +180,6 @@ class CommercialPartners
     void setBillingEmail(std::string &&pBillingEmail) noexcept;
     void setBillingEmailToNull() noexcept;
 
-    /**  For column billing_cycle  */
-    ///Get the value of the column billing_cycle, returns the default value if the column is null
-    const std::string &getValueOfBillingCycle() const noexcept;
-    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<std::string> &getBillingCycle() const noexcept;
-    ///Set the value of the column billing_cycle
-    void setBillingCycle(const std::string &pBillingCycle) noexcept;
-    void setBillingCycle(std::string &&pBillingCycle) noexcept;
-    void setBillingCycleToNull() noexcept;
-
     /**  For column currency  */
     ///Get the value of the column currency, returns the default value if the column is null
     const std::string &getValueOfCurrency() const noexcept;
@@ -252,28 +243,49 @@ class CommercialPartners
     ///Set the value of the column remaining_quota
     void setRemainingQuota(const int32_t &pRemainingQuota) noexcept;
 
-    /**  For column subscription_plan_id  */
-    ///Get the value of the column subscription_plan_id, returns the default value if the column is null
-    const std::string &getValueOfSubscriptionPlanId() const noexcept;
+    /**  For column default_subscription_plan_id  */
+    ///Get the value of the column default_subscription_plan_id, returns the default value if the column is null
+    const std::string &getValueOfDefaultSubscriptionPlanId() const noexcept;
     ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<std::string> &getSubscriptionPlanId() const noexcept;
-    ///Set the value of the column subscription_plan_id
-    void setSubscriptionPlanId(const std::string &pSubscriptionPlanId) noexcept;
-    void setSubscriptionPlanId(std::string &&pSubscriptionPlanId) noexcept;
-    void setSubscriptionPlanIdToNull() noexcept;
+    const std::shared_ptr<std::string> &getDefaultSubscriptionPlanId() const noexcept;
+    ///Set the value of the column default_subscription_plan_id
+    void setDefaultSubscriptionPlanId(const std::string &pDefaultSubscriptionPlanId) noexcept;
+    void setDefaultSubscriptionPlanId(std::string &&pDefaultSubscriptionPlanId) noexcept;
+    void setDefaultSubscriptionPlanIdToNull() noexcept;
 
-    /**  For column subscription_plan_description  */
-    ///Get the value of the column subscription_plan_description, returns the default value if the column is null
-    const std::string &getValueOfSubscriptionPlanDescription() const noexcept;
+    /**  For column default_subscription_plan_description  */
+    ///Get the value of the column default_subscription_plan_description, returns the default value if the column is null
+    const std::string &getValueOfDefaultSubscriptionPlanDescription() const noexcept;
     ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<std::string> &getSubscriptionPlanDescription() const noexcept;
-    ///Set the value of the column subscription_plan_description
-    void setSubscriptionPlanDescription(const std::string &pSubscriptionPlanDescription) noexcept;
-    void setSubscriptionPlanDescription(std::string &&pSubscriptionPlanDescription) noexcept;
-    void setSubscriptionPlanDescriptionToNull() noexcept;
+    const std::shared_ptr<std::string> &getDefaultSubscriptionPlanDescription() const noexcept;
+    ///Set the value of the column default_subscription_plan_description
+    void setDefaultSubscriptionPlanDescription(const std::string &pDefaultSubscriptionPlanDescription) noexcept;
+    void setDefaultSubscriptionPlanDescription(std::string &&pDefaultSubscriptionPlanDescription) noexcept;
+    void setDefaultSubscriptionPlanDescriptionToNull() noexcept;
+
+    /**  For column require_two_factor_auth  */
+    ///Get the value of the column require_two_factor_auth, returns the default value if the column is null
+    const bool &getValueOfRequireTwoFactorAuth() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<bool> &getRequireTwoFactorAuth() const noexcept;
+    ///Set the value of the column require_two_factor_auth
+    void setRequireTwoFactorAuth(const bool &pRequireTwoFactorAuth) noexcept;
+    void setRequireTwoFactorAuthToNull() noexcept;
+
+    /**  For column organization_logo  */
+    ///Get the value of the column organization_logo, returns the default value if the column is null
+    const std::vector<char> &getValueOfOrganizationLogo() const noexcept;
+    ///Return the column value by std::string with binary data
+    std::string getValueOfOrganizationLogoAsString() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::vector<char>> &getOrganizationLogo() const noexcept;
+    ///Set the value of the column organization_logo
+    void setOrganizationLogo(const std::vector<char> &pOrganizationLogo) noexcept;
+    void setOrganizationLogo(const std::string &pOrganizationLogo) noexcept;
+    void setOrganizationLogoToNull() noexcept;
 
 
-    static size_t getColumnNumber() noexcept {  return 17;  }
+    static size_t getColumnNumber() noexcept {  return 18;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -302,7 +314,6 @@ class CommercialPartners
     std::shared_ptr<std::string> contactEmail_;
     std::shared_ptr<std::string> contactPhone_;
     std::shared_ptr<std::string> billingEmail_;
-    std::shared_ptr<std::string> billingCycle_;
     std::shared_ptr<std::string> currency_;
     std::shared_ptr<std::string> status_;
     std::shared_ptr<bool> subAccountEnabled_;
@@ -310,8 +321,10 @@ class CommercialPartners
     std::shared_ptr<::trantor::Date> createdAt_;
     std::shared_ptr<::trantor::Date> updatedAt_;
     std::shared_ptr<int32_t> remainingQuota_;
-    std::shared_ptr<std::string> subscriptionPlanId_;
-    std::shared_ptr<std::string> subscriptionPlanDescription_;
+    std::shared_ptr<std::string> defaultSubscriptionPlanId_;
+    std::shared_ptr<std::string> defaultSubscriptionPlanDescription_;
+    std::shared_ptr<bool> requireTwoFactorAuth_;
+    std::shared_ptr<std::vector<char>> organizationLogo_;
     struct MetaData
     {
         const std::string colName_;
@@ -323,7 +336,7 @@ class CommercialPartners
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[17]={ false };
+    bool dirtyFlag_[18]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -378,61 +391,66 @@ class CommercialPartners
             sql += "billing_email,";
             ++parametersCount;
         }
-        sql += "billing_cycle,";
+        sql += "currency,";
         ++parametersCount;
         if(!dirtyFlag_[7])
         {
             needSelection=true;
         }
-        sql += "currency,";
+        sql += "status,";
         ++parametersCount;
         if(!dirtyFlag_[8])
         {
             needSelection=true;
         }
-        sql += "status,";
+        sql += "sub_account_enabled,";
         ++parametersCount;
         if(!dirtyFlag_[9])
         {
             needSelection=true;
         }
-        sql += "sub_account_enabled,";
-        ++parametersCount;
-        if(!dirtyFlag_[10])
-        {
-            needSelection=true;
-        }
-        if(dirtyFlag_[11])
+        if(dirtyFlag_[10])
         {
             sql += "subscriber_quota,";
             ++parametersCount;
         }
         sql += "created_at,";
         ++parametersCount;
-        if(!dirtyFlag_[12])
+        if(!dirtyFlag_[11])
         {
             needSelection=true;
         }
-        if(dirtyFlag_[13])
+        if(dirtyFlag_[12])
         {
             sql += "updated_at,";
             ++parametersCount;
         }
         sql += "remaining_quota,";
         ++parametersCount;
+        if(!dirtyFlag_[13])
+        {
+            needSelection=true;
+        }
+        sql += "default_subscription_plan_id,";
+        ++parametersCount;
         if(!dirtyFlag_[14])
         {
             needSelection=true;
         }
-        sql += "subscription_plan_id,";
+        if(dirtyFlag_[15])
+        {
+            sql += "default_subscription_plan_description,";
+            ++parametersCount;
+        }
+        sql += "require_two_factor_auth,";
         ++parametersCount;
-        if(!dirtyFlag_[15])
+        if(!dirtyFlag_[16])
         {
             needSelection=true;
         }
-        if(dirtyFlag_[16])
+        if(dirtyFlag_[17])
         {
-            sql += "subscription_plan_description,";
+            sql += "organization_logo,";
             ++parametersCount;
         }
         if(parametersCount > 0)
@@ -521,28 +539,28 @@ class CommercialPartners
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
-        else
-        {
-            sql +="default,";
-        }
         if(dirtyFlag_[11])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
         }
         if(dirtyFlag_[12])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
-        else
-        {
-            sql +="default,";
-        }
         if(dirtyFlag_[13])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
         }
         if(dirtyFlag_[14])
         {
@@ -558,11 +576,16 @@ class CommercialPartners
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
+        if(dirtyFlag_[16])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
         else
         {
             sql +="default,";
         }
-        if(dirtyFlag_[16])
+        if(dirtyFlag_[17])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);

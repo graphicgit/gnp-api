@@ -52,18 +52,17 @@ drogon::Task<dto::BaseApiResponse> UserService::getAll(int pageNo, int pageSize,
 
     // 3. Find the paginated data
     int offset = (pageNo - 1) * pageSize;
-    auto users =
-        co_await mp.limit(pageSize).offset(offset).findBy(searchCriteria);
+    auto users = co_await mp.limit(pageSize).offset(offset).findBy(searchCriteria);
 
     // 4. Build the final response
     response.success = true;
     response.result["totalCount"] = (Json::UInt64)totalCount;
     response.result["pageNo"] = pageNo;
     response.result["pageSize"] = pageSize;
-    response.result["totalPages"] =
-        (int)((totalCount + pageSize - 1) / pageSize);
+    response.result["totalPages"] = (int)((totalCount + pageSize - 1) / pageSize);
 
     Json::Value data = Json::arrayValue;
+
     for (const auto &role : users) {
       Json::Value roleJson = role.toJson();
       Json::Value camelCaseRole;
@@ -81,6 +80,7 @@ drogon::Task<dto::BaseApiResponse> UserService::getAll(int pageNo, int pageSize,
       data.append(camelCaseRole);
     }
     response.result["data"] = data;
+
   } catch (const DrogonDbException &e) {
     response.success = false;
     response.error["message"] = "Database error while fetching users.";
@@ -294,8 +294,7 @@ drogon::Task<gnp::dto::BaseApiResponse> UserService::create(const dto::CreateUse
   co_return response;
 }
 
-drogon::Task<gnp::dto::BaseApiResponse> UserService::registerUserPasskeys(
-    const dto::RegisterUserPasskeysDto &passKeysDto) {
+drogon::Task<gnp::dto::BaseApiResponse> UserService::registerUserPasskeys(const dto::RegisterUserPasskeysDto &passKeysDto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mp(dbClient);
@@ -602,6 +601,11 @@ drogon::Task<dto::BaseApiResponse> UserService::validateUserCredentials(const dt
     //bool passwordMatches = bcrypt::validatePassword(signin_dto.getPassword(), user.getValueOfPasswordHash());
 
     if (passwordMatches) {
+
+      Users userToUpdate = user;
+      userToUpdate.setLastActive(trantor::Date::now());
+      co_await mapper.update(userToUpdate);
+
       // Password is correct, generate JWT token
       auto &app = drogon::app();
       auto customConfig = app.getCustomConfig();
@@ -666,6 +670,11 @@ drogon::Task<gnp::dto::BaseApiResponse> UserService::validateAdminUserCredential
         signin_dto.getPassword(), user.getValueOfPasswordHash());
 
     if (passwordMatches) {
+
+      Users userToUpdate = user;
+      userToUpdate.setLastActive(trantor::Date::now());
+      co_await mapper.update(userToUpdate);
+
       // Password is correct, generate JWT token
       auto &app = drogon::app();
       auto customConfig = app.getCustomConfig();
@@ -730,6 +739,12 @@ drogon::Task<gnp::dto::BaseApiResponse> UserService::validatePartnerUserCredenti
     bool passwordMatches = bcrypt::validatePassword(signin_dto.getPassword(), user.getValueOfPasswordHash());
 
     if (passwordMatches) {
+
+      // Update last_active timestamp
+      Users userToUpdate = user;
+      userToUpdate.setLastActive(trantor::Date::now());
+      co_await mapper.update(userToUpdate);
+
       // Password is correct, generate JWT token
       auto &app = drogon::app();
       auto customConfig = app.getCustomConfig();
@@ -740,6 +755,15 @@ drogon::Task<gnp::dto::BaseApiResponse> UserService::validatePartnerUserCredenti
 
       auto commercialPartner = co_await cpMapper.findByPrimaryKey(user.getValueOfPartnerId());
 
+      if (!commercialPartner.getSubAccountEnabled()) {
+
+        response.success = false;
+        response.message = "Access denied !";
+        response.error["code"] = constants::ERR_UNAUTHORIZED;
+        response.error["message"] = "Sub-account functionality is not enabled for " + commercialPartner.getValueOfName() + ". Please contact your administrator";
+        co_return response;
+
+      }
       auto token =
           jwt::create()
               .set_issuer(jwtIssuer)
@@ -1269,8 +1293,7 @@ void UserService::setPassword(
       "GET %s", sessionId.c_str());
 }
 
-drogon::Task<gnp::dto::BaseApiResponse>
-UserService::registerProspectiveUser(const dto::CreateUserDto &userDto) {
+drogon::Task<gnp::dto::BaseApiResponse> UserService::registerProspectiveUser(const dto::CreateUserDto &userDto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mp(dbClient);

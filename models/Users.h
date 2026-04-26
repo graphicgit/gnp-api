@@ -71,6 +71,7 @@ class Users
         static const std::string _transports;
         static const std::string _credential_type;
         static const std::string _is_affiliate;
+        static const std::string _last_active;
     };
 
     static const int primaryKeyNumber;
@@ -380,8 +381,17 @@ class Users
     void setIsAffiliate(const bool &pIsAffiliate) noexcept;
     void setIsAffiliateToNull() noexcept;
 
+    /**  For column last_active  */
+    ///Get the value of the column last_active, returns the default value if the column is null
+    const ::trantor::Date &getValueOfLastActive() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<::trantor::Date> &getLastActive() const noexcept;
+    ///Set the value of the column last_active
+    void setLastActive(const ::trantor::Date &pLastActive) noexcept;
+    void setLastActiveToNull() noexcept;
 
-    static size_t getColumnNumber() noexcept {  return 27;  }
+
+    static size_t getColumnNumber() noexcept {  return 28;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -430,6 +440,7 @@ class Users
     std::shared_ptr<std::string> transports_;
     std::shared_ptr<std::string> credentialType_;
     std::shared_ptr<bool> isAffiliate_;
+    std::shared_ptr<::trantor::Date> lastActive_;
     struct MetaData
     {
         const std::string colName_;
@@ -441,7 +452,7 @@ class Users
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[27]={ false };
+    bool dirtyFlag_[28]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -602,6 +613,11 @@ class Users
         if(!dirtyFlag_[26])
         {
             needSelection=true;
+        }
+        if(dirtyFlag_[27])
+        {
+            sql += "last_active,";
+            ++parametersCount;
         }
         if(parametersCount > 0)
         {
@@ -784,6 +800,11 @@ class Users
         else
         {
             sql +="default,";
+        }
+        if(dirtyFlag_[27])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
         }
         if(parametersCount > 0)
         {

@@ -4,8 +4,8 @@
 
 #ifndef CREATEPARTNERSUBSCRIBERDTO_H
 #define CREATEPARTNERSUBSCRIBERDTO_H
-#include <json/json.h>
 
+#include <json/json.h>
 
 namespace gnp::dto {
 
@@ -66,4 +66,6 @@ namespace gnp::dto {
     }
 
 }
+
+
 #endif //CREATEPARTNERSUBSCRIBERDTO_H
