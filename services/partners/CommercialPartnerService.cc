@@ -19,8 +19,13 @@
 #include "services/email/EmailService.h"
 #include "utils/IdGeneratorUtils.h"
 #include "utils/PasswordUtils.h"
+#include "utils/CsvParser.h"
 #include <drogon/orm/CoroMapper.h>
+#include <drogon/utils/Utilities.h>
 #include <cmath>
+#include <fstream>
+#include <cstdio>
+#include <algorithm>
 
 using namespace drogon::orm;
 
@@ -190,7 +195,49 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getAllSubscr
   }
 }
 
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerDetails(const std::string &partnerId) {
 
+  auto dbClient = drogon::app().getDbClient();
+
+  CoroMapper<drogon_model::Gnp::CommercialPartners> partnerMapper(dbClient);
+  
+  try {
+    auto commercialPartner = co_await partnerMapper.findByPrimaryKey(partnerId);
+
+    ::gnp::dto::BaseApiResponse response;
+    response.success = true;
+
+    Json::Value commercialPartnerJson = commercialPartner.toJson();
+
+    // Convert snake_case to camelCase
+    Json::Value camelCaseCommercialPartner;
+
+    camelCaseCommercialPartner["partnerIdentifier"] = commercialPartnerJson["identifier"];
+    camelCaseCommercialPartner["name"] = commercialPartnerJson["name"];
+
+    camelCaseCommercialPartner["billingEmail"] = commercialPartnerJson["billing_email"];
+    camelCaseCommercialPartner["contactPhone"] = commercialPartnerJson["contact_phone"];
+    camelCaseCommercialPartner["requireTwoFactorAuth"] = commercialPartnerJson["require_two_factor_auth"];
+
+    auto logoBytes = commercialPartner.getValueOfOrganizationLogo();
+    if (!logoBytes.empty()) {
+      camelCaseCommercialPartner["organizationLogo"] = drogon::utils::base64Encode((const unsigned char *)logoBytes.data(), logoBytes.size());
+    } else {
+      camelCaseCommercialPartner["organizationLogo"] = Json::nullValue;
+    }
+
+    response.result = camelCaseCommercialPartner;
+    co_return response;
+
+  } catch (const drogon::orm::DrogonDbException &e) {
+    ::gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Commercial Partner not found";
+    errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
 drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::createPartner(const dto::CreatePartnerDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -637,6 +684,39 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::updatePartner(const
     dto::BaseApiResponse errorResponse;
     errorResponse.success = false;
     errorResponse.message = "Failed to update Commercial Partner";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::updatePartnerLogo(const std::string &partnerId, const std::string &logoContent, std::optional<bool> requireTwoFactorAuth) {
+
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<CommercialPartners> mp(dbClient);
+
+  try {
+    auto commercialPartner = co_await mp.findOne(Criteria(CommercialPartners::Cols::_id, CompareOperator::EQ, partnerId));
+
+    if (!logoContent.empty()) {
+      commercialPartner.setOrganizationLogo(logoContent);
+    }
+
+    if (requireTwoFactorAuth.has_value()) {
+      commercialPartner.setRequireTwoFactorAuth(requireTwoFactorAuth.value());
+    }
+
+    co_await mp.update(commercialPartner);
+
+    dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Partner settings updated successfully";
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to update Partner settings";
     errorResponse.error["code"] = constants::ERR_DB_QUERY;
     errorResponse.error["detail"] = e.base().what();
     co_return errorResponse;
@@ -1359,13 +1439,11 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::updatePartne
 
 drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubscriberAsync(const std::string &clientId, const std::string &clientSecret, const ::gnp::dto::PartnerOnboardingDto &dto) {
   auto dbClient = drogon::app().getDbClient();
-  CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> apiKeyMapper(
-      dbClient);
+  CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> apiKeyMapper(dbClient);
 
   try {
     // 1. Verify API Key
-    auto apiKey = co_await apiKeyMapper.findOne(
-        Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_client_id,
+    auto apiKey = co_await apiKeyMapper.findOne(Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_client_id,
                  CompareOperator::EQ, clientId) &&
         Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_is_active,
                  CompareOperator::EQ, true));
@@ -1416,8 +1494,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
 
     // 3. Update Partner Quota
     CoroMapper<drogon_model::Gnp::CommercialPartners> partnerMapper(dbClient);
-    auto partner =
-        co_await partnerMapper.findByPrimaryKey(apiKey.getValueOfPartnerId());
+    auto partner =  co_await partnerMapper.findByPrimaryKey(apiKey.getValueOfPartnerId());
     auto remainingQuota = partner.getValueOfRemainingQuota();
     if (remainingQuota > 0) {
       partner.setRemainingQuota(remainingQuota - 1);
@@ -1449,6 +1526,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
     co_return errorResponse;
   }
 }
+
 
 drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::checkSubscriberStatus(const std::string &clientId, const std::string &clientSecret, const std::string &phoneNumber) {
   auto dbClient = drogon::app().getDbClient();
@@ -1545,6 +1623,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::checkSubscri
   }
 }
 
+
 drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::retrieveSubscriberDetails(const std::string &clientId, const std::string &clientSecret, const std::string &phoneNumber) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -1609,6 +1688,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::retrieveSubs
     co_return errorResponse;
   }
 }
+
 
 drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerOverviewStats(const std::string &partnerId) {
 
@@ -1726,6 +1806,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerOv
   }
 }
 
+
 drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerEngagementReport(const std::string &partnerId, const std::string &period) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -1840,6 +1921,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerEn
   }
 }
 
+
 drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerAnalyticsCharts(const std::string &partnerId, const std::string &period) {
   auto dbClient = drogon::app().getDbClient();
   try {
@@ -1904,6 +1986,111 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerAn
     errorResponse.error["detail"] = e.base().what();
     co_return errorResponse;
   }
+}
+
+
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::bulkUploadSubscribersJson(const std::string &partnerId, const Json::Value &jsonArray) {
+  gnp::dto::BaseApiResponse response;
+  int successCount = 0;
+  int failureCount = 0;
+
+  for (const auto& item : jsonArray) {
+    if (!item.isObject()) continue;
+
+    gnp::dto::CreatePartnerSubscriberDto dto;
+    dto.setPartnerId(partnerId);
+    dto.setFirstName(item.get("FirstName", "").asString());
+    dto.setLastName(item.get("LastName", "").asString());
+    dto.setEmail(item.get("Email", "").asString());
+    dto.setPhoneNumber(item.get("PhoneNumber", "").asString());
+
+    if (dto.getEmail().empty() || dto.getFirstName().empty()) {
+      failureCount++;
+      continue;
+    }
+
+    auto res = co_await createPartnerSubscriber(dto);
+    if (res.success) {
+      successCount++;
+    } else {
+      failureCount++;
+    }
+  }
+
+  response.success = true;
+  response.message = "Bulk upload completed.";
+  response.result["successCount"] = successCount;
+  response.result["failureCount"] = failureCount;
+  response.result["totalProcessed"] = successCount + failureCount;
+
+  co_return response;
+}
+
+
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::bulkUploadSubscribersFile(const std::string &partnerId, const std::string &fileContent, const std::string &fileName) {
+  gnp::dto::BaseApiResponse response;
+  
+  bool isCsv = fileName.find(".csv") != std::string::npos;
+  bool isExcel = fileName.find(".xlsx") != std::string::npos || fileName.find(".xls") != std::string::npos;
+  
+  if (isExcel) {
+    response.success = false;
+    response.error["message"] = "Excel file upload is not supported directly. Please convert to CSV or use the web interface to automatically upload as JSON.";
+    co_return response;
+  }
+
+  if (!isCsv) {
+    response.success = false;
+    response.error["message"] = "Unsupported file format. Please upload a .csv file.";
+    co_return response;
+  }
+  
+  std::vector<gnp::dto::CreatePartnerSubscriberDto> dtos;
+  
+  auto rows = utils::CsvParser::parse(fileContent);
+  size_t startIdx = 0;
+  if (!rows.empty() && rows[0].columns.size() > 0) {
+    std::string firstCol = rows[0].get(0);
+    std::transform(firstCol.begin(), firstCol.end(), firstCol.begin(), ::tolower);
+    if (firstCol.find("first") != std::string::npos) {
+      startIdx = 1;
+    }
+  }
+  
+  for (size_t i = startIdx; i < rows.size(); ++i) {
+    if (rows[i].columns.empty() || (rows[i].columns.size() == 1 && rows[i].columns[0].empty())) continue;
+    gnp::dto::CreatePartnerSubscriberDto dto;
+    dto.setPartnerId(partnerId);
+    dto.setFirstName(rows[i].get(0));
+    dto.setLastName(rows[i].get(1));
+    dto.setEmail(rows[i].get(2));
+    dto.setPhoneNumber(rows[i].get(3));
+    dtos.push_back(dto);
+  }
+  
+  int successCount = 0;
+  int failureCount = 0;
+  
+  for (const auto& dto : dtos) {
+    if (dto.getEmail().empty() || dto.getFirstName().empty()) {
+      failureCount++;
+      continue;
+    }
+    auto res = co_await createPartnerSubscriber(dto);
+    if (res.success) {
+      successCount++;
+    } else {
+      failureCount++;
+    }
+  }
+  
+  response.success = true;
+  response.message = "Bulk upload completed.";
+  response.result["successCount"] = successCount;
+  response.result["failureCount"] = failureCount;
+  response.result["totalProcessed"] = (int)dtos.size();
+  
+  co_return response;
 }
 
 } // namespace gnp::services

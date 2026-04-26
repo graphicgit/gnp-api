@@ -29,6 +29,8 @@ const std::string CommercialPartners::Cols::_updated_at = "\"updated_at\"";
 const std::string CommercialPartners::Cols::_remaining_quota = "\"remaining_quota\"";
 const std::string CommercialPartners::Cols::_default_subscription_plan_id = "\"default_subscription_plan_id\"";
 const std::string CommercialPartners::Cols::_default_subscription_plan_description = "\"default_subscription_plan_description\"";
+const std::string CommercialPartners::Cols::_require_two_factor_auth = "\"require_two_factor_auth\"";
+const std::string CommercialPartners::Cols::_organization_logo = "\"organization_logo\"";
 const std::string CommercialPartners::primaryKeyName = "id";
 const bool CommercialPartners::hasPrimaryKey = true;
 const std::string CommercialPartners::tableName = "\"commercial_partners\"";
@@ -49,7 +51,9 @@ const std::vector<typename CommercialPartners::MetaData> CommercialPartners::met
 {"updated_at","::trantor::Date","timestamp without time zone",0,0,0,0},
 {"remaining_quota","int32_t","integer",4,0,0,1},
 {"default_subscription_plan_id","std::string","uuid",0,0,0,0},
-{"default_subscription_plan_description","std::string","character varying",255,0,0,0}
+{"default_subscription_plan_description","std::string","character varying",255,0,0,0},
+{"require_two_factor_auth","bool","boolean",1,0,0,0},
+{"organization_logo","std::vector<char>","bytea",0,0,0,0}
 };
 const std::string &CommercialPartners::getColumnName(size_t index) noexcept(false)
 {
@@ -160,11 +164,24 @@ CommercialPartners::CommercialPartners(const Row &r, const ssize_t indexOffset) 
         {
             defaultSubscriptionPlanDescription_=std::make_shared<std::string>(r["default_subscription_plan_description"].as<std::string>());
         }
+        if(!r["require_two_factor_auth"].isNull())
+        {
+            requireTwoFactorAuth_=std::make_shared<bool>(r["require_two_factor_auth"].as<bool>());
+        }
+        if(!r["organization_logo"].isNull())
+        {
+            auto str = r["organization_logo"].as<std::string_view>();
+            if(str.length()>=2&&
+                str[0]=='\\'&&str[1]=='x')
+            {
+                organizationLogo_=std::make_shared<std::vector<char>>(drogon::utils::hexToBinaryVector(str.data()+2,str.length()-2));
+            }
+        }
     }
     else
     {
         size_t offset = (size_t)indexOffset;
-        if(offset + 16 > r.size())
+        if(offset + 18 > r.size())
         {
             LOG_FATAL << "Invalid SQL result for this model";
             return;
@@ -286,13 +303,28 @@ CommercialPartners::CommercialPartners(const Row &r, const ssize_t indexOffset) 
         {
             defaultSubscriptionPlanDescription_=std::make_shared<std::string>(r[index].as<std::string>());
         }
+        index = offset + 16;
+        if(!r[index].isNull())
+        {
+            requireTwoFactorAuth_=std::make_shared<bool>(r[index].as<bool>());
+        }
+        index = offset + 17;
+        if(!r[index].isNull())
+        {
+            auto str = r[index].as<std::string_view>();
+            if(str.length()>=2&&
+                str[0]=='\\'&&str[1]=='x')
+            {
+                organizationLogo_=std::make_shared<std::vector<char>>(drogon::utils::hexToBinaryVector(str.data()+2,str.length()-2));
+            }
+        }
     }
 
 }
 
 CommercialPartners::CommercialPartners(const Json::Value &pJson, const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 16)
+    if(pMasqueradingVector.size() != 18)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -459,6 +491,23 @@ CommercialPartners::CommercialPartners(const Json::Value &pJson, const std::vect
         if(!pJson[pMasqueradingVector[15]].isNull())
         {
             defaultSubscriptionPlanDescription_=std::make_shared<std::string>(pJson[pMasqueradingVector[15]].asString());
+        }
+    }
+    if(!pMasqueradingVector[16].empty() && pJson.isMember(pMasqueradingVector[16]))
+    {
+        dirtyFlag_[16] = true;
+        if(!pJson[pMasqueradingVector[16]].isNull())
+        {
+            requireTwoFactorAuth_=std::make_shared<bool>(pJson[pMasqueradingVector[16]].asBool());
+        }
+    }
+    if(!pMasqueradingVector[17].empty() && pJson.isMember(pMasqueradingVector[17]))
+    {
+        dirtyFlag_[17] = true;
+        if(!pJson[pMasqueradingVector[17]].isNull())
+        {
+            auto str = pJson[pMasqueradingVector[17]].asString();
+            organizationLogo_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
         }
     }
 }
@@ -629,12 +678,29 @@ CommercialPartners::CommercialPartners(const Json::Value &pJson) noexcept(false)
             defaultSubscriptionPlanDescription_=std::make_shared<std::string>(pJson["default_subscription_plan_description"].asString());
         }
     }
+    if(pJson.isMember("require_two_factor_auth"))
+    {
+        dirtyFlag_[16]=true;
+        if(!pJson["require_two_factor_auth"].isNull())
+        {
+            requireTwoFactorAuth_=std::make_shared<bool>(pJson["require_two_factor_auth"].asBool());
+        }
+    }
+    if(pJson.isMember("organization_logo"))
+    {
+        dirtyFlag_[17]=true;
+        if(!pJson["organization_logo"].isNull())
+        {
+            auto str = pJson["organization_logo"].asString();
+            organizationLogo_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
+        }
+    }
 }
 
 void CommercialPartners::updateByMasqueradedJson(const Json::Value &pJson,
                                             const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 16)
+    if(pMasqueradingVector.size() != 18)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -802,6 +868,23 @@ void CommercialPartners::updateByMasqueradedJson(const Json::Value &pJson,
             defaultSubscriptionPlanDescription_=std::make_shared<std::string>(pJson[pMasqueradingVector[15]].asString());
         }
     }
+    if(!pMasqueradingVector[16].empty() && pJson.isMember(pMasqueradingVector[16]))
+    {
+        dirtyFlag_[16] = true;
+        if(!pJson[pMasqueradingVector[16]].isNull())
+        {
+            requireTwoFactorAuth_=std::make_shared<bool>(pJson[pMasqueradingVector[16]].asBool());
+        }
+    }
+    if(!pMasqueradingVector[17].empty() && pJson.isMember(pMasqueradingVector[17]))
+    {
+        dirtyFlag_[17] = true;
+        if(!pJson[pMasqueradingVector[17]].isNull())
+        {
+            auto str = pJson[pMasqueradingVector[17]].asString();
+            organizationLogo_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
+        }
+    }
 }
 
 void CommercialPartners::updateByJson(const Json::Value &pJson) noexcept(false)
@@ -967,6 +1050,23 @@ void CommercialPartners::updateByJson(const Json::Value &pJson) noexcept(false)
         if(!pJson["default_subscription_plan_description"].isNull())
         {
             defaultSubscriptionPlanDescription_=std::make_shared<std::string>(pJson["default_subscription_plan_description"].asString());
+        }
+    }
+    if(pJson.isMember("require_two_factor_auth"))
+    {
+        dirtyFlag_[16] = true;
+        if(!pJson["require_two_factor_auth"].isNull())
+        {
+            requireTwoFactorAuth_=std::make_shared<bool>(pJson["require_two_factor_auth"].asBool());
+        }
+    }
+    if(pJson.isMember("organization_logo"))
+    {
+        dirtyFlag_[17] = true;
+        if(!pJson["organization_logo"].isNull())
+        {
+            auto str = pJson["organization_logo"].asString();
+            organizationLogo_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
         }
     }
 }
@@ -1358,6 +1458,62 @@ void CommercialPartners::setDefaultSubscriptionPlanDescriptionToNull() noexcept
     dirtyFlag_[15] = true;
 }
 
+const bool &CommercialPartners::getValueOfRequireTwoFactorAuth() const noexcept
+{
+    static const bool defaultValue = bool();
+    if(requireTwoFactorAuth_)
+        return *requireTwoFactorAuth_;
+    return defaultValue;
+}
+const std::shared_ptr<bool> &CommercialPartners::getRequireTwoFactorAuth() const noexcept
+{
+    return requireTwoFactorAuth_;
+}
+void CommercialPartners::setRequireTwoFactorAuth(const bool &pRequireTwoFactorAuth) noexcept
+{
+    requireTwoFactorAuth_ = std::make_shared<bool>(pRequireTwoFactorAuth);
+    dirtyFlag_[16] = true;
+}
+void CommercialPartners::setRequireTwoFactorAuthToNull() noexcept
+{
+    requireTwoFactorAuth_.reset();
+    dirtyFlag_[16] = true;
+}
+
+const std::vector<char> &CommercialPartners::getValueOfOrganizationLogo() const noexcept
+{
+    static const std::vector<char> defaultValue = std::vector<char>();
+    if(organizationLogo_)
+        return *organizationLogo_;
+    return defaultValue;
+}
+std::string CommercialPartners::getValueOfOrganizationLogoAsString() const noexcept
+{
+    static const std::string defaultValue = std::string();
+    if(organizationLogo_)
+        return std::string(organizationLogo_->data(),organizationLogo_->size());
+    return defaultValue;
+}
+const std::shared_ptr<std::vector<char>> &CommercialPartners::getOrganizationLogo() const noexcept
+{
+    return organizationLogo_;
+}
+void CommercialPartners::setOrganizationLogo(const std::vector<char> &pOrganizationLogo) noexcept
+{
+    organizationLogo_ = std::make_shared<std::vector<char>>(pOrganizationLogo);
+    dirtyFlag_[17] = true;
+}
+void CommercialPartners::setOrganizationLogo(const std::string &pOrganizationLogo) noexcept
+{
+    organizationLogo_ = std::make_shared<std::vector<char>>(pOrganizationLogo.c_str(),pOrganizationLogo.c_str()+pOrganizationLogo.length());
+    dirtyFlag_[17] = true;
+}
+void CommercialPartners::setOrganizationLogoToNull() noexcept
+{
+    organizationLogo_.reset();
+    dirtyFlag_[17] = true;
+}
+
 void CommercialPartners::updateId(const uint64_t id)
 {
 }
@@ -1380,7 +1536,9 @@ const std::vector<std::string> &CommercialPartners::insertColumns() noexcept
         "updated_at",
         "remaining_quota",
         "default_subscription_plan_id",
-        "default_subscription_plan_description"
+        "default_subscription_plan_description",
+        "require_two_factor_auth",
+        "organization_logo"
     };
     return inCols;
 }
@@ -1563,6 +1721,28 @@ void CommercialPartners::outputArgs(drogon::orm::internal::SqlBinder &binder) co
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[16])
+    {
+        if(getRequireTwoFactorAuth())
+        {
+            binder << getValueOfRequireTwoFactorAuth();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[17])
+    {
+        if(getOrganizationLogo())
+        {
+            binder << getValueOfOrganizationLogo();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 
 const std::vector<std::string> CommercialPartners::updateColumns() const
@@ -1631,6 +1811,14 @@ const std::vector<std::string> CommercialPartners::updateColumns() const
     if(dirtyFlag_[15])
     {
         ret.push_back(getColumnName(15));
+    }
+    if(dirtyFlag_[16])
+    {
+        ret.push_back(getColumnName(16));
+    }
+    if(dirtyFlag_[17])
+    {
+        ret.push_back(getColumnName(17));
     }
     return ret;
 }
@@ -1813,6 +2001,28 @@ void CommercialPartners::updateArgs(drogon::orm::internal::SqlBinder &binder) co
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[16])
+    {
+        if(getRequireTwoFactorAuth())
+        {
+            binder << getValueOfRequireTwoFactorAuth();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[17])
+    {
+        if(getOrganizationLogo())
+        {
+            binder << getValueOfOrganizationLogo();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 Json::Value CommercialPartners::toJson() const
 {
@@ -1945,6 +2155,22 @@ Json::Value CommercialPartners::toJson() const
     {
         ret["default_subscription_plan_description"]=Json::Value();
     }
+    if(getRequireTwoFactorAuth())
+    {
+        ret["require_two_factor_auth"]=getValueOfRequireTwoFactorAuth();
+    }
+    else
+    {
+        ret["require_two_factor_auth"]=Json::Value();
+    }
+    if(getOrganizationLogo())
+    {
+        ret["organization_logo"]=drogon::utils::base64Encode((const unsigned char *)getOrganizationLogo()->data(),getOrganizationLogo()->size());
+    }
+    else
+    {
+        ret["organization_logo"]=Json::Value();
+    }
     return ret;
 }
 
@@ -1957,7 +2183,7 @@ Json::Value CommercialPartners::toMasqueradedJson(
     const std::vector<std::string> &pMasqueradingVector) const
 {
     Json::Value ret;
-    if(pMasqueradingVector.size() == 16)
+    if(pMasqueradingVector.size() == 18)
     {
         if(!pMasqueradingVector[0].empty())
         {
@@ -2135,6 +2361,28 @@ Json::Value CommercialPartners::toMasqueradedJson(
                 ret[pMasqueradingVector[15]]=Json::Value();
             }
         }
+        if(!pMasqueradingVector[16].empty())
+        {
+            if(getRequireTwoFactorAuth())
+            {
+                ret[pMasqueradingVector[16]]=getValueOfRequireTwoFactorAuth();
+            }
+            else
+            {
+                ret[pMasqueradingVector[16]]=Json::Value();
+            }
+        }
+        if(!pMasqueradingVector[17].empty())
+        {
+            if(getOrganizationLogo())
+            {
+                ret[pMasqueradingVector[17]]=drogon::utils::base64Encode((const unsigned char *)getOrganizationLogo()->data(),getOrganizationLogo()->size());
+            }
+            else
+            {
+                ret[pMasqueradingVector[17]]=Json::Value();
+            }
+        }
         return ret;
     }
     LOG_ERROR << "Masquerade failed";
@@ -2266,6 +2514,22 @@ Json::Value CommercialPartners::toMasqueradedJson(
     {
         ret["default_subscription_plan_description"]=Json::Value();
     }
+    if(getRequireTwoFactorAuth())
+    {
+        ret["require_two_factor_auth"]=getValueOfRequireTwoFactorAuth();
+    }
+    else
+    {
+        ret["require_two_factor_auth"]=Json::Value();
+    }
+    if(getOrganizationLogo())
+    {
+        ret["organization_logo"]=drogon::utils::base64Encode((const unsigned char *)getOrganizationLogo()->data(),getOrganizationLogo()->size());
+    }
+    else
+    {
+        ret["organization_logo"]=Json::Value();
+    }
     return ret;
 }
 
@@ -2356,13 +2620,23 @@ bool CommercialPartners::validateJsonForCreation(const Json::Value &pJson, std::
         if(!validJsonOfField(15, "default_subscription_plan_description", pJson["default_subscription_plan_description"], err, true))
             return false;
     }
+    if(pJson.isMember("require_two_factor_auth"))
+    {
+        if(!validJsonOfField(16, "require_two_factor_auth", pJson["require_two_factor_auth"], err, true))
+            return false;
+    }
+    if(pJson.isMember("organization_logo"))
+    {
+        if(!validJsonOfField(17, "organization_logo", pJson["organization_logo"], err, true))
+            return false;
+    }
     return true;
 }
 bool CommercialPartners::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                                                             const std::vector<std::string> &pMasqueradingVector,
                                                             std::string &err)
 {
-    if(pMasqueradingVector.size() != 16)
+    if(pMasqueradingVector.size() != 18)
     {
         err = "Bad masquerading vector";
         return false;
@@ -2501,6 +2775,22 @@ bool CommercialPartners::validateMasqueradedJsonForCreation(const Json::Value &p
                   return false;
           }
       }
+      if(!pMasqueradingVector[16].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[16]))
+          {
+              if(!validJsonOfField(16, pMasqueradingVector[16], pJson[pMasqueradingVector[16]], err, true))
+                  return false;
+          }
+      }
+      if(!pMasqueradingVector[17].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[17]))
+          {
+              if(!validJsonOfField(17, pMasqueradingVector[17], pJson[pMasqueradingVector[17]], err, true))
+                  return false;
+          }
+      }
     }
     catch(const Json::LogicError &e)
     {
@@ -2596,13 +2886,23 @@ bool CommercialPartners::validateJsonForUpdate(const Json::Value &pJson, std::st
         if(!validJsonOfField(15, "default_subscription_plan_description", pJson["default_subscription_plan_description"], err, false))
             return false;
     }
+    if(pJson.isMember("require_two_factor_auth"))
+    {
+        if(!validJsonOfField(16, "require_two_factor_auth", pJson["require_two_factor_auth"], err, false))
+            return false;
+    }
+    if(pJson.isMember("organization_logo"))
+    {
+        if(!validJsonOfField(17, "organization_logo", pJson["organization_logo"], err, false))
+            return false;
+    }
     return true;
 }
 bool CommercialPartners::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
                                                           const std::vector<std::string> &pMasqueradingVector,
                                                           std::string &err)
 {
-    if(pMasqueradingVector.size() != 16)
+    if(pMasqueradingVector.size() != 18)
     {
         err = "Bad masquerading vector";
         return false;
@@ -2691,6 +2991,16 @@ bool CommercialPartners::validateMasqueradedJsonForUpdate(const Json::Value &pJs
       if(!pMasqueradingVector[15].empty() && pJson.isMember(pMasqueradingVector[15]))
       {
           if(!validJsonOfField(15, pMasqueradingVector[15], pJson[pMasqueradingVector[15]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[16].empty() && pJson.isMember(pMasqueradingVector[16]))
+      {
+          if(!validJsonOfField(16, pMasqueradingVector[16], pJson[pMasqueradingVector[16]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[17].empty() && pJson.isMember(pMasqueradingVector[17]))
+      {
+          if(!validJsonOfField(17, pMasqueradingVector[17], pJson[pMasqueradingVector[17]], err, false))
               return false;
       }
     }
@@ -2961,6 +3271,28 @@ bool CommercialPartners::validJsonOfField(size_t index,
                 return false;
             }
 
+            break;
+        case 16:
+            if(pJson.isNull())
+            {
+                return true;
+            }
+            if(!pJson.isBool())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 17:
+            if(pJson.isNull())
+            {
+                return true;
+            }
+            if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
             break;
         default:
             err="Internal error in the server";

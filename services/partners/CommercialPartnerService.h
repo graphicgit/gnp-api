@@ -40,6 +40,8 @@ public:
 
   drogon::Task<dto::BaseApiResponse> updatePartner(const dto::UpdatePartnerDto &dto);
 
+  drogon::Task<dto::BaseApiResponse> updatePartnerLogo(const std::string &partnerId, const std::string &logoContent, std::optional<bool> requireTwoFactorAuth = std::nullopt);
+
   drogon::Task<dto::BaseApiResponse> deletePartner(const std::string &id);
 
   void enableSubaccount(
@@ -60,6 +62,8 @@ public:
   drogon::Task<::gnp::dto::BaseApiResponse> deletePartnerSubscriberAsync(const std::string &partnerId, const std::string &subscriberId);
 
   drogon::Task<::gnp::dto::BaseApiResponse> getPartnerApiKeys(const std::string &partnerId);
+
+  drogon::Task<::gnp::dto::BaseApiResponse> getPartnerDetails(const std::string &partnerId);
 
   drogon::Task<::gnp::dto::BaseApiResponse> generatePartnerApiKey(const ::gnp::dto::GeneratePartnerApiKeyDto &dto);
 
@@ -92,6 +96,8 @@ public:
 
     drogon::Task<::gnp::dto::BaseApiResponse> getPartnerAnalyticsCharts(const std::string &partnerId, const std::string &period);
 
+    drogon::Task<::gnp::dto::BaseApiResponse> bulkUploadSubscribersFile(const std::string &partnerId, const std::string &fileContent, const std::string &fileName);
+    drogon::Task<::gnp::dto::BaseApiResponse> bulkUploadSubscribersJson(const std::string &partnerId, const Json::Value &jsonArray);
 
 };
 

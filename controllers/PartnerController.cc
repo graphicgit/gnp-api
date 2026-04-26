@@ -4,9 +4,8 @@
 #include "plugins/GnpServicePlugin.h"
 
 
-drogon::Task<HttpResponsePtr> PartnerController::getStats(const HttpRequestPtr req) {
+Task<HttpResponsePtr> PartnerController::getStats(const HttpRequestPtr req) {
 
-  // Get partnerId from request attributes (set by PartnerJwtAuthFilter)
   auto partnerId = req->attributes()->get<std::string>("partnerId");
 
   if (partnerId.empty()) {
@@ -22,6 +21,26 @@ drogon::Task<HttpResponsePtr> PartnerController::getStats(const HttpRequestPtr r
   auto &partnerService = plugin->getCommercialPartnerService();
 
   auto result = co_await partnerService.getPartnerOverviewStats(partnerId);
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+}
+
+Task<HttpResponsePtr> PartnerController::getPartnerDetails(const HttpRequestPtr req) {
+
+  auto partnerId = req->attributes()->get<std::string>("partnerId");
+
+  if (partnerId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Authorization token required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &partnerService = plugin->getCommercialPartnerService();
+
+  auto result = co_await partnerService.getPartnerDetails(partnerId);
   co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
@@ -370,6 +389,94 @@ Task<HttpResponsePtr> PartnerController::deleteSubscriber(HttpRequestPtr req) {
   auto &commercialPartnerService = plugin->getCommercialPartnerService();
 
   auto result = co_await commercialPartnerService.deletePartnerSubscriberAsync(partnerId, subscriberId);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+}
+Task<HttpResponsePtr> PartnerController::bulkUploadSubscribers(HttpRequestPtr req) {
+  auto partnerId = req->attributes()->get<std::string>("partnerId");
+  if (partnerId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Authorization token required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &commercialPartnerService = plugin->getCommercialPartnerService();
+
+  // Try parsing as JSON array first (Frontend Excel/CSV to JSON parsing fallback)
+  auto jsonBody = req->getJsonObject();
+  if (jsonBody && jsonBody->isArray()) {
+    auto result = co_await commercialPartnerService.bulkUploadSubscribersJson(partnerId, *jsonBody);
+    auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+    co_return resp;
+  }
+
+  // Fallback to multipart file upload for CSV
+  drogon::MultiPartParser fileUpload;
+  if (fileUpload.parse(req) != 0 || fileUpload.getFiles().empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "No file uploaded or invalid JSON array";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto& file = fileUpload.getFiles()[0];
+  std::string fileContent(file.fileData(), file.fileLength());
+  std::string fileName = file.getFileName();
+
+  auto result = co_await commercialPartnerService.bulkUploadSubscribersFile(partnerId, fileContent, fileName);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+}
+
+Task<HttpResponsePtr> PartnerController::updateLogo(HttpRequestPtr req) {
+
+  auto partnerId = req->attributes()->get<std::string>("partnerId");
+
+  if (partnerId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Authorization token required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  drogon::MultiPartParser fileUpload;
+  std::string fileContent = "";
+  if (fileUpload.parse(req) == 0 && !fileUpload.getFiles().empty()) {
+    auto &file = fileUpload.getFiles()[0];
+    fileContent = std::string(file.fileData(), file.fileLength());
+  }
+
+  std::optional<bool> requireTwoFactorAuth = std::nullopt;
+  auto parameters = fileUpload.getParameters();
+  if (parameters.find("requireTwoFactorAuth") != parameters.end()) {
+    std::string val = parameters["requireTwoFactorAuth"];
+    requireTwoFactorAuth = (val == "true" || val == "1");
+  } else if (!req->getParameter("requireTwoFactorAuth").empty()) {
+    std::string val = req->getParameter("requireTwoFactorAuth");
+    requireTwoFactorAuth = (val == "true" || val == "1");
+  }
+
+  if (fileContent.empty() && !requireTwoFactorAuth.has_value()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "No updates provided";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &commercialPartnerService = plugin->getCommercialPartnerService();
+
+  auto result = co_await commercialPartnerService.updatePartnerLogo(partnerId, fileContent, requireTwoFactorAuth);
   auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
   co_return resp;
 }

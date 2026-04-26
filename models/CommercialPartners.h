@@ -60,6 +60,8 @@ class CommercialPartners
         static const std::string _remaining_quota;
         static const std::string _default_subscription_plan_id;
         static const std::string _default_subscription_plan_description;
+        static const std::string _require_two_factor_auth;
+        static const std::string _organization_logo;
     };
 
     static const int primaryKeyNumber;
@@ -261,8 +263,29 @@ class CommercialPartners
     void setDefaultSubscriptionPlanDescription(std::string &&pDefaultSubscriptionPlanDescription) noexcept;
     void setDefaultSubscriptionPlanDescriptionToNull() noexcept;
 
+    /**  For column require_two_factor_auth  */
+    ///Get the value of the column require_two_factor_auth, returns the default value if the column is null
+    const bool &getValueOfRequireTwoFactorAuth() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<bool> &getRequireTwoFactorAuth() const noexcept;
+    ///Set the value of the column require_two_factor_auth
+    void setRequireTwoFactorAuth(const bool &pRequireTwoFactorAuth) noexcept;
+    void setRequireTwoFactorAuthToNull() noexcept;
 
-    static size_t getColumnNumber() noexcept {  return 16;  }
+    /**  For column organization_logo  */
+    ///Get the value of the column organization_logo, returns the default value if the column is null
+    const std::vector<char> &getValueOfOrganizationLogo() const noexcept;
+    ///Return the column value by std::string with binary data
+    std::string getValueOfOrganizationLogoAsString() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::vector<char>> &getOrganizationLogo() const noexcept;
+    ///Set the value of the column organization_logo
+    void setOrganizationLogo(const std::vector<char> &pOrganizationLogo) noexcept;
+    void setOrganizationLogo(const std::string &pOrganizationLogo) noexcept;
+    void setOrganizationLogoToNull() noexcept;
+
+
+    static size_t getColumnNumber() noexcept {  return 18;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -300,6 +323,8 @@ class CommercialPartners
     std::shared_ptr<int32_t> remainingQuota_;
     std::shared_ptr<std::string> defaultSubscriptionPlanId_;
     std::shared_ptr<std::string> defaultSubscriptionPlanDescription_;
+    std::shared_ptr<bool> requireTwoFactorAuth_;
+    std::shared_ptr<std::vector<char>> organizationLogo_;
     struct MetaData
     {
         const std::string colName_;
@@ -311,7 +336,7 @@ class CommercialPartners
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[16]={ false };
+    bool dirtyFlag_[18]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -415,6 +440,17 @@ class CommercialPartners
         if(dirtyFlag_[15])
         {
             sql += "default_subscription_plan_description,";
+            ++parametersCount;
+        }
+        sql += "require_two_factor_auth,";
+        ++parametersCount;
+        if(!dirtyFlag_[16])
+        {
+            needSelection=true;
+        }
+        if(dirtyFlag_[17])
+        {
+            sql += "organization_logo,";
             ++parametersCount;
         }
         if(parametersCount > 0)
@@ -536,6 +572,20 @@ class CommercialPartners
             sql +="default,";
         }
         if(dirtyFlag_[15])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[16])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
+        }
+        if(dirtyFlag_[17])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);

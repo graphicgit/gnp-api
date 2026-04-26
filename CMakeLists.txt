@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
+cmake_policy(VERSION 3.5)
 project(GnpApi CXX)
 
 set(CMAKE_CXX_STANDARD 20)
