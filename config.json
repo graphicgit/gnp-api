@@ -338,12 +338,110 @@
         },
         "QuartzSchedulerApi": {
             "BaseUrl": "https://scheduler.richcreationsdevelopment.com",
-            "CampaignCallBackUrl": "https://dev-api.graphicnewsplus.com/api/v1/campaigns/run-scheduled-campaign"
+            "CampaignCallBackUrl": "https://dev-api.graphicnewsplus.com/api/v1/campaigns/run-scheduled-campaign",
+            "SubscriptionReminderCallBackUrl": "https://dev-api.graphicnewsplus.com/api/v1/subscription/send-reminders"
         },
         "MtnMomoApi": {
             "BaseUrl": "https://sandbox.mtnmomo.com/collection/v1_0",
             "CollectionsSubscriptionKey": "4f87849cbaf74ef0ba52e7b425897e78",
             "DisbursementSubscriptionKey": "b544de9587de4fe0805ecfdcb7fcdfb3"
-        }
+        },
+        "PartnerPermissions":  [
+            {
+                "systemName": "api.manage",
+                "friendlyName": "Manage API Keys",
+                "subPermissions": [
+                    {
+                        "id": 1,
+                        "systemName": "api.keys.create",
+                        "friendlyName": "Create API Keys"
+                    },
+                    {
+                        "id": 2,
+                        "systemName": "api.keys.revoke",
+                        "friendlyName": "Revoke API Key"
+                    },
+                    {
+                        "id": 3,
+                        "systemName": "api.keys.delete",
+                        "friendlyName": "Delete API Key"
+                    }
+                ]
+            },
+            {
+                "systemName": "subscribers.manage",
+                "friendlyName": "Manage Subscribers",
+                "subPermissions": [
+                    {
+                        "id": 4,
+                        "systemName": "subscribers.create",
+                        "friendlyName": "Create Subscriber"
+                    },
+                    {
+                        "id": 5,
+                        "systemName": "subscribers.bulk_upload",
+                        "friendlyName": "Upload Bulk Subscribers via Excel/CSV"
+                    },
+                    {
+                        "id": 6,
+                        "systemName": "subscribers.update",
+                        "friendlyName": "Update Subscriber"
+                    },
+                    {
+                        "id": 7,
+                        "systemName": "subscribers.delete",
+                        "friendlyName": "Delete Subscriber"
+                    }
+                ]
+            },
+            {
+                "systemName": "settings.manage",
+                "friendlyName": "Manage Settings",
+                "subPermissions": [
+                    {
+                        "id": 8,
+                        "systemName": "settings.update",
+                        "friendlyName": "Update Settings"
+                    }
+                ]
+            },
+            {
+                "systemName": "users.manage",
+                "friendlyName": "Manage Users",
+                "subPermissions": [
+                    {
+                        "id": 9,
+                        "systemName": "users.create",
+                        "friendlyName": "Create/Invite User"
+                    },
+                    {
+                        "id": 10,
+                        "systemName": "users.edit",
+                        "friendlyName": "Edit User"
+                    },
+                    {
+                        "id": 11,
+                        "systemName": "users.delete",
+                        "friendlyName": "Delete User"
+                    }
+                ]
+            },
+            {
+                "systemName": "reports.manage",
+                "friendlyName": "Manage Reports",
+                "subPermissions": [
+                    {
+                        "id": 12,
+                        "systemName": "reports.view",
+                        "friendlyName": "View Reports"
+                    },
+                    {
+                        "id": 13,
+                        "systemName": "reports.export",
+                        "friendlyName": "Export Report Data"
+                    }
+                ]
+            }
+        ]
     }
 }

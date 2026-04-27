@@ -8,34 +8,24 @@ class SubscriptionsController
     : public drogon::HttpController<SubscriptionsController> {
 
 public:
-  static constexpr const char *PREFIX = "/api/v1/subscription";
+  static constexpr const char *PREFIX = "/api/v1/subscription/";
   METHOD_LIST_BEGIN
-  ADD_METHOD_TO(SubscriptionsController::getAll,
-                std::string(PREFIX) + "/get-all", Get); // for admin use
-  ADD_METHOD_TO(SubscriptionsController::getUserSubscription,
-                std::string(PREFIX) + "/get-details", Get);
-  ADD_METHOD_TO(SubscriptionsController::manageGuestSubscription,
-                std::string(PREFIX) + "/guest", Post, Options);
-  ADD_METHOD_TO(SubscriptionsController::manageGuestOneTimeBuy,
-                std::string(PREFIX) + "/guest-onetime-buy", Post, Options);
-  ADD_METHOD_TO(SubscriptionsController::manageUserOneTimeBuy,
-                std::string(PREFIX) + "/user-onetime-buy", Get, Options,
-                "JwtAuthFilter");
-  ADD_METHOD_TO(SubscriptionsController::fulfillGuestOneTimeBuy,
-                std::string(PREFIX) + "/fulfill-guest-onetime", Get, Options);
-  ADD_METHOD_TO(SubscriptionsController::fulfillUserOneTimeBuy,
-                std::string(PREFIX) + "/fulfill-user-onetime", Get, Options,
-                "JwtAuthFilter");
-  ADD_METHOD_TO(SubscriptionsController::validateNewsPaperEntitlement, std::string(PREFIX) + "/validate-newspaper-entitlement", Get,
-                Options, "JwtAuthFilter");
-  ADD_METHOD_TO(SubscriptionsController::grantNewsPaperAccess, std::string(PREFIX) + "/grant-newspaper-access", Post, Options);
-  ADD_METHOD_TO(SubscriptionsController::getNewsPaperRedactedDetailsViaUniqueId, std::string(PREFIX) + "/get-newspaper-redacted-details-via-unique-id", Get, Options, "JwtAuthFilter");
-  ADD_METHOD_TO(SubscriptionsController::findNewsPaperByDateAndPublication, std::string(PREFIX) + "/find-newspaper-by-date", Get, Options, "JwtAuthFilter");
-  ADD_METHOD_TO(SubscriptionsController::buyCopy, std::string(PREFIX) + "/buy-copy", Post, Options, "JwtAuthFilter");
-  ADD_METHOD_TO(SubscriptionsController::fulfillBuyCopy, std::string(PREFIX) + "/fulfill-buy-copy", Get, Options);
-  ADD_METHOD_TO(SubscriptionsController::manageUserSubscription, std::string(PREFIX) + "/user", Post);
-  ADD_METHOD_TO(SubscriptionsController::renew, std::string(PREFIX) + "/renew", Post);
-  ADD_METHOD_TO(SubscriptionsController::renewSubscriptionViaDirectDebit, std::string(PREFIX) + "/renew-subscription-via-direct-debit", Get);
+  ADD_METHOD_TO(SubscriptionsController::getAll,  std::string(PREFIX) + "get-all", Get);
+  ADD_METHOD_TO(SubscriptionsController::getUserSubscription, std::string(PREFIX) + "get-details", Get);
+  ADD_METHOD_TO(SubscriptionsController::manageGuestSubscription,  std::string(PREFIX) + "guest", Post, Options);
+  ADD_METHOD_TO(SubscriptionsController::manageGuestOneTimeBuy,  std::string(PREFIX) + "guest-onetime-buy", Post, Options);
+  ADD_METHOD_TO(SubscriptionsController::manageUserOneTimeBuy, std::string(PREFIX) + "user-onetime-buy", Get, Options, "JwtAuthFilter");
+  ADD_METHOD_TO(SubscriptionsController::fulfillGuestOneTimeBuy, std::string(PREFIX) + "fulfill-guest-onetime", Get, Options);
+  ADD_METHOD_TO(SubscriptionsController::fulfillUserOneTimeBuy, std::string(PREFIX) + "fulfill-user-onetime", Get, Options, "JwtAuthFilter");
+  ADD_METHOD_TO(SubscriptionsController::validateNewsPaperEntitlement, std::string(PREFIX) + "validate-newspaper-entitlement", Get, Options, "JwtAuthFilter");
+  ADD_METHOD_TO(SubscriptionsController::grantNewsPaperAccess, std::string(PREFIX) + "grant-newspaper-access", Post, Options);
+  ADD_METHOD_TO(SubscriptionsController::getNewsPaperRedactedDetailsViaUniqueId, std::string(PREFIX) + "get-newspaper-redacted-details-via-unique-id", Get, Options, "JwtAuthFilter");
+  ADD_METHOD_TO(SubscriptionsController::findNewsPaperByDateAndPublication, std::string(PREFIX) + "find-newspaper-by-date", Get, Options, "JwtAuthFilter");
+  ADD_METHOD_TO(SubscriptionsController::buyCopy, std::string(PREFIX) + "buy-copy", Post, Options, "JwtAuthFilter");
+  ADD_METHOD_TO(SubscriptionsController::fulfillBuyCopy, std::string(PREFIX) + "fulfill-buy-copy", Get, Options);
+  ADD_METHOD_TO(SubscriptionsController::manageUserSubscription, std::string(PREFIX) + "user", Post);
+  ADD_METHOD_TO(SubscriptionsController::renew, std::string(PREFIX) + "renew", Post);
+  ADD_METHOD_TO(SubscriptionsController::renewSubscriptionViaDirectDebit, std::string(PREFIX) + "renew-subscription-via-direct-debit", Get);
   METHOD_LIST_END
 
   // handler methods
