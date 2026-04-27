@@ -17,6 +17,7 @@ public:
   ADD_METHOD_TO(AuthController::registerPasskeys,std::string(PREFIX) + "register-pass-keys", Post, Options);
   ADD_METHOD_TO(AuthController::adminSignIn, std::string(PREFIX) + "admin-login", Post, Options);
   ADD_METHOD_TO(AuthController::partnerSignIn, std::string(PREFIX) + "partner-login", Post, Options);
+  ADD_METHOD_TO(AuthController::verifyPartnerOtp, std::string(PREFIX) + "verify-otp", Post, Options);
   ADD_METHOD_TO(AuthController::affiliateSignIn, std::string(PREFIX) + "affiliate-login", Post, Options);
   METHOD_LIST_END
 
@@ -30,6 +31,7 @@ public:
   Task<HttpResponsePtr> loginViaPasskeys(HttpRequestPtr req);
   Task<HttpResponsePtr> adminSignIn(HttpRequestPtr req);
   Task<HttpResponsePtr> partnerSignIn(HttpRequestPtr req);
+  Task<HttpResponsePtr> verifyPartnerOtp(HttpRequestPtr req);
   Task<HttpResponsePtr> affiliateSignIn(HttpRequestPtr req);
 
 private:

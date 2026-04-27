@@ -10,6 +10,7 @@
 
 #include "dto/LoginUserPasskeyDto.h"
 #include "dto/RegisterUserPasskeysDto.h"
+#include "dto/VerifyPartnerUserOtpDto.h"
 
 namespace gnp::services {
 
@@ -51,6 +52,8 @@ public:
   drogon::Task<gnp::dto::BaseApiResponse> validateAdminUserCredentials(const dto::SigninDto &signin_dto);
 
   drogon::Task<gnp::dto::BaseApiResponse> validatePartnerUserCredentials(const dto::SigninDto &signin_dto);
+
+  drogon::Task<gnp::dto::BaseApiResponse> validatePartnerUserOtp(const dto::VerifyPartnerUserOtpDto &dto);
 
 
   void checkAccountStatus(

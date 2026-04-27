@@ -9,8 +9,8 @@
 #include <string>
 #include <vector>
 
-namespace gnp {
-namespace dto {
+namespace gnp::dto {
+
 
 class UpdatePartnerApiKeyDto {
 public:
@@ -58,7 +58,6 @@ inline void UpdatePartnerApiKeyDto::fromJson(const Json::Value &json) {
   }
 }
 
-} // namespace dto
 } // namespace gnp
 
 #endif // UPDATEPARTNERAPIKEYDTO_H
