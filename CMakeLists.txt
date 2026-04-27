@@ -90,6 +90,11 @@ add_executable(${PROJECT_NAME} main.cc
         dto/UpdatePartnerSubscriberDto.h
         services/partner_activity_logs/PartnerActivityLogService.h
         services/partner_activity_logs/PartnerActivityLogService.cc
+        services/roles/RoleService.h
+        services/roles/RoleService.h
+        services/roles/RoleService.h
+        dto/RoleDto.h
+        services/roles/RoleService.cc
 )
 
 # ##############################################################################

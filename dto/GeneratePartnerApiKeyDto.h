@@ -9,8 +9,7 @@
 #include <string>
 #include <vector>
 
-namespace gnp {
-namespace dto {
+namespace gnp::dto {
 
 class GeneratePartnerApiKeyDto {
 public:
@@ -63,6 +62,7 @@ inline void GeneratePartnerApiKeyDto::fromJson(const Json::Value &json) {
       scopes_.push_back(scope.asString());
     }
   }
+
   if (json.isMember("allowedIps") && json["allowedIps"].isArray()) {
     for (const auto &ip : json["allowedIps"]) {
       allowed_ips_.push_back(ip.asString());
@@ -71,6 +71,5 @@ inline void GeneratePartnerApiKeyDto::fromJson(const Json::Value &json) {
 }
 
 } // namespace dto
-} // namespace gnp
 
 #endif // GENERATEPARTNERAPIKEYDTO_H
