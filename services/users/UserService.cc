@@ -18,6 +18,7 @@
 #include <openssl/sha.h>
 
 #include "CommercialPartners.h"
+#include "plugins/GnpServicePlugin.h"
 #include "utils/PasswordUtils.h"
 
 using namespace drogon::orm;
@@ -25,7 +26,8 @@ using drogon_model::Gnp::Users;
 
 namespace gnp::services {
 
-drogon::Task<dto::BaseApiResponse> UserService::getAll(int pageNo, int pageSize, const std::string &query) {
+drogon::Task<dto::BaseApiResponse>
+UserService::getAll(int pageNo, int pageSize, const std::string &query) {
   auto dbClient = drogon::app().getDbClient();
   auto mp = CoroMapper<Users>(dbClient);
 
@@ -52,14 +54,16 @@ drogon::Task<dto::BaseApiResponse> UserService::getAll(int pageNo, int pageSize,
 
     // 3. Find the paginated data
     int offset = (pageNo - 1) * pageSize;
-    auto users = co_await mp.limit(pageSize).offset(offset).findBy(searchCriteria);
+    auto users =
+        co_await mp.limit(pageSize).offset(offset).findBy(searchCriteria);
 
     // 4. Build the final response
     response.success = true;
     response.result["totalCount"] = (Json::UInt64)totalCount;
     response.result["pageNo"] = pageNo;
     response.result["pageSize"] = pageSize;
-    response.result["totalPages"] = (int)((totalCount + pageSize - 1) / pageSize);
+    response.result["totalPages"] =
+        (int)((totalCount + pageSize - 1) / pageSize);
 
     Json::Value data = Json::arrayValue;
 
@@ -89,9 +93,8 @@ drogon::Task<dto::BaseApiResponse> UserService::getAll(int pageNo, int pageSize,
   co_return response;
 }
 
-
-
-drogon::Task<dto::BaseApiResponse> UserService::getAdminUsers(int pageNo, int pageSize, const std::string &query) {
+drogon::Task<dto::BaseApiResponse>
+UserService::getAdminUsers(int pageNo, int pageSize, const std::string &query) {
   auto dbClient = drogon::app().getDbClient();
   auto mp = CoroMapper<Users>(dbClient);
 
@@ -156,7 +159,9 @@ drogon::Task<dto::BaseApiResponse> UserService::getAdminUsers(int pageNo, int pa
   co_return response;
 }
 
-drogon::Task<dto::BaseApiResponse> UserService::getPartnerSubscribers(const std::string &partnerId, int pageNo, int pageSize, const std::string &query) {
+drogon::Task<dto::BaseApiResponse>
+UserService::getPartnerSubscribers(const std::string &partnerId, int pageNo,
+                                   int pageSize, const std::string &query) {
   auto dbClient = drogon::app().getDbClient();
   auto mp = CoroMapper<Users>(dbClient);
 
@@ -265,7 +270,8 @@ drogon::Task<dto::BaseApiResponse> UserService::getPartnerSubscribers(const std:
   co_return response;
 }
 
-drogon::Task<gnp::dto::BaseApiResponse> UserService::create(const dto::CreateUserDto &userDto) {
+drogon::Task<gnp::dto::BaseApiResponse>
+UserService::create(const dto::CreateUserDto &userDto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mp(dbClient);
@@ -296,7 +302,8 @@ drogon::Task<gnp::dto::BaseApiResponse> UserService::create(const dto::CreateUse
   co_return response;
 }
 
-drogon::Task<gnp::dto::BaseApiResponse> UserService::registerUserPasskeys(const dto::RegisterUserPasskeysDto &passKeysDto) {
+drogon::Task<gnp::dto::BaseApiResponse> UserService::registerUserPasskeys(
+    const dto::RegisterUserPasskeysDto &passKeysDto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mp(dbClient);
@@ -405,7 +412,8 @@ drogon::Task<gnp::dto::BaseApiResponse> UserService::registerUserPasskeys(const 
   co_return response;
 }
 
-drogon::Task<gnp::dto::BaseApiResponse> UserService::validateUserPasskeys(const dto::LoginUserPasskeyDto &passkeyDto) {
+drogon::Task<gnp::dto::BaseApiResponse>
+UserService::validateUserPasskeys(const dto::LoginUserPasskeyDto &passkeyDto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mp(dbClient);
@@ -577,7 +585,8 @@ drogon::Task<gnp::dto::BaseApiResponse> UserService::validateUserPasskeys(const 
   co_return response;
 }
 
-drogon::Task<dto::BaseApiResponse> UserService::validateUserCredentials(const dto::SigninDto &signin_dto) {
+drogon::Task<dto::BaseApiResponse>
+UserService::validateUserCredentials(const dto::SigninDto &signin_dto) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mapper(dbClient);
 
@@ -593,14 +602,14 @@ drogon::Task<dto::BaseApiResponse> UserService::validateUserCredentials(const dt
   try {
     Users user = co_await mapper.findOne(criteria);
 
-    std::string storedHash = gnp::utils::PasswordUtils::normalizeBcryptHash(user.getValueOfPasswordHash());
+    std::string storedHash = gnp::utils::PasswordUtils::normalizeBcryptHash(
+        user.getValueOfPasswordHash());
 
-    bool passwordMatches = bcrypt::validatePassword(
-        signin_dto.getPassword(),
-        storedHash
-    );
+    bool passwordMatches =
+        bcrypt::validatePassword(signin_dto.getPassword(), storedHash);
 
-    //bool passwordMatches = bcrypt::validatePassword(signin_dto.getPassword(), user.getValueOfPasswordHash());
+    // bool passwordMatches = bcrypt::validatePassword(signin_dto.getPassword(),
+    // user.getValueOfPasswordHash());
 
     if (passwordMatches) {
 
@@ -652,7 +661,8 @@ drogon::Task<dto::BaseApiResponse> UserService::validateUserCredentials(const dt
   co_return response;
 }
 
-drogon::Task<gnp::dto::BaseApiResponse> UserService::validateAdminUserCredentials(const dto::SigninDto &signin_dto) {
+drogon::Task<gnp::dto::BaseApiResponse>
+UserService::validateAdminUserCredentials(const dto::SigninDto &signin_dto) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mapper(dbClient);
 
@@ -721,17 +731,19 @@ drogon::Task<gnp::dto::BaseApiResponse> UserService::validateAdminUserCredential
   co_return response;
 }
 
-
 drogon::Task<gnp::dto::BaseApiResponse> UserService::validatePartnerUserCredentials(const dto::SigninDto &signin_dto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mapper(dbClient);
 
   Criteria criteria =
-      (Criteria(Users::Cols::_username, CompareOperator::EQ, signin_dto.getUsernameOrEmail()) ||
-       Criteria(Users::Cols::_email, CompareOperator::EQ, signin_dto.getUsernameOrEmail())) &&
+      (Criteria(Users::Cols::_username, CompareOperator::EQ,
+                signin_dto.getUsernameOrEmail()) ||
+       Criteria(Users::Cols::_email, CompareOperator::EQ,
+                signin_dto.getUsernameOrEmail())) &&
       Criteria(Users::Cols::_is_active, CompareOperator::EQ, true) &&
-      Criteria(Users::Cols::_is_partner_admin_user, CompareOperator::EQ, true) &&
+      Criteria(Users::Cols::_is_partner_admin_user, CompareOperator::EQ,
+               true) &&
       Criteria(Users::Cols::_is_locked_out, CompareOperator::EQ, false);
 
   gnp::dto::BaseApiResponse response;
@@ -750,33 +762,122 @@ drogon::Task<gnp::dto::BaseApiResponse> UserService::validatePartnerUserCredenti
       // Password is correct, generate JWT token
       auto &app = drogon::app();
       auto customConfig = app.getCustomConfig();
-      std::string jwtSecurityKey = customConfig["JwtBearer"]["JwtSecurityKey"].asString();
+      std::string jwtSecurityKey =
+          customConfig["JwtBearer"]["JwtSecurityKey"].asString();
       std::string jwtIssuer = customConfig["JwtBearer"]["JwtIssuer"].asString();
 
       CoroMapper<drogon_model::Gnp::CommercialPartners> cpMapper(dbClient);
 
-      auto commercialPartner = co_await cpMapper.findByPrimaryKey(user.getValueOfPartnerId());
+      auto commercialPartner =
+          co_await cpMapper.findByPrimaryKey(user.getValueOfPartnerId());
 
-      if (!commercialPartner.getSubAccountEnabled()) {
+      if (!commercialPartner.getValueOfSubAccountEnabled()) {
 
         response.success = false;
         response.message = "Access denied !";
         response.error["code"] = constants::ERR_UNAUTHORIZED;
-        response.error["message"] = "Sub-account functionality is not enabled for " + commercialPartner.getValueOfName() + ". Please contact your administrator";
+        response.error["message"] =
+            "Sub-account functionality is not enabled for " +
+            commercialPartner.getValueOfName() +
+            ". Please contact your administrator";
         co_return response;
-
       }
+
+       if (commercialPartner.getValueOfRequireTwoFactorAuth()) {
+
+        // send an OTP email to the partner user ...
+        std::string requestId = drogon::utils::getUuid();
+
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<> distrib(100000, 999999);
+        std::string otp = std::to_string(distrib(gen));
+
+        auto redisClient = drogon::app().getRedisClient();
+        std::string redisValue = otp + ":" + user.getValueOfId();
+        co_await redisClient->execCommandCoro("SETEX %s %d %s", requestId.c_str(), 300, redisValue.c_str());
+
+        auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+        auto &emailService = plugin->getEmailService();
+
+        gnp::dto::SendEmailDto emailDto;
+        emailDto.setTo(user.getValueOfEmail());
+        emailDto.setSubject("Your OTP for Graphic News Plus Verification");
+
+        std::string emailBody =
+            R"(
+            <!DOCTYPE html>
+            <html>
+            <head>
+            <style>
+              body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f9f9f9; margin: 0; padding: 0; }
+              .container { max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+              .header { background-color: #ffffff; padding: 30px 20px 20px; text-align: center; border-bottom: 1px solid #f0f0f0; }
+              .header img { height: 60px; margin-bottom: 15px; border-radius: 8px; }
+              .header h1 { margin: 0; font-size: 24px; font-weight: 600; color: #1a1a1a; }
+              .content { padding: 40px 30px; text-align: center; color: #4a4a4a; line-height: 1.6; }
+              .content p { margin: 0 0 15px; font-size: 16px; }
+              .otp-container { margin: 30px 0; padding: 20px; background-color: #fdf2f2; border-radius: 8px; border: 1px dashed #f5c6c6; }
+              .otp { font-size: 36px; font-weight: bold; color: #D32F2F; letter-spacing: 8px; margin: 0; }
+              .footer { background-color: #f9f9f9; color: #999999; padding: 20px; text-align: center; font-size: 13px; border-top: 1px solid #eeeeee; }
+            </style>
+            </head>
+            <body>
+            <div class="container">
+              <div class="header">
+                <img src="https://dev.graphicnewsplus.com/favicon-mag.png" style="height: 35px;width: 35px;" alt="Graphic News Plus Logo">
+                <h1>Graphic News Plus</h1>
+              </div>
+              <div class="content">
+                <p>Hello )" +
+            user.getValueOfFirstName() + R"(,</p>
+                <p>Your One-Time Password (OTP) for verification is:</p>
+                <div class="otp-container">
+                  <div class="otp">)" +
+            otp + R"(</div>
+                </div>
+                <p>This code will expire in 5 minutes.</p>
+                <p>If you did not request this code, please ignore this email.</p>
+              </div>
+              <div class="footer"> &copy; )" +
+            trantor::Date::now().toCustomFormattedString("%Y") +
+            R"( Graphic News Plus. All rights reserved.
+              </div>
+            </div>
+            </body>
+            </html>
+            )";
+
+        emailDto.setBody(emailBody);
+
+        co_await emailService.sendEmailAsync(emailDto);
+        response.success = true;
+        response.message = "OTP sent to " + user.getValueOfEmail();
+        response.result["requestId"] = requestId;
+        response.result["requiresTwoFactorAuth"] = true;
+
+        co_return response;
+      }
+
       auto token =
           jwt::create()
               .set_issuer(jwtIssuer)
               .set_type("JWT")
               .set_issued_at(std::chrono::system_clock::now())
-              .set_expires_at(std::chrono::system_clock::now() + std::chrono::hours(24 * 30))
-              .set_payload_claim("partnerId", jwt::claim(user.getValueOfPartnerId()))
-              .set_payload_claim("partnerEmail", jwt::claim(commercialPartner.getValueOfBillingEmail()))
-              .set_payload_claim("partnerUserId", jwt::claim(user.getValueOfId()))
-              .set_payload_claim("partnerUserEmail", jwt::claim(commercialPartner.getValueOfContactEmail()))
-              .set_payload_claim("partnerName", jwt::claim(commercialPartner.getValueOfName()))
+              .set_expires_at(std::chrono::system_clock::now() +
+                              std::chrono::hours(24 * 30))
+              .set_payload_claim("partnerId",
+                                 jwt::claim(user.getValueOfPartnerId()))
+              .set_payload_claim(
+                  "partnerEmail",
+                  jwt::claim(commercialPartner.getValueOfBillingEmail()))
+              .set_payload_claim("partnerUserId",
+                                 jwt::claim(user.getValueOfId()))
+              .set_payload_claim(
+                  "partnerUserEmail",
+                  jwt::claim(commercialPartner.getValueOfContactEmail()))
+              .set_payload_claim("partnerName",
+                                 jwt::claim(commercialPartner.getValueOfName()))
               .sign(jwt::algorithm::hs256{jwtSecurityKey});
 
 
@@ -787,10 +888,12 @@ drogon::Task<gnp::dto::BaseApiResponse> UserService::validatePartnerUserCredenti
       response.result["partnerName"] = commercialPartner.getValueOfName();
       response.result["fullName"] = user.getValueOfFirstName() + " " + user.getValueOfLastName();
       response.result["partnerEmail"] = commercialPartner.getValueOfBillingEmail();
+      response.result["requiresTwoFactorAuth"] = false;
     } else {
       // Password is incorrect
       response.success = false;
       response.message = "Invalid credentials";
+      response.result["requiresTwoFactorAuth"] = false;
       response.error["code"] = constants::ERR_AUTH_INVALID_CREDENTIALS;
     }
   } catch (const DrogonDbException &e) {
@@ -799,7 +902,90 @@ drogon::Task<gnp::dto::BaseApiResponse> UserService::validatePartnerUserCredenti
     response.message = "User not found";
     response.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
     response.error["message"] = "User not found";
+    response.result["requiresTwoFactorAuth"] = false;
   }
+  co_return response;
+}
+
+drogon::Task<gnp::dto::BaseApiResponse> UserService::validatePartnerUserOtp(const dto::VerifyPartnerUserOtpDto &dto) {
+  gnp::dto::BaseApiResponse response;
+
+  try {
+    auto redisClient = drogon::app().getRedisClient();
+    auto r = co_await redisClient->execCommandCoro("GET %s", dto.getRequestId().c_str());
+
+    if (r.type() == drogon::nosql::RedisResultType::kNil) {
+      response.success = false;
+      response.message = "OTP expired or invalid request ID";
+      response.error["code"] = constants::ERR_AUTH_INVALID_CREDENTIALS;
+      co_return response;
+    }
+
+    std::string redisValue = r.asString();
+    size_t colonPos = redisValue.find(':');
+    if (colonPos == std::string::npos) {
+      response.success = false;
+      response.message = "Invalid OTP data format";
+      co_return response;
+    }
+
+    std::string storedOtp = redisValue.substr(0, colonPos);
+    std::string userId = redisValue.substr(colonPos + 1);
+
+    if (storedOtp != dto.getOtp()) {
+      response.success = false;
+      response.message = "Invalid OTP";
+      response.error["code"] = constants::ERR_AUTH_INVALID_CREDENTIALS;
+      co_return response;
+    }
+
+    // OTP is valid. Now generate the auth token.
+    // First, delete the OTP so it can't be reused
+    co_await redisClient->execCommandCoro("DEL %s", dto.getRequestId().c_str());
+
+    auto dbClient = drogon::app().getDbClient();
+    drogon::orm::CoroMapper<Users> mapper(dbClient);
+    Users user = co_await mapper.findByPrimaryKey(userId);
+
+    drogon::orm::CoroMapper<drogon_model::Gnp::CommercialPartners> cpMapper(dbClient);
+    auto commercialPartner = co_await cpMapper.findByPrimaryKey(user.getValueOfPartnerId());
+
+    auto &app = drogon::app();
+    auto customConfig = app.getCustomConfig();
+    std::string jwtSecurityKey = customConfig["JwtBearer"]["JwtSecurityKey"].asString();
+    std::string jwtIssuer = customConfig["JwtBearer"]["JwtIssuer"].asString();
+
+    auto token =
+        jwt::create()
+            .set_issuer(jwtIssuer)
+            .set_type("JWT")
+            .set_issued_at(std::chrono::system_clock::now())
+            .set_expires_at(std::chrono::system_clock::now() + std::chrono::hours(24 * 30))
+            .set_payload_claim("partnerId", jwt::claim(user.getValueOfPartnerId()))
+            .set_payload_claim("partnerEmail", jwt::claim(commercialPartner.getValueOfBillingEmail()))
+            .set_payload_claim("partnerUserId", jwt::claim(user.getValueOfId()))
+            .set_payload_claim("partnerUserEmail", jwt::claim(commercialPartner.getValueOfContactEmail()))
+            .set_payload_claim("partnerName", jwt::claim(commercialPartner.getValueOfName()))
+            .sign(jwt::algorithm::hs256{jwtSecurityKey});
+
+    response.success = true;
+    response.message = "Partner Authentication successful";
+    response.result["token"] = token;
+    response.result["partnerUserId"] = user.getValueOfPartnerId();
+    response.result["partnerName"] = commercialPartner.getValueOfName();
+    response.result["fullName"] = user.getValueOfFirstName() + " " + user.getValueOfLastName();
+    response.result["partnerEmail"] = commercialPartner.getValueOfBillingEmail();
+
+  } catch (const drogon::orm::DrogonDbException &e) {
+    response.success = false;
+    response.message = "Database error or user not found";
+    response.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+  } catch (const std::exception &e) {
+    response.success = false;
+    response.message = "Redis or Server error";
+    response.error["details"] = e.what();
+  }
+
   co_return response;
 }
 
@@ -1054,24 +1240,31 @@ void UserService::sendOtp(
                   <html>
                   <head>
                   <style>
-                    body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
-                    .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-                    .header { background-color: #D32F2F; color: #ffffff; padding: 20px; text-align: center; }
-                    .content { padding: 30px; text-align: center; color: #333333; }
-                    .otp { font-size: 32px; font-weight: bold; color: #D32F2F; letter-spacing: 5px; margin: 20px 0; }
-                    .footer { background-color: #f4f4f4; color: #666666; padding: 10px; text-align: center; font-size: 12px; }
+                    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f9f9f9; margin: 0; padding: 0; }
+                    .container { max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+                    .header { background-color: #ffffff; padding: 30px 20px 20px; text-align: center; border-bottom: 1px solid #f0f0f0; }
+                    .header img { height: 60px; margin-bottom: 15px; border-radius: 8px; }
+                    .header h1 { margin: 0; font-size: 24px; font-weight: 600; color: #1a1a1a; }
+                    .content { padding: 40px 30px; text-align: center; color: #4a4a4a; line-height: 1.6; }
+                    .content p { margin: 0 0 15px; font-size: 16px; }
+                    .otp-container { margin: 30px 0; padding: 20px; background-color: #fdf2f2; border-radius: 8px; border: 1px dashed #f5c6c6; }
+                    .otp { font-size: 36px; font-weight: bold; color: #D32F2F; letter-spacing: 8px; margin: 0; }
+                    .footer { background-color: #f9f9f9; color: #999999; padding: 20px; text-align: center; font-size: 13px; border-top: 1px solid #eeeeee; }
                   </style>
                   </head>
                   <body>
                   <div class="container">
                     <div class="header">
+                      <img src="https://dev.graphicnewsplus.com/favicon-mag.png" alt="Graphic News Plus Logo">
                       <h1>Graphic News Plus</h1>
                     </div>
                     <div class="content">
                       <p>Hello Reader,</p>
                       <p>Your One-Time Password (OTP) for verification is:</p>
-                      <div class="otp">)" +
+                      <div class="otp-container">
+                        <div class="otp">)" +
                   otp + R"(</div>
+                      </div>
                       <p>This code will expire in 5 minutes.</p>
                       <p>If you did not request this code, please ignore this email.</p>
                     </div>
@@ -1295,7 +1488,8 @@ void UserService::setPassword(
       "GET %s", sessionId.c_str());
 }
 
-drogon::Task<gnp::dto::BaseApiResponse> UserService::registerProspectiveUser(const dto::CreateUserDto &userDto) {
+drogon::Task<gnp::dto::BaseApiResponse>
+UserService::registerProspectiveUser(const dto::CreateUserDto &userDto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mp(dbClient);

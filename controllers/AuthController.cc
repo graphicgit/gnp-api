@@ -3,7 +3,6 @@
 #include <string>
 
 #include "plugins/GnpServicePlugin.h"
-#include "services/email/EmailService.h"
 #include "services/users/UserService.h"
 
 void AuthController::checkAccountStatus(
@@ -210,8 +209,7 @@ drogon::Task<HttpResponsePtr> AuthController::signIn(HttpRequestPtr req) {
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr>
-AuthController::registerPasskeys(HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AuthController::registerPasskeys(HttpRequestPtr req) {
 
   auto jsonBody = req->getJsonObject();
 
@@ -241,8 +239,7 @@ AuthController::registerPasskeys(HttpRequestPtr req) {
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr>
-AuthController::loginViaPasskeys(HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AuthController::loginViaPasskeys(HttpRequestPtr req) {
   auto jsonBody = req->getJsonObject();
 
   if (!jsonBody) {
@@ -345,6 +342,30 @@ drogon::Task<HttpResponsePtr> AuthController::partnerSignIn(HttpRequestPtr req) 
   }
 
   co_return resp;
+}
+
+
+Task<HttpResponsePtr> AuthController::verifyPartnerOtp(HttpRequestPtr req) {
+
+  auto jsonBody = req->getJsonObject();
+
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  gnp::dto::VerifyPartnerUserOtpDto dto;
+  dto.fromJson(*jsonBody);
+
+  auto userService = std::make_shared<gnp::services::UserService>();
+  auto apiResp = co_await userService->validatePartnerUserOtp(dto);
+
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+
 }
 
 drogon::Task<HttpResponsePtr> AuthController::affiliateSignIn(HttpRequestPtr req) {

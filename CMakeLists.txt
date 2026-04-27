@@ -95,6 +95,7 @@ add_executable(${PROJECT_NAME} main.cc
         services/roles/RoleService.h
         dto/RoleDto.h
         services/roles/RoleService.cc
+        dto/VerifyPartnerUserOtpDto.h
 )
 
 # ##############################################################################
