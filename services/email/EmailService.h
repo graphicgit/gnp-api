@@ -14,13 +14,10 @@ namespace gnp::services {
 class EmailService {
 
 public:
-  void
-  sendEmail(const dto::SendEmailDto &dto,
-            const std::function<void(const dto::BaseApiResponse &)> &callback);
 
-  drogon::Task<dto::BaseApiResponse>
-  sendEmailAsync(const dto::SendEmailDto &dto);
+  drogon::Task<dto::BaseApiResponse> sendEmailAsync(const dto::SendEmailDto &dto);
+
 };
 
-} // namespace gnp::services
+}
 #endif // EMAILSERVICE_H

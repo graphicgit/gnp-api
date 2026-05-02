@@ -26,6 +26,9 @@
 #include <fstream>
 #include <cstdio>
 #include <algorithm>
+#include <iomanip>
+#include <sstream>
+
 
 using namespace drogon::orm;
 
@@ -238,7 +241,8 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerDe
     co_return errorResponse;
   }
 }
-drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::createPartner(const dto::CreatePartnerDto &dto) {
+
+  drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::createPartner(const dto::CreatePartnerDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<CommercialPartners> mp(dbClient);
@@ -257,7 +261,13 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::createPartne
     newPartner.setSubscriberQuota(dto.getSubscriberQuota());
     newPartner.setRemainingQuota(dto.getSubscriberQuota());
     newPartner.setStatus("Active");
-    newPartner.setSubAccountEnabled(dto.getSubaccountEnabled());
+    newPartner.setCurrentInvoiceNo(dto.getPartnerInvoice().getInvoiceNumber());
+    char totalAmountDueBuf[64];
+    snprintf(totalAmountDueBuf, sizeof(totalAmountDueBuf), "%.2f", dto.getPartnerInvoice().getInvoiceAmount());
+    newPartner.setTotalAmountDue(totalAmountDueBuf);
+    newPartner.setSubAccountEnabled(dto.getSubAccountEnabled());
+    newPartner.setSubscriptionStartDate(dto.getSubscriptionStartDate());
+    newPartner.setSubscriptionEndDate(dto.getSubscriptionEndDate());
 
     newPartner.setCreatedAt(trantor::Date::now());
 
@@ -288,7 +298,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::createPartne
     auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
     auto &emailService = plugin->getEmailService();
 
-    gnp::dto::SendEmailDto emailDto;
+    dto::SendEmailDto emailDto;
     emailDto.setTo(dto.getContactEmail());
     emailDto.setSubject("Graphic News Plus Account Details");
 
@@ -348,6 +358,125 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::createPartne
 
     co_await emailService.sendEmailAsync(emailDto);
 
+    //create invoice
+    dto::PartnerInvoiceDto partnerInvoiceDto;
+    partnerInvoiceDto.setInvoiceNumber(dto.getPartnerInvoice().getInvoiceNumber());
+    partnerInvoiceDto.setPartnerId(commercialPartner.getValueOfId());
+    partnerInvoiceDto.setPartnerName(dto.getName());
+    partnerInvoiceDto.setPartnerEmail(dto.getBillingEmail());
+    partnerInvoiceDto.setBalance(dto.getPartnerInvoice().getBalance());
+    partnerInvoiceDto.setInvoiceAmount(dto.getPartnerInvoice().getInvoiceAmount());
+    partnerInvoiceDto.setBillingCycle(dto.getPartnerInvoice().getBillingCycle());
+    partnerInvoiceDto.setCurrency(dto.getPartnerInvoice().getCurrency());
+    partnerInvoiceDto.setDescription(dto.getPartnerInvoice().getDescription());
+    partnerInvoiceDto.setDueDate(dto.getPartnerInvoice().getDueDate());
+    partnerInvoiceDto.setStatus(dto.getPartnerInvoice().getStatus());
+
+    auto &partnerInvoiceService = plugin->getPartnerInvoiceService();
+
+    co_await partnerInvoiceService.createInvoice(partnerInvoiceDto);
+
+
+    // Send onboarding email to billing email
+    dto::SendEmailDto onboardingEmailDto;
+    onboardingEmailDto.setTo(dto.getBillingEmail());
+    onboardingEmailDto.setSubject("Welcome to Graphic Partner Platform - Onboarding & Invoice");
+
+    std::ostringstream amountStream;
+    amountStream << std::fixed << std::setprecision(2) << dto.getPartnerInvoice().getInvoiceAmount();
+    std::string formattedAmount = amountStream.str();
+
+    std::string onboardingEmailBody =
+        R"html(
+              <!DOCTYPE html>
+              <html>
+              <head>
+              <style>
+                body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa; margin: 0; padding: 0; }
+                .container { max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+                .header { background-color: #D32F2F; color: #ffffff; padding: 40px 20px; text-align: center; }
+                .header h1 { margin: 0; font-size: 28px; font-weight: 600; letter-spacing: 1px; }
+                .content { padding: 40px; color: #444444; line-height: 1.6; }
+                .welcome-text { font-size: 18px; margin-bottom: 20px; color: #222222; }
+                .invoice-card { background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; margin: 30px 0; padding: 25px; }
+                .invoice-header { border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 20px; }
+                .invoice-title { font-weight: bold; color: #D32F2F; font-size: 20px; }
+                .invoice-detail { margin: 12px 0; display: flex; justify-content: space-between; }
+                .label { color: #888; font-weight: 500; }
+                .value { color: #333; font-weight: 600; text-align: right; }
+                .total-row { margin-top: 20px; padding-top: 15px; border-top: 2px solid #f4f4f4; }
+                .total-label { font-size: 18px; font-weight: bold; color: #222; }
+                .total-value { font-size: 22px; font-weight: 800; color: #D32F2F; }
+                .footer { background-color: #f8f9fa; color: #999999; padding: 20px; text-align: center; font-size: 13px; border-top: 1px solid #eeeeee; }
+                .btn { display: inline-block; background-color: #D32F2F; color: #ffffff; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 20px; }
+              </style>
+              </head>
+              <body>
+              <div class="container">
+                <div class="header">
+                  <h1>Graphic Partner Platform</h1>
+                </div>
+                <div class="content">
+                  <p class="welcome-text">Congratulations, )html" +
+        dto.getName() + R"html(!</p>
+                  <p>We are thrilled to welcome you to the Graphic Partner Platform. Your organization has been successfully onboarded, and you now have access to our premium suite of tools and content distribution services.</p>
+                  
+                  <p>As part of your subscription to the <strong>)html" +
+        dto.getDefaultSubscriptionPlanName() + R"html(</strong>, a new invoice has been generated for your account:</p>
+                  
+                  <div class="invoice-card">
+                    <div class="invoice-header">
+                      <span class="invoice-title">INVOICE SUMMARY</span>
+                    </div>
+                    <div class="invoice-detail">
+                      <span class="label">Invoice Number:</span>
+                      <span class="value">)html" +
+        dto.getPartnerInvoice().getInvoiceNumber() + R"html(</span>
+                    </div>
+                    <div class="invoice-detail">
+                      <span class="label">Description:</span>
+                      <span class="value">)html" +
+        dto.getPartnerInvoice().getDescription() + R"html(</span>
+                    </div>
+                    <div class="invoice-detail">
+                      <span class="label">Billing Cycle:</span>
+                      <span class="value">)html" +
+        dto.getPartnerInvoice().getBillingCycle() + R"html(</span>
+                    </div>
+                    <div class="invoice-detail">
+                      <span class="label">Due Date:</span>
+                      <span class="value">)html" +
+        dto.getPartnerInvoice().getDueDate() + R"html(</span>
+                    </div>
+                    <div class="total-row invoice-detail">
+                      <span class="total-label">Total Amount:</span>
+                      <span class="total-value">)html" +
+        dto.getPartnerInvoice().getCurrency() + " " + formattedAmount + R"html(</span>
+                    </div>
+                  </div>
+                  
+                  <p>You can manage your subscriptions, view full invoices, and track your performance directly from your Partner Dashboard.</p>
+                  
+                  <div style="text-align: center;">
+                      <a href="https://dev.graphicnewsplus.com/partners/account/login" class="btn">Access Partner Dashboard</a>
+                  </div>
+                  
+                  <p style="margin-top: 30px;">If you have any questions regarding your invoice or the onboarding process, please don't hesitate to contact our support team.</p>
+                </div>
+                <div class="footer">
+                  &copy; )html" +
+        trantor::Date::now().toCustomFormattedString("%Y") +
+        R"html( Graphic News Plus. All rights reserved.<br>
+                  Providing premium content solutions for our partners.
+                </div>
+              </div>
+              </body>
+              </html>
+            )html";
+
+    onboardingEmailDto.setBody(onboardingEmailBody);
+    co_await emailService.sendEmailAsync(onboardingEmailDto);
+
     // Prepare success response
     ::gnp::dto::BaseApiResponse successResponse;
     successResponse.success = true;
@@ -366,6 +495,45 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::createPartne
     co_return errorResponse;
   }
 }
+
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::updatePartner(const dto::UpdatePartnerDto &dto) {
+
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<CommercialPartners> mp(dbClient);
+
+  try {
+    auto commercialPartner = co_await mp.findByPrimaryKey(dto.getId());
+
+    commercialPartner.setName(dto.getName());
+    commercialPartner.setContactName(dto.getContactName());
+    commercialPartner.setContactEmail(dto.getContactEmail());
+    commercialPartner.setContactPhone(dto.getContactPhone());
+    commercialPartner.setBillingEmail(dto.getBillingEmail());
+    commercialPartner.setCurrency(dto.getCurrency());
+    commercialPartner.setSubscriberQuota(dto.getSubscriberQuota());
+    commercialPartner.setSubAccountEnabled(dto.getSubAccountEnabled());
+    commercialPartner.setSubscriptionStartDate(dto.getSubscriptionStartDate());
+    commercialPartner.setSubscriptionEndDate(dto.getSubscriptionEndDate());
+
+    co_await mp.update(commercialPartner);
+
+    dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Commercial Partner updated successfully";
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to update Commercial Partner";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+
+
 
 drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartnerSubscriber(const dto::CreatePartnerSubscriberDto &dto) {
 
@@ -654,41 +822,6 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::getPartnerSubscript
   }
 }
 
-drogon::Task<dto::BaseApiResponse> CommercialPartnerService::updatePartner(const dto::UpdatePartnerDto &dto) {
-
-  auto dbClient = drogon::app().getDbClient();
-  CoroMapper<CommercialPartners> mp(dbClient);
-
-  try {
-    auto commercialPartner = co_await mp.findOne(Criteria(CommercialPartners::Cols::_id, CompareOperator::EQ, dto.getId()));
-
-    commercialPartner.setName(dto.getName());
-    commercialPartner.setContactName(dto.getContactName());
-    commercialPartner.setContactEmail(dto.getContactEmail());
-    commercialPartner.setContactPhone(dto.getContactPhone());
-    commercialPartner.setBillingEmail(dto.getBillingEmail());
-    commercialPartner.setDefaultSubscriptionPlanId(dto.getDefaultSubscriptionPlanId());
-    commercialPartner.setDefaultSubscriptionPlanDescription(dto.getDefaultSubscriptionPlanName());
-    commercialPartner.setCurrency(dto.getCurrency());
-    commercialPartner.setSubscriberQuota(dto.getSubscriberQuota());
-    commercialPartner.setSubAccountEnabled(dto.getSubaccountEnabled());
-
-    co_await mp.update(commercialPartner);
-
-    dto::BaseApiResponse response;
-    response.success = true;
-    response.message = "Commercial Partner updated successfully";
-    co_return response;
-
-  } catch (const DrogonDbException &e) {
-    dto::BaseApiResponse errorResponse;
-    errorResponse.success = false;
-    errorResponse.message = "Failed to update Commercial Partner";
-    errorResponse.error["code"] = constants::ERR_DB_QUERY;
-    errorResponse.error["detail"] = e.base().what();
-    co_return errorResponse;
-  }
-}
 
 drogon::Task<dto::BaseApiResponse> CommercialPartnerService::updatePartnerLogo(const std::string &partnerId, const std::string &logoContent, std::optional<bool> requireTwoFactorAuth) {
 

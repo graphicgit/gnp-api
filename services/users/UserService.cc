@@ -1203,9 +1203,7 @@ void UserService::checkAccountStatus(
       });
 }
 
-void UserService::sendOtp(
-    const std::string &userEmail,
-    const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {
+void UserService::sendOtp(const std::string &userEmail, const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {
 
   auto dbClient = drogon::app().getDbClient();
   Mapper<Users> mp(dbClient);
@@ -1277,33 +1275,34 @@ void UserService::sendOtp(
                   </html>
                   )";
 
-              auto emailService =
-                  std::make_shared<gnp::services::EmailService>();
+              auto emailService = std::make_shared<gnp::services::EmailService>();
               gnp::dto::SendEmailDto dto;
               dto.setTo(userEmail);
               dto.setSubject("Your OTP for Graphic News Plus");
               dto.setBody(emailBody);
 
-              emailService->sendEmail(
-                  dto, [=](const gnp::dto::BaseApiResponse &emailResponse) {
-                    gnp::dto::BaseApiResponse response;
 
-                    if (emailResponse.success) {
-                      response.success = true;
-                      response.message = "OTP sent successfully";
-                      Json::Value result;
-                      result["requestId"] = requestId;
-                      result["expiry"] = 300;
-                      result["email"] = userEmail;
-                      response.result = result;
+              // emailService->sendEmail(dto, [=](const gnp::dto::BaseApiResponse &emailResponse) {
+              //       gnp::dto::BaseApiResponse response;
+              //
+              //       if (emailResponse.success) {
+              //         response.success = true;
+              //         response.message = "OTP sent successfully";
+              //         Json::Value result;
+              //         result["requestId"] = requestId;
+              //         result["expiry"] = 300;
+              //         result["email"] = userEmail;
+              //         response.result = result;
+              //
+              //       } else {
+              //         response.success = false;
+              //         response.message = "Failed to send OTP email";
+              //         response.error = emailResponse.error;
+              //       }
+              //       callback(response);
+              //     });
 
-                    } else {
-                      response.success = false;
-                      response.message = "Failed to send OTP email";
-                      response.error = emailResponse.error;
-                    }
-                    callback(response);
-                  });
+
             },
             [=](const std::exception &e) {
               gnp::dto::BaseApiResponse response;

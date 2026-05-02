@@ -4,6 +4,10 @@
 
 #ifndef UPDATEPARTNERDTO_H
 #define UPDATEPARTNERDTO_H
+#include <json/json.h>
+#include <trantor/utils/Date.h>
+#include <string>
+#include <algorithm>
 
 namespace gnp::dto {
 
@@ -22,11 +26,13 @@ namespace gnp::dto {
         [[nodiscard]] const std::string& getContactEmail() const { return contact_email_; }
         [[nodiscard]] const std::string& getContactPhone() const { return contact_phone_; }
         [[nodiscard]] const std::string& getBillingEmail() const { return billing_email_; }
-        [[nodiscard]] const std::string& getDefaultSubscriptionPlanId() const { return default_subscription_plan_id; }
-        [[nodiscard]] const std::string& getDefaultSubscriptionPlanName() const { return default_subscription_plan_name; }
+        [[nodiscard]] const std::string& getDefaultSubscriptionPlanId() const { return default_subscription_plan_id_; }
+        [[nodiscard]] const std::string& getDefaultSubscriptionPlanName() const { return default_subscription_plan_name_; }
+        [[nodiscard]] const trantor::Date& getSubscriptionStartDate() const { return subscription_start_date_; }
+        [[nodiscard]] const trantor::Date& getSubscriptionEndDate() const { return subscription_end_date_; }
         [[nodiscard]] const std::string& getCurrency() const { return currency_; }
         [[nodiscard]] int getSubscriberQuota() const { return subscriber_quota_; }
-        [[nodiscard]] bool getSubaccountEnabled() const { return sub_account_enabled_; }
+        [[nodiscard]] bool getSubAccountEnabled() const { return sub_account_enabled_; }
 
 
         // Setters
@@ -36,11 +42,13 @@ namespace gnp::dto {
         void setContactEmail(const std::string& value) { contact_email_ = value; }
         void setContactPhone(const std::string& value) { contact_phone_ = value; }
         void setBillingEmail(const std::string& value) { billing_email_ = value; }
-        void setDefaultSubscriptionPlanId(const std::string& value) { default_subscription_plan_id = value; }
-        void setDefaultSubscriptionPlanName(const std::string& value) { default_subscription_plan_name = value; }
+        void setDefaultSubscriptionPlanId(const std::string& value) { default_subscription_plan_id_ = value; }
+        void setDefaultSubscriptionPlanName(const std::string& value) { default_subscription_plan_name_ = value; }
+        void setSubscriptionStartDate(const trantor::Date& value) { subscription_start_date_ = value; }
+        void setSubscriptionEndDate(const trantor::Date& value) { subscription_end_date_ = value; }
         void setCurrency(const std::string& value) { currency_ = value; }
         void setSubscriberQuota(int value) { subscriber_quota_ = value; }
-        void setSubaccountEnabled(bool value) { sub_account_enabled_ = value; }
+        void setSubAccountEnabled(bool value) { sub_account_enabled_ = value; }
 
 
     private:
@@ -51,10 +59,12 @@ namespace gnp::dto {
         std::string contact_email_;
         std::string contact_phone_;
         std::string billing_email_;
-        std::string default_subscription_plan_id;
-        std::string default_subscription_plan_name;
+        trantor::Date subscription_start_date_;
+        trantor::Date subscription_end_date_;
+        std::string default_subscription_plan_id_;
+        std::string default_subscription_plan_name_;
         std::string currency_;
-        int subscriber_quota_;
+        int subscriber_quota_ = 0;
         bool sub_account_enabled_ = false;
 
     };
@@ -86,13 +96,12 @@ namespace gnp::dto {
         }
 
         if (json.isMember("defaultSubscriptionPlanId") && !json["defaultSubscriptionPlanId"].isNull()) {
-            default_subscription_plan_id = json["defaultSubscriptionPlanId"].asString();
+            default_subscription_plan_id_ = json["defaultSubscriptionPlanId"].asString();
         }
 
         if (json.isMember("defaultSubscriptionPlanName") && !json["defaultSubscriptionPlanName"].isNull()) {
-            default_subscription_plan_name = json["defaultSubscriptionPlanName"].asString();
+            default_subscription_plan_name_ = json["defaultSubscriptionPlanName"].asString();
         }
-
 
         if (json.isMember("currency") && !json["currency"].isNull()) {
             currency_ = json["currency"].asString();
@@ -102,11 +111,29 @@ namespace gnp::dto {
             subscriber_quota_ = json["subscriberQuota"].asInt();
         }
 
-        if (json.isMember("subaccountEnabled") && !json["username"].isNull()) {
-            sub_account_enabled_ = json["subaccountEnabled"].asBool();
+        if (json.isMember("subAccountEnabled") && !json["subAccountEnabled"].isNull()) {
+            sub_account_enabled_ = json["subAccountEnabled"].asBool();
+        }
+        
+        if (json.isMember("subscriptionStartDate") && !json["subscriptionStartDate"].isNull()) {
+            std::string dateStr = json["subscriptionStartDate"].asString();
+            if (dateStr.find('T') != std::string::npos) {
+                std::replace(dateStr.begin(), dateStr.end(), 'T', ' ');
+                if (dateStr.length() == 16) dateStr += ":00";
+            }
+            subscription_start_date_ = trantor::Date::fromDbString(dateStr);
         }
 
-    };
+        if (json.isMember("subscriptionEndDate") && !json["subscriptionEndDate"].isNull()) {
+            std::string dateStr = json["subscriptionEndDate"].asString();
+            if (dateStr.find('T') != std::string::npos) {
+                std::replace(dateStr.begin(), dateStr.end(), 'T', ' ');
+                if (dateStr.length() == 16) dateStr += ":00";
+            }
+            subscription_end_date_ = trantor::Date::fromDbString(dateStr);
+        }
+
+    }
 
 }
 #endif //UPDATEPARTNERDTO_H

@@ -10,6 +10,8 @@
 #include "services/payments/PaymentService.h"
 #include "services/subscription_plans/SubscriptionPlanService.h"
 #include "services/users/UserService.h"
+#include "services/partner_invoice/PartnerInvoiceService.h"
+#include "dto/PartnerInvoiceDto.h"
 
 drogon::Task<HttpResponsePtr> AdminController::getAllNewsPapers(const HttpRequestPtr req) {
   int pageSize = 10; // Default page size
@@ -1202,3 +1204,79 @@ drogon::Task<HttpResponsePtr> AdminController::updatePartnerApiKey(HttpRequestPt
 
 //
 
+
+drogon::Task<HttpResponsePtr> AdminController::getAllPartnerInvoices(HttpRequestPtr req) {
+  int pageSize = 10;
+  int pageNo = 1;
+
+  if (!req->getParameter("pageSize").empty()) {
+    try {
+      pageSize = std::stoi(req->getParameter("pageSize"));
+    } catch (...) {}
+  }
+
+  if (!req->getParameter("pageNo").empty()) {
+    try {
+      pageNo = std::stoi(req->getParameter("pageNo"));
+    } catch (...) {}
+  }
+
+  std::string query = req->getParameter("query");
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &partnerInvoiceService = plugin->getPartnerInvoiceService();
+
+  auto result = co_await partnerInvoiceService.getAll(pageNo, pageSize, query);
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+}
+
+drogon::Task<HttpResponsePtr> AdminController::createPartnerInvoice(HttpRequestPtr req) {
+  auto json = req->getJsonObject();
+  if (!json) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    co_return HttpResponse::newHttpJsonResponse(response.toJson());
+  }
+
+  gnp::dto::PartnerInvoiceDto dto;
+  dto.fromJson(*json);
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &partnerInvoiceService = plugin->getPartnerInvoiceService();
+
+  auto result = co_await partnerInvoiceService.createInvoice(dto);
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+}
+
+drogon::Task<HttpResponsePtr> AdminController::markPartnerInvoicePaid(HttpRequestPtr req) {
+  auto id = req->getParameter("id");
+  if (id.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Missing required parameter: id";
+    co_return HttpResponse::newHttpJsonResponse(response.toJson());
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &partnerInvoiceService = plugin->getPartnerInvoiceService();
+
+  auto result = co_await partnerInvoiceService.markAsPaid(id);
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+}
+
+drogon::Task<HttpResponsePtr> AdminController::deletePartnerInvoice(HttpRequestPtr req) {
+  auto id = req->getParameter("id");
+  if (id.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Missing required parameter: id";
+    co_return HttpResponse::newHttpJsonResponse(response.toJson());
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &partnerInvoiceService = plugin->getPartnerInvoiceService();
+
+  auto result = co_await partnerInvoiceService.deleteInvoice(id);
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+}

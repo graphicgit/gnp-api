@@ -30,6 +30,10 @@ public:
 
   drogon::Task< ::gnp::dto::BaseApiResponse> createPartner(const dto::CreatePartnerDto &dto);
 
+  drogon::Task<dto::BaseApiResponse> updatePartner(const dto::UpdatePartnerDto &dto);
+
+  //drogon::Task<dto::BaseApiResponse> assignPartnerSubscription(const dto::PartnerSubscriptionAssignmentDto &dto);
+
   drogon::Task<dto::BaseApiResponse> createPartnerSubscriber(const dto::CreatePartnerSubscriberDto &dto);
 
   drogon::Task<dto::BaseApiResponse> updatePartnerSubscriber(const dto::UpdatePartnerSubscriberDto &dto);
@@ -38,7 +42,6 @@ public:
 
   drogon::Task<dto::BaseApiResponse> getPartnerSubscriptionSummary(const std::string &partnerId);
 
-  drogon::Task<dto::BaseApiResponse> updatePartner(const dto::UpdatePartnerDto &dto);
 
   drogon::Task<dto::BaseApiResponse> updatePartnerLogo(const std::string &partnerId, const std::string &logoContent, std::optional<bool> requireTwoFactorAuth = std::nullopt);
 

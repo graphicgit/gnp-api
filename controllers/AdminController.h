@@ -89,6 +89,12 @@ public:
     ADD_METHOD_TO(AdminController::createCoupon, std::string(PREFIX) + "create-coupon", Post, Options, "JwtAuthFilter");
     ADD_METHOD_TO(AdminController::updateCoupon, std::string(PREFIX) + "update-coupon", Post, Options, "JwtAuthFilter");
     ADD_METHOD_TO(AdminController::deleteCoupon, std::string(PREFIX) + "delete-coupon", Delete, Options, "JwtAuthFilter");
+ 
+   // partner invoices
+   ADD_METHOD_TO(AdminController::getAllPartnerInvoices, std::string(PREFIX) + "get-all-partner-invoices", Get, Options, "JwtAuthFilter");
+   ADD_METHOD_TO(AdminController::createPartnerInvoice, std::string(PREFIX) + "create-partner-invoice", Post, Options, "JwtAuthFilter");
+   ADD_METHOD_TO(AdminController::markPartnerInvoicePaid, std::string(PREFIX) + "mark-partner-invoice-paid", Get, Options, "JwtAuthFilter");
+   ADD_METHOD_TO(AdminController::deletePartnerInvoice, std::string(PREFIX) + "delete-partner-invoice", Delete, Options, "JwtAuthFilter");
 
   // affiliates
 
@@ -178,5 +184,11 @@ public:
   drogon::Task<HttpResponsePtr> getAllCoupons(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> createCoupon(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> updateCoupon(HttpRequestPtr req);
-  drogon::Task<HttpResponsePtr> deleteCoupon(HttpRequestPtr req);
+    drogon::Task<HttpResponsePtr> deleteCoupon(HttpRequestPtr req);
+
+   // partner invoices
+   drogon::Task<HttpResponsePtr> getAllPartnerInvoices(HttpRequestPtr req);
+   drogon::Task<HttpResponsePtr> createPartnerInvoice(HttpRequestPtr req);
+   drogon::Task<HttpResponsePtr> markPartnerInvoicePaid(HttpRequestPtr req);
+   drogon::Task<HttpResponsePtr> deletePartnerInvoice(HttpRequestPtr req);
 };

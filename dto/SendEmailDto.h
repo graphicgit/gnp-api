@@ -4,6 +4,9 @@
 
 #ifndef SENDEMAILDTO_H
 #define SENDEMAILDTO_H
+#include <json/json.h>
+#include <string>
+
 namespace gnp::dto {
 
     class SendEmailDto {

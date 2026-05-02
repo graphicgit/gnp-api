@@ -29,10 +29,8 @@ int main() {
 
         // Add CORS headers to every response
 
-        resp->addHeader("Access-Control-Allow-Methods",
-                        "GET, POST, PUT, DELETE, OPTIONS");
-        resp->addHeader("Access-Control-Allow-Headers",
-                        "Content-Type, Authorization, Referer, User-Agent, "
+        resp->addHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+        resp->addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, Referer, User-Agent, "
                         "Accept, X-Requested-With, Origin");
       });
 
