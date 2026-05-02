@@ -141,8 +141,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CampaignService::createAsync(const ::g
 
     auto &app = drogon::app();
     auto customConfig = app.getCustomConfig();
-    std::string campaignCallBackUrl =
-        customConfig["QuartzSchedulerApi"]["CampaignCallBackUrl"].asString();
+    std::string campaignCallBackUrl = customConfig["QuartzSchedulerApi"]["CampaignCallBackUrl"].asString();
 
     auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
     auto &quartzApi = plugin->getQuartzApi();

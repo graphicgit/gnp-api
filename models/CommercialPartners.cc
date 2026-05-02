@@ -31,6 +31,10 @@ const std::string CommercialPartners::Cols::_default_subscription_plan_id = "\"d
 const std::string CommercialPartners::Cols::_default_subscription_plan_description = "\"default_subscription_plan_description\"";
 const std::string CommercialPartners::Cols::_require_two_factor_auth = "\"require_two_factor_auth\"";
 const std::string CommercialPartners::Cols::_organization_logo = "\"organization_logo\"";
+const std::string CommercialPartners::Cols::_subscription_start_date = "\"subscription_start_date\"";
+const std::string CommercialPartners::Cols::_subscription_end_date = "\"subscription_end_date\"";
+const std::string CommercialPartners::Cols::_total_amount_due = "\"total_amount_due\"";
+const std::string CommercialPartners::Cols::_current_invoice_no = "\"current_invoice_no\"";
 const std::string CommercialPartners::primaryKeyName = "id";
 const bool CommercialPartners::hasPrimaryKey = true;
 const std::string CommercialPartners::tableName = "\"commercial_partners\"";
@@ -53,7 +57,11 @@ const std::vector<typename CommercialPartners::MetaData> CommercialPartners::met
 {"default_subscription_plan_id","std::string","uuid",0,0,0,0},
 {"default_subscription_plan_description","std::string","character varying",255,0,0,0},
 {"require_two_factor_auth","bool","boolean",1,0,0,0},
-{"organization_logo","std::vector<char>","bytea",0,0,0,0}
+{"organization_logo","std::vector<char>","bytea",0,0,0,0},
+{"subscription_start_date","::trantor::Date","timestamp with time zone",0,0,0,0},
+{"subscription_end_date","::trantor::Date","timestamp with time zone",0,0,0,0},
+{"total_amount_due","std::string","numeric",0,0,0,1},
+{"current_invoice_no","std::string","character varying",20,0,0,0}
 };
 const std::string &CommercialPartners::getColumnName(size_t index) noexcept(false)
 {
@@ -177,11 +185,63 @@ CommercialPartners::CommercialPartners(const Row &r, const ssize_t indexOffset) 
                 organizationLogo_=std::make_shared<std::vector<char>>(drogon::utils::hexToBinaryVector(str.data()+2,str.length()-2));
             }
         }
+        if(!r["subscription_start_date"].isNull())
+        {
+            auto timeStr = r["subscription_start_date"].as<std::string>();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                subscriptionStartDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+        if(!r["subscription_end_date"].isNull())
+        {
+            auto timeStr = r["subscription_end_date"].as<std::string>();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                subscriptionEndDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+        if(!r["total_amount_due"].isNull())
+        {
+            totalAmountDue_=std::make_shared<std::string>(r["total_amount_due"].as<std::string>());
+        }
+        if(!r["current_invoice_no"].isNull())
+        {
+            currentInvoiceNo_=std::make_shared<std::string>(r["current_invoice_no"].as<std::string>());
+        }
     }
     else
     {
         size_t offset = (size_t)indexOffset;
-        if(offset + 18 > r.size())
+        if(offset + 22 > r.size())
         {
             LOG_FATAL << "Invalid SQL result for this model";
             return;
@@ -318,13 +378,69 @@ CommercialPartners::CommercialPartners(const Row &r, const ssize_t indexOffset) 
                 organizationLogo_=std::make_shared<std::vector<char>>(drogon::utils::hexToBinaryVector(str.data()+2,str.length()-2));
             }
         }
+        index = offset + 18;
+        if(!r[index].isNull())
+        {
+            auto timeStr = r[index].as<std::string>();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                subscriptionStartDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+        index = offset + 19;
+        if(!r[index].isNull())
+        {
+            auto timeStr = r[index].as<std::string>();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                subscriptionEndDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+        index = offset + 20;
+        if(!r[index].isNull())
+        {
+            totalAmountDue_=std::make_shared<std::string>(r[index].as<std::string>());
+        }
+        index = offset + 21;
+        if(!r[index].isNull())
+        {
+            currentInvoiceNo_=std::make_shared<std::string>(r[index].as<std::string>());
+        }
     }
 
 }
 
 CommercialPartners::CommercialPartners(const Json::Value &pJson, const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 18)
+    if(pMasqueradingVector.size() != 22)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -508,6 +624,74 @@ CommercialPartners::CommercialPartners(const Json::Value &pJson, const std::vect
         {
             auto str = pJson[pMasqueradingVector[17]].asString();
             organizationLogo_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
+        }
+    }
+    if(!pMasqueradingVector[18].empty() && pJson.isMember(pMasqueradingVector[18]))
+    {
+        dirtyFlag_[18] = true;
+        if(!pJson[pMasqueradingVector[18]].isNull())
+        {
+            auto timeStr = pJson[pMasqueradingVector[18]].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                subscriptionStartDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+    }
+    if(!pMasqueradingVector[19].empty() && pJson.isMember(pMasqueradingVector[19]))
+    {
+        dirtyFlag_[19] = true;
+        if(!pJson[pMasqueradingVector[19]].isNull())
+        {
+            auto timeStr = pJson[pMasqueradingVector[19]].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                subscriptionEndDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+    }
+    if(!pMasqueradingVector[20].empty() && pJson.isMember(pMasqueradingVector[20]))
+    {
+        dirtyFlag_[20] = true;
+        if(!pJson[pMasqueradingVector[20]].isNull())
+        {
+            totalAmountDue_=std::make_shared<std::string>(pJson[pMasqueradingVector[20]].asString());
+        }
+    }
+    if(!pMasqueradingVector[21].empty() && pJson.isMember(pMasqueradingVector[21]))
+    {
+        dirtyFlag_[21] = true;
+        if(!pJson[pMasqueradingVector[21]].isNull())
+        {
+            currentInvoiceNo_=std::make_shared<std::string>(pJson[pMasqueradingVector[21]].asString());
         }
     }
 }
@@ -695,12 +879,80 @@ CommercialPartners::CommercialPartners(const Json::Value &pJson) noexcept(false)
             organizationLogo_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
         }
     }
+    if(pJson.isMember("subscription_start_date"))
+    {
+        dirtyFlag_[18]=true;
+        if(!pJson["subscription_start_date"].isNull())
+        {
+            auto timeStr = pJson["subscription_start_date"].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                subscriptionStartDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+    }
+    if(pJson.isMember("subscription_end_date"))
+    {
+        dirtyFlag_[19]=true;
+        if(!pJson["subscription_end_date"].isNull())
+        {
+            auto timeStr = pJson["subscription_end_date"].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                subscriptionEndDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+    }
+    if(pJson.isMember("total_amount_due"))
+    {
+        dirtyFlag_[20]=true;
+        if(!pJson["total_amount_due"].isNull())
+        {
+            totalAmountDue_=std::make_shared<std::string>(pJson["total_amount_due"].asString());
+        }
+    }
+    if(pJson.isMember("current_invoice_no"))
+    {
+        dirtyFlag_[21]=true;
+        if(!pJson["current_invoice_no"].isNull())
+        {
+            currentInvoiceNo_=std::make_shared<std::string>(pJson["current_invoice_no"].asString());
+        }
+    }
 }
 
 void CommercialPartners::updateByMasqueradedJson(const Json::Value &pJson,
                                             const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 18)
+    if(pMasqueradingVector.size() != 22)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -885,6 +1137,74 @@ void CommercialPartners::updateByMasqueradedJson(const Json::Value &pJson,
             organizationLogo_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
         }
     }
+    if(!pMasqueradingVector[18].empty() && pJson.isMember(pMasqueradingVector[18]))
+    {
+        dirtyFlag_[18] = true;
+        if(!pJson[pMasqueradingVector[18]].isNull())
+        {
+            auto timeStr = pJson[pMasqueradingVector[18]].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                subscriptionStartDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+    }
+    if(!pMasqueradingVector[19].empty() && pJson.isMember(pMasqueradingVector[19]))
+    {
+        dirtyFlag_[19] = true;
+        if(!pJson[pMasqueradingVector[19]].isNull())
+        {
+            auto timeStr = pJson[pMasqueradingVector[19]].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                subscriptionEndDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+    }
+    if(!pMasqueradingVector[20].empty() && pJson.isMember(pMasqueradingVector[20]))
+    {
+        dirtyFlag_[20] = true;
+        if(!pJson[pMasqueradingVector[20]].isNull())
+        {
+            totalAmountDue_=std::make_shared<std::string>(pJson[pMasqueradingVector[20]].asString());
+        }
+    }
+    if(!pMasqueradingVector[21].empty() && pJson.isMember(pMasqueradingVector[21]))
+    {
+        dirtyFlag_[21] = true;
+        if(!pJson[pMasqueradingVector[21]].isNull())
+        {
+            currentInvoiceNo_=std::make_shared<std::string>(pJson[pMasqueradingVector[21]].asString());
+        }
+    }
 }
 
 void CommercialPartners::updateByJson(const Json::Value &pJson) noexcept(false)
@@ -1067,6 +1387,74 @@ void CommercialPartners::updateByJson(const Json::Value &pJson) noexcept(false)
         {
             auto str = pJson["organization_logo"].asString();
             organizationLogo_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
+        }
+    }
+    if(pJson.isMember("subscription_start_date"))
+    {
+        dirtyFlag_[18] = true;
+        if(!pJson["subscription_start_date"].isNull())
+        {
+            auto timeStr = pJson["subscription_start_date"].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                subscriptionStartDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+    }
+    if(pJson.isMember("subscription_end_date"))
+    {
+        dirtyFlag_[19] = true;
+        if(!pJson["subscription_end_date"].isNull())
+        {
+            auto timeStr = pJson["subscription_end_date"].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                subscriptionEndDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+    }
+    if(pJson.isMember("total_amount_due"))
+    {
+        dirtyFlag_[20] = true;
+        if(!pJson["total_amount_due"].isNull())
+        {
+            totalAmountDue_=std::make_shared<std::string>(pJson["total_amount_due"].asString());
+        }
+    }
+    if(pJson.isMember("current_invoice_no"))
+    {
+        dirtyFlag_[21] = true;
+        if(!pJson["current_invoice_no"].isNull())
+        {
+            currentInvoiceNo_=std::make_shared<std::string>(pJson["current_invoice_no"].asString());
         }
     }
 }
@@ -1514,6 +1902,99 @@ void CommercialPartners::setOrganizationLogoToNull() noexcept
     dirtyFlag_[17] = true;
 }
 
+const ::trantor::Date &CommercialPartners::getValueOfSubscriptionStartDate() const noexcept
+{
+    static const ::trantor::Date defaultValue = ::trantor::Date();
+    if(subscriptionStartDate_)
+        return *subscriptionStartDate_;
+    return defaultValue;
+}
+const std::shared_ptr<::trantor::Date> &CommercialPartners::getSubscriptionStartDate() const noexcept
+{
+    return subscriptionStartDate_;
+}
+void CommercialPartners::setSubscriptionStartDate(const ::trantor::Date &pSubscriptionStartDate) noexcept
+{
+    subscriptionStartDate_ = std::make_shared<::trantor::Date>(pSubscriptionStartDate);
+    dirtyFlag_[18] = true;
+}
+void CommercialPartners::setSubscriptionStartDateToNull() noexcept
+{
+    subscriptionStartDate_.reset();
+    dirtyFlag_[18] = true;
+}
+
+const ::trantor::Date &CommercialPartners::getValueOfSubscriptionEndDate() const noexcept
+{
+    static const ::trantor::Date defaultValue = ::trantor::Date();
+    if(subscriptionEndDate_)
+        return *subscriptionEndDate_;
+    return defaultValue;
+}
+const std::shared_ptr<::trantor::Date> &CommercialPartners::getSubscriptionEndDate() const noexcept
+{
+    return subscriptionEndDate_;
+}
+void CommercialPartners::setSubscriptionEndDate(const ::trantor::Date &pSubscriptionEndDate) noexcept
+{
+    subscriptionEndDate_ = std::make_shared<::trantor::Date>(pSubscriptionEndDate);
+    dirtyFlag_[19] = true;
+}
+void CommercialPartners::setSubscriptionEndDateToNull() noexcept
+{
+    subscriptionEndDate_.reset();
+    dirtyFlag_[19] = true;
+}
+
+const std::string &CommercialPartners::getValueOfTotalAmountDue() const noexcept
+{
+    static const std::string defaultValue = std::string();
+    if(totalAmountDue_)
+        return *totalAmountDue_;
+    return defaultValue;
+}
+const std::shared_ptr<std::string> &CommercialPartners::getTotalAmountDue() const noexcept
+{
+    return totalAmountDue_;
+}
+void CommercialPartners::setTotalAmountDue(const std::string &pTotalAmountDue) noexcept
+{
+    totalAmountDue_ = std::make_shared<std::string>(pTotalAmountDue);
+    dirtyFlag_[20] = true;
+}
+void CommercialPartners::setTotalAmountDue(std::string &&pTotalAmountDue) noexcept
+{
+    totalAmountDue_ = std::make_shared<std::string>(std::move(pTotalAmountDue));
+    dirtyFlag_[20] = true;
+}
+
+const std::string &CommercialPartners::getValueOfCurrentInvoiceNo() const noexcept
+{
+    static const std::string defaultValue = std::string();
+    if(currentInvoiceNo_)
+        return *currentInvoiceNo_;
+    return defaultValue;
+}
+const std::shared_ptr<std::string> &CommercialPartners::getCurrentInvoiceNo() const noexcept
+{
+    return currentInvoiceNo_;
+}
+void CommercialPartners::setCurrentInvoiceNo(const std::string &pCurrentInvoiceNo) noexcept
+{
+    currentInvoiceNo_ = std::make_shared<std::string>(pCurrentInvoiceNo);
+    dirtyFlag_[21] = true;
+}
+void CommercialPartners::setCurrentInvoiceNo(std::string &&pCurrentInvoiceNo) noexcept
+{
+    currentInvoiceNo_ = std::make_shared<std::string>(std::move(pCurrentInvoiceNo));
+    dirtyFlag_[21] = true;
+}
+void CommercialPartners::setCurrentInvoiceNoToNull() noexcept
+{
+    currentInvoiceNo_.reset();
+    dirtyFlag_[21] = true;
+}
+
 void CommercialPartners::updateId(const uint64_t id)
 {
 }
@@ -1538,7 +2019,11 @@ const std::vector<std::string> &CommercialPartners::insertColumns() noexcept
         "default_subscription_plan_id",
         "default_subscription_plan_description",
         "require_two_factor_auth",
-        "organization_logo"
+        "organization_logo",
+        "subscription_start_date",
+        "subscription_end_date",
+        "total_amount_due",
+        "current_invoice_no"
     };
     return inCols;
 }
@@ -1743,6 +2228,50 @@ void CommercialPartners::outputArgs(drogon::orm::internal::SqlBinder &binder) co
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[18])
+    {
+        if(getSubscriptionStartDate())
+        {
+            binder << getValueOfSubscriptionStartDate();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[19])
+    {
+        if(getSubscriptionEndDate())
+        {
+            binder << getValueOfSubscriptionEndDate();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[20])
+    {
+        if(getTotalAmountDue())
+        {
+            binder << getValueOfTotalAmountDue();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[21])
+    {
+        if(getCurrentInvoiceNo())
+        {
+            binder << getValueOfCurrentInvoiceNo();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 
 const std::vector<std::string> CommercialPartners::updateColumns() const
@@ -1819,6 +2348,22 @@ const std::vector<std::string> CommercialPartners::updateColumns() const
     if(dirtyFlag_[17])
     {
         ret.push_back(getColumnName(17));
+    }
+    if(dirtyFlag_[18])
+    {
+        ret.push_back(getColumnName(18));
+    }
+    if(dirtyFlag_[19])
+    {
+        ret.push_back(getColumnName(19));
+    }
+    if(dirtyFlag_[20])
+    {
+        ret.push_back(getColumnName(20));
+    }
+    if(dirtyFlag_[21])
+    {
+        ret.push_back(getColumnName(21));
     }
     return ret;
 }
@@ -2023,6 +2568,50 @@ void CommercialPartners::updateArgs(drogon::orm::internal::SqlBinder &binder) co
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[18])
+    {
+        if(getSubscriptionStartDate())
+        {
+            binder << getValueOfSubscriptionStartDate();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[19])
+    {
+        if(getSubscriptionEndDate())
+        {
+            binder << getValueOfSubscriptionEndDate();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[20])
+    {
+        if(getTotalAmountDue())
+        {
+            binder << getValueOfTotalAmountDue();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[21])
+    {
+        if(getCurrentInvoiceNo())
+        {
+            binder << getValueOfCurrentInvoiceNo();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 Json::Value CommercialPartners::toJson() const
 {
@@ -2171,6 +2760,38 @@ Json::Value CommercialPartners::toJson() const
     {
         ret["organization_logo"]=Json::Value();
     }
+    if(getSubscriptionStartDate())
+    {
+        ret["subscription_start_date"]=getSubscriptionStartDate()->toDbStringLocal();
+    }
+    else
+    {
+        ret["subscription_start_date"]=Json::Value();
+    }
+    if(getSubscriptionEndDate())
+    {
+        ret["subscription_end_date"]=getSubscriptionEndDate()->toDbStringLocal();
+    }
+    else
+    {
+        ret["subscription_end_date"]=Json::Value();
+    }
+    if(getTotalAmountDue())
+    {
+        ret["total_amount_due"]=getValueOfTotalAmountDue();
+    }
+    else
+    {
+        ret["total_amount_due"]=Json::Value();
+    }
+    if(getCurrentInvoiceNo())
+    {
+        ret["current_invoice_no"]=getValueOfCurrentInvoiceNo();
+    }
+    else
+    {
+        ret["current_invoice_no"]=Json::Value();
+    }
     return ret;
 }
 
@@ -2183,7 +2804,7 @@ Json::Value CommercialPartners::toMasqueradedJson(
     const std::vector<std::string> &pMasqueradingVector) const
 {
     Json::Value ret;
-    if(pMasqueradingVector.size() == 18)
+    if(pMasqueradingVector.size() == 22)
     {
         if(!pMasqueradingVector[0].empty())
         {
@@ -2383,6 +3004,50 @@ Json::Value CommercialPartners::toMasqueradedJson(
                 ret[pMasqueradingVector[17]]=Json::Value();
             }
         }
+        if(!pMasqueradingVector[18].empty())
+        {
+            if(getSubscriptionStartDate())
+            {
+                ret[pMasqueradingVector[18]]=getSubscriptionStartDate()->toDbStringLocal();
+            }
+            else
+            {
+                ret[pMasqueradingVector[18]]=Json::Value();
+            }
+        }
+        if(!pMasqueradingVector[19].empty())
+        {
+            if(getSubscriptionEndDate())
+            {
+                ret[pMasqueradingVector[19]]=getSubscriptionEndDate()->toDbStringLocal();
+            }
+            else
+            {
+                ret[pMasqueradingVector[19]]=Json::Value();
+            }
+        }
+        if(!pMasqueradingVector[20].empty())
+        {
+            if(getTotalAmountDue())
+            {
+                ret[pMasqueradingVector[20]]=getValueOfTotalAmountDue();
+            }
+            else
+            {
+                ret[pMasqueradingVector[20]]=Json::Value();
+            }
+        }
+        if(!pMasqueradingVector[21].empty())
+        {
+            if(getCurrentInvoiceNo())
+            {
+                ret[pMasqueradingVector[21]]=getValueOfCurrentInvoiceNo();
+            }
+            else
+            {
+                ret[pMasqueradingVector[21]]=Json::Value();
+            }
+        }
         return ret;
     }
     LOG_ERROR << "Masquerade failed";
@@ -2530,6 +3195,38 @@ Json::Value CommercialPartners::toMasqueradedJson(
     {
         ret["organization_logo"]=Json::Value();
     }
+    if(getSubscriptionStartDate())
+    {
+        ret["subscription_start_date"]=getSubscriptionStartDate()->toDbStringLocal();
+    }
+    else
+    {
+        ret["subscription_start_date"]=Json::Value();
+    }
+    if(getSubscriptionEndDate())
+    {
+        ret["subscription_end_date"]=getSubscriptionEndDate()->toDbStringLocal();
+    }
+    else
+    {
+        ret["subscription_end_date"]=Json::Value();
+    }
+    if(getTotalAmountDue())
+    {
+        ret["total_amount_due"]=getValueOfTotalAmountDue();
+    }
+    else
+    {
+        ret["total_amount_due"]=Json::Value();
+    }
+    if(getCurrentInvoiceNo())
+    {
+        ret["current_invoice_no"]=getValueOfCurrentInvoiceNo();
+    }
+    else
+    {
+        ret["current_invoice_no"]=Json::Value();
+    }
     return ret;
 }
 
@@ -2630,13 +3327,33 @@ bool CommercialPartners::validateJsonForCreation(const Json::Value &pJson, std::
         if(!validJsonOfField(17, "organization_logo", pJson["organization_logo"], err, true))
             return false;
     }
+    if(pJson.isMember("subscription_start_date"))
+    {
+        if(!validJsonOfField(18, "subscription_start_date", pJson["subscription_start_date"], err, true))
+            return false;
+    }
+    if(pJson.isMember("subscription_end_date"))
+    {
+        if(!validJsonOfField(19, "subscription_end_date", pJson["subscription_end_date"], err, true))
+            return false;
+    }
+    if(pJson.isMember("total_amount_due"))
+    {
+        if(!validJsonOfField(20, "total_amount_due", pJson["total_amount_due"], err, true))
+            return false;
+    }
+    if(pJson.isMember("current_invoice_no"))
+    {
+        if(!validJsonOfField(21, "current_invoice_no", pJson["current_invoice_no"], err, true))
+            return false;
+    }
     return true;
 }
 bool CommercialPartners::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                                                             const std::vector<std::string> &pMasqueradingVector,
                                                             std::string &err)
 {
-    if(pMasqueradingVector.size() != 18)
+    if(pMasqueradingVector.size() != 22)
     {
         err = "Bad masquerading vector";
         return false;
@@ -2791,6 +3508,38 @@ bool CommercialPartners::validateMasqueradedJsonForCreation(const Json::Value &p
                   return false;
           }
       }
+      if(!pMasqueradingVector[18].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[18]))
+          {
+              if(!validJsonOfField(18, pMasqueradingVector[18], pJson[pMasqueradingVector[18]], err, true))
+                  return false;
+          }
+      }
+      if(!pMasqueradingVector[19].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[19]))
+          {
+              if(!validJsonOfField(19, pMasqueradingVector[19], pJson[pMasqueradingVector[19]], err, true))
+                  return false;
+          }
+      }
+      if(!pMasqueradingVector[20].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[20]))
+          {
+              if(!validJsonOfField(20, pMasqueradingVector[20], pJson[pMasqueradingVector[20]], err, true))
+                  return false;
+          }
+      }
+      if(!pMasqueradingVector[21].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[21]))
+          {
+              if(!validJsonOfField(21, pMasqueradingVector[21], pJson[pMasqueradingVector[21]], err, true))
+                  return false;
+          }
+      }
     }
     catch(const Json::LogicError &e)
     {
@@ -2896,13 +3645,33 @@ bool CommercialPartners::validateJsonForUpdate(const Json::Value &pJson, std::st
         if(!validJsonOfField(17, "organization_logo", pJson["organization_logo"], err, false))
             return false;
     }
+    if(pJson.isMember("subscription_start_date"))
+    {
+        if(!validJsonOfField(18, "subscription_start_date", pJson["subscription_start_date"], err, false))
+            return false;
+    }
+    if(pJson.isMember("subscription_end_date"))
+    {
+        if(!validJsonOfField(19, "subscription_end_date", pJson["subscription_end_date"], err, false))
+            return false;
+    }
+    if(pJson.isMember("total_amount_due"))
+    {
+        if(!validJsonOfField(20, "total_amount_due", pJson["total_amount_due"], err, false))
+            return false;
+    }
+    if(pJson.isMember("current_invoice_no"))
+    {
+        if(!validJsonOfField(21, "current_invoice_no", pJson["current_invoice_no"], err, false))
+            return false;
+    }
     return true;
 }
 bool CommercialPartners::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
                                                           const std::vector<std::string> &pMasqueradingVector,
                                                           std::string &err)
 {
-    if(pMasqueradingVector.size() != 18)
+    if(pMasqueradingVector.size() != 22)
     {
         err = "Bad masquerading vector";
         return false;
@@ -3001,6 +3770,26 @@ bool CommercialPartners::validateMasqueradedJsonForUpdate(const Json::Value &pJs
       if(!pMasqueradingVector[17].empty() && pJson.isMember(pMasqueradingVector[17]))
       {
           if(!validJsonOfField(17, pMasqueradingVector[17], pJson[pMasqueradingVector[17]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[18].empty() && pJson.isMember(pMasqueradingVector[18]))
+      {
+          if(!validJsonOfField(18, pMasqueradingVector[18], pJson[pMasqueradingVector[18]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[19].empty() && pJson.isMember(pMasqueradingVector[19]))
+      {
+          if(!validJsonOfField(19, pMasqueradingVector[19], pJson[pMasqueradingVector[19]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[20].empty() && pJson.isMember(pMasqueradingVector[20]))
+      {
+          if(!validJsonOfField(20, pMasqueradingVector[20], pJson[pMasqueradingVector[20]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[21].empty() && pJson.isMember(pMasqueradingVector[21]))
+      {
+          if(!validJsonOfField(21, pMasqueradingVector[21], pJson[pMasqueradingVector[21]], err, false))
               return false;
       }
     }
@@ -3293,6 +4082,59 @@ bool CommercialPartners::validJsonOfField(size_t index,
                 err="Type error in the "+fieldName+" field";
                 return false;
             }
+            break;
+        case 18:
+            if(pJson.isNull())
+            {
+                return true;
+            }
+            if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 19:
+            if(pJson.isNull())
+            {
+                return true;
+            }
+            if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 20:
+            if(pJson.isNull())
+            {
+                err="The " + fieldName + " column cannot be null";
+                return false;
+            }
+            if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 21:
+            if(pJson.isNull())
+            {
+                return true;
+            }
+            if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            if(pJson.isString() && std::strlen(pJson.asCString()) > 20)
+            {
+                err="String length exceeds limit for the " +
+                    fieldName +
+                    " field (the maximum value is 20)";
+                return false;
+            }
+
             break;
         default:
             err="Internal error in the server";

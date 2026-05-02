@@ -18,6 +18,7 @@
 #include "services/media/MediaService.h"
 #include "services/newspapers/NewspaperService.h"
 #include "services/partners/CommercialPartnerService.h"
+#include "services/partner_invoice/PartnerInvoiceService.h"
 #include "services/payments/PaymentService.h"
 #include "services/paystack/PaystackApi.h"
 #include "services/publications/PublicationService.h"
@@ -69,6 +70,7 @@ public:
   ::gnp::services::QuartzApi &getQuartzApi() { return quartzApi_; }
   ::gnp::services::MediaService &getMediaService() { return mediaService_; }
   ::gnp::services::CouponService &getCouponService() { return couponService_; }
+  ::gnp::services::PartnerInvoiceService &getPartnerInvoiceService() { return partnerInvoiceService_; }
 
 private:
   ::gnp::services::AffiliateService affiliate_service_;
@@ -87,6 +89,7 @@ private:
   ::gnp::services::QuartzApi quartzApi_;
   ::gnp::services::MediaService mediaService_;
   ::gnp::services::CouponService couponService_;
+  ::gnp::services::PartnerInvoiceService partnerInvoiceService_;
 };
 
 } // namespace gnp::plugins

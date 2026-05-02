@@ -5,8 +5,8 @@
 #ifndef PAYMENTSERVICE_H
 #define PAYMENTSERVICE_H
 
-#include "../../dto/BaseApiResponse.h"
-#include "../../dto/CreatePaymentDto.h"
+#include "dto/BaseApiResponse.h"
+#include "dto/CreatePaymentDto.h"
 #include <drogon/drogon.h>
 #include <drogon/utils/coroutine.h>
 #include <functional>

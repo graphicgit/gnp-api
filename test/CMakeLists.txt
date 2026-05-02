@@ -20,6 +20,8 @@ file(GLOB AFFILIATE_SVC "../services/affiliates/*.cc")
 file(GLOB INGESTION_JOB_SVC "../services/ingestion_jobs/*.cc")
 file(GLOB SUB_PLAN_SVC "../services/subscription_plans/*.cc")
 file(GLOB PARTNER_SVC "../services/partners/*.cc")
+file(GLOB PARTNER_INVOICE_SVC "../services/partner_invoice/*.cc")
+file(GLOB PARTNER_ACTIVITY_LOG_SVC "../services/partner_activity_logs/*.cc")
 file(GLOB COUPON_SVC "../services/coupons/*.cc")
 file(GLOB MEDIA_SVC "../services/media/*.cc")
 file(GLOB UTILS_SVC "../utils/*.cc")
@@ -47,6 +49,8 @@ add_executable(${PROJECT_NAME} test_main.cc
     ${MEDIA_SVC}
     ${COUPON_SVC}
     ${PARTNER_SVC}
+    ${PARTNER_INVOICE_SVC}
+    ${PARTNER_ACTIVITY_LOG_SVC}
     ${UTILS_SVC}
 )
 

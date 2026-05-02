@@ -54,6 +54,7 @@ add_executable(${PROJECT_NAME} main.cc
         services/partners/CommercialPartnerService.h
         services/partners/CommercialPartnerService.cc
         dto/CreatePartnerDto.h
+        dto/PartnerInvoiceDto.h
         dto/UpdatePartnerDto.h
         dto/RegisterUserPasskeysDto.h
         dto/CreatePartnerSubscriberDto.h
@@ -96,6 +97,8 @@ add_executable(${PROJECT_NAME} main.cc
         dto/RoleDto.h
         services/roles/RoleService.cc
         dto/VerifyPartnerUserOtpDto.h
+        services/partner_invoice/PartnerInvoiceService.h
+        services/partner_invoice/PartnerInvoiceService.cc
 )
 
 # ##############################################################################

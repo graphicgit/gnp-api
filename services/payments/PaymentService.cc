@@ -3,9 +3,9 @@
 //
 
 #include "PaymentService.h"
-#include "../../constants/ErrorCodes.h"
-#include "../../dto/BaseApiResponse.h"
-#include "../../models/Payments.h"
+#include "constants/ErrorCodes.h"
+#include "dto/BaseApiResponse.h"
+#include "models/Payments.h"
 #include <drogon/orm/Mapper.h>
 #include <drogon/utils/coroutine.h>
 
@@ -14,8 +14,7 @@ using drogon_model::Gnp::Payments;
 
 namespace gnp::services {
 
-void PaymentService::getAll(
-    int pageNo, int pageSize, const std::string &query,
+void PaymentService::getAll(int pageNo, int pageSize, const std::string &query,
     const std::function<void(const dto::BaseApiResponse &)> &callback) {
 
   auto dbClient = drogon::app().getDbClient();
