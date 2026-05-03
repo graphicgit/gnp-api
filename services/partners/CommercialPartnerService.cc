@@ -121,7 +121,7 @@ drogon::Task<gnp::dto::BaseApiResponse> CommercialPartnerService::getAll(int pag
 }
 
 
-drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getAllSubscribers(int pageNo, int pageSize, const std::string &query, const std::string &partnerId) {
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::getAllSubscribers(int pageNo, int pageSize, const std::string &query, const std::string &partnerId) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mp(dbClient);
@@ -198,7 +198,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getAllSubscr
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerDetails(const std::string &partnerId) {
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::getPartnerDetails(const std::string &partnerId) {
 
   auto dbClient = drogon::app().getDbClient();
 
@@ -242,7 +242,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerDe
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::createPartner(const dto::CreatePartnerDto &dto) {
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartner(const dto::CreatePartnerDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<CommercialPartners> mp(dbClient);
@@ -544,8 +544,6 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::updatePartner(const
     co_return errorResponse;
   }
 }
-
-
 
 
 drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartnerSubscriber(const dto::CreatePartnerSubscriberDto &dto) {

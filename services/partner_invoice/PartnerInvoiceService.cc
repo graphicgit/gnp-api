@@ -1,6 +1,7 @@
 #include "PartnerInvoiceService.h"
 #include <drogon/orm/Mapper.h>
 #include "PartnerInvoices.h"
+#include "PartnerInvoicePayments.h"
 #include "constants/ErrorCodes.h"
 #include "utils/IdGeneratorUtils.h"
 #include <trantor/utils/Date.h>
@@ -212,6 +213,78 @@ namespace gnp::services {
       dto::BaseApiResponse errorResponse;
       errorResponse.success = false;
       errorResponse.message = "Failed to mark invoice as paid";
+      errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+      errorResponse.error["detail"] = e.base().what();
+      co_return errorResponse;
+    }
+  }
+
+  drogon::Task<dto::BaseApiResponse> PartnerInvoiceService::makePartPayment(const dto::PartnerInvoicePaymentDto &dto) {
+    auto dbClient = drogon::app().getDbClient();
+    CoroMapper<drogon_model::Gnp::PartnerInvoicePayments> mp(dbClient);
+
+    try {
+      drogon_model::Gnp::PartnerInvoicePayments payment;
+      payment.setId(gnp::utils::IdGeneratorUtils::generateGuid());
+      payment.setInvoiceId(dto.getInvoiceId());
+      payment.setPartnerId(dto.getPartnerId());
+      payment.setPaymentDate(trantor::Date::now());
+      
+      char buf[64];
+      snprintf(buf, sizeof(buf), "%.2f", dto.getAmountPaid());
+      payment.setAmountPaid(buf);
+      
+      payment.setPaymentMethod(dto.getPaymentMethod());
+      payment.setPaymentReference(dto.getPaymentReference());
+      payment.setTransactionId(dto.getTransactionId());
+      payment.setCurrency(dto.getCurrency().empty() ? "GHS" : dto.getCurrency());
+      payment.setPaymentStatus("Completed");
+      payment.setNotes(dto.getNotes());
+      payment.setCreatedAt(trantor::Date::now());
+
+      co_await mp.insert(payment);
+
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.message = "Payment recorded successfully. Invoice balance updated.";
+      co_return response;
+
+    } catch (const DrogonDbException &e) {
+      dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.message = "Failed to record payment";
+      errorResponse.error["code"] = constants::ERR_DB_QUERY;
+      errorResponse.error["detail"] = e.base().what();
+      co_return errorResponse;
+    }
+  }
+
+  drogon::Task<dto::BaseApiResponse> PartnerInvoiceService::makeFullPayment(const dto::PartnerInvoicePaymentDto &dto) {
+    auto dbClient = drogon::app().getDbClient();
+    CoroMapper<drogon_model::Gnp::PartnerInvoices> invMp(dbClient);
+
+    try {
+      // Fetch the current balance of the invoice
+      auto invoice = co_await invMp.findByPrimaryKey(dto.getInvoiceId());
+      double balance = std::stod(invoice.getValueOfBalance());
+
+      if (balance <= 0) {
+        dto::BaseApiResponse response;
+        response.success = true;
+        response.message = "Invoice is already fully paid";
+        co_return response;
+      }
+
+      // Create a full payment
+      dto::PartnerInvoicePaymentDto fullPaymentDto = dto;
+      fullPaymentDto.setAmountPaid(balance);
+
+      co_return co_await makePartPayment(fullPaymentDto);
+
+    } catch (const DrogonDbException &e) {
+      dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.message = "Failed to fetch invoice for full payment";
       errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
       errorResponse.error["detail"] = e.base().what();
       co_return errorResponse;
