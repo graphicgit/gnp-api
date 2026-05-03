@@ -20,6 +20,7 @@ class PartnerInvoiceService {
         drogon::Task<dto::BaseApiResponse> createInvoice(const dto::PartnerInvoiceDto &dto);
 
         drogon::Task<dto::BaseApiResponse> markAsPaid(const std::string &id);
+        drogon::Task<dto::BaseApiResponse> getInvoiceStats();
         drogon::Task<dto::BaseApiResponse> getById(const std::string &id);
         drogon::Task<dto::BaseApiResponse> deleteInvoice(const std::string &id);
 

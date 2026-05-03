@@ -7,10 +7,11 @@
 
 #include <json/json.h>
 #include <string>
+#include <algorithm>
 
 namespace gnp::dto {
 
-class PartnerInvoiceDto {
+class  PartnerInvoiceDto {
 public:
     PartnerInvoiceDto() = default;
 
@@ -46,11 +47,24 @@ public:
         if (json.isMember("currency") && !json["currency"].isNull()) {
             currency_ = json["currency"].asString();
         }
+
         if (json.isMember("dueDate") && !json["dueDate"].isNull()) {
-            due_date_ = json["dueDate"].asString();
+            std::string dateStr = json["dueDate"].asString();
+            if (dateStr.find('T') != std::string::npos) {
+                std::replace(dateStr.begin(), dateStr.end(), 'T', ' ');
+                if (dateStr.length() == 16) dateStr += ":00";
+            } else if (dateStr.length() == 10) {
+                dateStr += " 00:00:00";
+            }
+            due_date_ = trantor::Date::fromDbString(dateStr);
         }
+
         if (json.isMember("status") && !json["status"].isNull()) {
             status_ = json["status"].asString();
+        }
+
+        if (json.isMember("unitPrice") && !json["unitPrice"].isNull()) {
+            unit_price_ = json["unitPrice"].asDouble();
         }
 
         if (json.isMember("currentInvoiceNo") && !json["currentInvoiceNo"].isNull()) {
@@ -68,9 +82,10 @@ public:
     [[nodiscard]] const std::string& getInvoiceNumber() const { return invoice_number_; }
     [[nodiscard]] const std::string& getDescription() const { return description_; }
     [[nodiscard]] double getInvoiceAmount() const { return invoice_amount_; }
+    [[nodiscard]] double getUnitPrice() const { return unit_price_; }
     [[nodiscard]] double getBalance() const { return balance_; }
     [[nodiscard]] const std::string& getCurrency() const { return currency_; }
-    [[nodiscard]] const std::string& getDueDate() const { return due_date_; }
+    [[nodiscard]] const trantor::Date& getDueDate() const { return due_date_; }
     [[nodiscard]] const std::string& getStatus() const { return status_; }
 
     // Setters
@@ -81,9 +96,10 @@ public:
     void setInvoiceNumber(const std::string& value) { invoice_number_ = value; }
     void setDescription(const std::string& value) { description_ = value; }
     void setInvoiceAmount(double value) { invoice_amount_ = value; }
+    void setUnitPrice(double value) { unit_price_ = value; }
     void setBalance(double value) { balance_ = value; }
     void setCurrency(const std::string& value) { currency_ = value; }
-    void setDueDate(const std::string& value) { due_date_ = value; }
+    void setDueDate(const trantor::Date& value) { due_date_ = value; }
     void setStatus(const std::string& value) { status_ = value; }
 
 private:
@@ -94,9 +110,10 @@ private:
     std::string invoice_number_;
     std::string description_;
     double invoice_amount_ = 0.0;
+    double unit_price_ = 0.0;
     double balance_ = 0.0;
     std::string currency_;
-    std::string due_date_;
+    trantor::Date due_date_;
     std::string status_;
 };
 

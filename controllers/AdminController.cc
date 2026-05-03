@@ -1230,6 +1230,15 @@ drogon::Task<HttpResponsePtr> AdminController::getAllPartnerInvoices(HttpRequest
   co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
+drogon::Task<HttpResponsePtr> AdminController::getPartnerInvoiceStats(HttpRequestPtr req) {
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &partnerInvoiceService = plugin->getPartnerInvoiceService();
+
+  auto result = co_await partnerInvoiceService.getInvoiceStats();
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+}
+
 drogon::Task<HttpResponsePtr> AdminController::createPartnerInvoice(HttpRequestPtr req) {
   auto json = req->getJsonObject();
   if (!json) {
