@@ -121,7 +121,7 @@ drogon::Task<gnp::dto::BaseApiResponse> CommercialPartnerService::getAll(int pag
 }
 
 
-drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getAllSubscribers(int pageNo, int pageSize, const std::string &query, const std::string &partnerId) {
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::getAllSubscribers(int pageNo, int pageSize, const std::string &query, const std::string &partnerId) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mp(dbClient);
@@ -198,7 +198,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getAllSubscr
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerDetails(const std::string &partnerId) {
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::getPartnerDetails(const std::string &partnerId) {
 
   auto dbClient = drogon::app().getDbClient();
 
@@ -242,7 +242,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerDe
   }
 }
 
-  drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::createPartner(const dto::CreatePartnerDto &dto) {
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartner(const dto::CreatePartnerDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<CommercialPartners> mp(dbClient);
@@ -369,8 +369,9 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerDe
     partnerInvoiceDto.setBillingCycle(dto.getPartnerInvoice().getBillingCycle());
     partnerInvoiceDto.setCurrency(dto.getPartnerInvoice().getCurrency());
     partnerInvoiceDto.setDescription(dto.getPartnerInvoice().getDescription());
-    partnerInvoiceDto.setDueDate(dto.getPartnerInvoice().getDueDate());
+    partnerInvoiceDto.setDueDate(dto.getSubscriptionEndDate());
     partnerInvoiceDto.setStatus(dto.getPartnerInvoice().getStatus());
+    partnerInvoiceDto.setUnitPrice(dto.getPartnerInvoice().getUnitPrice());
 
     auto &partnerInvoiceService = plugin->getPartnerInvoiceService();
 
@@ -386,6 +387,15 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerDe
     amountStream << std::fixed << std::setprecision(2) << dto.getPartnerInvoice().getInvoiceAmount();
     std::string formattedAmount = amountStream.str();
 
+    // Add thousands separators for better readability
+    size_t dotPos = formattedAmount.find('.');
+    int pos = (dotPos == std::string::npos) ? (int)formattedAmount.length() : (int)dotPos;
+    for (int i = pos - 3; i > 0; i -= 3) {
+      formattedAmount.insert(i, ",");
+    }
+
+    std::string dueDateStr = dto.getSubscriptionEndDate().toCustomFormattedString("%d-%b-%Y");
+
     std::string onboardingEmailBody =
         R"html(
               <!DOCTYPE html>
@@ -398,17 +408,19 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerDe
                 .header h1 { margin: 0; font-size: 28px; font-weight: 600; letter-spacing: 1px; }
                 .content { padding: 40px; color: #444444; line-height: 1.6; }
                 .welcome-text { font-size: 18px; margin-bottom: 20px; color: #222222; }
-                .invoice-card { background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; margin: 30px 0; padding: 25px; }
-                .invoice-header { border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 20px; }
-                .invoice-title { font-weight: bold; color: #D32F2F; font-size: 20px; }
-                .invoice-detail { margin: 12px 0; display: flex; justify-content: space-between; }
-                .label { color: #888; font-weight: 500; }
-                .value { color: #333; font-weight: 600; text-align: right; }
-                .total-row { margin-top: 20px; padding-top: 15px; border-top: 2px solid #f4f4f4; }
-                .total-label { font-size: 18px; font-weight: bold; color: #222; }
-                .total-value { font-size: 22px; font-weight: 800; color: #D32F2F; }
+                .invoice-card { background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 12px; margin: 30px 0; padding: 0; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+                .invoice-header { background: linear-gradient(135deg, #fdfdfd 0%, #f5f5f5 100%); padding: 20px 25px; border-bottom: 1px solid #e0e0e0; }
+                .invoice-title { font-weight: 700; color: #D32F2F; font-size: 14px; margin: 0; text-transform: uppercase; letter-spacing: 1.2px; }
+                .invoice-body { padding: 30px; }
+                .invoice-row { margin: 0 0 18px 0; display: flex; justify-content: space-between; align-items: center; }
+                .invoice-row:last-of-type { margin-bottom: 0; }
+                .label { color: #888; font-weight: 500; font-size: 14px; }
+                .value { color: #333; font-weight: 600; font-size: 14px; text-align: right; }
+                .total-row { margin-top: 25px; padding-top: 20px; border-top: 2px solid #f0f0f0; }
+                .total-label { font-size: 20px; font-weight: 700; color: #222; }
+                .total-value { font-size: 20px; font-weight: 700; color: #D32F2F; text-align: right; }
                 .footer { background-color: #f8f9fa; color: #999999; padding: 20px; text-align: center; font-size: 13px; border-top: 1px solid #eeeeee; }
-                .btn { display: inline-block; background-color: #D32F2F; color: #ffffff; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 20px; }
+                .btn { display: inline-block; background-color: #D32F2F; color: #ffffff !important; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 20px; }
               </style>
               </head>
               <body>
@@ -420,52 +432,53 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerDe
                   <p class="welcome-text">Congratulations, )html" +
         dto.getName() + R"html(!</p>
                   <p>We are thrilled to welcome you to the Graphic Partner Platform. Your organization has been successfully onboarded, and you now have access to our premium suite of tools and content distribution services.</p>
-                  
+
                   <p>As part of your subscription to the <strong>)html" +
         dto.getDefaultSubscriptionPlanName() + R"html(</strong>, a new invoice has been generated for your account:</p>
-                  
+
                   <div class="invoice-card">
                     <div class="invoice-header">
-                      <span class="invoice-title">INVOICE SUMMARY</span>
+                      <div class="invoice-title">INVOICE SUMMARY</div>
                     </div>
-                    <div class="invoice-detail">
-                      <span class="label">Invoice Number:</span>
-                      <span class="value">)html" +
+                    <div class="invoice-body">
+                      <div class="invoice-row">
+                        <span class="label">Invoice Number:</span>
+                        <span class="value">)html" +
         dto.getPartnerInvoice().getInvoiceNumber() + R"html(</span>
-                    </div>
-                    <div class="invoice-detail">
-                      <span class="label">Description:</span>
-                      <span class="value">)html" +
+                      </div>
+                      <div class="invoice-row">
+                        <span class="label">Description:</span>
+                        <span class="value">)html" +
         dto.getPartnerInvoice().getDescription() + R"html(</span>
-                    </div>
-                    <div class="invoice-detail">
-                      <span class="label">Billing Cycle:</span>
-                      <span class="value">)html" +
+                      </div>
+                      <div class="invoice-row">
+                        <span class="label">Billing Cycle:</span>
+                        <span class="value">)html" +
         dto.getPartnerInvoice().getBillingCycle() + R"html(</span>
-                    </div>
-                    <div class="invoice-detail">
-                      <span class="label">Due Date:</span>
-                      <span class="value">)html" +
-        dto.getPartnerInvoice().getDueDate() + R"html(</span>
-                    </div>
-                    <div class="total-row invoice-detail">
-                      <span class="total-label">Total Amount:</span>
-                      <span class="total-value">)html" +
+                      </div>
+                      <div class="invoice-row">
+                        <span class="label">Due Date:</span>
+                        <span class="value">)html" +
+        dueDateStr + R"html(</span>
+                      </div>
+                      <div class="invoice-row total-row">
+                        <span class="total-label">Total Amount:</span>
+                        <span class="total-value">)html" +
         dto.getPartnerInvoice().getCurrency() + " " + formattedAmount + R"html(</span>
+                      </div>
                     </div>
                   </div>
-                  
+
                   <p>You can manage your subscriptions, view full invoices, and track your performance directly from your Partner Dashboard.</p>
-                  
+
                   <div style="text-align: center;">
                       <a href="https://dev.graphicnewsplus.com/partners/account/login" class="btn">Access Partner Dashboard</a>
                   </div>
-                  
+
                   <p style="margin-top: 30px;">If you have any questions regarding your invoice or the onboarding process, please don't hesitate to contact our support team.</p>
                 </div>
                 <div class="footer">
-                  &copy; )html" +
-        trantor::Date::now().toCustomFormattedString("%Y") +
+                  &copy; )html" + trantor::Date::now().toCustomFormattedString("%Y") +
         R"html( Graphic News Plus. All rights reserved.<br>
                   Providing premium content solutions for our partners.
                 </div>
@@ -531,8 +544,6 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::updatePartner(const
     co_return errorResponse;
   }
 }
-
-
 
 
 drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartnerSubscriber(const dto::CreatePartnerSubscriberDto &dto) {
@@ -900,7 +911,7 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::getPartnerStats() {
   try {
     // 1. Get Total Revenue
     double totalRevenue = 0.0;
-    auto revenueResult = co_await dbClient->execSqlCoro("SELECT SUM(invoice_amount - balance) FROM partner_invoice");
+    auto revenueResult = co_await dbClient->execSqlCoro("SELECT SUM(invoice_amount - balance) FROM partner_invoices");
     if (!revenueResult.empty() && !revenueResult[0][0].isNull()) {
       totalRevenue = revenueResult[0][0].as<double>();
     }

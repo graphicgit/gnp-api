@@ -120,6 +120,8 @@ namespace gnp::dto {
             if (dateStr.find('T') != std::string::npos) {
                 std::replace(dateStr.begin(), dateStr.end(), 'T', ' ');
                 if (dateStr.length() == 16) dateStr += ":00";
+            } else if (dateStr.length() == 10) {
+                dateStr += " 00:00:00";
             }
             subscription_start_date_ = trantor::Date::fromDbString(dateStr);
         }
@@ -129,6 +131,8 @@ namespace gnp::dto {
             if (dateStr.find('T') != std::string::npos) {
                 std::replace(dateStr.begin(), dateStr.end(), 'T', ' ');
                 if (dateStr.length() == 16) dateStr += ":00";
+            } else if (dateStr.length() == 10) {
+                dateStr += " 00:00:00";
             }
             subscription_end_date_ = trantor::Date::fromDbString(dateStr);
         }

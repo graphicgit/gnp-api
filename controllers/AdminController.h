@@ -92,6 +92,7 @@ public:
  
    // partner invoices
    ADD_METHOD_TO(AdminController::getAllPartnerInvoices, std::string(PREFIX) + "get-all-partner-invoices", Get, Options, "JwtAuthFilter");
+   ADD_METHOD_TO(AdminController::getPartnerInvoiceStats, std::string(PREFIX) + "get-partner-invoice-stats", Get, Options, "JwtAuthFilter");
    ADD_METHOD_TO(AdminController::createPartnerInvoice, std::string(PREFIX) + "create-partner-invoice", Post, Options, "JwtAuthFilter");
    ADD_METHOD_TO(AdminController::markPartnerInvoicePaid, std::string(PREFIX) + "mark-partner-invoice-paid", Get, Options, "JwtAuthFilter");
    ADD_METHOD_TO(AdminController::deletePartnerInvoice, std::string(PREFIX) + "delete-partner-invoice", Delete, Options, "JwtAuthFilter");
@@ -188,6 +189,7 @@ public:
 
    // partner invoices
    drogon::Task<HttpResponsePtr> getAllPartnerInvoices(HttpRequestPtr req);
+   drogon::Task<HttpResponsePtr> getPartnerInvoiceStats(HttpRequestPtr req);
    drogon::Task<HttpResponsePtr> createPartnerInvoice(HttpRequestPtr req);
    drogon::Task<HttpResponsePtr> markPartnerInvoicePaid(HttpRequestPtr req);
    drogon::Task<HttpResponsePtr> deletePartnerInvoice(HttpRequestPtr req);
