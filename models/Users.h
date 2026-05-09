@@ -72,6 +72,7 @@ class Users
         static const std::string _credential_type;
         static const std::string _is_affiliate;
         static const std::string _last_active;
+        static const std::string _roles;
     };
 
     static const int primaryKeyNumber;
@@ -390,8 +391,18 @@ class Users
     void setLastActive(const ::trantor::Date &pLastActive) noexcept;
     void setLastActiveToNull() noexcept;
 
+    /**  For column roles  */
+    ///Get the value of the column roles, returns the default value if the column is null
+    const std::string &getValueOfRoles() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getRoles() const noexcept;
+    ///Set the value of the column roles
+    void setRoles(const std::string &pRoles) noexcept;
+    void setRoles(std::string &&pRoles) noexcept;
+    void setRolesToNull() noexcept;
 
-    static size_t getColumnNumber() noexcept {  return 28;  }
+
+    static size_t getColumnNumber() noexcept {  return 29;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -441,6 +452,7 @@ class Users
     std::shared_ptr<std::string> credentialType_;
     std::shared_ptr<bool> isAffiliate_;
     std::shared_ptr<::trantor::Date> lastActive_;
+    std::shared_ptr<std::string> roles_;
     struct MetaData
     {
         const std::string colName_;
@@ -452,7 +464,7 @@ class Users
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[28]={ false };
+    bool dirtyFlag_[29]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -617,6 +629,11 @@ class Users
         if(dirtyFlag_[27])
         {
             sql += "last_active,";
+            ++parametersCount;
+        }
+        if(dirtyFlag_[28])
+        {
+            sql += "roles,";
             ++parametersCount;
         }
         if(parametersCount > 0)
@@ -802,6 +819,11 @@ class Users
             sql +="default,";
         }
         if(dirtyFlag_[27])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[28])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);

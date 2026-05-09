@@ -26,6 +26,20 @@ class PartnerController : public drogon::HttpController<PartnerController>
   ADD_METHOD_TO(PartnerController::deleteApiKey, std::string(PREFIX) + "delete-partner-api-key", Delete, Options, "PartnerJwtAuthFilter");
   ADD_METHOD_TO(PartnerController::deleteSubscriber, std::string(PREFIX) + "delete-subscriber", Delete, Options, "PartnerJwtAuthFilter");
   ADD_METHOD_TO(PartnerController::bulkUploadSubscribers, std::string(PREFIX) + "bulk-upload-subscribers", Post, Options, "PartnerJwtAuthFilter");
+
+    //partner roles
+    ADD_METHOD_TO(PartnerController::getAllRoles, std::string(PREFIX) + "get-all-roles", Get, Options, "PartnerJwtAuthFilter");
+    ADD_METHOD_TO(PartnerController::createRole, std::string(PREFIX) + "create-role", Post, Options, "PartnerJwtAuthFilter");
+    ADD_METHOD_TO(PartnerController::updateRole, std::string(PREFIX) + "update-role/{1}", Post, Options, "PartnerJwtAuthFilter");
+    ADD_METHOD_TO(PartnerController::deleteRole, std::string(PREFIX) + "delete-role", Delete, Options, "PartnerJwtAuthFilter");
+
+    //partner admin users
+    ADD_METHOD_TO(PartnerController::getAllAdminUsers, std::string(PREFIX) + "get-all-users", Get, Options, "PartnerJwtAuthFilter");
+    ADD_METHOD_TO(PartnerController::createAdminUser, std::string(PREFIX) + "create-admin-user", Post, Options, "PartnerJwtAuthFilter");
+    ADD_METHOD_TO(PartnerController::updateAdminUser, std::string(PREFIX) + "update-admin-user/{1}", Post, Options, "PartnerJwtAuthFilter");
+    ADD_METHOD_TO(PartnerController::deleteAdminUser, std::string(PREFIX) + "delete-admin-user", Delete, Options, "PartnerJwtAuthFilter");
+
+
   METHOD_LIST_END
 
     Task<HttpResponsePtr> getStats(HttpRequestPtr req);
@@ -45,5 +59,16 @@ class PartnerController : public drogon::HttpController<PartnerController>
     Task<HttpResponsePtr> updatePartnerApiKey(HttpRequestPtr req);
     Task<HttpResponsePtr> deleteSubscriber(HttpRequestPtr req);
     Task<HttpResponsePtr> bulkUploadSubscribers(HttpRequestPtr req);
+    // partner roles
+    Task<HttpResponsePtr> getAllRoles(HttpRequestPtr req);
+    Task<HttpResponsePtr> createRole(HttpRequestPtr req);
+    Task<HttpResponsePtr> updateRole(HttpRequestPtr req, const std::string &roleId);
+    Task<HttpResponsePtr> deleteRole(HttpRequestPtr req);
+    //partner admin users
+    Task<HttpResponsePtr> getAllAdminUsers(HttpRequestPtr req);
+    Task<HttpResponsePtr> createAdminUser(HttpRequestPtr req);
+    Task<HttpResponsePtr> updateAdminUser(HttpRequestPtr req, const std::string &adminUserId);
+    Task<HttpResponsePtr> deleteAdminUser(HttpRequestPtr req);
+
 
 };

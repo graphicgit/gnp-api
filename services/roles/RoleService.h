@@ -18,11 +18,13 @@ namespace gnp::services {
 
         drogon::Task<gnp::dto::BaseApiResponse> getAll(int pageNo, int pageSize, const std::string &query);
 
-        // drogon::Task<gnp::dto::BaseApiResponse> create(const dto::RoleDto &userDto);
-        //
-        // drogon::Task<gnp::dto::BaseApiResponse> update(const dto::RoleDto &userDto, const std::string &roleId);
-        //
-        // drogon::Task<gnp::dto::BaseApiResponse> deleteRole(const std::string &roleId);
+        drogon::Task<gnp::dto::BaseApiResponse> getAll(int pageNo, int pageSize, const std::string &partnerId, const std::string &query);
+
+        drogon::Task<gnp::dto::BaseApiResponse> create(const dto::RoleDto &roleDto);
+
+        drogon::Task<gnp::dto::BaseApiResponse> update(const dto::RoleDto &roleDto, const std::string &roleId);
+
+        drogon::Task<gnp::dto::BaseApiResponse> deleteRole(const std::string &roleId);
 
 
     };

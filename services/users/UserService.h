@@ -8,6 +8,7 @@
 #include "dto/SigninDto.h"
 #include <drogon/drogon.h>
 
+#include "dto/AdminUserDto.h"
 #include "dto/LoginUserPasskeyDto.h"
 #include "dto/RegisterUserPasskeysDto.h"
 #include "dto/VerifyPartnerUserOtpDto.h"
@@ -16,17 +17,23 @@ namespace gnp::services {
 
 class UserService {
 public:
-  drogon::Task<gnp::dto::BaseApiResponse> getAll(int pageNo, int pageSize,
+  drogon::Task<dto::BaseApiResponse> getAll(int pageNo, int pageSize,
                                                  const std::string &query);
 
-  drogon::Task<gnp::dto::BaseApiResponse> getAdminUsers(int pageNo, int pageSize, const std::string &query);
+  drogon::Task<dto::BaseApiResponse> getAdminUsers(int pageNo, int pageSize, const std::string &query);
+  drogon::Task<dto::BaseApiResponse> getPartnerAdminUsers(const std::string &partnerId, int pageNo, int pageSize, const std::string &query);
 
-  drogon::Task<gnp::dto::BaseApiResponse> getPartnerSubscribers(const std::string &partnerId, int pageNo, int pageSize,
-                        const std::string &query);
 
-  drogon::Task<gnp::dto::BaseApiResponse> create(const dto::CreateUserDto &userDto);
+  drogon::Task<dto::BaseApiResponse> getPartnerSubscribers(const std::string &partnerId, int pageNo, int pageSize, const std::string &query);
 
-  drogon::Task<gnp::dto::BaseApiResponse> registerUserPasskeys(const dto::RegisterUserPasskeysDto &passKeysDto);
+  drogon::Task<dto::BaseApiResponse> create(const dto::CreateUserDto &userDto);
+
+  drogon::Task<dto::BaseApiResponse> invitePartnerAdminUser(const dto::AdminUserDto &adminUserDto, const std::string &partnerId);
+
+  drogon::Task<dto::BaseApiResponse> updatePartnerAdminUser(const dto::AdminUserDto &adminUserDto, const std::string &adminUserId, const std::string &partnerId);
+
+
+  drogon::Task<dto::BaseApiResponse> registerUserPasskeys(const dto::RegisterUserPasskeysDto &passKeysDto);
 
   void updateProfileImage(
       const std::string &userId,
@@ -43,6 +50,8 @@ public:
   drogon::Task<gnp::dto::BaseApiResponse> deactivateUserAccount(const std::string &userId);
 
   drogon::Task<gnp::dto::BaseApiResponse> deleteUser(const std::string &userId);
+  drogon::Task<gnp::dto::BaseApiResponse> deletePartnerAdminUser(const std::string &userId, const std::string &partnerId);
+
 
   // auth
   drogon::Task<gnp::dto::BaseApiResponse> validateUserCredentials(const dto::SigninDto &signin_dto);

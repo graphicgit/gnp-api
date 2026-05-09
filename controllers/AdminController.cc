@@ -215,14 +215,12 @@ drogon::Task<HttpResponsePtr> AdminController::getAllUsers(const HttpRequestPtr 
   co_return resp;
 }
 
-void AdminController::createUser(
-    const HttpRequestPtr &req,
+void AdminController::createUser(const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) {
   // write your application logic here
 }
 
-void AdminController::getUserDetails(
-    const HttpRequestPtr &req,
+void AdminController::getUserDetails(const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) {
   // write your application logic here
 }
@@ -1098,8 +1096,7 @@ drogon::Task<HttpResponsePtr> AdminController::deletePartnerSubscriber(HttpReque
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
-drogon::Task<HttpResponsePtr>
-AdminController::getPartnerApiKeys(HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::getPartnerApiKeys(HttpRequestPtr req) {
   auto partnerId = req->getParameter("partnerId");
 
   if (partnerId.empty()) {
@@ -1118,8 +1115,7 @@ AdminController::getPartnerApiKeys(HttpRequestPtr req) {
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
-drogon::Task<HttpResponsePtr>
-AdminController::generatePartnerApiKey(HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::generatePartnerApiKey(HttpRequestPtr req) {
   auto jsonPtr = req->getJsonObject();
   if (!jsonPtr) {
     gnp::dto::BaseApiResponse response;
@@ -1289,3 +1285,114 @@ drogon::Task<HttpResponsePtr> AdminController::deletePartnerInvoice(HttpRequestP
   auto result = co_await partnerInvoiceService.deleteInvoice(id);
   co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
+
+//admin roles
+
+Task<HttpResponsePtr> AdminController::getAllRoles(HttpRequestPtr req) {
+
+  int pageSize = 10; // Default page size
+  int pageNo = 1;    //  Default page number
+
+  if (!req->getParameter("pageSize").empty()) {
+    try {
+      pageSize = std::stoi(req->getParameter("pageSize"));
+      pageSize = std::max(1, std::min(100, pageSize)); // Limit between 1-100
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  if (!req->getParameter("pageNo").empty()) {
+    try {
+      pageNo = std::stoi(req->getParameter("pageNo"));
+      pageNo = std::max(1, pageNo); // Ensure page number is at least 1
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  std::string query = req->getParameter("query");
+  if (query.empty()) {
+    query = "";
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &roleService = plugin->getRoleService();
+
+  auto result = co_await roleService.getAll(pageNo, pageSize, query);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+}
+
+Task<HttpResponsePtr> AdminController::createRole(HttpRequestPtr req) {
+
+  auto jsonBody = req->getJsonObject();
+
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  gnp::dto::RoleDto dto;
+
+  dto.fromJson(*jsonBody);
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &roleService = plugin->getRoleService();
+
+  auto result = co_await roleService.create(dto);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+}
+
+Task<HttpResponsePtr> AdminController::updateRole(HttpRequestPtr req, const std::string &roleId) {
+
+  auto jsonBody = req->getJsonObject();
+
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  gnp::dto::RoleDto dto;
+
+  dto.fromJson(*jsonBody);
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &roleService = plugin->getRoleService();
+
+  auto result = co_await roleService.update(dto, roleId);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+}
+
+Task<HttpResponsePtr> AdminController::deleteRole(HttpRequestPtr req) {
+
+  auto id = req->getParameter("id");
+
+  if (id.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Missing required parameter: id";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &roleService = plugin->getRoleService();
+
+  auto result = co_await roleService.deleteRole(id);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+}
+
+
