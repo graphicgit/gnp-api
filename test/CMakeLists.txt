@@ -23,6 +23,8 @@ file(GLOB PARTNER_SVC "../services/partners/*.cc")
 file(GLOB PARTNER_INVOICE_SVC "../services/partner_invoice/*.cc")
 file(GLOB PARTNER_ACTIVITY_LOG_SVC "../services/partner_activity_logs/*.cc")
 file(GLOB COUPON_SVC "../services/coupons/*.cc")
+file(GLOB ADMIN_USER_INVITATION_SVC "../services/user_invitations/*.cc")
+file(GLOB ROLE_SVC "../services/roles/*.cc")
 file(GLOB MEDIA_SVC "../services/media/*.cc")
 file(GLOB UTILS_SVC "../utils/*.cc")
 
@@ -48,9 +50,11 @@ add_executable(${PROJECT_NAME} test_main.cc
     ${PAYMENT_SVC}
     ${MEDIA_SVC}
     ${COUPON_SVC}
+    ${ROLE_SVC}
     ${PARTNER_SVC}
     ${PARTNER_INVOICE_SVC}
     ${PARTNER_ACTIVITY_LOG_SVC}
+    ${ADMIN_USER_INVITATION_SVC}
     ${UTILS_SVC}
 )
 

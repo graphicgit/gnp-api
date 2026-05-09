@@ -26,8 +26,7 @@ using drogon_model::Gnp::Users;
 
 namespace gnp::services {
 
-drogon::Task<dto::BaseApiResponse>
-UserService::getAll(int pageNo, int pageSize, const std::string &query) {
+drogon::Task<dto::BaseApiResponse> UserService::getAll(int pageNo, int pageSize, const std::string &query) {
   auto dbClient = drogon::app().getDbClient();
   auto mp = CoroMapper<Users>(dbClient);
 
@@ -93,8 +92,7 @@ UserService::getAll(int pageNo, int pageSize, const std::string &query) {
   co_return response;
 }
 
-drogon::Task<dto::BaseApiResponse>
-UserService::getAdminUsers(int pageNo, int pageSize, const std::string &query) {
+drogon::Task<dto::BaseApiResponse> UserService::getAdminUsers(int pageNo, int pageSize, const std::string &query) {
   auto dbClient = drogon::app().getDbClient();
   auto mp = CoroMapper<Users>(dbClient);
 
@@ -159,8 +157,77 @@ UserService::getAdminUsers(int pageNo, int pageSize, const std::string &query) {
   co_return response;
 }
 
-drogon::Task<dto::BaseApiResponse>
-UserService::getPartnerSubscribers(const std::string &partnerId, int pageNo,
+drogon::Task<dto::BaseApiResponse> UserService::getPartnerAdminUsers(const std::string &partnerId, int pageNo, int pageSize, const std::string &query) {
+  auto dbClient = drogon::app().getDbClient();
+  auto mp = CoroMapper<Users>(dbClient);
+
+  // 1. Build the search criteria
+  Criteria criteria = Criteria(Users::Cols::_partner_id, CompareOperator::EQ, partnerId) &&
+                     Criteria(Users::Cols::_is_partner_admin_user, CompareOperator::EQ, true);
+
+  if (!query.empty()) {
+    std::string likeQuery = "%" + query + "%";
+    Criteria searchCriteria =
+        Criteria(Users::Cols::_first_name, CompareOperator::Like, likeQuery) ||
+        Criteria(Users::Cols::_email, CompareOperator::Like, likeQuery) ||
+        Criteria(Users::Cols::_last_name, CompareOperator::Like, likeQuery);
+    criteria = criteria && searchCriteria;
+  }
+
+  dto::BaseApiResponse response;
+  try {
+    // 2. Get the total count matching the criteria
+    size_t totalCount = co_await mp.count(criteria);
+    if (totalCount == 0) {
+      response.success = true;
+      response.result["data"] = Json::arrayValue;
+      response.result["totalCount"] = 0;
+      co_return response;
+    }
+
+    // 3. Find the paginated data
+    int offset = (pageNo - 1) * pageSize;
+    auto users = co_await mp.limit(pageSize).offset(offset).findBy(criteria);
+
+    // 4. Build the final response
+    response.success = true;
+    response.result["totalCount"] = (Json::UInt64)totalCount;
+    response.result["pageNo"] = pageNo;
+    response.result["pageSize"] = pageSize;
+    response.result["totalPages"] =
+        (int)((totalCount + pageSize - 1) / pageSize);
+
+    Json::Value data = Json::arrayValue;
+    for (const auto &user : users) {
+      Json::Value userJson = user.toJson();
+      Json::Value camelCaseUser;
+      camelCaseUser["id"] = userJson["id"];
+      camelCaseUser["firstName"] = userJson["first_name"];
+      camelCaseUser["lastName"] = userJson["last_name"];
+      camelCaseUser["email"] = userJson["email"];
+      camelCaseUser["phoneNumber"] = userJson["phone_number"];
+      camelCaseUser["country"] = userJson["country"];
+      camelCaseUser["username"] = userJson["username"];
+      camelCaseUser["profileImageUrl"] = userJson["profile_image_url"];
+      camelCaseUser["isLockedOut"] = userJson["is_locked_out"];
+      camelCaseUser["isActive"] = userJson["is_active"];
+      camelCaseUser["createdAt"] = userJson["created_at"];
+      camelCaseUser["updatedAt"] = userJson["updated_at"];
+      camelCaseUser["roles"] = userJson["roles"];
+      data.append(camelCaseUser);
+    }
+    response.result["data"] = data;
+  } catch (const DrogonDbException &e) {
+    response.success = false;
+    response.error["code"] = constants::ERR_DB_QUERY;
+    response.error["message"] = "Database error while fetching users.";
+    response.error["detail"] = e.base().what();
+  }
+  co_return response;
+}
+
+
+drogon::Task<dto::BaseApiResponse> UserService::getPartnerSubscribers(const std::string &partnerId, int pageNo,
                                    int pageSize, const std::string &query) {
   auto dbClient = drogon::app().getDbClient();
   auto mp = CoroMapper<Users>(dbClient);
@@ -270,8 +337,8 @@ UserService::getPartnerSubscribers(const std::string &partnerId, int pageNo,
   co_return response;
 }
 
-drogon::Task<gnp::dto::BaseApiResponse>
-UserService::create(const dto::CreateUserDto &userDto) {
+
+drogon::Task<dto::BaseApiResponse> UserService::create(const dto::CreateUserDto &userDto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mp(dbClient);
@@ -302,8 +369,181 @@ UserService::create(const dto::CreateUserDto &userDto) {
   co_return response;
 }
 
-drogon::Task<gnp::dto::BaseApiResponse> UserService::registerUserPasskeys(
-    const dto::RegisterUserPasskeysDto &passKeysDto) {
+
+drogon::Task<dto::BaseApiResponse> UserService::invitePartnerAdminUser(const dto::AdminUserDto &userDto, const std::string &partnerId) {
+
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<Users> mp(dbClient);
+  CoroMapper<drogon_model::Gnp::CommercialPartners> partnerMapper(dbClient);
+  CoroMapper<drogon_model::Gnp::CommercialPartners> userInvitationsMapper(dbClient);
+  auto plugin = drogon::app().getPlugin<plugins::GnpServicePlugin>();
+
+  Users newUser;
+  newUser.setFirstName(userDto.getFirstName());
+  newUser.setLastName(userDto.getLastName());
+  newUser.setEmail(userDto.getEmail());
+  newUser.setUsername(userDto.getUsername());
+  newUser.setPhoneNumber(userDto.getPhoneNumber());
+  newUser.setCountry(userDto.getCountry());
+  newUser.setPasswordHash(bcrypt::generateHash(userDto.getPassword()));
+  newUser.setIsActive(true);
+  newUser.setIsPartnerAdminUser(true);
+  newUser.setPartnerId(partnerId);
+
+  auto partnerInfo = co_await partnerMapper.findByPrimaryKey(partnerId);
+
+  // Convert permissions vector to JSON string
+  Json::Value permissionsJson = Json::arrayValue;
+  for (const auto &perm : userDto.getRoles()) {
+    permissionsJson.append(perm);
+  }
+  Json::StreamWriterBuilder writer;
+  newUser.setRoles(Json::writeString(writer, permissionsJson));
+
+  newUser.setIsLockedOut(false);
+  newUser.setCreatedAt(trantor::Date::now());
+
+  dto::BaseApiResponse response;
+
+  try {
+    Users user = co_await mp.insert(newUser);
+    response.success = true;
+    response.message = "User created successfully";
+    response.result["id"] = user.getValueOfId();
+
+    //create a record in the invitations table
+    auto &adminUserInvitationService = plugin->getAdminUserInvitationService();
+    dto::AdminUserInvitationDto adminUserInvitationDto;
+    adminUserInvitationDto.setUserId(user.getValueOfId());
+    adminUserInvitationDto.setPartnerId(partnerId);
+    adminUserInvitationDto.setEmail(user.getValueOfEmail());
+    std::string tokenHash = bcrypt::generateHash(user.getValueOfId()+ trantor::Date::now().toDbStringLocal());
+    adminUserInvitationDto.setTokenHash(tokenHash);
+
+    co_await adminUserInvitationService.create(adminUserInvitationDto);
+
+    //send invitation email to new partner admin user
+
+    auto &emailService = plugin->getEmailService();
+
+    dto::SendEmailDto emailDto;
+    emailDto.setTo(userDto.getEmail());
+    std::string emailSubject = "Invitation to join" + partnerInfo.getValueOfName() + " on GNP";
+    emailDto.setSubject(emailSubject);
+
+    auto invitationLink = "https://dev.graphicnewsplus.com/admin/accept-invitation?id=" + user.getValueOfId();
+
+    std::string emailBody =
+        R"(
+        <!DOCTYPE html>
+        <html>
+        <head>
+        <style>
+          body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+          .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+          .header { background-color: #80004d; color: #ffffff; padding: 20px; text-align: center; }
+          .content { padding: 30px; color: #333333; }
+          .cta-container { text-align: center; margin: 25px 0; }
+          .cta-button { display: inline-block; padding: 12px 25px; background-color: #80004d; color: #ffffff !important; text-decoration: none; border-radius: 5px; font-weight: bold; }
+          .link-box { background-color: #f9f9f9; padding: 12px; border-radius: 5px; margin-top: 15px; font-size: 13px; word-break: break-all; color: #80004d; }
+          .footer { background-color: #f4f4f4; color: #666666; padding: 10px; text-align: center; font-size: 12px; }
+        </style>
+        </head>
+        <body>
+        <div class="container">
+          <div class="header">
+            <h1>GNP Administrative Invitation</h1>
+          </div>
+
+          <div class="content">
+            <p>Hello )" + userDto.getFirstName() + R"(,</p>
+
+            <p>You have been invited to join )" + partnerInfo.getValueOfName() + R"( on <strong>Graphic News Plus</strong> as an Administrative user.</p>
+
+            <p>This role gives you access to manage users, configurations, and platform operations.</p>
+
+            <p>Click the button below to accept your invitation and complete your account setup:</p>
+
+            <div class="cta-container">
+              <a href=")" + invitationLink + R"(" class="cta-button">Accept Invitation</a>
+            </div>
+
+            <p>If the button above does not work, copy and paste the link below into your browser:</p>
+
+            <div class="link-box">)" + invitationLink + R"(</div>
+
+            <p>If you did not expect this invitation, you can safely ignore this email.</p>
+          </div>
+
+          <div class="footer">
+            &copy; )" + trantor::Date::now().toCustomFormattedString("%Y") + R"( GNP. All rights reserved.
+          </div>
+        </div>
+        </body>
+        </html>
+    )";
+
+    emailDto.setBody(emailBody);
+
+    co_await emailService.sendEmailAsync(emailDto);
+
+  } catch (const drogon::orm::DrogonDbException &e) {
+    response.success = false;
+    response.message = "Database error while creating user";
+    response.error["code"] = constants::ERR_DB_QUERY;
+  }
+  co_return response;
+}
+
+
+
+drogon::Task<dto::BaseApiResponse> UserService::updatePartnerAdminUser(const dto::AdminUserDto &userDto, const std::string &adminUserId, const std::string &partnerId) {
+
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<Users> mp(dbClient);
+
+  dto::BaseApiResponse response;
+
+  try {
+
+    Criteria criteria = Criteria(Users::Cols::_id, CompareOperator::EQ, adminUserId) && Criteria(Users::Cols::_partner_id, CompareOperator::EQ, partnerId);
+
+    Users user = co_await mp.findOne(criteria);
+
+    user.setFirstName(userDto.getFirstName());
+    user.setLastName(userDto.getLastName());
+    user.setEmail(userDto.getEmail());
+    user.setPhoneNumber(userDto.getPhoneNumber());
+    user.setCountry(userDto.getCountry());
+    user.setUsername(userDto.getUsername());
+
+    // Convert roles vector to JSON string
+    Json::Value rolesJson = Json::arrayValue;
+    for (const auto &role : userDto.getRoles()) {
+      rolesJson.append(role);
+    }
+    Json::StreamWriterBuilder writer;
+    user.setRoles(Json::writeString(writer, rolesJson));
+
+    user.setUpdatedAt(trantor::Date::now());
+
+    co_await mp.update(user);
+
+    response.success = true;
+    response.message = "Admin user updated successfully";
+  } catch (const DrogonDbException &e) {
+    response.success = false;
+    response.message = "User not found or database error";
+    response.error["code"] = constants::ERR_DB_QUERY;
+    response.error["detail"] = e.base().what();
+  }
+
+  co_return response;
+}
+
+
+
+drogon::Task<dto::BaseApiResponse> UserService::registerUserPasskeys(const dto::RegisterUserPasskeysDto &passKeysDto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mp(dbClient);
@@ -412,8 +652,7 @@ drogon::Task<gnp::dto::BaseApiResponse> UserService::registerUserPasskeys(
   co_return response;
 }
 
-drogon::Task<gnp::dto::BaseApiResponse>
-UserService::validateUserPasskeys(const dto::LoginUserPasskeyDto &passkeyDto) {
+drogon::Task<dto::BaseApiResponse> UserService::validateUserPasskeys(const dto::LoginUserPasskeyDto &passkeyDto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mp(dbClient);
@@ -585,8 +824,7 @@ UserService::validateUserPasskeys(const dto::LoginUserPasskeyDto &passkeyDto) {
   co_return response;
 }
 
-drogon::Task<dto::BaseApiResponse>
-UserService::validateUserCredentials(const dto::SigninDto &signin_dto) {
+drogon::Task<dto::BaseApiResponse> UserService::validateUserCredentials(const dto::SigninDto &signin_dto) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mapper(dbClient);
 
@@ -661,8 +899,7 @@ UserService::validateUserCredentials(const dto::SigninDto &signin_dto) {
   co_return response;
 }
 
-drogon::Task<gnp::dto::BaseApiResponse>
-UserService::validateAdminUserCredentials(const dto::SigninDto &signin_dto) {
+drogon::Task<dto::BaseApiResponse> UserService::validateAdminUserCredentials(const dto::SigninDto &signin_dto) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mapper(dbClient);
 
@@ -731,7 +968,7 @@ UserService::validateAdminUserCredentials(const dto::SigninDto &signin_dto) {
   co_return response;
 }
 
-drogon::Task<gnp::dto::BaseApiResponse> UserService::validatePartnerUserCredentials(const dto::SigninDto &signin_dto) {
+drogon::Task<dto::BaseApiResponse> UserService::validatePartnerUserCredentials(const dto::SigninDto &signin_dto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mapper(dbClient);
@@ -907,7 +1144,7 @@ drogon::Task<gnp::dto::BaseApiResponse> UserService::validatePartnerUserCredenti
   co_return response;
 }
 
-drogon::Task<gnp::dto::BaseApiResponse> UserService::validatePartnerUserOtp(const dto::VerifyPartnerUserOtpDto &dto) {
+drogon::Task<dto::BaseApiResponse> UserService::validatePartnerUserOtp(const dto::VerifyPartnerUserOtpDto &dto) {
   gnp::dto::BaseApiResponse response;
 
   try {
@@ -989,7 +1226,7 @@ drogon::Task<gnp::dto::BaseApiResponse> UserService::validatePartnerUserOtp(cons
   co_return response;
 }
 
-drogon::Task<gnp::dto::BaseApiResponse> UserService::lockUserAccount(const std::string &userId) {
+drogon::Task<dto::BaseApiResponse> UserService::lockUserAccount(const std::string &userId) {
   auto dbClient = drogon::app().getDbClient();
   auto mp = drogon::orm::CoroMapper<Users>(dbClient);
 
@@ -1028,7 +1265,7 @@ drogon::Task<gnp::dto::BaseApiResponse> UserService::lockUserAccount(const std::
   }
 }
 
-drogon::Task<gnp::dto::BaseApiResponse> UserService::unlockUserAccount(const std::string &userId) {
+drogon::Task<dto::BaseApiResponse> UserService::unlockUserAccount(const std::string &userId) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mp(dbClient);
@@ -1058,7 +1295,7 @@ drogon::Task<gnp::dto::BaseApiResponse> UserService::unlockUserAccount(const std
   co_return response;
 }
 
-drogon::Task<gnp::dto::BaseApiResponse> UserService::activateUserAccount(const std::string &userId) {
+drogon::Task<dto::BaseApiResponse> UserService::activateUserAccount(const std::string &userId) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mp(dbClient);
@@ -1088,7 +1325,7 @@ drogon::Task<gnp::dto::BaseApiResponse> UserService::activateUserAccount(const s
   co_return response;
 }
 
-drogon::Task<gnp::dto::BaseApiResponse> UserService::deactivateUserAccount(const std::string &userId) {
+drogon::Task<dto::BaseApiResponse> UserService::deactivateUserAccount(const std::string &userId) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mp(dbClient);
@@ -1118,7 +1355,7 @@ drogon::Task<gnp::dto::BaseApiResponse> UserService::deactivateUserAccount(const
   co_return response;
 }
 
-drogon::Task<gnp::dto::BaseApiResponse> UserService::deleteUser(const std::string &userId) {
+drogon::Task<dto::BaseApiResponse> UserService::deleteUser(const std::string &userId) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mp(dbClient);
@@ -1151,6 +1388,40 @@ drogon::Task<gnp::dto::BaseApiResponse> UserService::deleteUser(const std::strin
   }
   co_return response;
 }
+
+drogon::Task<gnp::dto::BaseApiResponse> UserService::deletePartnerAdminUser(const std::string &userId, const std::string &partnerId) {
+
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<Users> mp(dbClient);
+
+  gnp::dto::BaseApiResponse response;
+  try {
+    // Check if user exists first and belongs to partner
+    co_await mp.findOne(
+        Criteria(Users::Cols::_id, CompareOperator::EQ, userId) &&
+        Criteria(Users::Cols::_partner_id, CompareOperator::EQ, partnerId));
+
+    // Delete the user
+    size_t count = co_await mp.deleteBy(
+        Criteria(Users::Cols::_id, CompareOperator::EQ, userId));
+
+    if (count > 0) {
+      response.success = true;
+      response.message = "Admin user deleted successfully";
+    } else {
+      // This part should technically not be reached if findOne succeeded,
+      // but added for completeness.
+      response.success = false;
+      response.message = "Failed to delete user";
+    }
+  } catch (const DrogonDbException &e) {
+    response.success = false;
+    response.message = "User not found or database error";
+    response.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+  }
+  co_return response;
+}
+
 
 // auth
 
@@ -1431,9 +1702,7 @@ void UserService::setPassword(
         std::string userId = r.asString();
 
         // Delete Session ID (Single Attempt)
-        redisClient->execCommandAsync([](const drogon::nosql::RedisResult &) {},
-                                      [](const std::exception &) {}, "DEL %s",
-                                      sessionId.c_str());
+        redisClient->execCommandAsync([](const drogon::nosql::RedisResult &) {},  [](const std::exception &) {}, "DEL %s", sessionId.c_str());
 
         // Proceed to set password
         std::string passwordHash = bcrypt::generateHash(password);
@@ -1487,8 +1756,7 @@ void UserService::setPassword(
       "GET %s", sessionId.c_str());
 }
 
-drogon::Task<gnp::dto::BaseApiResponse>
-UserService::registerProspectiveUser(const dto::CreateUserDto &userDto) {
+drogon::Task<gnp::dto::BaseApiResponse> UserService::registerProspectiveUser(const dto::CreateUserDto &userDto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mp(dbClient);

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GnpApi | Graphic News Plus API Ecosystem</title>
+    <meta name="description" content="The high-performance API backbone for Graphic News Plus. Robust, secure, and built for scale.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+    <div class="glow-container">
+        <div class="glow glow-1"></div>
+        <div class="glow glow-2"></div>
+    </div>
+
+    <nav id="navbar">
+        <div class="container">
+            <div class="logo">
+                <span class="logo-icon">G</span>
+                <span class="logo-text">GNP<span>API</span></span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#status">Status</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1 class="fade-in">Powering the Future of <span>Digital News</span></h1>
+                <p class="fade-in delay-1">Secure, high-performance API infrastructure for Graphic News Plus. Experience seamless integration and lightning-fast responses.</p>
+                <div class="hero-btns fade-in delay-2">
+                    <a href="#endpoints" class="btn btn-primary">Explore Docs</a>
+                    <a href="#features" class="btn btn-secondary">Platform Features</a>
+                </div>
+            </div>
+            <div class="hero-image fade-in delay-3">
+                <div class="glass-card">
+                    <div class="card-header">
+                        <div class="dots">
+                            <span></span><span></span><span></span>
+                        </div>
+                        <div class="url-bar">api.graphicnewsplus.com/v1</div>
+                    </div>
+                    <div class="card-body">
+                        <pre><code><span class="key">GET</span> <span class="path">/api/v1/publications</span>
+
+{
+  <span class="key">"status"</span>: <span class="string">"success"</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"total"</span>: <span class="number">124</span>,
+    <span class="key">"items"</span>: [...]
+  }
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section id="features" class="features">
+        <div class="container">
+            <h2 class="section-title">Core Capabilities</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="icon">🛡️</div>
+                    <h3>Secure Auth</h3>
+                    <p>JWT-based authentication with passkey support and multi-factor validation.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">⚡</div>
+                    <h3>Drogon Powered</h3>
+                    <p>Built on the fastest C++ web framework for ultra-low latency and high throughput.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">📊</div>
+                    <h3>Real-time Stats</h3>
+                    <p>Comprehensive monitoring and analytics for partners and administrators.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">📱</div>
+                    <h3>Multi-Platform</h3>
+                    <p>Tailored endpoints for Web, iOS, and Android clients.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="status" class="status-section">
+        <div class="container">
+            <div class="status-card">
+                <div class="status-info">
+                    <div class="status-indicator"></div>
+                    <div>
+                        <h3>System Status</h3>
+                        <p>All systems operational</p>
+                    </div>
+                </div>
+                <div class="status-metrics">
+                    <div class="metric">
+                        <span class="label">Uptime</span>
+                        <span class="value">100%</span>
+                    </div>
+                    <div class="metric">
+                        <span class="label">Avg Latency</span>
+                        <span class="value">42ms</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="logo">
+                        <span class="logo-icon">G</span>
+                        <span class="logo-text">GNP<span>API</span></span>
+                    </div>
+                    <p>Developing the backbone of modern publishing.</p>
+                </div>
+                <div class="footer-links">
+                    <h4>Resources</h4>
+                    <ul>
+                        <li><a href="#">API Documentation</a></li>
+                        <li><a href="#">Partner Portal</a></li>
+                        <li><a href="#">Support</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Graphic News Plus. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="/assets/script.js"></script>
+</body>
+</html>

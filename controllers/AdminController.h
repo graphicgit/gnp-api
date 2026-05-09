@@ -89,7 +89,14 @@ public:
     ADD_METHOD_TO(AdminController::createCoupon, std::string(PREFIX) + "create-coupon", Post, Options, "JwtAuthFilter");
     ADD_METHOD_TO(AdminController::updateCoupon, std::string(PREFIX) + "update-coupon", Post, Options, "JwtAuthFilter");
     ADD_METHOD_TO(AdminController::deleteCoupon, std::string(PREFIX) + "delete-coupon", Delete, Options, "JwtAuthFilter");
- 
+
+    //admin roles
+    ADD_METHOD_TO(AdminController::getAllRoles, std::string(PREFIX) + "get-all-roles", Get, Options, "JwtAuthFilter");
+    ADD_METHOD_TO(AdminController::createRole, std::string(PREFIX) + "create-role", Post, Options, "JwtAuthFilter");
+    ADD_METHOD_TO(AdminController::updateRole, std::string(PREFIX) + "update-role/{1}", Post, Options, "JwtAuthFilter");
+    ADD_METHOD_TO(AdminController::deleteRole, std::string(PREFIX) + "delete-role", Delete, Options, "JwtAuthFilter");
+
+
    // partner invoices
    ADD_METHOD_TO(AdminController::getAllPartnerInvoices, std::string(PREFIX) + "get-all-partner-invoices", Get, Options, "JwtAuthFilter");
    ADD_METHOD_TO(AdminController::getPartnerInvoiceStats, std::string(PREFIX) + "get-partner-invoice-stats", Get, Options, "JwtAuthFilter");
@@ -185,7 +192,7 @@ public:
   drogon::Task<HttpResponsePtr> getAllCoupons(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> createCoupon(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> updateCoupon(HttpRequestPtr req);
-    drogon::Task<HttpResponsePtr> deleteCoupon(HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> deleteCoupon(HttpRequestPtr req);
 
    // partner invoices
    drogon::Task<HttpResponsePtr> getAllPartnerInvoices(HttpRequestPtr req);
@@ -193,4 +200,10 @@ public:
    drogon::Task<HttpResponsePtr> createPartnerInvoice(HttpRequestPtr req);
    drogon::Task<HttpResponsePtr> markPartnerInvoicePaid(HttpRequestPtr req);
    drogon::Task<HttpResponsePtr> deletePartnerInvoice(HttpRequestPtr req);
+
+    // admin roles
+    Task<HttpResponsePtr> getAllRoles(HttpRequestPtr req);
+    Task<HttpResponsePtr> createRole(HttpRequestPtr req);
+    Task<HttpResponsePtr> updateRole(HttpRequestPtr req, const std::string &roleId);
+    Task<HttpResponsePtr> deleteRole(HttpRequestPtr req);
 };

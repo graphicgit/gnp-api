@@ -23,9 +23,11 @@
 #include "services/paystack/PaystackApi.h"
 #include "services/publications/PublicationService.h"
 #include "services/quartz/QuartzApi.h"
+#include "services/roles/RoleService.h"
 #include "services/subscription_plans/SubscriptionPlanService.h"
 #include "services/subscriptions/SubscriptionService.h"
 #include "services/users/UserService.h"
+#include "services/user_invitations/AdminUserInvitationService.h"
 #include "utils/PasswordUtils.h"
 
 namespace gnp::plugins {
@@ -70,7 +72,9 @@ public:
   ::gnp::services::QuartzApi &getQuartzApi() { return quartzApi_; }
   ::gnp::services::MediaService &getMediaService() { return mediaService_; }
   ::gnp::services::CouponService &getCouponService() { return couponService_; }
+  ::gnp::services::RoleService &getRoleService() { return roleService_; }
   ::gnp::services::PartnerInvoiceService &getPartnerInvoiceService() { return partnerInvoiceService_; }
+  ::gnp::services::AdminUserInvitationService &getAdminUserInvitationService() { return adminUserInvitationService_; }
 
 private:
   ::gnp::services::AffiliateService affiliate_service_;
@@ -89,7 +93,9 @@ private:
   ::gnp::services::QuartzApi quartzApi_;
   ::gnp::services::MediaService mediaService_;
   ::gnp::services::CouponService couponService_;
+  ::gnp::services::RoleService roleService_;
   ::gnp::services::PartnerInvoiceService partnerInvoiceService_;
+  ::gnp::services::AdminUserInvitationService adminUserInvitationService_;
 };
 
 } // namespace gnp::plugins

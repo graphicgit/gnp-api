@@ -59,7 +59,7 @@ drogon::Task<gnp::dto::BaseApiResponse> CommercialPartnerService::getAll(int pag
   try {
     size_t totalCount = co_await mp.count(searchCriteria);
     if (totalCount == 0) {
-      gnp::dto::BaseApiResponse response;
+      dto::BaseApiResponse response;
       response.success = true;
       response.result["data"] = Json::arrayValue;
       response.result["totalCount"] = 0;
@@ -111,7 +111,7 @@ drogon::Task<gnp::dto::BaseApiResponse> CommercialPartnerService::getAll(int pag
     co_return response;
 
   } catch (const DrogonDbException &e) {
-    gnp::dto::BaseApiResponse errorResponse;
+    dto::BaseApiResponse errorResponse;
     errorResponse.success = false;
     errorResponse.error["code"] = constants::ERR_DB_QUERY;
     errorResponse.error["message"] = "Database error while fetching commercial partners.";
@@ -544,7 +544,6 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::updatePartner(const
     co_return errorResponse;
   }
 }
-
 
 drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartnerSubscriber(const dto::CreatePartnerSubscriberDto &dto) {
 

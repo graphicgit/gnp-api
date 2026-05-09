@@ -296,8 +296,7 @@ void PublicationService::deactivatePublication(
   Mapper<drogon_model::Gnp::Publications> mp(dbClient);
 
   // Create criteria to find the user with specified ID in the tenant
-  Criteria criteria = Criteria(drogon_model::Gnp::Publications::Cols::_id,
-                               CompareOperator::EQ, publicationId);
+  Criteria criteria = Criteria(drogon_model::Gnp::Publications::Cols::_id, CompareOperator::EQ, publicationId);
 
   // Find the user first
   mp.findOne(

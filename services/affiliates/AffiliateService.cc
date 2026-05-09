@@ -23,9 +23,7 @@ using drogon_model::Gnp::Affiliates;
 
 namespace gnp::services {
 
-drogon::Task<dto::BaseApiResponse>
-AffiliateService::getAll(int pageNo, int pageSize, const std::string &query,
-                         const std::string &sortBy) {
+drogon::Task<dto::BaseApiResponse> AffiliateService::getAll(int pageNo, int pageSize, const std::string &query, const std::string &sortBy) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Affiliates> mp(dbClient);

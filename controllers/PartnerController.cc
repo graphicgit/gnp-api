@@ -208,7 +208,7 @@ Task<HttpResponsePtr> PartnerController::generateApiKey(const HttpRequestPtr req
 
 }
 
-drogon::Task<HttpResponsePtr> PartnerController::getEngagementReport(const HttpRequestPtr req) {
+Task<HttpResponsePtr> PartnerController::getEngagementReport(const HttpRequestPtr req) {
 
   // Get partnerId from request attributes (set by PartnerJwtAuthFilter)
   auto partnerId = req->attributes()->get<std::string>("partnerId");
@@ -234,7 +234,7 @@ drogon::Task<HttpResponsePtr> PartnerController::getEngagementReport(const HttpR
   co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
-drogon::Task<HttpResponsePtr> PartnerController::getAnalyticsCharts(const HttpRequestPtr req) {
+Task<HttpResponsePtr> PartnerController::getAnalyticsCharts(const HttpRequestPtr req) {
 
   // Get partnerId from request attributes (set by PartnerJwtAuthFilter)
   auto partnerId = req->attributes()->get<std::string>("partnerId");
@@ -392,6 +392,7 @@ Task<HttpResponsePtr> PartnerController::deleteSubscriber(HttpRequestPtr req) {
   auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
   co_return resp;
 }
+
 Task<HttpResponsePtr> PartnerController::bulkUploadSubscribers(HttpRequestPtr req) {
   auto partnerId = req->attributes()->get<std::string>("partnerId");
   if (partnerId.empty()) {
@@ -480,3 +481,309 @@ Task<HttpResponsePtr> PartnerController::updateLogo(HttpRequestPtr req) {
   auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
   co_return resp;
 }
+
+// partner roles
+
+Task<HttpResponsePtr> PartnerController::getAllRoles(HttpRequestPtr req) {
+
+  auto partnerId = req->attributes()->get<std::string>("partnerId");
+
+  if (partnerId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Authorization token required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  int pageSize = 10; // Default page size
+  int pageNo = 1;    //  Default page number
+
+  if (!req->getParameter("pageSize").empty()) {
+    try {
+      pageSize = std::stoi(req->getParameter("pageSize"));
+      pageSize = std::max(1, std::min(100, pageSize)); // Limit between 1-100
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  if (!req->getParameter("pageNo").empty()) {
+    try {
+      pageNo = std::stoi(req->getParameter("pageNo"));
+      pageNo = std::max(1, pageNo); // Ensure page number is at least 1
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  std::string query = req->getParameter("query");
+  if (query.empty()) {
+    query = "";
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &roleService = plugin->getRoleService();
+
+  auto result = co_await roleService.getAll(pageNo, pageSize, partnerId, query);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+}
+
+Task<HttpResponsePtr> PartnerController::createRole(HttpRequestPtr req) {
+
+  auto partnerId = req->attributes()->get<std::string>("partnerId");
+
+  if (partnerId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Authorization token required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto jsonBody = req->getJsonObject();
+
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  gnp::dto::RoleDto dto;
+  dto.setPartnerId(partnerId);
+  dto.fromJson(*jsonBody);
+
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &roleService = plugin->getRoleService();
+
+  auto result = co_await roleService.create(dto);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+}
+
+Task<HttpResponsePtr> PartnerController::updateRole(HttpRequestPtr req, const std::string &roleId) {
+
+  auto partnerId = req->attributes()->get<std::string>("partnerId");
+
+  if (partnerId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Authorization token required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto jsonBody = req->getJsonObject();
+
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  gnp::dto::RoleDto dto;
+  dto.setPartnerId(partnerId);
+  dto.fromJson(*jsonBody);
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &roleService = plugin->getRoleService();
+
+  auto result = co_await roleService.update(dto, roleId);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+}
+
+Task<HttpResponsePtr> PartnerController::deleteRole(HttpRequestPtr req) {
+
+  auto partnerId = req->attributes()->get<std::string>("partnerId");
+
+  if (partnerId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Authorization token required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto id = req->getParameter("id");
+
+  if (id.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Missing required parameter: id";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &roleService = plugin->getRoleService();
+
+  auto result = co_await roleService.deleteRole(id);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+}
+
+//partner admin users
+Task<HttpResponsePtr> PartnerController::getAllAdminUsers(HttpRequestPtr req) {
+
+  auto partnerId = req->attributes()->get<std::string>("partnerId");
+
+  if (partnerId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Authorization token required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  int pageSize = 10; // Default page size
+  int pageNo = 1;    //  Default page number
+
+  if (!req->getParameter("pageSize").empty()) {
+    try {
+      pageSize = std::stoi(req->getParameter("pageSize"));
+      pageSize = std::max(1, std::min(100, pageSize)); // Limit between 1-100
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  if (!req->getParameter("pageNo").empty()) {
+    try {
+      pageNo = std::stoi(req->getParameter("pageNo"));
+      pageNo = std::max(1, pageNo); // Ensure page number is at least 1
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  std::string query = req->getParameter("query");
+  if (query.empty()) {
+    query = "";
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &userService = plugin->getUserService();
+
+  auto result = co_await userService.getPartnerAdminUsers(partnerId, pageNo, pageSize, query);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+}
+
+
+Task<HttpResponsePtr> PartnerController::createAdminUser(HttpRequestPtr req) {
+
+  auto partnerId = req->attributes()->get<std::string>("partnerId");
+
+  if (partnerId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Authorization token required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto jsonBody = req->getJsonObject();
+
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  gnp::dto::AdminUserDto dto;
+  dto.fromJson(*jsonBody);
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &userService = plugin->getUserService();
+
+  auto result = co_await userService.invitePartnerAdminUser(dto,partnerId);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+
+}
+
+Task<HttpResponsePtr> PartnerController::updateAdminUser(HttpRequestPtr req, const std::string &adminUserId) {
+
+  auto partnerId = req->attributes()->get<std::string>("partnerId");
+
+  if (partnerId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Authorization token required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto jsonBody = req->getJsonObject();
+
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  gnp::dto::AdminUserDto dto;
+  dto.fromJson(*jsonBody);
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &userService = plugin->getUserService();
+
+  auto result = co_await userService.updatePartnerAdminUser(dto, adminUserId, partnerId);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+}
+
+Task<HttpResponsePtr> PartnerController::deleteAdminUser(HttpRequestPtr req) {
+
+  auto partnerId = req->attributes()->get<std::string>("partnerId");
+  auto adminUserId = req->getParameter("id");
+
+  if (partnerId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Authorization token required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  if (adminUserId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Admin User ID is required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &userService = plugin->getUserService();
+
+  auto result = co_await userService.deletePartnerAdminUser(adminUserId, partnerId);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+}
+
+

@@ -1,18 +1,20 @@
 //
-// Created by Emmanuel Addo-Odame on 13/11/2025.
+// Created by Emmanuel Addo-Odame on 05/05/2026.
 //
 
-#ifndef CREATEUSERDTO_H
-#define CREATEUSERDTO_H
+#ifndef GNPAPI_ADMINUSERDTO_H
+#define GNPAPI_ADMINUSERDTO_H
+
 #include <json/json.h>
+#include <string>
 
 namespace gnp::dto {
 
-    class CreateUserDto {
+    class AdminUserDto {
 
     public:
 
-        CreateUserDto() = default;
+        AdminUserDto() = default;
 
         void fromJson(const Json::Value& json);
 
@@ -24,6 +26,7 @@ namespace gnp::dto {
         [[nodiscard]] const std::string& getPassword() const { return password_; }
         [[nodiscard]] const std::string& getPhoneNumber() const { return phone_number_; }
         [[nodiscard]] const std::string& getCountry() const { return country_; }
+        [[nodiscard]] const std::vector<std::string> &getRoles() const { return roles_; }
 
         // Setters
         void setFirstName(const std::string& value) { first_name_ = value; }
@@ -33,7 +36,7 @@ namespace gnp::dto {
         void setPassword(const std::string& value) { password_ = value; }
         void setPhoneNumber(const std::string& value) { phone_number_ = value; }
         void setCountry(const std::string& value) { country_ = value; }
-
+        void setRoles(const std::vector<std::string> &value) { roles_ = value; }
 
     private:
 
@@ -44,9 +47,10 @@ namespace gnp::dto {
         std::string password_;
         std::string phone_number_;
         std::string country_;
+        std::vector<std::string> roles_;
     };
 
-    inline void CreateUserDto::fromJson(const Json::Value& json) {
+    inline void AdminUserDto::fromJson(const Json::Value& json) {
 
         if (json.isMember("firstName") && !json["firstName"].isNull()) {
             first_name_ = json["firstName"].asString();
@@ -76,9 +80,13 @@ namespace gnp::dto {
             country_ = json["country"].asString();
         }
 
+        if (json.isMember("roles") && json["roles"].isArray()) {
+            for (const auto &ip : json["roles"]) {
+                roles_.push_back(ip.asString());
+            }
+        }
+
     }
 
 }
-
-
-#endif //CREATEUSERDTO_H
+#endif //GNPAPI_ADMINUSERDTO_H
