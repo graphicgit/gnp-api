@@ -103,6 +103,29 @@ add_executable(${PROJECT_NAME} main.cc
         services/user_invitations/AdminUserInvitationService.h
         dto/AdminUserInvitationDto.h
         services/user_invitations/AdminUserInvitationService.cc
+        services/content/ContentService.h
+        services/content/ContentService.cc
+        services/categories/CategoryService.h
+        services/categories/CategoryService.cc
+        services/tags/TagService.h
+        services/tags/TagService.cc
+        services/dashboard/DashboardService.h
+        services/dashboard/DashboardService.cc
+        services/bookmarks/BookmarkService.h
+        services/bookmarks/BookmarkService.cc
+        services/saved_searches/SavedSearchService.h
+        services/saved_searches/SavedSearchService.cc
+        services/support_tickets/SupportTicketService.h
+        services/support_tickets/SupportTicketService.cc
+        services/plugins/PluginService.h
+        services/plugins/PluginService.cc
+        dto/SavedSearchDto.h
+        dto/TagDto.h
+        dto/CategoryDto.h
+        services/audit_logs/AuditLogService.h
+        dto/AuditLogDto.h
+        dto/UserIdentityDto.h
+        services/audit_logs/AuditLogService.cc
 )
 
 # ##############################################################################

@@ -21,8 +21,7 @@ public:
   ADD_METHOD_TO(AuthController::affiliateSignIn, std::string(PREFIX) + "affiliate-login", Post, Options);
   METHOD_LIST_END
 
-  void
-  checkAccountStatus(const HttpRequestPtr &req,std::function<void(const HttpResponsePtr &)> &&callback);
+  void checkAccountStatus(const HttpRequestPtr &req,std::function<void(const HttpResponsePtr &)> &&callback);
   void sendOtp(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   Task<HttpResponsePtr> registerPasskeys(HttpRequestPtr req);
   void verifyOtp(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);

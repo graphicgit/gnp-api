@@ -53,4 +53,7 @@ namespace gnp::dto {
     }
 
 }
+
+
+
 #endif //SENDEMAILDTO_H

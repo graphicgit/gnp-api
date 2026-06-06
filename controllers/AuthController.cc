@@ -406,8 +406,7 @@ drogon::Task<HttpResponsePtr> AuthController::affiliateSignIn(HttpRequestPtr req
   co_return resp;
 }
 
-void AuthController::setAuthCookie(const HttpResponsePtr &resp,
-                                   const std::string &token) {
+void AuthController::setAuthCookie(const HttpResponsePtr &resp, const std::string &token) {
   drogon::Cookie cookie("auth_token", token);
   cookie.setHttpOnly(true);
   cookie.setSecure(true);

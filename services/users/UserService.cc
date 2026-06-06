@@ -53,8 +53,7 @@ drogon::Task<dto::BaseApiResponse> UserService::getAll(int pageNo, int pageSize,
 
     // 3. Find the paginated data
     int offset = (pageNo - 1) * pageSize;
-    auto users =
-        co_await mp.limit(pageSize).offset(offset).findBy(searchCriteria);
+    auto users = co_await mp.limit(pageSize).offset(offset).findBy(searchCriteria);
 
     // 4. Build the final response
     response.success = true;
