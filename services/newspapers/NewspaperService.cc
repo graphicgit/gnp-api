@@ -8,6 +8,8 @@
 #include <drogon/orm/Mapper.h>
 #include <jwt-cpp/jwt.h>
 
+#include "NewspaperDetail.h"
+
 using namespace drogon::orm;
 using drogon_model::Gnp::Newspapers;
 
@@ -646,8 +648,7 @@ drogon::Task<dto::BaseApiResponse> NewspaperService::listAllAsync(
   }
 }
 
-drogon::Task<gnp::dto::BaseApiResponse>
-NewspaperService::ingestAsync(const dto::IngestNewsPaperDto &dto) {
+drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::ingestAsync(const dto::IngestNewsPaperDto &dto) {
   auto dbClient = drogon::app().getDbClient();
   drogon::orm::CoroMapper<drogon_model::Gnp::Newspapers> mp(dbClient);
 
@@ -664,7 +665,7 @@ NewspaperService::ingestAsync(const dto::IngestNewsPaperDto &dto) {
   newspaper.setPublishedDateToNull();
 
   // Optional fields
-  newspaper.setCopyrightOwner("Graphic Communications Group");
+  newspaper.setCopyrightOwner("Graphic Communications Group Limited");
   newspaper.setEditionNumber(dto.getEditionNumber());
   newspaper.setIsPopular(dto.getIsPopular());
   newspaper.setFullDescription(dto.getFullDescription());
@@ -848,4 +849,111 @@ void NewspaperService::incrementViewCount(
       id);
 }
 
+
+
+ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::handleOcrIngestion(const dto::OcrIngestionDto &dto) {
+
+  auto dbClient = drogon::app().getDbClient();
+  auto mp_newspaper = drogon::orm::CoroMapper<drogon_model::Gnp::Newspapers>(dbClient);
+  auto mp_detail = drogon::orm::CoroMapper<drogon_model::Gnp::NewspaperDetail>(dbClient);
+
+  try {
+    // check if a newspaper exists for that publication date
+    Criteria criteria = Criteria(drogon_model::Gnp::Newspapers::Cols::_publication_date, CompareOperator::EQ, dto.getPublicationDate());
+    auto newspapers = co_await mp_newspaper.limit(1).findBy(criteria);
+
+    drogon_model::Gnp::Newspapers newspaper;
+
+    //if newspaper is null, create a new news paper record and create a 1st detail record linked to the newspaper record
+    if (newspapers.empty()) {
+
+      drogon_model::Gnp::Newspapers new_newspaper;
+
+      std::string dayStr = dto.getPublicationDate().toCustomFormattedString("%d");
+      if (!dayStr.empty() && dayStr[0] == '0') {
+          dayStr = dayStr.substr(1);
+      }
+      std::string titleStr = "DG " + dto.getPublicationDate().toCustomFormattedString("%A, %B ") + dayStr + dto.getPublicationDate().toCustomFormattedString(", %Y");
+      new_newspaper.setTitle(titleStr);
+      
+      std::string slugStr = "dg-" + dto.getPublicationDate().toCustomFormattedString("%A-%B-%d-%Y");
+      for (auto& c : slugStr) {
+          if (c >= 'A' && c <= 'Z') c = c + ('a' - 'A');
+      }
+      new_newspaper.setSlug(slugStr);
+      new_newspaper.setPrice("0.1");
+      new_newspaper.setIsArchived(true);
+      new_newspaper.setIsFree(false);
+      new_newspaper.setStorageService("google-drive");
+      new_newspaper.setCopyrightOwner("Graphic Communications Group Limited");
+      new_newspaper.setEditionNumber(dto.getEditionNumber());
+      new_newspaper.setFullDescription(dto.getPageSummary());
+      //new_newspaper.setPublishedDate(trantor::Date::fromDbStringLocal("2023-02-02 00:00:00")); // set date to  2nd february,2023
+      new_newspaper.setPublishedDate(dto.getPublicationDate());
+      new_newspaper.setPublicationDate(dto.getPublicationDate());
+      new_newspaper.setIsPublished(true);
+      new_newspaper.setPublicationId("485ac7f9-022d-4a30-818e-41732d90da18");
+      new_newspaper.setPublicationName("Daily Graphic");
+      new_newspaper.setCreatorName("System");
+
+      new_newspaper.setFileType(dto.getFileType());
+      if (!dto.getThumbnailId().empty()) new_newspaper.setThumbnailId(dto.getThumbnailId());
+      if (!dto.getDocumentId().empty()) new_newspaper.setDocumentId(dto.getDocumentId());
+      new_newspaper.setCreatedAt(trantor::Date::now());
+      new_newspaper.setIsPublished(false);
+      new_newspaper.setIsFree(false);
+      new_newspaper.setIsPopular(false);
+      
+      newspaper = co_await mp_newspaper.insert(new_newspaper);
+    } else {
+      //else add up to the details record linked to the parent newspaper record
+      newspaper = newspapers[0];
+    }
+
+    drogon_model::Gnp::NewspaperDetail detail;
+    detail.setNewspaperId(newspaper.getValueOfId());
+    detail.setPageText(dto.getPageText());
+    detail.setPageNumber(dto.getPageNumber());
+    detail.setFileType(dto.getFileType());
+    detail.setPublicationId("485ac7f9-022d-4a30-818e-41732d90da18");
+    detail.setPublicationName("Daily Graphic");
+    detail.setCreatorName("System");
+    detail.setPublishedDate(trantor::Date::fromDbStringLocal("2023-02-02 00:00:00"));
+
+    if (!dto.getThumbnailId().empty()) detail.setThumbnailId(dto.getThumbnailId());
+    if (!dto.getDocumentId().empty()) detail.setDocumentId(dto.getDocumentId());
+    if (!dto.getContentType().empty()) detail.setContentType(dto.getContentType());
+
+
+    Json::Value tagsJson(Json::arrayValue);
+    for (const auto& tag : dto.getTags()) tagsJson.append(tag);
+    detail.setTags(tagsJson.empty() ? "[]" : Json::FastWriter().write(tagsJson));
+
+    Json::Value catJson(Json::arrayValue);
+    for (const auto& cat : dto.getCategories()) catJson.append(cat);
+    detail.setCategories(catJson.empty() ? "[]" : Json::FastWriter().write(catJson));
+
+    if (!dto.getPageSummary().empty()) detail.setSupportingText(dto.getPageSummary());
+    
+    detail.setPublicationDate(dto.getPublicationDate());
+    detail.setPublishedDate(dto.getDatePublished());
+
+    detail.setCreatedAt(trantor::Date::now());
+
+    co_await mp_detail.insert(detail);
+
+    dto::BaseApiResponse successResponse;
+    successResponse.success = true;
+    successResponse.message = "OCR ingestion handled successfully";
+    co_return successResponse;
+
+  } catch (const drogon::orm::DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Database error during OCR ingestion";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
 } // namespace gnp::services

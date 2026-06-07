@@ -38,6 +38,7 @@ namespace drogon_model
 {
 namespace Gnp
 {
+class PartnerInvoices;
 
 class PartnerInvoicePayments
 {
@@ -237,6 +238,10 @@ class PartnerInvoicePayments
     std::string toString() const;
     Json::Value toMasqueradedJson(const std::vector<std::string> &pMasqueradingVector) const;
     /// Relationship interfaces
+    PartnerInvoices getPartnerInvoices(const drogon::orm::DbClientPtr &clientPtr) const;
+    void getPartnerInvoices(const drogon::orm::DbClientPtr &clientPtr,
+                            const std::function<void(PartnerInvoices)> &rcb,
+                            const drogon::orm::ExceptionCallback &ecb) const;
   private:
     friend drogon::orm::Mapper<PartnerInvoicePayments>;
     friend drogon::orm::BaseBuilder<PartnerInvoicePayments, true, true>;

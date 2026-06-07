@@ -62,11 +62,18 @@ class Newspapers
         static const std::string _is_published;
         static const std::string _published_date;
         static const std::string _created_at;
-        static const std::string _updated_at;
         static const std::string _featured_stories;
         static const std::string _views;
         static const std::string _sales;
         static const std::string _publication_date;
+        static const std::string _tags;
+        static const std::string _categories;
+        static const std::string _is_archived;
+        static const std::string _created_by;
+        static const std::string _creator_name;
+        static const std::string _modified_by;
+        static const std::string _modifier_name;
+        static const std::string _modified_at;
     };
 
     static const int primaryKeyNumber;
@@ -170,6 +177,7 @@ class Newspapers
     ///Set the value of the column publication_id
     void setPublicationId(const std::string &pPublicationId) noexcept;
     void setPublicationId(std::string &&pPublicationId) noexcept;
+    void setPublicationIdToNull() noexcept;
 
     /**  For column publication_name  */
     ///Get the value of the column publication_name, returns the default value if the column is null
@@ -284,15 +292,6 @@ class Newspapers
     void setCreatedAt(const ::trantor::Date &pCreatedAt) noexcept;
     void setCreatedAtToNull() noexcept;
 
-    /**  For column updated_at  */
-    ///Get the value of the column updated_at, returns the default value if the column is null
-    const ::trantor::Date &getValueOfUpdatedAt() const noexcept;
-    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<::trantor::Date> &getUpdatedAt() const noexcept;
-    ///Set the value of the column updated_at
-    void setUpdatedAt(const ::trantor::Date &pUpdatedAt) noexcept;
-    void setUpdatedAtToNull() noexcept;
-
     /**  For column featured_stories  */
     ///Get the value of the column featured_stories, returns the default value if the column is null
     const std::string &getValueOfFeaturedStories() const noexcept;
@@ -329,8 +328,84 @@ class Newspapers
     void setPublicationDate(const ::trantor::Date &pPublicationDate) noexcept;
     void setPublicationDateToNull() noexcept;
 
+    /**  For column tags  */
+    ///Get the value of the column tags, returns the default value if the column is null
+    const std::string &getValueOfTags() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getTags() const noexcept;
+    ///Set the value of the column tags
+    void setTags(const std::string &pTags) noexcept;
+    void setTags(std::string &&pTags) noexcept;
+    void setTagsToNull() noexcept;
 
-    static size_t getColumnNumber() noexcept {  return 23;  }
+    /**  For column categories  */
+    ///Get the value of the column categories, returns the default value if the column is null
+    const std::string &getValueOfCategories() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getCategories() const noexcept;
+    ///Set the value of the column categories
+    void setCategories(const std::string &pCategories) noexcept;
+    void setCategories(std::string &&pCategories) noexcept;
+    void setCategoriesToNull() noexcept;
+
+    /**  For column is_archived  */
+    ///Get the value of the column is_archived, returns the default value if the column is null
+    const bool &getValueOfIsArchived() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<bool> &getIsArchived() const noexcept;
+    ///Set the value of the column is_archived
+    void setIsArchived(const bool &pIsArchived) noexcept;
+
+    /**  For column created_by  */
+    ///Get the value of the column created_by, returns the default value if the column is null
+    const std::string &getValueOfCreatedBy() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getCreatedBy() const noexcept;
+    ///Set the value of the column created_by
+    void setCreatedBy(const std::string &pCreatedBy) noexcept;
+    void setCreatedBy(std::string &&pCreatedBy) noexcept;
+    void setCreatedByToNull() noexcept;
+
+    /**  For column creator_name  */
+    ///Get the value of the column creator_name, returns the default value if the column is null
+    const std::string &getValueOfCreatorName() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getCreatorName() const noexcept;
+    ///Set the value of the column creator_name
+    void setCreatorName(const std::string &pCreatorName) noexcept;
+    void setCreatorName(std::string &&pCreatorName) noexcept;
+
+    /**  For column modified_by  */
+    ///Get the value of the column modified_by, returns the default value if the column is null
+    const std::string &getValueOfModifiedBy() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getModifiedBy() const noexcept;
+    ///Set the value of the column modified_by
+    void setModifiedBy(const std::string &pModifiedBy) noexcept;
+    void setModifiedBy(std::string &&pModifiedBy) noexcept;
+    void setModifiedByToNull() noexcept;
+
+    /**  For column modifier_name  */
+    ///Get the value of the column modifier_name, returns the default value if the column is null
+    const std::string &getValueOfModifierName() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getModifierName() const noexcept;
+    ///Set the value of the column modifier_name
+    void setModifierName(const std::string &pModifierName) noexcept;
+    void setModifierName(std::string &&pModifierName) noexcept;
+    void setModifierNameToNull() noexcept;
+
+    /**  For column modified_at  */
+    ///Get the value of the column modified_at, returns the default value if the column is null
+    const ::trantor::Date &getValueOfModifiedAt() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<::trantor::Date> &getModifiedAt() const noexcept;
+    ///Set the value of the column modified_at
+    void setModifiedAt(const ::trantor::Date &pModifiedAt) noexcept;
+    void setModifiedAtToNull() noexcept;
+
+
+    static size_t getColumnNumber() noexcept {  return 30;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -370,11 +445,18 @@ class Newspapers
     std::shared_ptr<bool> isPublished_;
     std::shared_ptr<::trantor::Date> publishedDate_;
     std::shared_ptr<::trantor::Date> createdAt_;
-    std::shared_ptr<::trantor::Date> updatedAt_;
     std::shared_ptr<std::string> featuredStories_;
     std::shared_ptr<int32_t> views_;
     std::shared_ptr<std::string> sales_;
     std::shared_ptr<::trantor::Date> publicationDate_;
+    std::shared_ptr<std::string> tags_;
+    std::shared_ptr<std::string> categories_;
+    std::shared_ptr<bool> isArchived_;
+    std::shared_ptr<std::string> createdBy_;
+    std::shared_ptr<std::string> creatorName_;
+    std::shared_ptr<std::string> modifiedBy_;
+    std::shared_ptr<std::string> modifierName_;
+    std::shared_ptr<::trantor::Date> modifiedAt_;
     struct MetaData
     {
         const std::string colName_;
@@ -386,7 +468,7 @@ class Newspapers
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[23]={ false };
+    bool dirtyFlag_[30]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -500,31 +582,69 @@ class Newspapers
         }
         if(dirtyFlag_[18])
         {
-            sql += "updated_at,";
-            ++parametersCount;
-        }
-        if(dirtyFlag_[19])
-        {
             sql += "featured_stories,";
             ++parametersCount;
         }
         sql += "views,";
         ++parametersCount;
-        if(!dirtyFlag_[20])
+        if(!dirtyFlag_[19])
         {
             needSelection=true;
         }
         sql += "sales,";
         ++parametersCount;
-        if(!dirtyFlag_[21])
+        if(!dirtyFlag_[20])
         {
             needSelection=true;
         }
         sql += "publication_date,";
         ++parametersCount;
-        if(!dirtyFlag_[22])
+        if(!dirtyFlag_[21])
         {
             needSelection=true;
+        }
+        if(dirtyFlag_[22])
+        {
+            sql += "tags,";
+            ++parametersCount;
+        }
+        if(dirtyFlag_[23])
+        {
+            sql += "categories,";
+            ++parametersCount;
+        }
+        sql += "is_archived,";
+        ++parametersCount;
+        if(!dirtyFlag_[24])
+        {
+            needSelection=true;
+        }
+        if(dirtyFlag_[25])
+        {
+            sql += "created_by,";
+            ++parametersCount;
+        }
+        sql += "creator_name,";
+        ++parametersCount;
+        if(!dirtyFlag_[26])
+        {
+            needSelection=true;
+        }
+        if(dirtyFlag_[27])
+        {
+            sql += "modified_by,";
+            ++parametersCount;
+        }
+        sql += "modifier_name,";
+        ++parametersCount;
+        if(!dirtyFlag_[28])
+        {
+            needSelection=true;
+        }
+        if(dirtyFlag_[29])
+        {
+            sql += "modified_at,";
+            ++parametersCount;
         }
         if(parametersCount > 0)
         {
@@ -653,6 +773,10 @@ class Newspapers
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
+        else
+        {
+            sql +="default,";
+        }
         if(dirtyFlag_[20])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
@@ -676,9 +800,52 @@ class Newspapers
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
+        if(dirtyFlag_[23])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[24])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
         else
         {
             sql +="default,";
+        }
+        if(dirtyFlag_[25])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[26])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
+        }
+        if(dirtyFlag_[27])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[28])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
+        }
+        if(dirtyFlag_[29])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
         }
         if(parametersCount > 0)
         {

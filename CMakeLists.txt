@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+add_compile_options("-include" "${CMAKE_CURRENT_SOURCE_DIR}/utils/codecvt_helper.h" "-Wno-deprecated-declarations")
+
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     add_compile_options(-fcoroutines)
 endif()
@@ -126,6 +128,8 @@ add_executable(${PROJECT_NAME} main.cc
         dto/AuditLogDto.h
         dto/UserIdentityDto.h
         services/audit_logs/AuditLogService.cc
+        dto/OcrIngestionDto.h
+        utils/codecvt_helper.h
 )
 
 # ##############################################################################
@@ -198,6 +202,10 @@ target_sources(${PROJECT_NAME}
 # set_property(TARGET ${PROJECT_NAME} PROPERTY ENABLE_EXPORTS ON)
 
 # ##############################################################################
+
+#target_compile_options(${PROJECT_NAME} PRIVATE "-include" "${CMAKE_CURRENT_SOURCE_DIR}/utils/codecvt_helper.h" "-Wno-deprecated-declarations")
+
+
 
 add_subdirectory(test)
 add_subdirectory(external_deps/Bcrypt)

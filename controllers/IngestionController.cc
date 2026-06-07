@@ -2,15 +2,31 @@
 #include <thread>
 #include <chrono>
 
+#include "dto/BaseApiResponse.h"
+#include "dto/OcrIngestionDto.h"
+#include "plugins/GnpServicePlugin.h"
+
 
 Task<HttpResponsePtr> IngestionController::handleOcrData(HttpRequestPtr req) {
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(02));
+    auto jsonPtr = req->getJsonObject();
 
-    Json::Value response;
-    response["success"] = true;
-    response["message"] = "Extracted text stored successfully (dummy response)";
-    response["documentId"] = 1;
-    auto httpResponse = HttpResponse::newHttpJsonResponse(response);
-    co_return httpResponse;
+    if (!jsonPtr) {
+        gnp::dto::BaseApiResponse response;
+        response.success = false;
+        response.error["message"] = "Invalid JSON body";
+        auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+        resp->setStatusCode(k400BadRequest);
+        co_return resp;
+    }
+
+    gnp::dto::OcrIngestionDto dto;
+    dto.fromJson(*jsonPtr);
+
+    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto &newspaperService = plugin->getNewsPaperService();
+
+    auto apiResp = co_await newspaperService.handleOcrIngestion(dto);
+    co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+
 }
