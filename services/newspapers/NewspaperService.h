@@ -9,6 +9,8 @@
 #include "dto/IngestNewsPaperDto.h"
 #include <drogon/drogon.h>
 
+#include "dto/OcrIngestionDto.h"
+
 namespace gnp::services {
 
 class NewspaperService {
@@ -47,6 +49,9 @@ public:
   void incrementViewCount(
       const std::string &id,
       const std::function<void(const dto::BaseApiResponse &)> &callback);
+
+    //ocr ingestion
+    drogon::Task<gnp::dto::BaseApiResponse> handleOcrIngestion(const dto::OcrIngestionDto &dto);
 };
 
 } // namespace gnp::services

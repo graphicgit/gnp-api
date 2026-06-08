@@ -159,9 +159,7 @@ drogon::Task<HttpResponsePtr> NewsPapersController::getFullDetails(const HttpReq
   co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
-drogon::Task<HttpResponsePtr>
-NewsPapersController::GetFreeNewsPaperDetailsByPublication(
-    const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> NewsPapersController::GetFreeNewsPaperDetailsByPublication(const HttpRequestPtr req) {
   std::string publicationId = req->getParameter("publicationId");
   std::string date = req->getParameter("date");
   std::string privateKey = req->getHeader("Vitamin");
@@ -197,9 +195,7 @@ NewsPapersController::GetFreeNewsPaperDetailsByPublication(
   co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
-drogon::Task<HttpResponsePtr>
-NewsPapersController::GetPaidNewsPaperDetailsByPublication(
-    const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> NewsPapersController::GetPaidNewsPaperDetailsByPublication(const HttpRequestPtr req) {
   std::string publicationId = req->getParameter("publicationId");
   std::string date = req->getParameter("date");
   std::string privateKey = req->getHeader("Vitamin");
@@ -235,8 +231,7 @@ NewsPapersController::GetPaidNewsPaperDetailsByPublication(
   co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
-drogon::Task<HttpResponsePtr>
-NewsPapersController::publish(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> NewsPapersController::publish(const HttpRequestPtr req) {
   if (req->getParameter("id").empty()) {
     gnp::dto::BaseApiResponse response;
     response.success = false;
@@ -256,8 +251,7 @@ NewsPapersController::publish(const HttpRequestPtr req) {
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr>
-NewsPapersController::unPublish(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> NewsPapersController::unPublish(const HttpRequestPtr req) {
   if (req->getParameter("id").empty()) {
     gnp::dto::BaseApiResponse response;
     response.success = false;
@@ -277,8 +271,7 @@ NewsPapersController::unPublish(const HttpRequestPtr req) {
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr>
-NewsPapersController::ingestPublication(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> NewsPapersController::ingestPublication(const HttpRequestPtr req) {
   auto jsonBody = req->getJsonObject();
 
   if (!jsonBody) {

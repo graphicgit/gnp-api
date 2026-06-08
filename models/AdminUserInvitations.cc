@@ -2086,14 +2086,14 @@ bool AdminUserInvitations::validJsonOfField(size_t index,
                 err="Type error in the "+fieldName+" field";
                 return false;
             }
-            if(pJson.isString() && std::strlen(pJson.asCString()) > 250)
+            if(pJson.isString() && std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>{}
+                .from_bytes(pJson.asCString()).size() > 250)
             {
                 err="String length exceeds limit for the " +
                     fieldName +
                     " field (the maximum value is 250)";
                 return false;
             }
-
             break;
         case 2:
             if(pJson.isNull())
@@ -2106,14 +2106,14 @@ bool AdminUserInvitations::validJsonOfField(size_t index,
                 err="Type error in the "+fieldName+" field";
                 return false;
             }
-            if(pJson.isString() && std::strlen(pJson.asCString()) > 300)
+            if(pJson.isString() && std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>{}
+                .from_bytes(pJson.asCString()).size() > 300)
             {
                 err="String length exceeds limit for the " +
                     fieldName +
                     " field (the maximum value is 300)";
                 return false;
             }
-
             break;
         case 3:
             if(pJson.isNull())

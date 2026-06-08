@@ -6,6 +6,7 @@
  */
 
 #include "CouponUsage.h"
+#include "Coupons.h"
 #include <drogon/utils/Utilities.h>
 #include <string>
 
@@ -1638,14 +1639,14 @@ bool CouponUsage::validJsonOfField(size_t index,
                 err="Type error in the "+fieldName+" field";
                 return false;
             }
-            if(pJson.isString() && std::strlen(pJson.asCString()) > 150)
+            if(pJson.isString() && std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>{}
+                .from_bytes(pJson.asCString()).size() > 150)
             {
                 err="String length exceeds limit for the " +
                     fieldName +
                     " field (the maximum value is 150)";
                 return false;
             }
-
             break;
         case 4:
             if(pJson.isNull())
@@ -1692,14 +1693,14 @@ bool CouponUsage::validJsonOfField(size_t index,
                 err="Type error in the "+fieldName+" field";
                 return false;
             }
-            if(pJson.isString() && std::strlen(pJson.asCString()) > 45)
+            if(pJson.isString() && std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>{}
+                .from_bytes(pJson.asCString()).size() > 45)
             {
                 err="String length exceeds limit for the " +
                     fieldName +
                     " field (the maximum value is 45)";
                 return false;
             }
-
             break;
         case 8:
             if(pJson.isNull())
@@ -1717,4 +1718,47 @@ bool CouponUsage::validJsonOfField(size_t index,
             return false;
     }
     return true;
+}
+Coupons CouponUsage::getCoupons(const DbClientPtr &clientPtr) const {
+    static const std::string sql = "select * from coupons where id = $1";
+    Result r(nullptr);
+    {
+        auto binder = *clientPtr << sql;
+        binder << *couponId_ << Mode::Blocking >>
+            [&r](const Result &result) { r = result; };
+        binder.exec();
+    }
+    if (r.size() == 0)
+    {
+        throw UnexpectedRows("0 rows found");
+    }
+    else if (r.size() > 1)
+    {
+        throw UnexpectedRows("Found more than one row");
+    }
+    return Coupons(r[0]);
+}
+
+void CouponUsage::getCoupons(const DbClientPtr &clientPtr,
+                             const std::function<void(Coupons)> &rcb,
+                             const ExceptionCallback &ecb) const
+{
+    static const std::string sql = "select * from coupons where id = $1";
+    *clientPtr << sql
+               << *couponId_
+               >> [rcb = std::move(rcb), ecb](const Result &r){
+                    if (r.size() == 0)
+                    {
+                        ecb(UnexpectedRows("0 rows found"));
+                    }
+                    else if (r.size() > 1)
+                    {
+                        ecb(UnexpectedRows("Found more than one row"));
+                    }
+                    else
+                    {
+                        rcb(Coupons(r[0]));
+                    }
+               }
+               >> ecb;
 }

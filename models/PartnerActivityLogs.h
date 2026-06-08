@@ -38,6 +38,7 @@ namespace drogon_model
 {
 namespace Gnp
 {
+class CommercialPartners;
 
 class PartnerActivityLogs
 {
@@ -207,6 +208,10 @@ class PartnerActivityLogs
     std::string toString() const;
     Json::Value toMasqueradedJson(const std::vector<std::string> &pMasqueradingVector) const;
     /// Relationship interfaces
+    CommercialPartners getCommercialPartners(const drogon::orm::DbClientPtr &clientPtr) const;
+    void getCommercialPartners(const drogon::orm::DbClientPtr &clientPtr,
+                               const std::function<void(CommercialPartners)> &rcb,
+                               const drogon::orm::ExceptionCallback &ecb) const;
   private:
     friend drogon::orm::Mapper<PartnerActivityLogs>;
     friend drogon::orm::BaseBuilder<PartnerActivityLogs, true, true>;

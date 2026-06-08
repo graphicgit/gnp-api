@@ -6,7 +6,10 @@
 	url = https://github.com/kay-smith/Bcrypt.cpp
 [submodule "external/jwt-cpp"]
 	path = external/jwt-cpp
-	url = https://github.com/Thalhammer/jwt-cpp.git
+	url = https://github.com/kay-smith/jwt-cpp.git
 [submodule "external_deps/jwt-cpp"]
 	path = external_deps/jwt-cpp
 	url = https://github.com/Thalhammer/jwt-cpp.git
+[submodule "external/Bcrypt.cpp"]
+	path = external/Bcrypt.cpp
+	url = https://github.com/kay-smith/Bcrypt.cpp.git

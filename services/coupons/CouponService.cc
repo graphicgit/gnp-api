@@ -48,8 +48,7 @@ drogon::Task<dto::BaseApiResponse> CouponService::getAll(int pageNo, int pageSiz
     }
 
     int offset = (pageNo - 1) * pageSize;
-    auto coupons =
-        co_await mapper.orderBy(Coupons::Cols::_created_at, SortOrder::DESC)
+    auto coupons = co_await mapper.orderBy(Coupons::Cols::_created_at, SortOrder::DESC)
             .limit(pageSize)
             .offset(offset)
             .findBy(criteria);

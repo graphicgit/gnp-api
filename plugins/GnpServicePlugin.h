@@ -10,7 +10,9 @@
 #include <drogon/plugins/Plugin.h>
 
 #include "services/affiliates/AffiliateService.h"
+#include "services/audit_logs/AuditLogService.h"
 #include "services/campaigns/CampaignService.h"
+#include "services/categories/CategoryService.h"
 #include "services/coupons/CouponService.h"
 #include "services/email/EmailService.h"
 #include "services/hubtel_sms/HubtelSmsApi.h"
@@ -26,6 +28,7 @@
 #include "services/roles/RoleService.h"
 #include "services/subscription_plans/SubscriptionPlanService.h"
 #include "services/subscriptions/SubscriptionService.h"
+#include "services/tags/TagService.h"
 #include "services/users/UserService.h"
 #include "services/user_invitations/AdminUserInvitationService.h"
 #include "utils/PasswordUtils.h"
@@ -75,6 +78,9 @@ public:
   ::gnp::services::RoleService &getRoleService() { return roleService_; }
   ::gnp::services::PartnerInvoiceService &getPartnerInvoiceService() { return partnerInvoiceService_; }
   ::gnp::services::AdminUserInvitationService &getAdminUserInvitationService() { return adminUserInvitationService_; }
+  ::gnp::services::AuditLogService &getAuditLogService() { return auditLogService_; }
+  ::gnp::services::TagService &getTagService() { return tagService_; }
+  ::gnp::services::CategoryService &getCategoryService() { return categoryService_; }
 
 private:
   ::gnp::services::AffiliateService affiliate_service_;
@@ -96,6 +102,9 @@ private:
   ::gnp::services::RoleService roleService_;
   ::gnp::services::PartnerInvoiceService partnerInvoiceService_;
   ::gnp::services::AdminUserInvitationService adminUserInvitationService_;
+  ::gnp::services::AuditLogService auditLogService_;
+  ::gnp::services::TagService tagService_;
+  ::gnp::services::CategoryService categoryService_;
 };
 
 } // namespace gnp::plugins

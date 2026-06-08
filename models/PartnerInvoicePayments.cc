@@ -6,6 +6,7 @@
  */
 
 #include "PartnerInvoicePayments.h"
+#include "PartnerInvoices.h"
 #include <drogon/utils/Utilities.h>
 #include <string>
 
@@ -2471,14 +2472,14 @@ bool PartnerInvoicePayments::validJsonOfField(size_t index,
                 err="Type error in the "+fieldName+" field";
                 return false;
             }
-            if(pJson.isString() && std::strlen(pJson.asCString()) > 50)
+            if(pJson.isString() && std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>{}
+                .from_bytes(pJson.asCString()).size() > 50)
             {
                 err="String length exceeds limit for the " +
                     fieldName +
                     " field (the maximum value is 50)";
                 return false;
             }
-
             break;
         case 6:
             if(pJson.isNull())
@@ -2490,14 +2491,14 @@ bool PartnerInvoicePayments::validJsonOfField(size_t index,
                 err="Type error in the "+fieldName+" field";
                 return false;
             }
-            if(pJson.isString() && std::strlen(pJson.asCString()) > 100)
+            if(pJson.isString() && std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>{}
+                .from_bytes(pJson.asCString()).size() > 100)
             {
                 err="String length exceeds limit for the " +
                     fieldName +
                     " field (the maximum value is 100)";
                 return false;
             }
-
             break;
         case 7:
             if(pJson.isNull())
@@ -2509,14 +2510,14 @@ bool PartnerInvoicePayments::validJsonOfField(size_t index,
                 err="Type error in the "+fieldName+" field";
                 return false;
             }
-            if(pJson.isString() && std::strlen(pJson.asCString()) > 100)
+            if(pJson.isString() && std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>{}
+                .from_bytes(pJson.asCString()).size() > 100)
             {
                 err="String length exceeds limit for the " +
                     fieldName +
                     " field (the maximum value is 100)";
                 return false;
             }
-
             break;
         case 8:
             if(pJson.isNull())
@@ -2528,14 +2529,14 @@ bool PartnerInvoicePayments::validJsonOfField(size_t index,
                 err="Type error in the "+fieldName+" field";
                 return false;
             }
-            if(pJson.isString() && std::strlen(pJson.asCString()) > 10)
+            if(pJson.isString() && std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>{}
+                .from_bytes(pJson.asCString()).size() > 10)
             {
                 err="String length exceeds limit for the " +
                     fieldName +
                     " field (the maximum value is 10)";
                 return false;
             }
-
             break;
         case 9:
             if(pJson.isNull())
@@ -2547,14 +2548,14 @@ bool PartnerInvoicePayments::validJsonOfField(size_t index,
                 err="Type error in the "+fieldName+" field";
                 return false;
             }
-            if(pJson.isString() && std::strlen(pJson.asCString()) > 20)
+            if(pJson.isString() && std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>{}
+                .from_bytes(pJson.asCString()).size() > 20)
             {
                 err="String length exceeds limit for the " +
                     fieldName +
                     " field (the maximum value is 20)";
                 return false;
             }
-
             break;
         case 10:
             if(pJson.isNull())
@@ -2595,4 +2596,47 @@ bool PartnerInvoicePayments::validJsonOfField(size_t index,
             return false;
     }
     return true;
+}
+PartnerInvoices PartnerInvoicePayments::getPartnerInvoices(const DbClientPtr &clientPtr) const {
+    static const std::string sql = "select * from partner_invoices where id = $1";
+    Result r(nullptr);
+    {
+        auto binder = *clientPtr << sql;
+        binder << *invoiceId_ << Mode::Blocking >>
+            [&r](const Result &result) { r = result; };
+        binder.exec();
+    }
+    if (r.size() == 0)
+    {
+        throw UnexpectedRows("0 rows found");
+    }
+    else if (r.size() > 1)
+    {
+        throw UnexpectedRows("Found more than one row");
+    }
+    return PartnerInvoices(r[0]);
+}
+
+void PartnerInvoicePayments::getPartnerInvoices(const DbClientPtr &clientPtr,
+                                                const std::function<void(PartnerInvoices)> &rcb,
+                                                const ExceptionCallback &ecb) const
+{
+    static const std::string sql = "select * from partner_invoices where id = $1";
+    *clientPtr << sql
+               << *invoiceId_
+               >> [rcb = std::move(rcb), ecb](const Result &r){
+                    if (r.size() == 0)
+                    {
+                        ecb(UnexpectedRows("0 rows found"));
+                    }
+                    else if (r.size() > 1)
+                    {
+                        ecb(UnexpectedRows("Found more than one row"));
+                    }
+                    else
+                    {
+                        rcb(PartnerInvoices(r[0]));
+                    }
+               }
+               >> ecb;
 }

@@ -5,6 +5,7 @@
 
 #ifndef ERRORCODES_H
 #define ERRORCODES_H
+
 namespace gnp::constants {
 
     enum ErrorCode {
@@ -26,4 +27,6 @@ namespace gnp::constants {
         ERR_UNSUPPORTED_OPERATION = 1601  // Operation not supported
     };
 }
+
+
 #endif //ERRORCODES_H

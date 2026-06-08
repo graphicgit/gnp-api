@@ -38,6 +38,7 @@ namespace drogon_model
 {
 namespace Gnp
 {
+class Coupons;
 
 class CouponUsage
 {
@@ -196,6 +197,10 @@ class CouponUsage
     std::string toString() const;
     Json::Value toMasqueradedJson(const std::vector<std::string> &pMasqueradingVector) const;
     /// Relationship interfaces
+    Coupons getCoupons(const drogon::orm::DbClientPtr &clientPtr) const;
+    void getCoupons(const drogon::orm::DbClientPtr &clientPtr,
+                    const std::function<void(Coupons)> &rcb,
+                    const drogon::orm::ExceptionCallback &ecb) const;
   private:
     friend drogon::orm::Mapper<CouponUsage>;
     friend drogon::orm::BaseBuilder<CouponUsage, true, true>;

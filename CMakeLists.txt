@@ -1,10 +1,12 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.11)
 cmake_policy(VERSION 3.5)
 project(GnpApi CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+add_compile_options("-include" "${CMAKE_CURRENT_SOURCE_DIR}/utils/codecvt_helper.h" "-Wno-deprecated-declarations")
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     add_compile_options(-fcoroutines)
@@ -103,6 +105,31 @@ add_executable(${PROJECT_NAME} main.cc
         services/user_invitations/AdminUserInvitationService.h
         dto/AdminUserInvitationDto.h
         services/user_invitations/AdminUserInvitationService.cc
+        services/content/ContentService.h
+        services/content/ContentService.cc
+        services/categories/CategoryService.h
+        services/categories/CategoryService.cc
+        services/tags/TagService.h
+        services/tags/TagService.cc
+        services/dashboard/DashboardService.h
+        services/dashboard/DashboardService.cc
+        services/bookmarks/BookmarkService.h
+        services/bookmarks/BookmarkService.cc
+        services/saved_searches/SavedSearchService.h
+        services/saved_searches/SavedSearchService.cc
+        services/support_tickets/SupportTicketService.h
+        services/support_tickets/SupportTicketService.cc
+        services/plugins/PluginService.h
+        services/plugins/PluginService.cc
+        dto/SavedSearchDto.h
+        dto/TagDto.h
+        dto/CategoryDto.h
+        services/audit_logs/AuditLogService.h
+        dto/AuditLogDto.h
+        dto/UserIdentityDto.h
+        services/audit_logs/AuditLogService.cc
+        dto/OcrIngestionDto.h
+        utils/codecvt_helper.h
 )
 
 # ##############################################################################
@@ -176,7 +203,19 @@ target_sources(${PROJECT_NAME}
 
 # ##############################################################################
 
+#target_compile_options(${PROJECT_NAME} PRIVATE "-include" "${CMAKE_CURRENT_SOURCE_DIR}/utils/codecvt_helper.h" "-Wno-deprecated-declarations")
+
+
+
 add_subdirectory(test)
 add_subdirectory(external_deps/Bcrypt)
+
+# Disable jwt-cpp examples and tests to avoid a duplicate target error:
+# jwt-cpp's example/traits/CMakeLists.txt calls find_package(jsoncpp),
+# which re-creates the JsonCpp::JsonCpp imported target that Drogon already
+# defined, causing CMake to abort with "another target with the same name
+# already exists".
+set(JWT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(JWT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 add_subdirectory(external_deps/jwt-cpp)
 

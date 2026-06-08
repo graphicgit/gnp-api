@@ -6,6 +6,7 @@
  */
 
 #include "PublicationReads.h"
+#include "Users.h"
 #include <drogon/utils/Utilities.h>
 #include <string>
 
@@ -1077,4 +1078,47 @@ bool PublicationReads::validJsonOfField(size_t index,
             return false;
     }
     return true;
+}
+Users PublicationReads::getUsers(const DbClientPtr &clientPtr) const {
+    static const std::string sql = "select * from users where id = $1";
+    Result r(nullptr);
+    {
+        auto binder = *clientPtr << sql;
+        binder << *userId_ << Mode::Blocking >>
+            [&r](const Result &result) { r = result; };
+        binder.exec();
+    }
+    if (r.size() == 0)
+    {
+        throw UnexpectedRows("0 rows found");
+    }
+    else if (r.size() > 1)
+    {
+        throw UnexpectedRows("Found more than one row");
+    }
+    return Users(r[0]);
+}
+
+void PublicationReads::getUsers(const DbClientPtr &clientPtr,
+                                const std::function<void(Users)> &rcb,
+                                const ExceptionCallback &ecb) const
+{
+    static const std::string sql = "select * from users where id = $1";
+    *clientPtr << sql
+               << *userId_
+               >> [rcb = std::move(rcb), ecb](const Result &r){
+                    if (r.size() == 0)
+                    {
+                        ecb(UnexpectedRows("0 rows found"));
+                    }
+                    else if (r.size() > 1)
+                    {
+                        ecb(UnexpectedRows("Found more than one row"));
+                    }
+                    else
+                    {
+                        rcb(Users(r[0]));
+                    }
+               }
+               >> ecb;
 }

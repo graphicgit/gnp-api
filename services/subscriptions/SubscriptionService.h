@@ -27,8 +27,7 @@ public:
    * @param callback The callback function to handle the response.
    */
 
-  void getAllSubscriptions(
-      int pageNo, int pageSize, const std::string &query,
+  void getAllSubscriptions(int pageNo, int pageSize, const std::string &query,
       const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
   void manageGuestSubscription(const dto::GuestSubscriptionDto &dto, const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
@@ -47,12 +46,15 @@ public:
 
   drogon::Task<dto::BaseApiResponse> fulFillBuyCopy(const std::string &reference);
 
-  void grantNewsPaperAccessToRequester(const dto::GrantNewsPaperAccessDto &dto,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+  void grantNewsPaperAccessToRequester(const dto::GrantNewsPaperAccessDto &dto, const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
 
   drogon::Task<dto::BaseApiResponse> getNewsPaperRedactedDetailsWithUniqueIdAsync(const std::string &uniqueId, const std::string &userId, const std::string &email);
 
   drogon::Task<dto::BaseApiResponse> readNewsPaperByDateAndPublicationAsync(const std::string &publicationId, const std::string &publicationDate, const std::string &userId, const std::string &email);
+
+  // renewal history
+
+
 };
 
 } // namespace gnp::services
