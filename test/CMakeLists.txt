@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.10)
 project(GnpApi_test CXX)
 
 file(GLOB CTL_SRC "../controllers/*.cc")
