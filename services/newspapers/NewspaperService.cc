@@ -15,7 +15,7 @@ using drogon_model::Gnp::Newspapers;
 
 namespace gnp::services {
 
-// reduced information
+// reduced information for public api
 drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::getAllAsync(
     int pageNo, int pageSize, const std::string &publicationId,
     const std::string &startDate, const std::string &endDate,
@@ -24,8 +24,7 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::getAllAsync(
   CoroMapper<Newspapers> mp(dbClient);
 
   // 1. Build the search criteria
-  Criteria searchCriteria =
-      Criteria(Newspapers::Cols::_is_published, CompareOperator::EQ, true);
+  Criteria searchCriteria = Criteria(Newspapers::Cols::_is_published, CompareOperator::EQ, true) && Criteria(Newspapers::Cols::_is_archived, CompareOperator::EQ, false);
 
   // text search
   if (!query.empty()) {

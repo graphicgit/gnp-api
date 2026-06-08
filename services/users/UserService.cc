@@ -5,6 +5,8 @@
 #include "UserService.h"
 #include "UserSubscriptions.h"
 
+#include <algorithm>
+#include <cctype>
 #include <random>
 
 #include "Users.h"
@@ -345,7 +347,10 @@ drogon::Task<dto::BaseApiResponse> UserService::create(const dto::CreateUserDto 
   Users newUser;
   newUser.setFirstName(userDto.getFirstName());
   newUser.setLastName(userDto.getLastName());
-  newUser.setEmail(userDto.getEmail());
+  std::string standardEmail = userDto.getEmail();
+  std::transform(standardEmail.begin(), standardEmail.end(), standardEmail.begin(), [](unsigned char c) { return std::tolower(c); });
+
+  newUser.setEmail(standardEmail);
   newUser.setUsername(userDto.getUsername());
   newUser.setPhoneNumber(userDto.getPhoneNumber());
   newUser.setCountry(userDto.getCountry());
@@ -380,7 +385,10 @@ drogon::Task<dto::BaseApiResponse> UserService::invitePartnerAdminUser(const dto
   Users newUser;
   newUser.setFirstName(userDto.getFirstName());
   newUser.setLastName(userDto.getLastName());
-  newUser.setEmail(userDto.getEmail());
+  std::string standardEmail = userDto.getEmail();
+  std::transform(standardEmail.begin(), standardEmail.end(), standardEmail.begin(), [](unsigned char c) { return std::tolower(c); });
+
+  newUser.setEmail(standardEmail);
   newUser.setUsername(userDto.getUsername());
   newUser.setPhoneNumber(userDto.getPhoneNumber());
   newUser.setCountry(userDto.getCountry());
@@ -972,20 +980,25 @@ drogon::Task<dto::BaseApiResponse> UserService::validatePartnerUserCredentials(c
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mapper(dbClient);
 
+  // Normalize email/username to lowercase for case-insensitive email matching
+  std::string normalizedInput = signin_dto.getUsernameOrEmail();
+  std::transform(normalizedInput.begin(), normalizedInput.end(),
+                 normalizedInput.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
+
   Criteria criteria =
-      (Criteria(Users::Cols::_username, CompareOperator::EQ,
-                signin_dto.getUsernameOrEmail()) ||
-       Criteria(Users::Cols::_email, CompareOperator::EQ,
-                signin_dto.getUsernameOrEmail())) &&
+      (Criteria(Users::Cols::_username, CompareOperator::EQ, normalizedInput) ||
+      Criteria(Users::Cols::_email, CompareOperator::EQ, normalizedInput)) &&
       Criteria(Users::Cols::_is_active, CompareOperator::EQ, true) &&
-      Criteria(Users::Cols::_is_partner_admin_user, CompareOperator::EQ,
-               true) &&
+      Criteria(Users::Cols::_is_partner_admin_user, CompareOperator::EQ, true) &&
       Criteria(Users::Cols::_is_locked_out, CompareOperator::EQ, false);
 
   gnp::dto::BaseApiResponse response;
 
   try {
+
     Users user = co_await mapper.findOne(criteria);
+
     bool passwordMatches = bcrypt::validatePassword(signin_dto.getPassword(), user.getValueOfPasswordHash());
 
     if (passwordMatches) {
