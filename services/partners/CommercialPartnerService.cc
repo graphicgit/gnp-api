@@ -1623,7 +1623,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
     if (!lastName.empty())
       newUser.setLastName(lastName);
     newUser.setPhoneNumber(dto.getPhoneNumber());
-    newUser.setEmail(dto.getPhoneNumber() + "@graphic.com.gh");
+    newUser.setEmail(dto.getPhoneNumber() + "@graphicnewsplus.com.gh");
     newUser.setPartnerId(apiKey.getValueOfPartnerId());
     newUser.setIsActive(true);
     newUser.setIsLockedOut(false);
@@ -1634,7 +1634,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
     std::string password = utils::PasswordUtils::generateRandomPassword(8);
     newUser.setPasswordHash(bcrypt::generateHash(password));
 
-    co_await userMapper.insert(newUser);
+    auto newUserResult = co_await userMapper.insert(newUser);
 
     // 3. Update Partner Quota
     CoroMapper<drogon_model::Gnp::CommercialPartners> partnerMapper(dbClient);
@@ -1645,22 +1645,37 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
       co_await partnerMapper.update(partner);
     }
 
-    if (dto.getSmsProvider() == "platform") {
 
-      // 4. Send welcome SMS to the user
-      auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
-      auto &hubtelSmsApi = plugin->getHubtelSmsApi();
 
-      std::string messageContent = "Congratulations! Your Graphic NewsPlus account has been created. Visit https://dev.graphicnewsplus.com and login with Username: " + dto.getPhoneNumber() + " & Password: " + password;
+    if (dto.getSmsProvider() != "platform") {
 
-      co_await hubtelSmsApi.sendSms(dto.getPhoneNumber(), messageContent);
+      gnp::dto::BaseApiResponse response;
+      response.success = true;
+      response.message = "Subscriber onboarded successfully";
+      response.result["username"] = dto.getPhoneNumber();
+      response.result["password"] = password;
+      response.result["email"] = dto.getPhoneNumber() + "@graphicnewsplus.com.gh";
+      response.result["status"] = "Active";
+      response.result["createdAt"] = trantor::Date::now().toCustomFormattedString("%d-%b-%Y %H:%M:%S");
+      response.result["message"] = "Congratulations! Your Graphic NewsPlus account has been created. Visit https://dev.graphicnewsplus.com and login with Username: " + dto.getPhoneNumber() + " & Password: " + password;;
+      co_return response;
 
     }
 
+    // 4. Send welcome SMS to the user
+    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto &hubtelSmsApi = plugin->getHubtelSmsApi();
+
+    std::string messageContent = "Congratulations! Your Graphic NewsPlus account has been created. Visit https://dev.graphicnewsplus.com and login with Username: " + dto.getPhoneNumber() + " & Password: " + password;
+
+    co_await hubtelSmsApi.sendSms(dto.getPhoneNumber(), messageContent);
 
     gnp::dto::BaseApiResponse response;
     response.success = true;
     response.message = "Subscriber onboarded successfully";
+    response.result["status"] = "Active";
+    response.result["email"] = dto.getPhoneNumber() + "@graphicnewsplus.com.gh";
+    response.result["createdAt"] = trantor::Date::now().toCustomFormattedString("%d-%b-%Y %H:%M:%S");
     co_return response;
 
   } catch (const DrogonDbException &e) {
