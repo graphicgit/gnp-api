@@ -209,5 +209,13 @@ target_sources(${PROJECT_NAME}
 
 add_subdirectory(test)
 add_subdirectory(external_deps/Bcrypt)
+
+# Disable jwt-cpp examples and tests to avoid a duplicate target error:
+# jwt-cpp's example/traits/CMakeLists.txt calls find_package(jsoncpp),
+# which re-creates the JsonCpp::JsonCpp imported target that Drogon already
+# defined, causing CMake to abort with "another target with the same name
+# already exists".
+set(JWT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(JWT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 add_subdirectory(external_deps/jwt-cpp)
 
