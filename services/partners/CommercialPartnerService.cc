@@ -1581,6 +1581,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::updatePartne
 
 
 drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubscriberAsync(const std::string &clientId, const std::string &clientSecret, const ::gnp::dto::PartnerOnboardingDto &dto) {
+
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> apiKeyMapper(dbClient);
 
@@ -1644,16 +1645,18 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
       co_await partnerMapper.update(partner);
     }
 
-    // 4. Send welcome SMS to the user
-    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
-    auto &hubtelSmsApi = plugin->getHubtelSmsApi();
+    if (dto.getSmsProvider() == "platform") {
 
-    std::string messageContent =
-        "Welcome to Graphic News Plus! Your corporate account has been created. "
-        "Username: " + dto.getPhoneNumber() + " & Password: " + password +
-        ". Log in now to explore engaging content. https://dev.graphicnewsplus.com";
+      // 4. Send welcome SMS to the user
+      auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+      auto &hubtelSmsApi = plugin->getHubtelSmsApi();
 
-    co_await hubtelSmsApi.sendSms(dto.getPhoneNumber(), messageContent);
+      std::string messageContent = "Congratulations! Your Graphic NewsPlus account has been created. Visit https://dev.graphicnewsplus.com and login with Username: " + dto.getPhoneNumber() + " & Password: " + password;
+
+      co_await hubtelSmsApi.sendSms(dto.getPhoneNumber(), messageContent);
+
+    }
+
 
     gnp::dto::BaseApiResponse response;
     response.success = true;
