@@ -5,6 +5,8 @@
 #include "UserService.h"
 #include "UserSubscriptions.h"
 
+#include <algorithm>
+#include <cctype>
 #include <random>
 
 #include "Users.h"
@@ -87,6 +89,52 @@ drogon::Task<dto::BaseApiResponse> UserService::getAll(int pageNo, int pageSize,
     response.success = false;
     response.error["message"] = "Database error while fetching users.";
     response.error["detail"] = e.base().what();
+  }
+  co_return response;
+}
+
+drogon::Task<dto::BaseApiResponse> UserService::getDetails(const std::string &userId) {
+  auto dbClient = drogon::app().getDbClient();
+  auto mp = drogon::orm::CoroMapper<Users>(dbClient);
+
+  gnp::dto::BaseApiResponse response;
+  try {
+    Users user = co_await mp.findOne(
+        Criteria(Users::Cols::_id, CompareOperator::EQ, userId));
+
+    Json::Value userJson = user.toJson();
+    Json::Value data;
+    data["id"]              = userJson["id"];
+    data["firstName"]       = userJson["first_name"];
+    data["lastName"]        = userJson["last_name"];
+    data["email"]           = userJson["email"];
+    data["username"]        = userJson["username"];
+    data["phoneNumber"]     = userJson["phone_number"];
+    data["country"]         = userJson["country"];
+    data["profileImageUrl"] = userJson["profile_image_url"];
+    data["isLockedOut"]     = userJson["is_locked_out"];
+    data["isActive"]        = userJson["is_active"];
+    data["isAdminUser"]     = userJson["is_admin_user"];
+    data["isPartnerAdminUser"] = userJson["is_partner_admin_user"];
+    data["partnerId"]       = userJson["partner_id"];
+    data["roles"]           = userJson["roles"];
+    data["lastActive"]      = userJson["last_active"];
+    data["createdAt"]       = userJson["created_at"];
+    data["updatedAt"]       = userJson["updated_at"];
+
+    response.success = true;
+    response.result["data"] = data;
+
+  } catch (const DrogonDbException &e) {
+    response.success = false;
+    if (e.base().what() == std::string("Unexpected row number")) {
+      response.message = "User not found";
+      response.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+    } else {
+      response.message = "Database error while fetching user details.";
+      response.error["code"] = constants::ERR_DB_QUERY;
+      response.error["detail"] = e.base().what();
+    }
   }
   co_return response;
 }
@@ -337,7 +385,7 @@ drogon::Task<dto::BaseApiResponse> UserService::getPartnerSubscribers(const std:
 }
 
 
-drogon::Task<dto::BaseApiResponse> UserService::create(const dto::CreateUserDto &userDto) {
+drogon::Task<dto::BaseApiResponse> UserService::create(const dto::UserDto &userDto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mp(dbClient);
@@ -345,7 +393,10 @@ drogon::Task<dto::BaseApiResponse> UserService::create(const dto::CreateUserDto 
   Users newUser;
   newUser.setFirstName(userDto.getFirstName());
   newUser.setLastName(userDto.getLastName());
-  newUser.setEmail(userDto.getEmail());
+  std::string standardEmail = userDto.getEmail();
+  std::transform(standardEmail.begin(), standardEmail.end(), standardEmail.begin(), [](unsigned char c) { return std::tolower(c); });
+
+  newUser.setEmail(standardEmail);
   newUser.setUsername(userDto.getUsername());
   newUser.setPhoneNumber(userDto.getPhoneNumber());
   newUser.setCountry(userDto.getCountry());
@@ -369,6 +420,99 @@ drogon::Task<dto::BaseApiResponse> UserService::create(const dto::CreateUserDto 
 }
 
 
+drogon::Task<dto::BaseApiResponse> UserService::update(const dto::UserDto &userDto, const std::string &userId) {
+
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<Users> mp(dbClient);
+
+  dto::BaseApiResponse response;
+
+  try {
+
+    Criteria criteria = Criteria(Users::Cols::_id, CompareOperator::EQ, userId);
+
+    Users user = co_await mp.findOne(criteria);
+
+    if (!userDto.getFirstName().empty()) {
+      user.setFirstName(userDto.getFirstName());
+    }
+
+    if (!userDto.getLastName().empty()) {
+      user.setLastName(userDto.getLastName());
+    }
+
+    if (!userDto.getEmail().empty()) {
+      std::string standardEmail = userDto.getEmail();
+      std::transform(standardEmail.begin(), standardEmail.end(), standardEmail.begin(), [](unsigned char c) { return std::tolower(c); });
+      user.setEmail(standardEmail);
+    }
+
+    if (!userDto.getPhoneNumber().empty()) {
+      user.setPhoneNumber(userDto.getPhoneNumber());
+    }
+
+    if (!userDto.getCountry().empty()) {
+      user.setCountry(userDto.getCountry());
+    }
+
+    if (!userDto.getUsername().empty()) {
+      user.setUsername(userDto.getUsername());
+    }
+
+    if (!userDto.getPassword().empty()) {
+      user.setPasswordHash(bcrypt::generateHash(userDto.getPassword()));
+    }
+
+    user.setUpdatedAt(trantor::Date::now());
+
+    co_await mp.update(user);
+
+    response.success = true;
+    response.message = "User updated successfully";
+  } catch (const DrogonDbException &e) {
+    response.success = false;
+    response.message = "User not found or database error";
+    response.error["code"] = constants::ERR_DB_QUERY;
+    response.error["detail"] = e.base().what();
+  }
+
+  co_return response;
+}
+drogon::Task<dto::BaseApiResponse> UserService::updateProfileImage(const std::string &userId, const std::string &logoContent) {
+
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<Users> mp(dbClient);
+
+  try {
+    auto user = co_await mp.findOne(Criteria(Users::Cols::_id, CompareOperator::EQ, userId));
+
+    if (!logoContent.empty()) {
+      user.setProfileImage(logoContent);
+      user.setUpdatedAt(trantor::Date::now());
+      co_await mp.update(user);
+    }
+
+    dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "User profile image updated successfully";
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    if (e.base().what() == std::string("Unexpected row number")) {
+      errorResponse.message = "User not found";
+      errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+    } else {
+      errorResponse.message = "Failed to update user profile image";
+      errorResponse.error["code"] = constants::ERR_DB_QUERY;
+      errorResponse.error["detail"] = e.base().what();
+    }
+    co_return errorResponse;
+  }
+}
+
+
 drogon::Task<dto::BaseApiResponse> UserService::invitePartnerAdminUser(const dto::AdminUserDto &userDto, const std::string &partnerId) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -380,7 +524,10 @@ drogon::Task<dto::BaseApiResponse> UserService::invitePartnerAdminUser(const dto
   Users newUser;
   newUser.setFirstName(userDto.getFirstName());
   newUser.setLastName(userDto.getLastName());
-  newUser.setEmail(userDto.getEmail());
+  std::string standardEmail = userDto.getEmail();
+  std::transform(standardEmail.begin(), standardEmail.end(), standardEmail.begin(), [](unsigned char c) { return std::tolower(c); });
+
+  newUser.setEmail(standardEmail);
   newUser.setUsername(userDto.getUsername());
   newUser.setPhoneNumber(userDto.getPhoneNumber());
   newUser.setCountry(userDto.getCountry());
@@ -836,6 +983,7 @@ drogon::Task<dto::BaseApiResponse> UserService::validateUserCredentials(const dt
       Criteria(Users::Cols::_is_locked_out, CompareOperator::EQ, false);
 
   dto::BaseApiResponse response;
+
   try {
     Users user = co_await mapper.findOne(criteria);
 
@@ -972,20 +1120,25 @@ drogon::Task<dto::BaseApiResponse> UserService::validatePartnerUserCredentials(c
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mapper(dbClient);
 
+  // Normalize email/username to lowercase for case-insensitive email matching
+  std::string normalizedInput = signin_dto.getUsernameOrEmail();
+  std::transform(normalizedInput.begin(), normalizedInput.end(),
+                 normalizedInput.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
+
   Criteria criteria =
-      (Criteria(Users::Cols::_username, CompareOperator::EQ,
-                signin_dto.getUsernameOrEmail()) ||
-       Criteria(Users::Cols::_email, CompareOperator::EQ,
-                signin_dto.getUsernameOrEmail())) &&
+      (Criteria(Users::Cols::_username, CompareOperator::EQ, normalizedInput) ||
+      Criteria(Users::Cols::_email, CompareOperator::EQ, normalizedInput)) &&
       Criteria(Users::Cols::_is_active, CompareOperator::EQ, true) &&
-      Criteria(Users::Cols::_is_partner_admin_user, CompareOperator::EQ,
-               true) &&
+      Criteria(Users::Cols::_is_partner_admin_user, CompareOperator::EQ, true) &&
       Criteria(Users::Cols::_is_locked_out, CompareOperator::EQ, false);
 
   gnp::dto::BaseApiResponse response;
 
   try {
+
     Users user = co_await mapper.findOne(criteria);
+
     bool passwordMatches = bcrypt::validatePassword(signin_dto.getPassword(), user.getValueOfPasswordHash());
 
     if (passwordMatches) {
@@ -1435,13 +1588,11 @@ void UserService::checkAccountStatus(
   if (identifierType == "email") {
     criteria = Criteria(Users::Cols::_email, CompareOperator::EQ, identifier);
   } else if (identifierType == "username") {
-    criteria =
-        Criteria(Users::Cols::_username, CompareOperator::EQ, identifier);
+    criteria = Criteria(Users::Cols::_username, CompareOperator::EQ, identifier);
   } else {
     gnp::dto::BaseApiResponse response;
     response.success = false;
-    response.message =
-        "Invalid identifier type. Must be 'email' or 'username'.";
+    response.message = "Invalid identifier type. Must be 'email' or 'username'.";
     callback(response);
     return;
   }
@@ -1755,7 +1906,7 @@ void UserService::setPassword(
       "GET %s", sessionId.c_str());
 }
 
-drogon::Task<gnp::dto::BaseApiResponse> UserService::registerProspectiveUser(const dto::CreateUserDto &userDto) {
+drogon::Task<gnp::dto::BaseApiResponse> UserService::registerProspectiveUser(const dto::UserDto &userDto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mp(dbClient);

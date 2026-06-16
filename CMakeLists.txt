@@ -26,7 +26,7 @@ add_executable(${PROJECT_NAME} main.cc
         dto/UpdatePublicationDto.h
         constants/ErrorCodes.h
         constants/PublicationTypes.h
-        dto/CreateUserDto.h
+        dto/UserDto.h
         services/paystack/PaystackApi.h
         services/hubtel_sms/HubtelSmsApi.h
         dto/SigninDto.h
@@ -130,6 +130,7 @@ add_executable(${PROJECT_NAME} main.cc
         services/audit_logs/AuditLogService.cc
         dto/OcrIngestionDto.h
         utils/codecvt_helper.h
+        dto/MtnBroadBandCallbackResponseDto.h
 )
 
 # ##############################################################################

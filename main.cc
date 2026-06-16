@@ -16,9 +16,8 @@ int main() {
         const std::vector<std::string> allowedOrigins = {
             "http://localhost:3009",
             "https://dev.graphicnewsplus.com",
-            "https://graphicnewsplus.com",
-            "https://www.graphicnewsplus.com"
-            // Add more origins as needed
+            "https://new.graphicnewsplus.com",
+            "https://graphicnewsplus.com"
         };
 
         auto origin = req->getHeader("Origin");

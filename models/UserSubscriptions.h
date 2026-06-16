@@ -54,6 +54,8 @@ class UserSubscriptions
         static const std::string _email;
         static const std::string _newspaper_entitlements;
         static const std::string _is_active;
+        static const std::string _start_date;
+        static const std::string _end_date;
         static const std::string _created_at;
         static const std::string _updated_at;
     };
@@ -142,7 +144,6 @@ class UserSubscriptions
     ///Set the value of the column partner_id
     void setPartnerId(const std::string &pPartnerId) noexcept;
     void setPartnerId(std::string &&pPartnerId) noexcept;
-    void setPartnerIdToNull() noexcept;
 
     /**  For column subscription_plan_id  */
     ///Get the value of the column subscription_plan_id, returns the default value if the column is null
@@ -152,7 +153,6 @@ class UserSubscriptions
     ///Set the value of the column subscription_plan_id
     void setSubscriptionPlanId(const std::string &pSubscriptionPlanId) noexcept;
     void setSubscriptionPlanId(std::string &&pSubscriptionPlanId) noexcept;
-    void setSubscriptionPlanIdToNull() noexcept;
 
     /**  For column billing_cycle  */
     ///Get the value of the column billing_cycle, returns the default value if the column is null
@@ -172,7 +172,6 @@ class UserSubscriptions
     ///Set the value of the column subscription_plan_description
     void setSubscriptionPlanDescription(const std::string &pSubscriptionPlanDescription) noexcept;
     void setSubscriptionPlanDescription(std::string &&pSubscriptionPlanDescription) noexcept;
-    void setSubscriptionPlanDescriptionToNull() noexcept;
 
     /**  For column email  */
     ///Get the value of the column email, returns the default value if the column is null
@@ -202,6 +201,22 @@ class UserSubscriptions
     ///Set the value of the column is_active
     void setIsActive(const bool &pIsActive) noexcept;
 
+    /**  For column start_date  */
+    ///Get the value of the column start_date, returns the default value if the column is null
+    const ::trantor::Date &getValueOfStartDate() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<::trantor::Date> &getStartDate() const noexcept;
+    ///Set the value of the column start_date
+    void setStartDate(const ::trantor::Date &pStartDate) noexcept;
+
+    /**  For column end_date  */
+    ///Get the value of the column end_date, returns the default value if the column is null
+    const ::trantor::Date &getValueOfEndDate() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<::trantor::Date> &getEndDate() const noexcept;
+    ///Set the value of the column end_date
+    void setEndDate(const ::trantor::Date &pEndDate) noexcept;
+
     /**  For column created_at  */
     ///Get the value of the column created_at, returns the default value if the column is null
     const ::trantor::Date &getValueOfCreatedAt() const noexcept;
@@ -221,7 +236,7 @@ class UserSubscriptions
     void setUpdatedAtToNull() noexcept;
 
 
-    static size_t getColumnNumber() noexcept {  return 12;  }
+    static size_t getColumnNumber() noexcept {  return 14;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -253,6 +268,8 @@ class UserSubscriptions
     std::shared_ptr<std::string> email_;
     std::shared_ptr<std::string> newspaperEntitlements_;
     std::shared_ptr<bool> isActive_;
+    std::shared_ptr<::trantor::Date> startDate_;
+    std::shared_ptr<::trantor::Date> endDate_;
     std::shared_ptr<::trantor::Date> createdAt_;
     std::shared_ptr<::trantor::Date> updatedAt_;
     struct MetaData
@@ -266,7 +283,7 @@ class UserSubscriptions
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[12]={ false };
+    bool dirtyFlag_[14]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -300,17 +317,15 @@ class UserSubscriptions
             sql += "user_id,";
             ++parametersCount;
         }
-        sql += "partner_id,";
-        ++parametersCount;
-        if(!dirtyFlag_[3])
+        if(dirtyFlag_[3])
         {
-            needSelection=true;
+            sql += "partner_id,";
+            ++parametersCount;
         }
-        sql += "subscription_plan_id,";
-        ++parametersCount;
-        if(!dirtyFlag_[4])
+        if(dirtyFlag_[4])
         {
-            needSelection=true;
+            sql += "subscription_plan_id,";
+            ++parametersCount;
         }
         if(dirtyFlag_[5])
         {
@@ -340,10 +355,20 @@ class UserSubscriptions
         }
         if(dirtyFlag_[10])
         {
-            sql += "created_at,";
+            sql += "start_date,";
             ++parametersCount;
         }
         if(dirtyFlag_[11])
+        {
+            sql += "end_date,";
+            ++parametersCount;
+        }
+        if(dirtyFlag_[12])
+        {
+            sql += "created_at,";
+            ++parametersCount;
+        }
+        if(dirtyFlag_[13])
         {
             sql += "updated_at,";
             ++parametersCount;
@@ -383,18 +408,10 @@ class UserSubscriptions
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
-        else
-        {
-            sql +="default,";
-        }
         if(dirtyFlag_[4])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
-        }
-        else
-        {
-            sql +="default,";
         }
         if(dirtyFlag_[5])
         {
@@ -431,6 +448,16 @@ class UserSubscriptions
             sql.append(placeholderStr, n);
         }
         if(dirtyFlag_[11])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[12])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[13])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);

@@ -8,11 +8,11 @@
 
 namespace gnp::dto {
 
-    class CreateUserDto {
+    class UserDto {
 
     public:
 
-        CreateUserDto() = default;
+        UserDto() = default;
 
         void fromJson(const Json::Value& json);
 
@@ -46,7 +46,7 @@ namespace gnp::dto {
         std::string country_;
     };
 
-    inline void CreateUserDto::fromJson(const Json::Value& json) {
+    inline void UserDto::fromJson(const Json::Value& json) {
 
         if (json.isMember("firstName") && !json["firstName"].isNull()) {
             first_name_ = json["firstName"].asString();

@@ -6,6 +6,7 @@
 
 using namespace gnp;
 
+
 drogon::Task<HttpResponsePtr> UsersController::getUsers(HttpRequestPtr req) {
   int pageSize = 10; // Default page size
   int pageNo = 1;    //  Default page number
@@ -41,6 +42,20 @@ drogon::Task<HttpResponsePtr> UsersController::getUsers(HttpRequestPtr req) {
   co_return resp;
 }
 
+
+
+drogon::Task<HttpResponsePtr> UsersController::getUserDetails(HttpRequestPtr req, const std::string &userId)
+{
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &userService = plugin->getUserService();
+
+  auto result = co_await userService.getDetails(userId);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+}
+
+
+
 drogon::Task<HttpResponsePtr> UsersController::createUser(HttpRequestPtr req) {
 
   auto jsonBody = req->getJsonObject();
@@ -54,7 +69,7 @@ drogon::Task<HttpResponsePtr> UsersController::createUser(HttpRequestPtr req) {
     co_return resp;
   }
 
-  dto::CreateUserDto userDto;
+  dto::UserDto userDto;
   userDto.fromJson(*jsonBody);
 
   // Get tenant service from plugin
@@ -62,6 +77,67 @@ drogon::Task<HttpResponsePtr> UsersController::createUser(HttpRequestPtr req) {
   auto &userService = plugin->getUserService();
 
   auto result = co_await userService.create(userDto);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+}
+
+
+drogon::Task<HttpResponsePtr> UsersController::updateUser(HttpRequestPtr req, const std::string &userId) {
+
+  auto jsonBody = req->getJsonObject();
+
+  if (!jsonBody) {
+    dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  dto::UserDto userDto;
+  userDto.fromJson(*jsonBody);
+
+  // Get tenant service from plugin
+  auto plugin = app().getPlugin<plugins::GnpServicePlugin>();
+  auto &userService = plugin->getUserService();
+
+  auto result = co_await userService.update(userDto, userId);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+}
+
+drogon::Task<HttpResponsePtr> UsersController::updateUserProfileImage(HttpRequestPtr req, const std::string &userId) {
+
+  if (userId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Authorization token required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  drogon::MultiPartParser fileUpload;
+  std::string fileContent = "";
+  if (fileUpload.parse(req) == 0 && !fileUpload.getFiles().empty()) {
+    auto &file = fileUpload.getFiles()[0];
+    fileContent = std::string(file.fileData(), file.fileLength());
+  }
+
+  if (fileContent.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "No file uploaded";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto plugin = app().getPlugin<plugins::GnpServicePlugin>();
+  auto &userService = plugin->getUserService();
+
+  auto result = co_await userService.updateProfileImage(userId, fileContent);
   auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
   co_return resp;
 }
@@ -77,7 +153,7 @@ drogon::Task<HttpResponsePtr> UsersController::registerProspectiveUser(HttpReque
     co_return resp;
   }
 
-  dto::CreateUserDto userDto;
+  dto::UserDto userDto;
   userDto.fromJson(*jsonPtr);
 
   auto plugin = app().getPlugin<plugins::GnpServicePlugin>();
@@ -178,11 +254,7 @@ drogon::Task<HttpResponsePtr> UsersController::unLockUserAccount(const HttpReque
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
-void UsersController::updateUser(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
-  // write your application logic here
-}
+
 
 drogon::Task<HttpResponsePtr> UsersController::generateAuthToken(const HttpRequestPtr req) {
 

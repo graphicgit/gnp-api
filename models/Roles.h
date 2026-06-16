@@ -241,11 +241,10 @@ class Roles
             sql += "description,";
             ++parametersCount;
         }
-        sql += "partner_id,";
-        ++parametersCount;
-        if(!dirtyFlag_[3])
+        if(dirtyFlag_[3])
         {
-            needSelection=true;
+            sql += "partner_id,";
+            ++parametersCount;
         }
         if(dirtyFlag_[4])
         {
@@ -297,10 +296,6 @@ class Roles
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
-        }
-        else
-        {
-            sql +="default,";
         }
         if(dirtyFlag_[4])
         {

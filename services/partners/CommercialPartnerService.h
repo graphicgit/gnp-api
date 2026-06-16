@@ -42,7 +42,6 @@ public:
 
   drogon::Task<dto::BaseApiResponse> getPartnerSubscriptionSummary(const std::string &partnerId);
 
-
   drogon::Task<dto::BaseApiResponse> updatePartnerLogo(const std::string &partnerId, const std::string &logoContent, std::optional<bool> requireTwoFactorAuth = std::nullopt);
 
   drogon::Task<dto::BaseApiResponse> deletePartner(const std::string &id);
@@ -78,9 +77,7 @@ public:
 
   drogon::Task<::gnp::dto::BaseApiResponse> deletePartnerApiKey(const std::string &id);
 
-  drogon::Task<::gnp::dto::BaseApiResponse> onboardSubscriberAsync(const std::string &clientId,
-                         const std::string &clientSecret,
-                         const ::gnp::dto::PartnerOnboardingDto &dto);
+  drogon::Task<::gnp::dto::BaseApiResponse> onboardSubscriberAsync(const std::string &clientId, const std::string &clientSecret, const ::gnp::dto::PartnerOnboardingDto &dto);
 
     drogon::Task<::gnp::dto::BaseApiResponse> checkSubscriberStatus(const std::string &clientId,
                         const std::string &clientSecret,
