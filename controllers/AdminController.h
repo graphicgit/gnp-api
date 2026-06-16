@@ -94,7 +94,7 @@ public:
     ADD_METHOD_TO(AdminController::getAllRoles, std::string(PREFIX) + "get-all-roles", Get, Options, "JwtAuthFilter");
     ADD_METHOD_TO(AdminController::createRole, std::string(PREFIX) + "create-role", Post, Options, "JwtAuthFilter");
     ADD_METHOD_TO(AdminController::updateRole, std::string(PREFIX) + "update-role/{1}", Post, Options, "JwtAuthFilter");
-    ADD_METHOD_TO(AdminController::deleteRole, std::string(PREFIX) + "delete-role", Delete, Options, "JwtAuthFilter");
+    ADD_METHOD_TO(AdminController::deleteRole, std::string(PREFIX) + "delete-role/{1}", Delete, Options, "JwtAuthFilter");
 
 
    // partner invoices
@@ -205,5 +205,5 @@ public:
     Task<HttpResponsePtr> getAllRoles(HttpRequestPtr req);
     Task<HttpResponsePtr> createRole(HttpRequestPtr req);
     Task<HttpResponsePtr> updateRole(HttpRequestPtr req, const std::string &roleId);
-    Task<HttpResponsePtr> deleteRole(HttpRequestPtr req);
+    Task<HttpResponsePtr> deleteRole(HttpRequestPtr req, const std::string &roleId);
 };

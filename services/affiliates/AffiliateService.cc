@@ -4,7 +4,7 @@
 
 #include "AffiliateService.h"
 #include "constants/ErrorCodes.h"
-#include "dto/CreateUserDto.h"
+#include "dto/UserDto.h"
 #include "dto/SendEmailDto.h"
 #include "models/AffiliateCommissions.h"
 #include "models/AffiliatePayouts.h"
@@ -154,8 +154,7 @@ drogon::Task<dto::BaseApiResponse> AffiliateService::getAll(int pageNo, int page
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-AffiliateService::createAsync(const ::gnp::dto::CreateAffiliateDto &dto) {
+drogon::Task<::gnp::dto::BaseApiResponse> AffiliateService::createAsync(const ::gnp::dto::CreateAffiliateDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Affiliates> mapper(dbClient);
@@ -163,7 +162,7 @@ AffiliateService::createAsync(const ::gnp::dto::CreateAffiliateDto &dto) {
   try {
 
     // 1. Build a CreateUserDto from the affiliate data
-    gnp::dto::CreateUserDto userDto;
+    gnp::dto::UserDto userDto;
 
     // Split name into first and last name
     const std::string &fullName = dto.getName();
@@ -371,8 +370,7 @@ AffiliateService::createAsync(const ::gnp::dto::CreateAffiliateDto &dto) {
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-AffiliateService::updateAsync(const ::gnp::dto::UpdateAffiliateDto &dto) {
+drogon::Task<::gnp::dto::BaseApiResponse> AffiliateService::updateAsync(const ::gnp::dto::UpdateAffiliateDto &dto) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Affiliates> mapper(dbClient);
 
@@ -436,8 +434,7 @@ AffiliateService::updateAsync(const ::gnp::dto::UpdateAffiliateDto &dto) {
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-AffiliateService::suspendAccount(const std::string &id) {
+drogon::Task<::gnp::dto::BaseApiResponse> AffiliateService::suspendAccount(const std::string &id) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Affiliates> mapper(dbClient);
@@ -480,8 +477,7 @@ AffiliateService::suspendAccount(const std::string &id) {
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-AffiliateService::deleteAffiliate(const std::string &id) {
+drogon::Task<::gnp::dto::BaseApiResponse> AffiliateService::deleteAffiliate(const std::string &id) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Affiliates> affiliateMapper(dbClient);
@@ -568,9 +564,8 @@ AffiliateService::deleteAffiliate(const std::string &id) {
 
 // commissions
 
-drogon::Task<::gnp::dto::BaseApiResponse> AffiliateService::getAllCommissions(
-    int pageNo, int pageSize, const std::string &affiliateId,
-    const std::string &startDate, const std::string &endDate) {
+drogon::Task<::gnp::dto::BaseApiResponse> AffiliateService::getAllCommissions(int pageNo, int pageSize, const std::string &affiliateId, const std::string &startDate, const std::string &endDate)
+{
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<AffiliateCommissions> mp(dbClient);
 
@@ -578,20 +573,17 @@ drogon::Task<::gnp::dto::BaseApiResponse> AffiliateService::getAllCommissions(
 
   if (!affiliateId.empty()) {
 
-    criteria = criteria && Criteria(AffiliatePayouts::Cols::_id,
-                                    CompareOperator::EQ, affiliateId);
+    criteria = criteria && Criteria(AffiliatePayouts::Cols::_id, CompareOperator::EQ, affiliateId);
   }
 
   if (!startDate.empty()) {
-    criteria = criteria && Criteria(AffiliateCommissions::Cols::_created_at,
-                                    CompareOperator::GE, startDate);
+    criteria = criteria && Criteria(AffiliateCommissions::Cols::_created_at, CompareOperator::GE, startDate);
   }
 
   if (!endDate.empty()) {
     // Assuming endDate is just a date string, append time to cover the full day
     std::string endDateTime = endDate + " 23:59:59";
-    criteria = criteria && Criteria(AffiliateCommissions::Cols::_created_at,
-                                    CompareOperator::LE, endDateTime);
+    criteria = criteria && Criteria(AffiliateCommissions::Cols::_created_at, CompareOperator::LE, endDateTime);
   }
 
   try {
@@ -656,9 +648,8 @@ drogon::Task<::gnp::dto::BaseApiResponse> AffiliateService::getAllCommissions(
 
 // payouts
 
-drogon::Task<::gnp::dto::BaseApiResponse> AffiliateService::getAllPayouts(
-    int pageNo, int pageSize, const std::string &affiliateId,
-    const std::string &startDate, const std::string &endDate) {
+drogon::Task<::gnp::dto::BaseApiResponse> AffiliateService::getAllPayouts(int pageNo, int pageSize, const std::string &affiliateId, const std::string &startDate, const std::string &endDate)
+{
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<AffiliatePayouts> mp(dbClient);
 
@@ -677,11 +668,11 @@ drogon::Task<::gnp::dto::BaseApiResponse> AffiliateService::getAllPayouts(
 
   if (!endDate.empty()) {
     std::string endDateTime = endDate + " 23:59:59";
-    criteria = criteria && Criteria(AffiliatePayouts::Cols::_created_at,
-                                    CompareOperator::LE, endDateTime);
+    criteria = criteria && Criteria(AffiliatePayouts::Cols::_created_at, CompareOperator::LE, endDateTime);
   }
 
   try {
+
     auto totalCount = co_await mp.count(criteria);
 
     if (totalCount == 0) {
@@ -692,9 +683,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> AffiliateService::getAllPayouts(
       co_return response;
     }
 
-    auto payouts =
-        co_await mp
-            .orderBy(AffiliatePayouts::Cols::_created_at, SortOrder::DESC)
+    auto payouts = co_await mp.orderBy(AffiliatePayouts::Cols::_created_at, SortOrder::DESC)
             .limit(pageSize)
             .offset((pageNo - 1) * pageSize)
             .findBy(criteria);
@@ -738,8 +727,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> AffiliateService::getAllPayouts(
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-AffiliateService::issueAffiliatePayout(const std::string &affiliateId) {
+drogon::Task<::gnp::dto::BaseApiResponse> AffiliateService::issueAffiliatePayout(const std::string &affiliateId) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Affiliates> affiliateMapper(dbClient);
@@ -751,8 +739,7 @@ AffiliateService::issueAffiliatePayout(const std::string &affiliateId) {
     auto affiliate = co_await affiliateMapper.findByPrimaryKey(affiliateId);
 
     // 2. Fetch unpaid commissions
-    auto commissions = co_await commissionMapper.findBy(
-        Criteria(AffiliateCommissions::Cols::_affiliate_name,
+    auto commissions = co_await commissionMapper.findBy(Criteria(AffiliateCommissions::Cols::_affiliate_name,
                  CompareOperator::EQ, affiliate.getValueOfName()) &&
         Criteria(AffiliateCommissions::Cols::_status, CompareOperator::EQ,
                  "pending"));
@@ -898,8 +885,7 @@ AffiliateService::issueAffiliatePayout(const std::string &affiliateId) {
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-AffiliateService::getAffiliateCommissions(const std::string &affiliateId) {
+drogon::Task<::gnp::dto::BaseApiResponse> AffiliateService::getAffiliateCommissions(const std::string &affiliateId) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Affiliates> affiliateMapper(dbClient);
   CoroMapper<AffiliateCommissions> commissionMapper(dbClient);
@@ -956,8 +942,7 @@ AffiliateService::getAffiliateCommissions(const std::string &affiliateId) {
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-AffiliateService::getAffiliatePayouts(const std::string &affiliateId) {
+drogon::Task<::gnp::dto::BaseApiResponse> AffiliateService::getAffiliatePayouts(const std::string &affiliateId) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Affiliates> affiliateMapper(dbClient);
   CoroMapper<AffiliatePayouts> payoutMapper(dbClient);
@@ -1042,6 +1027,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> AffiliateService::issueBulkPayout() {
 
     int successCount = 0;
     int failureCount = 0;
+
     Json::Value errors = Json::arrayValue;
 
     for (const auto &row : result) {

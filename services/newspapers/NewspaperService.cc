@@ -15,7 +15,7 @@ using drogon_model::Gnp::Newspapers;
 
 namespace gnp::services {
 
-// reduced information for public api
+// reduced information for public a
 drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::getAllAsync(
     int pageNo, int pageSize, const std::string &publicationId,
     const std::string &startDate, const std::string &endDate,
@@ -883,6 +883,7 @@ void NewspaperService::incrementViewCount(
       new_newspaper.setPrice("0.1");
       new_newspaper.setIsArchived(true);
       new_newspaper.setIsFree(false);
+      new_newspaper.setIsPublished(true);
       new_newspaper.setStorageService("google-drive");
       new_newspaper.setCopyrightOwner("Graphic Communications Group Limited");
       new_newspaper.setEditionNumber(dto.getEditionNumber());
@@ -917,6 +918,7 @@ void NewspaperService::incrementViewCount(
     detail.setPublicationId("485ac7f9-022d-4a30-818e-41732d90da18");
     detail.setPublicationName("Daily Graphic");
     detail.setCreatorName("System");
+
     detail.setPublishedDate(trantor::Date::fromDbStringLocal("2023-02-02 00:00:00"));
 
     if (!dto.getThumbnailId().empty()) detail.setThumbnailId(dto.getThumbnailId());

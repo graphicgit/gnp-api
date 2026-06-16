@@ -202,6 +202,7 @@ class SubscriptionRenewalHistory
     ///Set the value of the column transaction_id
     void setTransactionId(const std::string &pTransactionId) noexcept;
     void setTransactionId(std::string &&pTransactionId) noexcept;
+    void setTransactionIdToNull() noexcept;
 
     /**  For column transaction_status  */
     ///Get the value of the column transaction_status, returns the default value if the column is null

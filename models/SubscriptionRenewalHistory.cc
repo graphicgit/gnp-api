@@ -42,7 +42,7 @@ const std::vector<typename SubscriptionRenewalHistory::MetaData> SubscriptionRen
 {"subscription_plan_name","std::string","character varying",255,0,0,1},
 {"past_billing_cycle","std::string","character varying",50,0,0,1},
 {"current_billing_cycle","std::string","character varying",50,0,0,1},
-{"transaction_id","std::string","character varying",60,0,0,1},
+{"transaction_id","std::string","character varying",60,0,0,0},
 {"transaction_status","std::string","character varying",50,0,0,1},
 {"amount_paid","std::string","numeric",0,0,0,1},
 {"paid_by","std::string","character varying",150,0,0,1},
@@ -1167,6 +1167,11 @@ void SubscriptionRenewalHistory::setTransactionId(std::string &&pTransactionId) 
     transactionId_ = std::make_shared<std::string>(std::move(pTransactionId));
     dirtyFlag_[9] = true;
 }
+void SubscriptionRenewalHistory::setTransactionIdToNull() noexcept
+{
+    transactionId_.reset();
+    dirtyFlag_[9] = true;
+}
 
 const std::string &SubscriptionRenewalHistory::getValueOfTransactionStatus() const noexcept
 {
@@ -2207,11 +2212,6 @@ bool SubscriptionRenewalHistory::validateJsonForCreation(const Json::Value &pJso
         if(!validJsonOfField(9, "transaction_id", pJson["transaction_id"], err, true))
             return false;
     }
-    else
-    {
-        err="The transaction_id column cannot be null";
-        return false;
-    }
     if(pJson.isMember("transaction_status"))
     {
         if(!validJsonOfField(10, "transaction_status", pJson["transaction_status"], err, true))
@@ -2373,11 +2373,6 @@ bool SubscriptionRenewalHistory::validateMasqueradedJsonForCreation(const Json::
               if(!validJsonOfField(9, pMasqueradingVector[9], pJson[pMasqueradingVector[9]], err, true))
                   return false;
           }
-        else
-        {
-            err="The " + pMasqueradingVector[9] + " column cannot be null";
-            return false;
-        }
       }
       if(!pMasqueradingVector[10].empty())
       {
@@ -2793,8 +2788,7 @@ bool SubscriptionRenewalHistory::validJsonOfField(size_t index,
         case 9:
             if(pJson.isNull())
             {
-                err="The " + fieldName + " column cannot be null";
-                return false;
+                return true;
             }
             if(!pJson.isString())
             {

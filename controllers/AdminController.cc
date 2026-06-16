@@ -1374,11 +1374,9 @@ Task<HttpResponsePtr> AdminController::updateRole(HttpRequestPtr req, const std:
   co_return resp;
 }
 
-Task<HttpResponsePtr> AdminController::deleteRole(HttpRequestPtr req) {
+Task<HttpResponsePtr> AdminController::deleteRole(HttpRequestPtr req, const std::string &roleId) {
 
-  auto id = req->getParameter("id");
-
-  if (id.empty()) {
+  if (roleId.empty()) {
     gnp::dto::BaseApiResponse response;
     response.success = false;
     response.error["message"] = "Missing required parameter: id";
@@ -1390,7 +1388,7 @@ Task<HttpResponsePtr> AdminController::deleteRole(HttpRequestPtr req) {
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &roleService = plugin->getRoleService();
 
-  auto result = co_await roleService.deleteRole(id);
+  auto result = co_await roleService.deleteRole(roleId);
   auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
   co_return resp;
 }

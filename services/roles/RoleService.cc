@@ -17,15 +17,14 @@ drogon::Task<dto::BaseApiResponse> RoleService::getAll(int pageNo, int pageSize,
   auto mp = CoroMapper<Roles>(dbClient);
 
   // 1. Build the search criteria
-  Criteria searchCriteria;
+  Criteria searchCriteria = Criteria(Roles::Cols::_partner_id, CompareOperator::IsNull);
   if (!query.empty()) {
     std::string likeQuery = "%" + query + "%";
-    searchCriteria =
-        Criteria(Roles::Cols::_name, CompareOperator::Like, likeQuery) ||
-        Criteria(Roles::Cols::_description, CompareOperator::Like, likeQuery);
+    searchCriteria = searchCriteria && Criteria(Roles::Cols::_name, CompareOperator::Like, likeQuery) || Criteria(Roles::Cols::_description, CompareOperator::Like, likeQuery);
   }
 
   dto::BaseApiResponse response;
+
   try {
     // 2. Get the total count matching the criteria
     size_t totalCount = co_await mp.count(searchCriteria);
@@ -81,80 +80,6 @@ drogon::Task<dto::BaseApiResponse> RoleService::getAll(int pageNo, int pageSize,
   }
   co_return response;
 }
-
-
-
-drogon::Task<dto::BaseApiResponse> RoleService::getAll(int pageNo, int pageSize, const std::string &partnerId, const std::string &query) {
-
-  auto dbClient = drogon::app().getDbClient();
-  auto mp = CoroMapper<Roles>(dbClient);
-
-  // 1. Build the search criteria
-  Criteria searchCriteria;
-  if (!query.empty()) {
-    std::string likeQuery = "%" + query + "%";
-    searchCriteria =  Criteria(Roles::Cols::_name, CompareOperator::Like, likeQuery) || Criteria(Roles::Cols::_description, CompareOperator::Like, likeQuery);
-  }
-
-  searchCriteria = searchCriteria && Criteria(Roles::Cols::_partner_id, CompareOperator::EQ, partnerId);
-
-  dto::BaseApiResponse response;
-  try {
-    // 2. Get the total count matching the criteria
-    size_t totalCount = co_await mp.count(searchCriteria);
-    if (totalCount == 0) {
-      response.success = true;
-      response.result["data"] = Json::arrayValue;
-      response.result["totalCount"] = 0;
-      co_return response;
-    }
-
-    // 3. Find the paginated data
-    int offset = (pageNo - 1) * pageSize;
-    auto users = co_await mp.limit(pageSize).offset(offset).findBy(searchCriteria);
-
-    // 4. Build the final response
-    response.success = true;
-    response.result["totalCount"] = (Json::UInt64)totalCount;
-    response.result["pageNo"] = pageNo;
-    response.result["pageSize"] = pageSize;
-    response.result["totalPages"] = (int)((totalCount + pageSize - 1) / pageSize);
-
-    Json::Value data = Json::arrayValue;
-
-    for (const auto &role : users) {
-      Json::Value roleJson = role.toJson();
-      Json::Value camelCaseRole;
-      camelCaseRole["id"] = roleJson["id"];
-      camelCaseRole["name"] = roleJson["name"];
-      camelCaseRole["description"] = roleJson["description"];
-      camelCaseRole["partnerId"] = roleJson["partner_id"];
-
-      // Parse permissions JSON string into array
-      Json::Value permissionsArray = Json::arrayValue;
-      if (!roleJson["permissions"].isNull() && !roleJson["permissions"].asString().empty()) {
-        Json::CharReaderBuilder builder;
-        std::string errs;
-        std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
-        std::string permStr = roleJson["permissions"].asString();
-        reader->parse(permStr.c_str(), permStr.c_str() + permStr.size(), &permissionsArray, &errs);
-      }
-      camelCaseRole["permissions"] = permissionsArray;
-
-      camelCaseRole["createdAt"] = roleJson["created_at"];
-      camelCaseRole["updatedAt"] = roleJson["updated_at"];
-      data.append(camelCaseRole);
-    }
-    response.result["data"] = data;
-
-  } catch (const DrogonDbException &e) {
-    response.success = false;
-    response.error["message"] = "Database error while fetching roles.";
-    response.error["detail"] = e.base().what();
-  }
-  co_return response;
-}
-
 
 
 drogon::Task<gnp::dto::BaseApiResponse> RoleService::create(const dto::RoleDto &roleDto) {
@@ -239,6 +164,77 @@ drogon::Task<gnp::dto::BaseApiResponse> RoleService::deleteRole(const std::strin
   } catch (const DrogonDbException &e) {
     response.success = false;
     response.error["message"] = "Database error while deleting role.";
+    response.error["detail"] = e.base().what();
+  }
+  co_return response;
+}
+
+  //partner role
+
+drogon::Task<dto::BaseApiResponse> RoleService::getAll(int pageNo, int pageSize, const std::string &partnerId, const std::string &query) {
+
+  auto dbClient = drogon::app().getDbClient();
+  auto mp = CoroMapper<Roles>(dbClient);
+
+  // 1. Build the search criteria
+  Criteria searchCriteria = Criteria(Roles::Cols::_partner_id, CompareOperator::EQ, partnerId);
+  if (!query.empty()) {
+    std::string likeQuery = "%" + query + "%";
+    searchCriteria =  searchCriteria && Criteria(Roles::Cols::_name, CompareOperator::Like, likeQuery) || Criteria(Roles::Cols::_description, CompareOperator::Like, likeQuery);
+  }
+
+  dto::BaseApiResponse response;
+  try {
+    // 2. Get the total count matching the criteria
+    size_t totalCount = co_await mp.count(searchCriteria);
+    if (totalCount == 0) {
+      response.success = true;
+      response.result["data"] = Json::arrayValue;
+      response.result["totalCount"] = 0;
+      co_return response;
+    }
+
+    // 3. Find the paginated data
+    int offset = (pageNo - 1) * pageSize;
+    auto users = co_await mp.limit(pageSize).offset(offset).findBy(searchCriteria);
+
+    // 4. Build the final response
+    response.success = true;
+    response.result["totalCount"] = (Json::UInt64)totalCount;
+    response.result["pageNo"] = pageNo;
+    response.result["pageSize"] = pageSize;
+    response.result["totalPages"] = (int)((totalCount + pageSize - 1) / pageSize);
+
+    Json::Value data = Json::arrayValue;
+
+    for (const auto &role : users) {
+      Json::Value roleJson = role.toJson();
+      Json::Value camelCaseRole;
+      camelCaseRole["id"] = roleJson["id"];
+      camelCaseRole["name"] = roleJson["name"];
+      camelCaseRole["description"] = roleJson["description"];
+      camelCaseRole["partnerId"] = roleJson["partner_id"];
+
+      // Parse permissions JSON string into array
+      Json::Value permissionsArray = Json::arrayValue;
+      if (!roleJson["permissions"].isNull() && !roleJson["permissions"].asString().empty()) {
+        Json::CharReaderBuilder builder;
+        std::string errs;
+        std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+        std::string permStr = roleJson["permissions"].asString();
+        reader->parse(permStr.c_str(), permStr.c_str() + permStr.size(), &permissionsArray, &errs);
+      }
+      camelCaseRole["permissions"] = permissionsArray;
+
+      camelCaseRole["createdAt"] = roleJson["created_at"];
+      camelCaseRole["updatedAt"] = roleJson["updated_at"];
+      data.append(camelCaseRole);
+    }
+    response.result["data"] = data;
+
+  } catch (const DrogonDbException &e) {
+    response.success = false;
+    response.error["message"] = "Database error while fetching roles.";
     response.error["detail"] = e.base().what();
   }
   co_return response;

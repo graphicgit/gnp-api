@@ -21,7 +21,6 @@ const std::string Users::Cols::_username = "\"username\"";
 const std::string Users::Cols::_email_verified_at = "\"email_verified_at\"";
 const std::string Users::Cols::_password_hash = "\"password_hash\"";
 const std::string Users::Cols::_last_active_device = "\"last_active_device\"";
-const std::string Users::Cols::_profile_image_url = "\"profile_image_url\"";
 const std::string Users::Cols::_phone_number = "\"phone_number\"";
 const std::string Users::Cols::_country = "\"country\"";
 const std::string Users::Cols::_phone_verified_at = "\"phone_verified_at\"";
@@ -42,6 +41,7 @@ const std::string Users::Cols::_credential_type = "\"credential_type\"";
 const std::string Users::Cols::_is_affiliate = "\"is_affiliate\"";
 const std::string Users::Cols::_last_active = "\"last_active\"";
 const std::string Users::Cols::_roles = "\"roles\"";
+const std::string Users::Cols::_profile_image = "\"profile_image\"";
 const std::string Users::primaryKeyName = "id";
 const bool Users::hasPrimaryKey = true;
 const std::string Users::tableName = "\"users\"";
@@ -55,7 +55,6 @@ const std::vector<typename Users::MetaData> Users::metaData_={
 {"email_verified_at","::trantor::Date","timestamp without time zone",0,0,0,0},
 {"password_hash","std::string","character varying",255,0,0,0},
 {"last_active_device","std::string","text",0,0,0,0},
-{"profile_image_url","std::string","character varying",255,0,0,0},
 {"phone_number","std::string","character varying",255,0,0,0},
 {"country","std::string","character varying",255,0,0,0},
 {"phone_verified_at","::trantor::Date","timestamp without time zone",0,0,0,0},
@@ -75,7 +74,8 @@ const std::vector<typename Users::MetaData> Users::metaData_={
 {"credential_type","std::string","text",0,0,0,0},
 {"is_affiliate","bool","boolean",1,0,0,0},
 {"last_active","::trantor::Date","timestamp with time zone",0,0,0,0},
-{"roles","std::string","jsonb",0,0,0,0}
+{"roles","std::string","jsonb",0,0,0,0},
+{"profile_image","std::vector<char>","bytea",0,0,0,0}
 };
 const std::string &Users::getColumnName(size_t index) noexcept(false)
 {
@@ -135,10 +135,6 @@ Users::Users(const Row &r, const ssize_t indexOffset) noexcept
         if(!r["last_active_device"].isNull())
         {
             lastActiveDevice_=std::make_shared<std::string>(r["last_active_device"].as<std::string>());
-        }
-        if(!r["profile_image_url"].isNull())
-        {
-            profileImageUrl_=std::make_shared<std::string>(r["profile_image_url"].as<std::string>());
         }
         if(!r["phone_number"].isNull())
         {
@@ -307,6 +303,15 @@ Users::Users(const Row &r, const ssize_t indexOffset) noexcept
         {
             roles_=std::make_shared<std::string>(r["roles"].as<std::string>());
         }
+        if(!r["profile_image"].isNull())
+        {
+            auto str = r["profile_image"].as<std::string_view>();
+            if(str.length()>=2&&
+                str[0]=='\\'&&str[1]=='x')
+            {
+                profileImage_=std::make_shared<std::vector<char>>(drogon::utils::hexToBinaryVector(str.data()+2,str.length()-2));
+            }
+        }
     }
     else
     {
@@ -378,19 +383,14 @@ Users::Users(const Row &r, const ssize_t indexOffset) noexcept
         index = offset + 8;
         if(!r[index].isNull())
         {
-            profileImageUrl_=std::make_shared<std::string>(r[index].as<std::string>());
+            phoneNumber_=std::make_shared<std::string>(r[index].as<std::string>());
         }
         index = offset + 9;
         if(!r[index].isNull())
         {
-            phoneNumber_=std::make_shared<std::string>(r[index].as<std::string>());
-        }
-        index = offset + 10;
-        if(!r[index].isNull())
-        {
             country_=std::make_shared<std::string>(r[index].as<std::string>());
         }
-        index = offset + 11;
+        index = offset + 10;
         if(!r[index].isNull())
         {
             auto timeStr = r[index].as<std::string>();
@@ -413,17 +413,17 @@ Users::Users(const Row &r, const ssize_t indexOffset) noexcept
                 phoneVerifiedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
-        index = offset + 12;
+        index = offset + 11;
         if(!r[index].isNull())
         {
             isLockedOut_=std::make_shared<bool>(r[index].as<bool>());
         }
-        index = offset + 13;
+        index = offset + 12;
         if(!r[index].isNull())
         {
             isActive_=std::make_shared<bool>(r[index].as<bool>());
         }
-        index = offset + 14;
+        index = offset + 13;
         if(!r[index].isNull())
         {
             auto timeStr = r[index].as<std::string>();
@@ -446,7 +446,7 @@ Users::Users(const Row &r, const ssize_t indexOffset) noexcept
                 createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
-        index = offset + 15;
+        index = offset + 14;
         if(!r[index].isNull())
         {
             auto timeStr = r[index].as<std::string>();
@@ -469,22 +469,22 @@ Users::Users(const Row &r, const ssize_t indexOffset) noexcept
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
-        index = offset + 16;
+        index = offset + 15;
         if(!r[index].isNull())
         {
             isAdminUser_=std::make_shared<bool>(r[index].as<bool>());
         }
-        index = offset + 17;
+        index = offset + 16;
         if(!r[index].isNull())
         {
             isPartnerAdminUser_=std::make_shared<bool>(r[index].as<bool>());
         }
-        index = offset + 18;
+        index = offset + 17;
         if(!r[index].isNull())
         {
             partnerId_=std::make_shared<std::string>(r[index].as<std::string>());
         }
-        index = offset + 19;
+        index = offset + 18;
         if(!r[index].isNull())
         {
             auto str = r[index].as<std::string_view>();
@@ -494,7 +494,7 @@ Users::Users(const Row &r, const ssize_t indexOffset) noexcept
                 credentialId_=std::make_shared<std::vector<char>>(drogon::utils::hexToBinaryVector(str.data()+2,str.length()-2));
             }
         }
-        index = offset + 20;
+        index = offset + 19;
         if(!r[index].isNull())
         {
             auto str = r[index].as<std::string_view>();
@@ -504,17 +504,17 @@ Users::Users(const Row &r, const ssize_t indexOffset) noexcept
                 publicKey_=std::make_shared<std::vector<char>>(drogon::utils::hexToBinaryVector(str.data()+2,str.length()-2));
             }
         }
-        index = offset + 21;
+        index = offset + 20;
         if(!r[index].isNull())
         {
             publicKeyAlgorithm_=std::make_shared<int32_t>(r[index].as<int32_t>());
         }
-        index = offset + 22;
+        index = offset + 21;
         if(!r[index].isNull())
         {
             signCount_=std::make_shared<int64_t>(r[index].as<int64_t>());
         }
-        index = offset + 23;
+        index = offset + 22;
         if(!r[index].isNull())
         {
             auto str = r[index].as<std::string_view>();
@@ -524,22 +524,22 @@ Users::Users(const Row &r, const ssize_t indexOffset) noexcept
                 userHandle_=std::make_shared<std::vector<char>>(drogon::utils::hexToBinaryVector(str.data()+2,str.length()-2));
             }
         }
-        index = offset + 24;
+        index = offset + 23;
         if(!r[index].isNull())
         {
             transports_=std::make_shared<std::string>(r[index].as<std::string>());
         }
-        index = offset + 25;
+        index = offset + 24;
         if(!r[index].isNull())
         {
             credentialType_=std::make_shared<std::string>(r[index].as<std::string>());
         }
-        index = offset + 26;
+        index = offset + 25;
         if(!r[index].isNull())
         {
             isAffiliate_=std::make_shared<bool>(r[index].as<bool>());
         }
-        index = offset + 27;
+        index = offset + 26;
         if(!r[index].isNull())
         {
             auto timeStr = r[index].as<std::string>();
@@ -562,10 +562,20 @@ Users::Users(const Row &r, const ssize_t indexOffset) noexcept
                 lastActive_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
-        index = offset + 28;
+        index = offset + 27;
         if(!r[index].isNull())
         {
             roles_=std::make_shared<std::string>(r[index].as<std::string>());
+        }
+        index = offset + 28;
+        if(!r[index].isNull())
+        {
+            auto str = r[index].as<std::string_view>();
+            if(str.length()>=2&&
+                str[0]=='\\'&&str[1]=='x')
+            {
+                profileImage_=std::make_shared<std::vector<char>>(drogon::utils::hexToBinaryVector(str.data()+2,str.length()-2));
+            }
         }
     }
 
@@ -665,7 +675,7 @@ Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasquera
         dirtyFlag_[8] = true;
         if(!pJson[pMasqueradingVector[8]].isNull())
         {
-            profileImageUrl_=std::make_shared<std::string>(pJson[pMasqueradingVector[8]].asString());
+            phoneNumber_=std::make_shared<std::string>(pJson[pMasqueradingVector[8]].asString());
         }
     }
     if(!pMasqueradingVector[9].empty() && pJson.isMember(pMasqueradingVector[9]))
@@ -673,7 +683,7 @@ Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasquera
         dirtyFlag_[9] = true;
         if(!pJson[pMasqueradingVector[9]].isNull())
         {
-            phoneNumber_=std::make_shared<std::string>(pJson[pMasqueradingVector[9]].asString());
+            country_=std::make_shared<std::string>(pJson[pMasqueradingVector[9]].asString());
         }
     }
     if(!pMasqueradingVector[10].empty() && pJson.isMember(pMasqueradingVector[10]))
@@ -681,15 +691,7 @@ Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasquera
         dirtyFlag_[10] = true;
         if(!pJson[pMasqueradingVector[10]].isNull())
         {
-            country_=std::make_shared<std::string>(pJson[pMasqueradingVector[10]].asString());
-        }
-    }
-    if(!pMasqueradingVector[11].empty() && pJson.isMember(pMasqueradingVector[11]))
-    {
-        dirtyFlag_[11] = true;
-        if(!pJson[pMasqueradingVector[11]].isNull())
-        {
-            auto timeStr = pJson[pMasqueradingVector[11]].asString();
+            auto timeStr = pJson[pMasqueradingVector[10]].asString();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -710,12 +712,20 @@ Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasquera
             }
         }
     }
+    if(!pMasqueradingVector[11].empty() && pJson.isMember(pMasqueradingVector[11]))
+    {
+        dirtyFlag_[11] = true;
+        if(!pJson[pMasqueradingVector[11]].isNull())
+        {
+            isLockedOut_=std::make_shared<bool>(pJson[pMasqueradingVector[11]].asBool());
+        }
+    }
     if(!pMasqueradingVector[12].empty() && pJson.isMember(pMasqueradingVector[12]))
     {
         dirtyFlag_[12] = true;
         if(!pJson[pMasqueradingVector[12]].isNull())
         {
-            isLockedOut_=std::make_shared<bool>(pJson[pMasqueradingVector[12]].asBool());
+            isActive_=std::make_shared<bool>(pJson[pMasqueradingVector[12]].asBool());
         }
     }
     if(!pMasqueradingVector[13].empty() && pJson.isMember(pMasqueradingVector[13]))
@@ -723,7 +733,25 @@ Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasquera
         dirtyFlag_[13] = true;
         if(!pJson[pMasqueradingVector[13]].isNull())
         {
-            isActive_=std::make_shared<bool>(pJson[pMasqueradingVector[13]].asBool());
+            auto timeStr = pJson[pMasqueradingVector[13]].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
         }
     }
     if(!pMasqueradingVector[14].empty() && pJson.isMember(pMasqueradingVector[14]))
@@ -748,7 +776,7 @@ Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasquera
                     }
                     decimalNum = (size_t)atol(decimals.c_str());
                 }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+                updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
     }
@@ -757,25 +785,7 @@ Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasquera
         dirtyFlag_[15] = true;
         if(!pJson[pMasqueradingVector[15]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[15]].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
+            isAdminUser_=std::make_shared<bool>(pJson[pMasqueradingVector[15]].asBool());
         }
     }
     if(!pMasqueradingVector[16].empty() && pJson.isMember(pMasqueradingVector[16]))
@@ -783,7 +793,7 @@ Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasquera
         dirtyFlag_[16] = true;
         if(!pJson[pMasqueradingVector[16]].isNull())
         {
-            isAdminUser_=std::make_shared<bool>(pJson[pMasqueradingVector[16]].asBool());
+            isPartnerAdminUser_=std::make_shared<bool>(pJson[pMasqueradingVector[16]].asBool());
         }
     }
     if(!pMasqueradingVector[17].empty() && pJson.isMember(pMasqueradingVector[17]))
@@ -791,7 +801,7 @@ Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasquera
         dirtyFlag_[17] = true;
         if(!pJson[pMasqueradingVector[17]].isNull())
         {
-            isPartnerAdminUser_=std::make_shared<bool>(pJson[pMasqueradingVector[17]].asBool());
+            partnerId_=std::make_shared<std::string>(pJson[pMasqueradingVector[17]].asString());
         }
     }
     if(!pMasqueradingVector[18].empty() && pJson.isMember(pMasqueradingVector[18]))
@@ -799,7 +809,8 @@ Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasquera
         dirtyFlag_[18] = true;
         if(!pJson[pMasqueradingVector[18]].isNull())
         {
-            partnerId_=std::make_shared<std::string>(pJson[pMasqueradingVector[18]].asString());
+            auto str = pJson[pMasqueradingVector[18]].asString();
+            credentialId_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
         }
     }
     if(!pMasqueradingVector[19].empty() && pJson.isMember(pMasqueradingVector[19]))
@@ -808,7 +819,7 @@ Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasquera
         if(!pJson[pMasqueradingVector[19]].isNull())
         {
             auto str = pJson[pMasqueradingVector[19]].asString();
-            credentialId_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
+            publicKey_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
         }
     }
     if(!pMasqueradingVector[20].empty() && pJson.isMember(pMasqueradingVector[20]))
@@ -816,8 +827,7 @@ Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasquera
         dirtyFlag_[20] = true;
         if(!pJson[pMasqueradingVector[20]].isNull())
         {
-            auto str = pJson[pMasqueradingVector[20]].asString();
-            publicKey_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
+            publicKeyAlgorithm_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[20]].asInt64());
         }
     }
     if(!pMasqueradingVector[21].empty() && pJson.isMember(pMasqueradingVector[21]))
@@ -825,7 +835,7 @@ Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasquera
         dirtyFlag_[21] = true;
         if(!pJson[pMasqueradingVector[21]].isNull())
         {
-            publicKeyAlgorithm_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[21]].asInt64());
+            signCount_=std::make_shared<int64_t>((int64_t)pJson[pMasqueradingVector[21]].asInt64());
         }
     }
     if(!pMasqueradingVector[22].empty() && pJson.isMember(pMasqueradingVector[22]))
@@ -833,7 +843,8 @@ Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasquera
         dirtyFlag_[22] = true;
         if(!pJson[pMasqueradingVector[22]].isNull())
         {
-            signCount_=std::make_shared<int64_t>((int64_t)pJson[pMasqueradingVector[22]].asInt64());
+            auto str = pJson[pMasqueradingVector[22]].asString();
+            userHandle_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
         }
     }
     if(!pMasqueradingVector[23].empty() && pJson.isMember(pMasqueradingVector[23]))
@@ -841,8 +852,7 @@ Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasquera
         dirtyFlag_[23] = true;
         if(!pJson[pMasqueradingVector[23]].isNull())
         {
-            auto str = pJson[pMasqueradingVector[23]].asString();
-            userHandle_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
+            transports_=std::make_shared<std::string>(pJson[pMasqueradingVector[23]].asString());
         }
     }
     if(!pMasqueradingVector[24].empty() && pJson.isMember(pMasqueradingVector[24]))
@@ -850,7 +860,7 @@ Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasquera
         dirtyFlag_[24] = true;
         if(!pJson[pMasqueradingVector[24]].isNull())
         {
-            transports_=std::make_shared<std::string>(pJson[pMasqueradingVector[24]].asString());
+            credentialType_=std::make_shared<std::string>(pJson[pMasqueradingVector[24]].asString());
         }
     }
     if(!pMasqueradingVector[25].empty() && pJson.isMember(pMasqueradingVector[25]))
@@ -858,7 +868,7 @@ Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasquera
         dirtyFlag_[25] = true;
         if(!pJson[pMasqueradingVector[25]].isNull())
         {
-            credentialType_=std::make_shared<std::string>(pJson[pMasqueradingVector[25]].asString());
+            isAffiliate_=std::make_shared<bool>(pJson[pMasqueradingVector[25]].asBool());
         }
     }
     if(!pMasqueradingVector[26].empty() && pJson.isMember(pMasqueradingVector[26]))
@@ -866,15 +876,7 @@ Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasquera
         dirtyFlag_[26] = true;
         if(!pJson[pMasqueradingVector[26]].isNull())
         {
-            isAffiliate_=std::make_shared<bool>(pJson[pMasqueradingVector[26]].asBool());
-        }
-    }
-    if(!pMasqueradingVector[27].empty() && pJson.isMember(pMasqueradingVector[27]))
-    {
-        dirtyFlag_[27] = true;
-        if(!pJson[pMasqueradingVector[27]].isNull())
-        {
-            auto timeStr = pJson[pMasqueradingVector[27]].asString();
+            auto timeStr = pJson[pMasqueradingVector[26]].asString();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -895,12 +897,21 @@ Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasquera
             }
         }
     }
+    if(!pMasqueradingVector[27].empty() && pJson.isMember(pMasqueradingVector[27]))
+    {
+        dirtyFlag_[27] = true;
+        if(!pJson[pMasqueradingVector[27]].isNull())
+        {
+            roles_=std::make_shared<std::string>(pJson[pMasqueradingVector[27]].asString());
+        }
+    }
     if(!pMasqueradingVector[28].empty() && pJson.isMember(pMasqueradingVector[28]))
     {
         dirtyFlag_[28] = true;
         if(!pJson[pMasqueradingVector[28]].isNull())
         {
-            roles_=std::make_shared<std::string>(pJson[pMasqueradingVector[28]].asString());
+            auto str = pJson[pMasqueradingVector[28]].asString();
+            profileImage_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
         }
     }
 }
@@ -989,17 +1000,9 @@ Users::Users(const Json::Value &pJson) noexcept(false)
             lastActiveDevice_=std::make_shared<std::string>(pJson["last_active_device"].asString());
         }
     }
-    if(pJson.isMember("profile_image_url"))
-    {
-        dirtyFlag_[8]=true;
-        if(!pJson["profile_image_url"].isNull())
-        {
-            profileImageUrl_=std::make_shared<std::string>(pJson["profile_image_url"].asString());
-        }
-    }
     if(pJson.isMember("phone_number"))
     {
-        dirtyFlag_[9]=true;
+        dirtyFlag_[8]=true;
         if(!pJson["phone_number"].isNull())
         {
             phoneNumber_=std::make_shared<std::string>(pJson["phone_number"].asString());
@@ -1007,7 +1010,7 @@ Users::Users(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("country"))
     {
-        dirtyFlag_[10]=true;
+        dirtyFlag_[9]=true;
         if(!pJson["country"].isNull())
         {
             country_=std::make_shared<std::string>(pJson["country"].asString());
@@ -1015,7 +1018,7 @@ Users::Users(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("phone_verified_at"))
     {
-        dirtyFlag_[11]=true;
+        dirtyFlag_[10]=true;
         if(!pJson["phone_verified_at"].isNull())
         {
             auto timeStr = pJson["phone_verified_at"].asString();
@@ -1041,7 +1044,7 @@ Users::Users(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("is_locked_out"))
     {
-        dirtyFlag_[12]=true;
+        dirtyFlag_[11]=true;
         if(!pJson["is_locked_out"].isNull())
         {
             isLockedOut_=std::make_shared<bool>(pJson["is_locked_out"].asBool());
@@ -1049,7 +1052,7 @@ Users::Users(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("is_active"))
     {
-        dirtyFlag_[13]=true;
+        dirtyFlag_[12]=true;
         if(!pJson["is_active"].isNull())
         {
             isActive_=std::make_shared<bool>(pJson["is_active"].asBool());
@@ -1057,7 +1060,7 @@ Users::Users(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("created_at"))
     {
-        dirtyFlag_[14]=true;
+        dirtyFlag_[13]=true;
         if(!pJson["created_at"].isNull())
         {
             auto timeStr = pJson["created_at"].asString();
@@ -1083,7 +1086,7 @@ Users::Users(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("updated_at"))
     {
-        dirtyFlag_[15]=true;
+        dirtyFlag_[14]=true;
         if(!pJson["updated_at"].isNull())
         {
             auto timeStr = pJson["updated_at"].asString();
@@ -1109,7 +1112,7 @@ Users::Users(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("is_admin_user"))
     {
-        dirtyFlag_[16]=true;
+        dirtyFlag_[15]=true;
         if(!pJson["is_admin_user"].isNull())
         {
             isAdminUser_=std::make_shared<bool>(pJson["is_admin_user"].asBool());
@@ -1117,7 +1120,7 @@ Users::Users(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("is_partner_admin_user"))
     {
-        dirtyFlag_[17]=true;
+        dirtyFlag_[16]=true;
         if(!pJson["is_partner_admin_user"].isNull())
         {
             isPartnerAdminUser_=std::make_shared<bool>(pJson["is_partner_admin_user"].asBool());
@@ -1125,7 +1128,7 @@ Users::Users(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("partner_id"))
     {
-        dirtyFlag_[18]=true;
+        dirtyFlag_[17]=true;
         if(!pJson["partner_id"].isNull())
         {
             partnerId_=std::make_shared<std::string>(pJson["partner_id"].asString());
@@ -1133,7 +1136,7 @@ Users::Users(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("credential_id"))
     {
-        dirtyFlag_[19]=true;
+        dirtyFlag_[18]=true;
         if(!pJson["credential_id"].isNull())
         {
             auto str = pJson["credential_id"].asString();
@@ -1142,7 +1145,7 @@ Users::Users(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("public_key"))
     {
-        dirtyFlag_[20]=true;
+        dirtyFlag_[19]=true;
         if(!pJson["public_key"].isNull())
         {
             auto str = pJson["public_key"].asString();
@@ -1151,7 +1154,7 @@ Users::Users(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("public_key_algorithm"))
     {
-        dirtyFlag_[21]=true;
+        dirtyFlag_[20]=true;
         if(!pJson["public_key_algorithm"].isNull())
         {
             publicKeyAlgorithm_=std::make_shared<int32_t>((int32_t)pJson["public_key_algorithm"].asInt64());
@@ -1159,7 +1162,7 @@ Users::Users(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("sign_count"))
     {
-        dirtyFlag_[22]=true;
+        dirtyFlag_[21]=true;
         if(!pJson["sign_count"].isNull())
         {
             signCount_=std::make_shared<int64_t>((int64_t)pJson["sign_count"].asInt64());
@@ -1167,7 +1170,7 @@ Users::Users(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("user_handle"))
     {
-        dirtyFlag_[23]=true;
+        dirtyFlag_[22]=true;
         if(!pJson["user_handle"].isNull())
         {
             auto str = pJson["user_handle"].asString();
@@ -1176,7 +1179,7 @@ Users::Users(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("transports"))
     {
-        dirtyFlag_[24]=true;
+        dirtyFlag_[23]=true;
         if(!pJson["transports"].isNull())
         {
             transports_=std::make_shared<std::string>(pJson["transports"].asString());
@@ -1184,7 +1187,7 @@ Users::Users(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("credential_type"))
     {
-        dirtyFlag_[25]=true;
+        dirtyFlag_[24]=true;
         if(!pJson["credential_type"].isNull())
         {
             credentialType_=std::make_shared<std::string>(pJson["credential_type"].asString());
@@ -1192,7 +1195,7 @@ Users::Users(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("is_affiliate"))
     {
-        dirtyFlag_[26]=true;
+        dirtyFlag_[25]=true;
         if(!pJson["is_affiliate"].isNull())
         {
             isAffiliate_=std::make_shared<bool>(pJson["is_affiliate"].asBool());
@@ -1200,7 +1203,7 @@ Users::Users(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("last_active"))
     {
-        dirtyFlag_[27]=true;
+        dirtyFlag_[26]=true;
         if(!pJson["last_active"].isNull())
         {
             auto timeStr = pJson["last_active"].asString();
@@ -1226,10 +1229,19 @@ Users::Users(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("roles"))
     {
-        dirtyFlag_[28]=true;
+        dirtyFlag_[27]=true;
         if(!pJson["roles"].isNull())
         {
             roles_=std::make_shared<std::string>(pJson["roles"].asString());
+        }
+    }
+    if(pJson.isMember("profile_image"))
+    {
+        dirtyFlag_[28]=true;
+        if(!pJson["profile_image"].isNull())
+        {
+            auto str = pJson["profile_image"].asString();
+            profileImage_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
         }
     }
 }
@@ -1328,7 +1340,7 @@ void Users::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[8] = true;
         if(!pJson[pMasqueradingVector[8]].isNull())
         {
-            profileImageUrl_=std::make_shared<std::string>(pJson[pMasqueradingVector[8]].asString());
+            phoneNumber_=std::make_shared<std::string>(pJson[pMasqueradingVector[8]].asString());
         }
     }
     if(!pMasqueradingVector[9].empty() && pJson.isMember(pMasqueradingVector[9]))
@@ -1336,7 +1348,7 @@ void Users::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[9] = true;
         if(!pJson[pMasqueradingVector[9]].isNull())
         {
-            phoneNumber_=std::make_shared<std::string>(pJson[pMasqueradingVector[9]].asString());
+            country_=std::make_shared<std::string>(pJson[pMasqueradingVector[9]].asString());
         }
     }
     if(!pMasqueradingVector[10].empty() && pJson.isMember(pMasqueradingVector[10]))
@@ -1344,15 +1356,7 @@ void Users::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[10] = true;
         if(!pJson[pMasqueradingVector[10]].isNull())
         {
-            country_=std::make_shared<std::string>(pJson[pMasqueradingVector[10]].asString());
-        }
-    }
-    if(!pMasqueradingVector[11].empty() && pJson.isMember(pMasqueradingVector[11]))
-    {
-        dirtyFlag_[11] = true;
-        if(!pJson[pMasqueradingVector[11]].isNull())
-        {
-            auto timeStr = pJson[pMasqueradingVector[11]].asString();
+            auto timeStr = pJson[pMasqueradingVector[10]].asString();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -1373,12 +1377,20 @@ void Users::updateByMasqueradedJson(const Json::Value &pJson,
             }
         }
     }
+    if(!pMasqueradingVector[11].empty() && pJson.isMember(pMasqueradingVector[11]))
+    {
+        dirtyFlag_[11] = true;
+        if(!pJson[pMasqueradingVector[11]].isNull())
+        {
+            isLockedOut_=std::make_shared<bool>(pJson[pMasqueradingVector[11]].asBool());
+        }
+    }
     if(!pMasqueradingVector[12].empty() && pJson.isMember(pMasqueradingVector[12]))
     {
         dirtyFlag_[12] = true;
         if(!pJson[pMasqueradingVector[12]].isNull())
         {
-            isLockedOut_=std::make_shared<bool>(pJson[pMasqueradingVector[12]].asBool());
+            isActive_=std::make_shared<bool>(pJson[pMasqueradingVector[12]].asBool());
         }
     }
     if(!pMasqueradingVector[13].empty() && pJson.isMember(pMasqueradingVector[13]))
@@ -1386,7 +1398,25 @@ void Users::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[13] = true;
         if(!pJson[pMasqueradingVector[13]].isNull())
         {
-            isActive_=std::make_shared<bool>(pJson[pMasqueradingVector[13]].asBool());
+            auto timeStr = pJson[pMasqueradingVector[13]].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
         }
     }
     if(!pMasqueradingVector[14].empty() && pJson.isMember(pMasqueradingVector[14]))
@@ -1411,7 +1441,7 @@ void Users::updateByMasqueradedJson(const Json::Value &pJson,
                     }
                     decimalNum = (size_t)atol(decimals.c_str());
                 }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+                updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
     }
@@ -1420,25 +1450,7 @@ void Users::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[15] = true;
         if(!pJson[pMasqueradingVector[15]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[15]].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
+            isAdminUser_=std::make_shared<bool>(pJson[pMasqueradingVector[15]].asBool());
         }
     }
     if(!pMasqueradingVector[16].empty() && pJson.isMember(pMasqueradingVector[16]))
@@ -1446,7 +1458,7 @@ void Users::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[16] = true;
         if(!pJson[pMasqueradingVector[16]].isNull())
         {
-            isAdminUser_=std::make_shared<bool>(pJson[pMasqueradingVector[16]].asBool());
+            isPartnerAdminUser_=std::make_shared<bool>(pJson[pMasqueradingVector[16]].asBool());
         }
     }
     if(!pMasqueradingVector[17].empty() && pJson.isMember(pMasqueradingVector[17]))
@@ -1454,7 +1466,7 @@ void Users::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[17] = true;
         if(!pJson[pMasqueradingVector[17]].isNull())
         {
-            isPartnerAdminUser_=std::make_shared<bool>(pJson[pMasqueradingVector[17]].asBool());
+            partnerId_=std::make_shared<std::string>(pJson[pMasqueradingVector[17]].asString());
         }
     }
     if(!pMasqueradingVector[18].empty() && pJson.isMember(pMasqueradingVector[18]))
@@ -1462,7 +1474,8 @@ void Users::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[18] = true;
         if(!pJson[pMasqueradingVector[18]].isNull())
         {
-            partnerId_=std::make_shared<std::string>(pJson[pMasqueradingVector[18]].asString());
+            auto str = pJson[pMasqueradingVector[18]].asString();
+            credentialId_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
         }
     }
     if(!pMasqueradingVector[19].empty() && pJson.isMember(pMasqueradingVector[19]))
@@ -1471,7 +1484,7 @@ void Users::updateByMasqueradedJson(const Json::Value &pJson,
         if(!pJson[pMasqueradingVector[19]].isNull())
         {
             auto str = pJson[pMasqueradingVector[19]].asString();
-            credentialId_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
+            publicKey_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
         }
     }
     if(!pMasqueradingVector[20].empty() && pJson.isMember(pMasqueradingVector[20]))
@@ -1479,8 +1492,7 @@ void Users::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[20] = true;
         if(!pJson[pMasqueradingVector[20]].isNull())
         {
-            auto str = pJson[pMasqueradingVector[20]].asString();
-            publicKey_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
+            publicKeyAlgorithm_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[20]].asInt64());
         }
     }
     if(!pMasqueradingVector[21].empty() && pJson.isMember(pMasqueradingVector[21]))
@@ -1488,7 +1500,7 @@ void Users::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[21] = true;
         if(!pJson[pMasqueradingVector[21]].isNull())
         {
-            publicKeyAlgorithm_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[21]].asInt64());
+            signCount_=std::make_shared<int64_t>((int64_t)pJson[pMasqueradingVector[21]].asInt64());
         }
     }
     if(!pMasqueradingVector[22].empty() && pJson.isMember(pMasqueradingVector[22]))
@@ -1496,7 +1508,8 @@ void Users::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[22] = true;
         if(!pJson[pMasqueradingVector[22]].isNull())
         {
-            signCount_=std::make_shared<int64_t>((int64_t)pJson[pMasqueradingVector[22]].asInt64());
+            auto str = pJson[pMasqueradingVector[22]].asString();
+            userHandle_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
         }
     }
     if(!pMasqueradingVector[23].empty() && pJson.isMember(pMasqueradingVector[23]))
@@ -1504,8 +1517,7 @@ void Users::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[23] = true;
         if(!pJson[pMasqueradingVector[23]].isNull())
         {
-            auto str = pJson[pMasqueradingVector[23]].asString();
-            userHandle_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
+            transports_=std::make_shared<std::string>(pJson[pMasqueradingVector[23]].asString());
         }
     }
     if(!pMasqueradingVector[24].empty() && pJson.isMember(pMasqueradingVector[24]))
@@ -1513,7 +1525,7 @@ void Users::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[24] = true;
         if(!pJson[pMasqueradingVector[24]].isNull())
         {
-            transports_=std::make_shared<std::string>(pJson[pMasqueradingVector[24]].asString());
+            credentialType_=std::make_shared<std::string>(pJson[pMasqueradingVector[24]].asString());
         }
     }
     if(!pMasqueradingVector[25].empty() && pJson.isMember(pMasqueradingVector[25]))
@@ -1521,7 +1533,7 @@ void Users::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[25] = true;
         if(!pJson[pMasqueradingVector[25]].isNull())
         {
-            credentialType_=std::make_shared<std::string>(pJson[pMasqueradingVector[25]].asString());
+            isAffiliate_=std::make_shared<bool>(pJson[pMasqueradingVector[25]].asBool());
         }
     }
     if(!pMasqueradingVector[26].empty() && pJson.isMember(pMasqueradingVector[26]))
@@ -1529,15 +1541,7 @@ void Users::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[26] = true;
         if(!pJson[pMasqueradingVector[26]].isNull())
         {
-            isAffiliate_=std::make_shared<bool>(pJson[pMasqueradingVector[26]].asBool());
-        }
-    }
-    if(!pMasqueradingVector[27].empty() && pJson.isMember(pMasqueradingVector[27]))
-    {
-        dirtyFlag_[27] = true;
-        if(!pJson[pMasqueradingVector[27]].isNull())
-        {
-            auto timeStr = pJson[pMasqueradingVector[27]].asString();
+            auto timeStr = pJson[pMasqueradingVector[26]].asString();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -1558,12 +1562,21 @@ void Users::updateByMasqueradedJson(const Json::Value &pJson,
             }
         }
     }
+    if(!pMasqueradingVector[27].empty() && pJson.isMember(pMasqueradingVector[27]))
+    {
+        dirtyFlag_[27] = true;
+        if(!pJson[pMasqueradingVector[27]].isNull())
+        {
+            roles_=std::make_shared<std::string>(pJson[pMasqueradingVector[27]].asString());
+        }
+    }
     if(!pMasqueradingVector[28].empty() && pJson.isMember(pMasqueradingVector[28]))
     {
         dirtyFlag_[28] = true;
         if(!pJson[pMasqueradingVector[28]].isNull())
         {
-            roles_=std::make_shared<std::string>(pJson[pMasqueradingVector[28]].asString());
+            auto str = pJson[pMasqueradingVector[28]].asString();
+            profileImage_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
         }
     }
 }
@@ -1651,17 +1664,9 @@ void Users::updateByJson(const Json::Value &pJson) noexcept(false)
             lastActiveDevice_=std::make_shared<std::string>(pJson["last_active_device"].asString());
         }
     }
-    if(pJson.isMember("profile_image_url"))
-    {
-        dirtyFlag_[8] = true;
-        if(!pJson["profile_image_url"].isNull())
-        {
-            profileImageUrl_=std::make_shared<std::string>(pJson["profile_image_url"].asString());
-        }
-    }
     if(pJson.isMember("phone_number"))
     {
-        dirtyFlag_[9] = true;
+        dirtyFlag_[8] = true;
         if(!pJson["phone_number"].isNull())
         {
             phoneNumber_=std::make_shared<std::string>(pJson["phone_number"].asString());
@@ -1669,7 +1674,7 @@ void Users::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("country"))
     {
-        dirtyFlag_[10] = true;
+        dirtyFlag_[9] = true;
         if(!pJson["country"].isNull())
         {
             country_=std::make_shared<std::string>(pJson["country"].asString());
@@ -1677,7 +1682,7 @@ void Users::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("phone_verified_at"))
     {
-        dirtyFlag_[11] = true;
+        dirtyFlag_[10] = true;
         if(!pJson["phone_verified_at"].isNull())
         {
             auto timeStr = pJson["phone_verified_at"].asString();
@@ -1703,7 +1708,7 @@ void Users::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("is_locked_out"))
     {
-        dirtyFlag_[12] = true;
+        dirtyFlag_[11] = true;
         if(!pJson["is_locked_out"].isNull())
         {
             isLockedOut_=std::make_shared<bool>(pJson["is_locked_out"].asBool());
@@ -1711,7 +1716,7 @@ void Users::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("is_active"))
     {
-        dirtyFlag_[13] = true;
+        dirtyFlag_[12] = true;
         if(!pJson["is_active"].isNull())
         {
             isActive_=std::make_shared<bool>(pJson["is_active"].asBool());
@@ -1719,7 +1724,7 @@ void Users::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("created_at"))
     {
-        dirtyFlag_[14] = true;
+        dirtyFlag_[13] = true;
         if(!pJson["created_at"].isNull())
         {
             auto timeStr = pJson["created_at"].asString();
@@ -1745,7 +1750,7 @@ void Users::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("updated_at"))
     {
-        dirtyFlag_[15] = true;
+        dirtyFlag_[14] = true;
         if(!pJson["updated_at"].isNull())
         {
             auto timeStr = pJson["updated_at"].asString();
@@ -1771,7 +1776,7 @@ void Users::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("is_admin_user"))
     {
-        dirtyFlag_[16] = true;
+        dirtyFlag_[15] = true;
         if(!pJson["is_admin_user"].isNull())
         {
             isAdminUser_=std::make_shared<bool>(pJson["is_admin_user"].asBool());
@@ -1779,7 +1784,7 @@ void Users::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("is_partner_admin_user"))
     {
-        dirtyFlag_[17] = true;
+        dirtyFlag_[16] = true;
         if(!pJson["is_partner_admin_user"].isNull())
         {
             isPartnerAdminUser_=std::make_shared<bool>(pJson["is_partner_admin_user"].asBool());
@@ -1787,7 +1792,7 @@ void Users::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("partner_id"))
     {
-        dirtyFlag_[18] = true;
+        dirtyFlag_[17] = true;
         if(!pJson["partner_id"].isNull())
         {
             partnerId_=std::make_shared<std::string>(pJson["partner_id"].asString());
@@ -1795,7 +1800,7 @@ void Users::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("credential_id"))
     {
-        dirtyFlag_[19] = true;
+        dirtyFlag_[18] = true;
         if(!pJson["credential_id"].isNull())
         {
             auto str = pJson["credential_id"].asString();
@@ -1804,7 +1809,7 @@ void Users::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("public_key"))
     {
-        dirtyFlag_[20] = true;
+        dirtyFlag_[19] = true;
         if(!pJson["public_key"].isNull())
         {
             auto str = pJson["public_key"].asString();
@@ -1813,7 +1818,7 @@ void Users::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("public_key_algorithm"))
     {
-        dirtyFlag_[21] = true;
+        dirtyFlag_[20] = true;
         if(!pJson["public_key_algorithm"].isNull())
         {
             publicKeyAlgorithm_=std::make_shared<int32_t>((int32_t)pJson["public_key_algorithm"].asInt64());
@@ -1821,7 +1826,7 @@ void Users::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("sign_count"))
     {
-        dirtyFlag_[22] = true;
+        dirtyFlag_[21] = true;
         if(!pJson["sign_count"].isNull())
         {
             signCount_=std::make_shared<int64_t>((int64_t)pJson["sign_count"].asInt64());
@@ -1829,7 +1834,7 @@ void Users::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("user_handle"))
     {
-        dirtyFlag_[23] = true;
+        dirtyFlag_[22] = true;
         if(!pJson["user_handle"].isNull())
         {
             auto str = pJson["user_handle"].asString();
@@ -1838,7 +1843,7 @@ void Users::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("transports"))
     {
-        dirtyFlag_[24] = true;
+        dirtyFlag_[23] = true;
         if(!pJson["transports"].isNull())
         {
             transports_=std::make_shared<std::string>(pJson["transports"].asString());
@@ -1846,7 +1851,7 @@ void Users::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("credential_type"))
     {
-        dirtyFlag_[25] = true;
+        dirtyFlag_[24] = true;
         if(!pJson["credential_type"].isNull())
         {
             credentialType_=std::make_shared<std::string>(pJson["credential_type"].asString());
@@ -1854,7 +1859,7 @@ void Users::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("is_affiliate"))
     {
-        dirtyFlag_[26] = true;
+        dirtyFlag_[25] = true;
         if(!pJson["is_affiliate"].isNull())
         {
             isAffiliate_=std::make_shared<bool>(pJson["is_affiliate"].asBool());
@@ -1862,7 +1867,7 @@ void Users::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("last_active"))
     {
-        dirtyFlag_[27] = true;
+        dirtyFlag_[26] = true;
         if(!pJson["last_active"].isNull())
         {
             auto timeStr = pJson["last_active"].asString();
@@ -1888,10 +1893,19 @@ void Users::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("roles"))
     {
-        dirtyFlag_[28] = true;
+        dirtyFlag_[27] = true;
         if(!pJson["roles"].isNull())
         {
             roles_=std::make_shared<std::string>(pJson["roles"].asString());
+        }
+    }
+    if(pJson.isMember("profile_image"))
+    {
+        dirtyFlag_[28] = true;
+        if(!pJson["profile_image"].isNull())
+        {
+            auto str = pJson["profile_image"].asString();
+            profileImage_=std::make_shared<std::vector<char>>(drogon::utils::base64DecodeToVector(str));
         }
     }
 }
@@ -2102,33 +2116,6 @@ void Users::setLastActiveDeviceToNull() noexcept
     dirtyFlag_[7] = true;
 }
 
-const std::string &Users::getValueOfProfileImageUrl() const noexcept
-{
-    static const std::string defaultValue = std::string();
-    if(profileImageUrl_)
-        return *profileImageUrl_;
-    return defaultValue;
-}
-const std::shared_ptr<std::string> &Users::getProfileImageUrl() const noexcept
-{
-    return profileImageUrl_;
-}
-void Users::setProfileImageUrl(const std::string &pProfileImageUrl) noexcept
-{
-    profileImageUrl_ = std::make_shared<std::string>(pProfileImageUrl);
-    dirtyFlag_[8] = true;
-}
-void Users::setProfileImageUrl(std::string &&pProfileImageUrl) noexcept
-{
-    profileImageUrl_ = std::make_shared<std::string>(std::move(pProfileImageUrl));
-    dirtyFlag_[8] = true;
-}
-void Users::setProfileImageUrlToNull() noexcept
-{
-    profileImageUrl_.reset();
-    dirtyFlag_[8] = true;
-}
-
 const std::string &Users::getValueOfPhoneNumber() const noexcept
 {
     static const std::string defaultValue = std::string();
@@ -2143,17 +2130,17 @@ const std::shared_ptr<std::string> &Users::getPhoneNumber() const noexcept
 void Users::setPhoneNumber(const std::string &pPhoneNumber) noexcept
 {
     phoneNumber_ = std::make_shared<std::string>(pPhoneNumber);
-    dirtyFlag_[9] = true;
+    dirtyFlag_[8] = true;
 }
 void Users::setPhoneNumber(std::string &&pPhoneNumber) noexcept
 {
     phoneNumber_ = std::make_shared<std::string>(std::move(pPhoneNumber));
-    dirtyFlag_[9] = true;
+    dirtyFlag_[8] = true;
 }
 void Users::setPhoneNumberToNull() noexcept
 {
     phoneNumber_.reset();
-    dirtyFlag_[9] = true;
+    dirtyFlag_[8] = true;
 }
 
 const std::string &Users::getValueOfCountry() const noexcept
@@ -2170,17 +2157,17 @@ const std::shared_ptr<std::string> &Users::getCountry() const noexcept
 void Users::setCountry(const std::string &pCountry) noexcept
 {
     country_ = std::make_shared<std::string>(pCountry);
-    dirtyFlag_[10] = true;
+    dirtyFlag_[9] = true;
 }
 void Users::setCountry(std::string &&pCountry) noexcept
 {
     country_ = std::make_shared<std::string>(std::move(pCountry));
-    dirtyFlag_[10] = true;
+    dirtyFlag_[9] = true;
 }
 void Users::setCountryToNull() noexcept
 {
     country_.reset();
-    dirtyFlag_[10] = true;
+    dirtyFlag_[9] = true;
 }
 
 const ::trantor::Date &Users::getValueOfPhoneVerifiedAt() const noexcept
@@ -2197,12 +2184,12 @@ const std::shared_ptr<::trantor::Date> &Users::getPhoneVerifiedAt() const noexce
 void Users::setPhoneVerifiedAt(const ::trantor::Date &pPhoneVerifiedAt) noexcept
 {
     phoneVerifiedAt_ = std::make_shared<::trantor::Date>(pPhoneVerifiedAt);
-    dirtyFlag_[11] = true;
+    dirtyFlag_[10] = true;
 }
 void Users::setPhoneVerifiedAtToNull() noexcept
 {
     phoneVerifiedAt_.reset();
-    dirtyFlag_[11] = true;
+    dirtyFlag_[10] = true;
 }
 
 const bool &Users::getValueOfIsLockedOut() const noexcept
@@ -2219,7 +2206,7 @@ const std::shared_ptr<bool> &Users::getIsLockedOut() const noexcept
 void Users::setIsLockedOut(const bool &pIsLockedOut) noexcept
 {
     isLockedOut_ = std::make_shared<bool>(pIsLockedOut);
-    dirtyFlag_[12] = true;
+    dirtyFlag_[11] = true;
 }
 
 const bool &Users::getValueOfIsActive() const noexcept
@@ -2236,7 +2223,7 @@ const std::shared_ptr<bool> &Users::getIsActive() const noexcept
 void Users::setIsActive(const bool &pIsActive) noexcept
 {
     isActive_ = std::make_shared<bool>(pIsActive);
-    dirtyFlag_[13] = true;
+    dirtyFlag_[12] = true;
 }
 
 const ::trantor::Date &Users::getValueOfCreatedAt() const noexcept
@@ -2253,7 +2240,7 @@ const std::shared_ptr<::trantor::Date> &Users::getCreatedAt() const noexcept
 void Users::setCreatedAt(const ::trantor::Date &pCreatedAt) noexcept
 {
     createdAt_ = std::make_shared<::trantor::Date>(pCreatedAt);
-    dirtyFlag_[14] = true;
+    dirtyFlag_[13] = true;
 }
 
 const ::trantor::Date &Users::getValueOfUpdatedAt() const noexcept
@@ -2270,12 +2257,12 @@ const std::shared_ptr<::trantor::Date> &Users::getUpdatedAt() const noexcept
 void Users::setUpdatedAt(const ::trantor::Date &pUpdatedAt) noexcept
 {
     updatedAt_ = std::make_shared<::trantor::Date>(pUpdatedAt);
-    dirtyFlag_[15] = true;
+    dirtyFlag_[14] = true;
 }
 void Users::setUpdatedAtToNull() noexcept
 {
     updatedAt_.reset();
-    dirtyFlag_[15] = true;
+    dirtyFlag_[14] = true;
 }
 
 const bool &Users::getValueOfIsAdminUser() const noexcept
@@ -2292,7 +2279,7 @@ const std::shared_ptr<bool> &Users::getIsAdminUser() const noexcept
 void Users::setIsAdminUser(const bool &pIsAdminUser) noexcept
 {
     isAdminUser_ = std::make_shared<bool>(pIsAdminUser);
-    dirtyFlag_[16] = true;
+    dirtyFlag_[15] = true;
 }
 
 const bool &Users::getValueOfIsPartnerAdminUser() const noexcept
@@ -2309,7 +2296,7 @@ const std::shared_ptr<bool> &Users::getIsPartnerAdminUser() const noexcept
 void Users::setIsPartnerAdminUser(const bool &pIsPartnerAdminUser) noexcept
 {
     isPartnerAdminUser_ = std::make_shared<bool>(pIsPartnerAdminUser);
-    dirtyFlag_[17] = true;
+    dirtyFlag_[16] = true;
 }
 
 const std::string &Users::getValueOfPartnerId() const noexcept
@@ -2326,17 +2313,17 @@ const std::shared_ptr<std::string> &Users::getPartnerId() const noexcept
 void Users::setPartnerId(const std::string &pPartnerId) noexcept
 {
     partnerId_ = std::make_shared<std::string>(pPartnerId);
-    dirtyFlag_[18] = true;
+    dirtyFlag_[17] = true;
 }
 void Users::setPartnerId(std::string &&pPartnerId) noexcept
 {
     partnerId_ = std::make_shared<std::string>(std::move(pPartnerId));
-    dirtyFlag_[18] = true;
+    dirtyFlag_[17] = true;
 }
 void Users::setPartnerIdToNull() noexcept
 {
     partnerId_.reset();
-    dirtyFlag_[18] = true;
+    dirtyFlag_[17] = true;
 }
 
 const std::vector<char> &Users::getValueOfCredentialId() const noexcept
@@ -2360,17 +2347,17 @@ const std::shared_ptr<std::vector<char>> &Users::getCredentialId() const noexcep
 void Users::setCredentialId(const std::vector<char> &pCredentialId) noexcept
 {
     credentialId_ = std::make_shared<std::vector<char>>(pCredentialId);
-    dirtyFlag_[19] = true;
+    dirtyFlag_[18] = true;
 }
 void Users::setCredentialId(const std::string &pCredentialId) noexcept
 {
     credentialId_ = std::make_shared<std::vector<char>>(pCredentialId.c_str(),pCredentialId.c_str()+pCredentialId.length());
-    dirtyFlag_[19] = true;
+    dirtyFlag_[18] = true;
 }
 void Users::setCredentialIdToNull() noexcept
 {
     credentialId_.reset();
-    dirtyFlag_[19] = true;
+    dirtyFlag_[18] = true;
 }
 
 const std::vector<char> &Users::getValueOfPublicKey() const noexcept
@@ -2394,17 +2381,17 @@ const std::shared_ptr<std::vector<char>> &Users::getPublicKey() const noexcept
 void Users::setPublicKey(const std::vector<char> &pPublicKey) noexcept
 {
     publicKey_ = std::make_shared<std::vector<char>>(pPublicKey);
-    dirtyFlag_[20] = true;
+    dirtyFlag_[19] = true;
 }
 void Users::setPublicKey(const std::string &pPublicKey) noexcept
 {
     publicKey_ = std::make_shared<std::vector<char>>(pPublicKey.c_str(),pPublicKey.c_str()+pPublicKey.length());
-    dirtyFlag_[20] = true;
+    dirtyFlag_[19] = true;
 }
 void Users::setPublicKeyToNull() noexcept
 {
     publicKey_.reset();
-    dirtyFlag_[20] = true;
+    dirtyFlag_[19] = true;
 }
 
 const int32_t &Users::getValueOfPublicKeyAlgorithm() const noexcept
@@ -2421,12 +2408,12 @@ const std::shared_ptr<int32_t> &Users::getPublicKeyAlgorithm() const noexcept
 void Users::setPublicKeyAlgorithm(const int32_t &pPublicKeyAlgorithm) noexcept
 {
     publicKeyAlgorithm_ = std::make_shared<int32_t>(pPublicKeyAlgorithm);
-    dirtyFlag_[21] = true;
+    dirtyFlag_[20] = true;
 }
 void Users::setPublicKeyAlgorithmToNull() noexcept
 {
     publicKeyAlgorithm_.reset();
-    dirtyFlag_[21] = true;
+    dirtyFlag_[20] = true;
 }
 
 const int64_t &Users::getValueOfSignCount() const noexcept
@@ -2443,12 +2430,12 @@ const std::shared_ptr<int64_t> &Users::getSignCount() const noexcept
 void Users::setSignCount(const int64_t &pSignCount) noexcept
 {
     signCount_ = std::make_shared<int64_t>(pSignCount);
-    dirtyFlag_[22] = true;
+    dirtyFlag_[21] = true;
 }
 void Users::setSignCountToNull() noexcept
 {
     signCount_.reset();
-    dirtyFlag_[22] = true;
+    dirtyFlag_[21] = true;
 }
 
 const std::vector<char> &Users::getValueOfUserHandle() const noexcept
@@ -2472,17 +2459,17 @@ const std::shared_ptr<std::vector<char>> &Users::getUserHandle() const noexcept
 void Users::setUserHandle(const std::vector<char> &pUserHandle) noexcept
 {
     userHandle_ = std::make_shared<std::vector<char>>(pUserHandle);
-    dirtyFlag_[23] = true;
+    dirtyFlag_[22] = true;
 }
 void Users::setUserHandle(const std::string &pUserHandle) noexcept
 {
     userHandle_ = std::make_shared<std::vector<char>>(pUserHandle.c_str(),pUserHandle.c_str()+pUserHandle.length());
-    dirtyFlag_[23] = true;
+    dirtyFlag_[22] = true;
 }
 void Users::setUserHandleToNull() noexcept
 {
     userHandle_.reset();
-    dirtyFlag_[23] = true;
+    dirtyFlag_[22] = true;
 }
 
 const std::string &Users::getValueOfTransports() const noexcept
@@ -2499,17 +2486,17 @@ const std::shared_ptr<std::string> &Users::getTransports() const noexcept
 void Users::setTransports(const std::string &pTransports) noexcept
 {
     transports_ = std::make_shared<std::string>(pTransports);
-    dirtyFlag_[24] = true;
+    dirtyFlag_[23] = true;
 }
 void Users::setTransports(std::string &&pTransports) noexcept
 {
     transports_ = std::make_shared<std::string>(std::move(pTransports));
-    dirtyFlag_[24] = true;
+    dirtyFlag_[23] = true;
 }
 void Users::setTransportsToNull() noexcept
 {
     transports_.reset();
-    dirtyFlag_[24] = true;
+    dirtyFlag_[23] = true;
 }
 
 const std::string &Users::getValueOfCredentialType() const noexcept
@@ -2526,17 +2513,17 @@ const std::shared_ptr<std::string> &Users::getCredentialType() const noexcept
 void Users::setCredentialType(const std::string &pCredentialType) noexcept
 {
     credentialType_ = std::make_shared<std::string>(pCredentialType);
-    dirtyFlag_[25] = true;
+    dirtyFlag_[24] = true;
 }
 void Users::setCredentialType(std::string &&pCredentialType) noexcept
 {
     credentialType_ = std::make_shared<std::string>(std::move(pCredentialType));
-    dirtyFlag_[25] = true;
+    dirtyFlag_[24] = true;
 }
 void Users::setCredentialTypeToNull() noexcept
 {
     credentialType_.reset();
-    dirtyFlag_[25] = true;
+    dirtyFlag_[24] = true;
 }
 
 const bool &Users::getValueOfIsAffiliate() const noexcept
@@ -2553,12 +2540,12 @@ const std::shared_ptr<bool> &Users::getIsAffiliate() const noexcept
 void Users::setIsAffiliate(const bool &pIsAffiliate) noexcept
 {
     isAffiliate_ = std::make_shared<bool>(pIsAffiliate);
-    dirtyFlag_[26] = true;
+    dirtyFlag_[25] = true;
 }
 void Users::setIsAffiliateToNull() noexcept
 {
     isAffiliate_.reset();
-    dirtyFlag_[26] = true;
+    dirtyFlag_[25] = true;
 }
 
 const ::trantor::Date &Users::getValueOfLastActive() const noexcept
@@ -2575,12 +2562,12 @@ const std::shared_ptr<::trantor::Date> &Users::getLastActive() const noexcept
 void Users::setLastActive(const ::trantor::Date &pLastActive) noexcept
 {
     lastActive_ = std::make_shared<::trantor::Date>(pLastActive);
-    dirtyFlag_[27] = true;
+    dirtyFlag_[26] = true;
 }
 void Users::setLastActiveToNull() noexcept
 {
     lastActive_.reset();
-    dirtyFlag_[27] = true;
+    dirtyFlag_[26] = true;
 }
 
 const std::string &Users::getValueOfRoles() const noexcept
@@ -2597,16 +2584,50 @@ const std::shared_ptr<std::string> &Users::getRoles() const noexcept
 void Users::setRoles(const std::string &pRoles) noexcept
 {
     roles_ = std::make_shared<std::string>(pRoles);
-    dirtyFlag_[28] = true;
+    dirtyFlag_[27] = true;
 }
 void Users::setRoles(std::string &&pRoles) noexcept
 {
     roles_ = std::make_shared<std::string>(std::move(pRoles));
-    dirtyFlag_[28] = true;
+    dirtyFlag_[27] = true;
 }
 void Users::setRolesToNull() noexcept
 {
     roles_.reset();
+    dirtyFlag_[27] = true;
+}
+
+const std::vector<char> &Users::getValueOfProfileImage() const noexcept
+{
+    static const std::vector<char> defaultValue = std::vector<char>();
+    if(profileImage_)
+        return *profileImage_;
+    return defaultValue;
+}
+std::string Users::getValueOfProfileImageAsString() const noexcept
+{
+    static const std::string defaultValue = std::string();
+    if(profileImage_)
+        return std::string(profileImage_->data(),profileImage_->size());
+    return defaultValue;
+}
+const std::shared_ptr<std::vector<char>> &Users::getProfileImage() const noexcept
+{
+    return profileImage_;
+}
+void Users::setProfileImage(const std::vector<char> &pProfileImage) noexcept
+{
+    profileImage_ = std::make_shared<std::vector<char>>(pProfileImage);
+    dirtyFlag_[28] = true;
+}
+void Users::setProfileImage(const std::string &pProfileImage) noexcept
+{
+    profileImage_ = std::make_shared<std::vector<char>>(pProfileImage.c_str(),pProfileImage.c_str()+pProfileImage.length());
+    dirtyFlag_[28] = true;
+}
+void Users::setProfileImageToNull() noexcept
+{
+    profileImage_.reset();
     dirtyFlag_[28] = true;
 }
 
@@ -2625,7 +2646,6 @@ const std::vector<std::string> &Users::insertColumns() noexcept
         "email_verified_at",
         "password_hash",
         "last_active_device",
-        "profile_image_url",
         "phone_number",
         "country",
         "phone_verified_at",
@@ -2645,7 +2665,8 @@ const std::vector<std::string> &Users::insertColumns() noexcept
         "credential_type",
         "is_affiliate",
         "last_active",
-        "roles"
+        "roles",
+        "profile_image"
     };
     return inCols;
 }
@@ -2742,17 +2763,6 @@ void Users::outputArgs(drogon::orm::internal::SqlBinder &binder) const
     }
     if(dirtyFlag_[8])
     {
-        if(getProfileImageUrl())
-        {
-            binder << getValueOfProfileImageUrl();
-        }
-        else
-        {
-            binder << nullptr;
-        }
-    }
-    if(dirtyFlag_[9])
-    {
         if(getPhoneNumber())
         {
             binder << getValueOfPhoneNumber();
@@ -2762,7 +2772,7 @@ void Users::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[10])
+    if(dirtyFlag_[9])
     {
         if(getCountry())
         {
@@ -2773,7 +2783,7 @@ void Users::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[11])
+    if(dirtyFlag_[10])
     {
         if(getPhoneVerifiedAt())
         {
@@ -2784,7 +2794,7 @@ void Users::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[12])
+    if(dirtyFlag_[11])
     {
         if(getIsLockedOut())
         {
@@ -2795,7 +2805,7 @@ void Users::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[13])
+    if(dirtyFlag_[12])
     {
         if(getIsActive())
         {
@@ -2806,7 +2816,7 @@ void Users::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[14])
+    if(dirtyFlag_[13])
     {
         if(getCreatedAt())
         {
@@ -2817,7 +2827,7 @@ void Users::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[15])
+    if(dirtyFlag_[14])
     {
         if(getUpdatedAt())
         {
@@ -2828,7 +2838,7 @@ void Users::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[16])
+    if(dirtyFlag_[15])
     {
         if(getIsAdminUser())
         {
@@ -2839,7 +2849,7 @@ void Users::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[17])
+    if(dirtyFlag_[16])
     {
         if(getIsPartnerAdminUser())
         {
@@ -2850,7 +2860,7 @@ void Users::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[18])
+    if(dirtyFlag_[17])
     {
         if(getPartnerId())
         {
@@ -2861,7 +2871,7 @@ void Users::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[19])
+    if(dirtyFlag_[18])
     {
         if(getCredentialId())
         {
@@ -2872,7 +2882,7 @@ void Users::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[20])
+    if(dirtyFlag_[19])
     {
         if(getPublicKey())
         {
@@ -2883,7 +2893,7 @@ void Users::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[21])
+    if(dirtyFlag_[20])
     {
         if(getPublicKeyAlgorithm())
         {
@@ -2894,7 +2904,7 @@ void Users::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[22])
+    if(dirtyFlag_[21])
     {
         if(getSignCount())
         {
@@ -2905,7 +2915,7 @@ void Users::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[23])
+    if(dirtyFlag_[22])
     {
         if(getUserHandle())
         {
@@ -2916,7 +2926,7 @@ void Users::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[24])
+    if(dirtyFlag_[23])
     {
         if(getTransports())
         {
@@ -2927,7 +2937,7 @@ void Users::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[25])
+    if(dirtyFlag_[24])
     {
         if(getCredentialType())
         {
@@ -2938,7 +2948,7 @@ void Users::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[26])
+    if(dirtyFlag_[25])
     {
         if(getIsAffiliate())
         {
@@ -2949,7 +2959,7 @@ void Users::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[27])
+    if(dirtyFlag_[26])
     {
         if(getLastActive())
         {
@@ -2960,11 +2970,22 @@ void Users::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[28])
+    if(dirtyFlag_[27])
     {
         if(getRoles())
         {
             binder << getValueOfRoles();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[28])
+    {
+        if(getProfileImage())
+        {
+            binder << getValueOfProfileImage();
         }
         else
         {
@@ -3187,17 +3208,6 @@ void Users::updateArgs(drogon::orm::internal::SqlBinder &binder) const
     }
     if(dirtyFlag_[8])
     {
-        if(getProfileImageUrl())
-        {
-            binder << getValueOfProfileImageUrl();
-        }
-        else
-        {
-            binder << nullptr;
-        }
-    }
-    if(dirtyFlag_[9])
-    {
         if(getPhoneNumber())
         {
             binder << getValueOfPhoneNumber();
@@ -3207,7 +3217,7 @@ void Users::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[10])
+    if(dirtyFlag_[9])
     {
         if(getCountry())
         {
@@ -3218,7 +3228,7 @@ void Users::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[11])
+    if(dirtyFlag_[10])
     {
         if(getPhoneVerifiedAt())
         {
@@ -3229,7 +3239,7 @@ void Users::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[12])
+    if(dirtyFlag_[11])
     {
         if(getIsLockedOut())
         {
@@ -3240,7 +3250,7 @@ void Users::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[13])
+    if(dirtyFlag_[12])
     {
         if(getIsActive())
         {
@@ -3251,7 +3261,7 @@ void Users::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[14])
+    if(dirtyFlag_[13])
     {
         if(getCreatedAt())
         {
@@ -3262,7 +3272,7 @@ void Users::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[15])
+    if(dirtyFlag_[14])
     {
         if(getUpdatedAt())
         {
@@ -3273,7 +3283,7 @@ void Users::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[16])
+    if(dirtyFlag_[15])
     {
         if(getIsAdminUser())
         {
@@ -3284,7 +3294,7 @@ void Users::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[17])
+    if(dirtyFlag_[16])
     {
         if(getIsPartnerAdminUser())
         {
@@ -3295,7 +3305,7 @@ void Users::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[18])
+    if(dirtyFlag_[17])
     {
         if(getPartnerId())
         {
@@ -3306,7 +3316,7 @@ void Users::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[19])
+    if(dirtyFlag_[18])
     {
         if(getCredentialId())
         {
@@ -3317,7 +3327,7 @@ void Users::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[20])
+    if(dirtyFlag_[19])
     {
         if(getPublicKey())
         {
@@ -3328,7 +3338,7 @@ void Users::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[21])
+    if(dirtyFlag_[20])
     {
         if(getPublicKeyAlgorithm())
         {
@@ -3339,7 +3349,7 @@ void Users::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[22])
+    if(dirtyFlag_[21])
     {
         if(getSignCount())
         {
@@ -3350,7 +3360,7 @@ void Users::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[23])
+    if(dirtyFlag_[22])
     {
         if(getUserHandle())
         {
@@ -3361,7 +3371,7 @@ void Users::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[24])
+    if(dirtyFlag_[23])
     {
         if(getTransports())
         {
@@ -3372,7 +3382,7 @@ void Users::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[25])
+    if(dirtyFlag_[24])
     {
         if(getCredentialType())
         {
@@ -3383,7 +3393,7 @@ void Users::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[26])
+    if(dirtyFlag_[25])
     {
         if(getIsAffiliate())
         {
@@ -3394,7 +3404,7 @@ void Users::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[27])
+    if(dirtyFlag_[26])
     {
         if(getLastActive())
         {
@@ -3405,11 +3415,22 @@ void Users::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[28])
+    if(dirtyFlag_[27])
     {
         if(getRoles())
         {
             binder << getValueOfRoles();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[28])
+    {
+        if(getProfileImage())
+        {
+            binder << getValueOfProfileImage();
         }
         else
         {
@@ -3483,14 +3504,6 @@ Json::Value Users::toJson() const
     else
     {
         ret["last_active_device"]=Json::Value();
-    }
-    if(getProfileImageUrl())
-    {
-        ret["profile_image_url"]=getValueOfProfileImageUrl();
-    }
-    else
-    {
-        ret["profile_image_url"]=Json::Value();
     }
     if(getPhoneNumber())
     {
@@ -3651,6 +3664,14 @@ Json::Value Users::toJson() const
     else
     {
         ret["roles"]=Json::Value();
+    }
+    if(getProfileImage())
+    {
+        ret["profile_image"]=drogon::utils::base64Encode((const unsigned char *)getProfileImage()->data(),getProfileImage()->size());
+    }
+    else
+    {
+        ret["profile_image"]=Json::Value();
     }
     return ret;
 }
@@ -3756,9 +3777,9 @@ Json::Value Users::toMasqueradedJson(
         }
         if(!pMasqueradingVector[8].empty())
         {
-            if(getProfileImageUrl())
+            if(getPhoneNumber())
             {
-                ret[pMasqueradingVector[8]]=getValueOfProfileImageUrl();
+                ret[pMasqueradingVector[8]]=getValueOfPhoneNumber();
             }
             else
             {
@@ -3767,9 +3788,9 @@ Json::Value Users::toMasqueradedJson(
         }
         if(!pMasqueradingVector[9].empty())
         {
-            if(getPhoneNumber())
+            if(getCountry())
             {
-                ret[pMasqueradingVector[9]]=getValueOfPhoneNumber();
+                ret[pMasqueradingVector[9]]=getValueOfCountry();
             }
             else
             {
@@ -3778,9 +3799,9 @@ Json::Value Users::toMasqueradedJson(
         }
         if(!pMasqueradingVector[10].empty())
         {
-            if(getCountry())
+            if(getPhoneVerifiedAt())
             {
-                ret[pMasqueradingVector[10]]=getValueOfCountry();
+                ret[pMasqueradingVector[10]]=getPhoneVerifiedAt()->toDbStringLocal();
             }
             else
             {
@@ -3789,9 +3810,9 @@ Json::Value Users::toMasqueradedJson(
         }
         if(!pMasqueradingVector[11].empty())
         {
-            if(getPhoneVerifiedAt())
+            if(getIsLockedOut())
             {
-                ret[pMasqueradingVector[11]]=getPhoneVerifiedAt()->toDbStringLocal();
+                ret[pMasqueradingVector[11]]=getValueOfIsLockedOut();
             }
             else
             {
@@ -3800,9 +3821,9 @@ Json::Value Users::toMasqueradedJson(
         }
         if(!pMasqueradingVector[12].empty())
         {
-            if(getIsLockedOut())
+            if(getIsActive())
             {
-                ret[pMasqueradingVector[12]]=getValueOfIsLockedOut();
+                ret[pMasqueradingVector[12]]=getValueOfIsActive();
             }
             else
             {
@@ -3811,9 +3832,9 @@ Json::Value Users::toMasqueradedJson(
         }
         if(!pMasqueradingVector[13].empty())
         {
-            if(getIsActive())
+            if(getCreatedAt())
             {
-                ret[pMasqueradingVector[13]]=getValueOfIsActive();
+                ret[pMasqueradingVector[13]]=getCreatedAt()->toDbStringLocal();
             }
             else
             {
@@ -3822,9 +3843,9 @@ Json::Value Users::toMasqueradedJson(
         }
         if(!pMasqueradingVector[14].empty())
         {
-            if(getCreatedAt())
+            if(getUpdatedAt())
             {
-                ret[pMasqueradingVector[14]]=getCreatedAt()->toDbStringLocal();
+                ret[pMasqueradingVector[14]]=getUpdatedAt()->toDbStringLocal();
             }
             else
             {
@@ -3833,9 +3854,9 @@ Json::Value Users::toMasqueradedJson(
         }
         if(!pMasqueradingVector[15].empty())
         {
-            if(getUpdatedAt())
+            if(getIsAdminUser())
             {
-                ret[pMasqueradingVector[15]]=getUpdatedAt()->toDbStringLocal();
+                ret[pMasqueradingVector[15]]=getValueOfIsAdminUser();
             }
             else
             {
@@ -3844,9 +3865,9 @@ Json::Value Users::toMasqueradedJson(
         }
         if(!pMasqueradingVector[16].empty())
         {
-            if(getIsAdminUser())
+            if(getIsPartnerAdminUser())
             {
-                ret[pMasqueradingVector[16]]=getValueOfIsAdminUser();
+                ret[pMasqueradingVector[16]]=getValueOfIsPartnerAdminUser();
             }
             else
             {
@@ -3855,9 +3876,9 @@ Json::Value Users::toMasqueradedJson(
         }
         if(!pMasqueradingVector[17].empty())
         {
-            if(getIsPartnerAdminUser())
+            if(getPartnerId())
             {
-                ret[pMasqueradingVector[17]]=getValueOfIsPartnerAdminUser();
+                ret[pMasqueradingVector[17]]=getValueOfPartnerId();
             }
             else
             {
@@ -3866,9 +3887,9 @@ Json::Value Users::toMasqueradedJson(
         }
         if(!pMasqueradingVector[18].empty())
         {
-            if(getPartnerId())
+            if(getCredentialId())
             {
-                ret[pMasqueradingVector[18]]=getValueOfPartnerId();
+                ret[pMasqueradingVector[18]]=drogon::utils::base64Encode((const unsigned char *)getCredentialId()->data(),getCredentialId()->size());
             }
             else
             {
@@ -3877,9 +3898,9 @@ Json::Value Users::toMasqueradedJson(
         }
         if(!pMasqueradingVector[19].empty())
         {
-            if(getCredentialId())
+            if(getPublicKey())
             {
-                ret[pMasqueradingVector[19]]=drogon::utils::base64Encode((const unsigned char *)getCredentialId()->data(),getCredentialId()->size());
+                ret[pMasqueradingVector[19]]=drogon::utils::base64Encode((const unsigned char *)getPublicKey()->data(),getPublicKey()->size());
             }
             else
             {
@@ -3888,9 +3909,9 @@ Json::Value Users::toMasqueradedJson(
         }
         if(!pMasqueradingVector[20].empty())
         {
-            if(getPublicKey())
+            if(getPublicKeyAlgorithm())
             {
-                ret[pMasqueradingVector[20]]=drogon::utils::base64Encode((const unsigned char *)getPublicKey()->data(),getPublicKey()->size());
+                ret[pMasqueradingVector[20]]=getValueOfPublicKeyAlgorithm();
             }
             else
             {
@@ -3899,9 +3920,9 @@ Json::Value Users::toMasqueradedJson(
         }
         if(!pMasqueradingVector[21].empty())
         {
-            if(getPublicKeyAlgorithm())
+            if(getSignCount())
             {
-                ret[pMasqueradingVector[21]]=getValueOfPublicKeyAlgorithm();
+                ret[pMasqueradingVector[21]]=(Json::Int64)getValueOfSignCount();
             }
             else
             {
@@ -3910,9 +3931,9 @@ Json::Value Users::toMasqueradedJson(
         }
         if(!pMasqueradingVector[22].empty())
         {
-            if(getSignCount())
+            if(getUserHandle())
             {
-                ret[pMasqueradingVector[22]]=(Json::Int64)getValueOfSignCount();
+                ret[pMasqueradingVector[22]]=drogon::utils::base64Encode((const unsigned char *)getUserHandle()->data(),getUserHandle()->size());
             }
             else
             {
@@ -3921,9 +3942,9 @@ Json::Value Users::toMasqueradedJson(
         }
         if(!pMasqueradingVector[23].empty())
         {
-            if(getUserHandle())
+            if(getTransports())
             {
-                ret[pMasqueradingVector[23]]=drogon::utils::base64Encode((const unsigned char *)getUserHandle()->data(),getUserHandle()->size());
+                ret[pMasqueradingVector[23]]=getValueOfTransports();
             }
             else
             {
@@ -3932,9 +3953,9 @@ Json::Value Users::toMasqueradedJson(
         }
         if(!pMasqueradingVector[24].empty())
         {
-            if(getTransports())
+            if(getCredentialType())
             {
-                ret[pMasqueradingVector[24]]=getValueOfTransports();
+                ret[pMasqueradingVector[24]]=getValueOfCredentialType();
             }
             else
             {
@@ -3943,9 +3964,9 @@ Json::Value Users::toMasqueradedJson(
         }
         if(!pMasqueradingVector[25].empty())
         {
-            if(getCredentialType())
+            if(getIsAffiliate())
             {
-                ret[pMasqueradingVector[25]]=getValueOfCredentialType();
+                ret[pMasqueradingVector[25]]=getValueOfIsAffiliate();
             }
             else
             {
@@ -3954,9 +3975,9 @@ Json::Value Users::toMasqueradedJson(
         }
         if(!pMasqueradingVector[26].empty())
         {
-            if(getIsAffiliate())
+            if(getLastActive())
             {
-                ret[pMasqueradingVector[26]]=getValueOfIsAffiliate();
+                ret[pMasqueradingVector[26]]=getLastActive()->toDbStringLocal();
             }
             else
             {
@@ -3965,9 +3986,9 @@ Json::Value Users::toMasqueradedJson(
         }
         if(!pMasqueradingVector[27].empty())
         {
-            if(getLastActive())
+            if(getRoles())
             {
-                ret[pMasqueradingVector[27]]=getLastActive()->toDbStringLocal();
+                ret[pMasqueradingVector[27]]=getValueOfRoles();
             }
             else
             {
@@ -3976,9 +3997,9 @@ Json::Value Users::toMasqueradedJson(
         }
         if(!pMasqueradingVector[28].empty())
         {
-            if(getRoles())
+            if(getProfileImage())
             {
-                ret[pMasqueradingVector[28]]=getValueOfRoles();
+                ret[pMasqueradingVector[28]]=drogon::utils::base64Encode((const unsigned char *)getProfileImage()->data(),getProfileImage()->size());
             }
             else
             {
@@ -4051,14 +4072,6 @@ Json::Value Users::toMasqueradedJson(
     else
     {
         ret["last_active_device"]=Json::Value();
-    }
-    if(getProfileImageUrl())
-    {
-        ret["profile_image_url"]=getValueOfProfileImageUrl();
-    }
-    else
-    {
-        ret["profile_image_url"]=Json::Value();
     }
     if(getPhoneNumber())
     {
@@ -4220,6 +4233,14 @@ Json::Value Users::toMasqueradedJson(
     {
         ret["roles"]=Json::Value();
     }
+    if(getProfileImage())
+    {
+        ret["profile_image"]=drogon::utils::base64Encode((const unsigned char *)getProfileImage()->data(),getProfileImage()->size());
+    }
+    else
+    {
+        ret["profile_image"]=Json::Value();
+    }
     return ret;
 }
 
@@ -4270,39 +4291,34 @@ bool Users::validateJsonForCreation(const Json::Value &pJson, std::string &err)
         if(!validJsonOfField(7, "last_active_device", pJson["last_active_device"], err, true))
             return false;
     }
-    if(pJson.isMember("profile_image_url"))
-    {
-        if(!validJsonOfField(8, "profile_image_url", pJson["profile_image_url"], err, true))
-            return false;
-    }
     if(pJson.isMember("phone_number"))
     {
-        if(!validJsonOfField(9, "phone_number", pJson["phone_number"], err, true))
+        if(!validJsonOfField(8, "phone_number", pJson["phone_number"], err, true))
             return false;
     }
     if(pJson.isMember("country"))
     {
-        if(!validJsonOfField(10, "country", pJson["country"], err, true))
+        if(!validJsonOfField(9, "country", pJson["country"], err, true))
             return false;
     }
     if(pJson.isMember("phone_verified_at"))
     {
-        if(!validJsonOfField(11, "phone_verified_at", pJson["phone_verified_at"], err, true))
+        if(!validJsonOfField(10, "phone_verified_at", pJson["phone_verified_at"], err, true))
             return false;
     }
     if(pJson.isMember("is_locked_out"))
     {
-        if(!validJsonOfField(12, "is_locked_out", pJson["is_locked_out"], err, true))
+        if(!validJsonOfField(11, "is_locked_out", pJson["is_locked_out"], err, true))
             return false;
     }
     if(pJson.isMember("is_active"))
     {
-        if(!validJsonOfField(13, "is_active", pJson["is_active"], err, true))
+        if(!validJsonOfField(12, "is_active", pJson["is_active"], err, true))
             return false;
     }
     if(pJson.isMember("created_at"))
     {
-        if(!validJsonOfField(14, "created_at", pJson["created_at"], err, true))
+        if(!validJsonOfField(13, "created_at", pJson["created_at"], err, true))
             return false;
     }
     else
@@ -4312,72 +4328,77 @@ bool Users::validateJsonForCreation(const Json::Value &pJson, std::string &err)
     }
     if(pJson.isMember("updated_at"))
     {
-        if(!validJsonOfField(15, "updated_at", pJson["updated_at"], err, true))
+        if(!validJsonOfField(14, "updated_at", pJson["updated_at"], err, true))
             return false;
     }
     if(pJson.isMember("is_admin_user"))
     {
-        if(!validJsonOfField(16, "is_admin_user", pJson["is_admin_user"], err, true))
+        if(!validJsonOfField(15, "is_admin_user", pJson["is_admin_user"], err, true))
             return false;
     }
     if(pJson.isMember("is_partner_admin_user"))
     {
-        if(!validJsonOfField(17, "is_partner_admin_user", pJson["is_partner_admin_user"], err, true))
+        if(!validJsonOfField(16, "is_partner_admin_user", pJson["is_partner_admin_user"], err, true))
             return false;
     }
     if(pJson.isMember("partner_id"))
     {
-        if(!validJsonOfField(18, "partner_id", pJson["partner_id"], err, true))
+        if(!validJsonOfField(17, "partner_id", pJson["partner_id"], err, true))
             return false;
     }
     if(pJson.isMember("credential_id"))
     {
-        if(!validJsonOfField(19, "credential_id", pJson["credential_id"], err, true))
+        if(!validJsonOfField(18, "credential_id", pJson["credential_id"], err, true))
             return false;
     }
     if(pJson.isMember("public_key"))
     {
-        if(!validJsonOfField(20, "public_key", pJson["public_key"], err, true))
+        if(!validJsonOfField(19, "public_key", pJson["public_key"], err, true))
             return false;
     }
     if(pJson.isMember("public_key_algorithm"))
     {
-        if(!validJsonOfField(21, "public_key_algorithm", pJson["public_key_algorithm"], err, true))
+        if(!validJsonOfField(20, "public_key_algorithm", pJson["public_key_algorithm"], err, true))
             return false;
     }
     if(pJson.isMember("sign_count"))
     {
-        if(!validJsonOfField(22, "sign_count", pJson["sign_count"], err, true))
+        if(!validJsonOfField(21, "sign_count", pJson["sign_count"], err, true))
             return false;
     }
     if(pJson.isMember("user_handle"))
     {
-        if(!validJsonOfField(23, "user_handle", pJson["user_handle"], err, true))
+        if(!validJsonOfField(22, "user_handle", pJson["user_handle"], err, true))
             return false;
     }
     if(pJson.isMember("transports"))
     {
-        if(!validJsonOfField(24, "transports", pJson["transports"], err, true))
+        if(!validJsonOfField(23, "transports", pJson["transports"], err, true))
             return false;
     }
     if(pJson.isMember("credential_type"))
     {
-        if(!validJsonOfField(25, "credential_type", pJson["credential_type"], err, true))
+        if(!validJsonOfField(24, "credential_type", pJson["credential_type"], err, true))
             return false;
     }
     if(pJson.isMember("is_affiliate"))
     {
-        if(!validJsonOfField(26, "is_affiliate", pJson["is_affiliate"], err, true))
+        if(!validJsonOfField(25, "is_affiliate", pJson["is_affiliate"], err, true))
             return false;
     }
     if(pJson.isMember("last_active"))
     {
-        if(!validJsonOfField(27, "last_active", pJson["last_active"], err, true))
+        if(!validJsonOfField(26, "last_active", pJson["last_active"], err, true))
             return false;
     }
     if(pJson.isMember("roles"))
     {
-        if(!validJsonOfField(28, "roles", pJson["roles"], err, true))
+        if(!validJsonOfField(27, "roles", pJson["roles"], err, true))
+            return false;
+    }
+    if(pJson.isMember("profile_image"))
+    {
+        if(!validJsonOfField(28, "profile_image", pJson["profile_image"], err, true))
             return false;
     }
     return true;
@@ -4508,6 +4529,11 @@ bool Users::validateMasqueradedJsonForCreation(const Json::Value &pJson,
               if(!validJsonOfField(13, pMasqueradingVector[13], pJson[pMasqueradingVector[13]], err, true))
                   return false;
           }
+        else
+        {
+            err="The " + pMasqueradingVector[13] + " column cannot be null";
+            return false;
+        }
       }
       if(!pMasqueradingVector[14].empty())
       {
@@ -4516,11 +4542,6 @@ bool Users::validateMasqueradedJsonForCreation(const Json::Value &pJson,
               if(!validJsonOfField(14, pMasqueradingVector[14], pJson[pMasqueradingVector[14]], err, true))
                   return false;
           }
-        else
-        {
-            err="The " + pMasqueradingVector[14] + " column cannot be null";
-            return false;
-        }
       }
       if(!pMasqueradingVector[15].empty())
       {
@@ -4689,109 +4710,109 @@ bool Users::validateJsonForUpdate(const Json::Value &pJson, std::string &err)
         if(!validJsonOfField(7, "last_active_device", pJson["last_active_device"], err, false))
             return false;
     }
-    if(pJson.isMember("profile_image_url"))
-    {
-        if(!validJsonOfField(8, "profile_image_url", pJson["profile_image_url"], err, false))
-            return false;
-    }
     if(pJson.isMember("phone_number"))
     {
-        if(!validJsonOfField(9, "phone_number", pJson["phone_number"], err, false))
+        if(!validJsonOfField(8, "phone_number", pJson["phone_number"], err, false))
             return false;
     }
     if(pJson.isMember("country"))
     {
-        if(!validJsonOfField(10, "country", pJson["country"], err, false))
+        if(!validJsonOfField(9, "country", pJson["country"], err, false))
             return false;
     }
     if(pJson.isMember("phone_verified_at"))
     {
-        if(!validJsonOfField(11, "phone_verified_at", pJson["phone_verified_at"], err, false))
+        if(!validJsonOfField(10, "phone_verified_at", pJson["phone_verified_at"], err, false))
             return false;
     }
     if(pJson.isMember("is_locked_out"))
     {
-        if(!validJsonOfField(12, "is_locked_out", pJson["is_locked_out"], err, false))
+        if(!validJsonOfField(11, "is_locked_out", pJson["is_locked_out"], err, false))
             return false;
     }
     if(pJson.isMember("is_active"))
     {
-        if(!validJsonOfField(13, "is_active", pJson["is_active"], err, false))
+        if(!validJsonOfField(12, "is_active", pJson["is_active"], err, false))
             return false;
     }
     if(pJson.isMember("created_at"))
     {
-        if(!validJsonOfField(14, "created_at", pJson["created_at"], err, false))
+        if(!validJsonOfField(13, "created_at", pJson["created_at"], err, false))
             return false;
     }
     if(pJson.isMember("updated_at"))
     {
-        if(!validJsonOfField(15, "updated_at", pJson["updated_at"], err, false))
+        if(!validJsonOfField(14, "updated_at", pJson["updated_at"], err, false))
             return false;
     }
     if(pJson.isMember("is_admin_user"))
     {
-        if(!validJsonOfField(16, "is_admin_user", pJson["is_admin_user"], err, false))
+        if(!validJsonOfField(15, "is_admin_user", pJson["is_admin_user"], err, false))
             return false;
     }
     if(pJson.isMember("is_partner_admin_user"))
     {
-        if(!validJsonOfField(17, "is_partner_admin_user", pJson["is_partner_admin_user"], err, false))
+        if(!validJsonOfField(16, "is_partner_admin_user", pJson["is_partner_admin_user"], err, false))
             return false;
     }
     if(pJson.isMember("partner_id"))
     {
-        if(!validJsonOfField(18, "partner_id", pJson["partner_id"], err, false))
+        if(!validJsonOfField(17, "partner_id", pJson["partner_id"], err, false))
             return false;
     }
     if(pJson.isMember("credential_id"))
     {
-        if(!validJsonOfField(19, "credential_id", pJson["credential_id"], err, false))
+        if(!validJsonOfField(18, "credential_id", pJson["credential_id"], err, false))
             return false;
     }
     if(pJson.isMember("public_key"))
     {
-        if(!validJsonOfField(20, "public_key", pJson["public_key"], err, false))
+        if(!validJsonOfField(19, "public_key", pJson["public_key"], err, false))
             return false;
     }
     if(pJson.isMember("public_key_algorithm"))
     {
-        if(!validJsonOfField(21, "public_key_algorithm", pJson["public_key_algorithm"], err, false))
+        if(!validJsonOfField(20, "public_key_algorithm", pJson["public_key_algorithm"], err, false))
             return false;
     }
     if(pJson.isMember("sign_count"))
     {
-        if(!validJsonOfField(22, "sign_count", pJson["sign_count"], err, false))
+        if(!validJsonOfField(21, "sign_count", pJson["sign_count"], err, false))
             return false;
     }
     if(pJson.isMember("user_handle"))
     {
-        if(!validJsonOfField(23, "user_handle", pJson["user_handle"], err, false))
+        if(!validJsonOfField(22, "user_handle", pJson["user_handle"], err, false))
             return false;
     }
     if(pJson.isMember("transports"))
     {
-        if(!validJsonOfField(24, "transports", pJson["transports"], err, false))
+        if(!validJsonOfField(23, "transports", pJson["transports"], err, false))
             return false;
     }
     if(pJson.isMember("credential_type"))
     {
-        if(!validJsonOfField(25, "credential_type", pJson["credential_type"], err, false))
+        if(!validJsonOfField(24, "credential_type", pJson["credential_type"], err, false))
             return false;
     }
     if(pJson.isMember("is_affiliate"))
     {
-        if(!validJsonOfField(26, "is_affiliate", pJson["is_affiliate"], err, false))
+        if(!validJsonOfField(25, "is_affiliate", pJson["is_affiliate"], err, false))
             return false;
     }
     if(pJson.isMember("last_active"))
     {
-        if(!validJsonOfField(27, "last_active", pJson["last_active"], err, false))
+        if(!validJsonOfField(26, "last_active", pJson["last_active"], err, false))
             return false;
     }
     if(pJson.isMember("roles"))
     {
-        if(!validJsonOfField(28, "roles", pJson["roles"], err, false))
+        if(!validJsonOfField(27, "roles", pJson["roles"], err, false))
+            return false;
+    }
+    if(pJson.isMember("profile_image"))
+    {
+        if(!validJsonOfField(28, "profile_image", pJson["profile_image"], err, false))
             return false;
     }
     return true;
@@ -5150,21 +5171,14 @@ bool Users::validJsonOfField(size_t index,
                 err="Type error in the "+fieldName+" field";
                 return false;
             }
-            if(pJson.isString() && std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>{}
-                .from_bytes(pJson.asCString()).size() > 255)
-            {
-                err="String length exceeds limit for the " +
-                    fieldName +
-                    " field (the maximum value is 255)";
-                return false;
-            }
             break;
         case 11:
             if(pJson.isNull())
             {
-                return true;
+                err="The " + fieldName + " column cannot be null";
+                return false;
             }
-            if(!pJson.isString())
+            if(!pJson.isBool())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;
@@ -5188,7 +5202,7 @@ bool Users::validJsonOfField(size_t index,
                 err="The " + fieldName + " column cannot be null";
                 return false;
             }
-            if(!pJson.isBool())
+            if(!pJson.isString())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;
@@ -5197,8 +5211,7 @@ bool Users::validJsonOfField(size_t index,
         case 14:
             if(pJson.isNull())
             {
-                err="The " + fieldName + " column cannot be null";
-                return false;
+                return true;
             }
             if(!pJson.isString())
             {
@@ -5209,9 +5222,10 @@ bool Users::validJsonOfField(size_t index,
         case 15:
             if(pJson.isNull())
             {
-                return true;
+                err="The " + fieldName + " column cannot be null";
+                return false;
             }
-            if(!pJson.isString())
+            if(!pJson.isBool())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;
@@ -5232,10 +5246,9 @@ bool Users::validJsonOfField(size_t index,
         case 17:
             if(pJson.isNull())
             {
-                err="The " + fieldName + " column cannot be null";
-                return false;
+                return true;
             }
-            if(!pJson.isBool())
+            if(!pJson.isString())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;
@@ -5268,7 +5281,7 @@ bool Users::validJsonOfField(size_t index,
             {
                 return true;
             }
-            if(!pJson.isString())
+            if(!pJson.isInt())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;
@@ -5279,7 +5292,7 @@ bool Users::validJsonOfField(size_t index,
             {
                 return true;
             }
-            if(!pJson.isInt())
+            if(!pJson.isInt64())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;
@@ -5290,7 +5303,7 @@ bool Users::validJsonOfField(size_t index,
             {
                 return true;
             }
-            if(!pJson.isInt64())
+            if(!pJson.isString())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;
@@ -5323,7 +5336,7 @@ bool Users::validJsonOfField(size_t index,
             {
                 return true;
             }
-            if(!pJson.isString())
+            if(!pJson.isBool())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;
@@ -5334,7 +5347,7 @@ bool Users::validJsonOfField(size_t index,
             {
                 return true;
             }
-            if(!pJson.isBool())
+            if(!pJson.isString())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;

@@ -23,6 +23,8 @@ const std::string UserSubscriptions::Cols::_subscription_plan_description = "\"s
 const std::string UserSubscriptions::Cols::_email = "\"email\"";
 const std::string UserSubscriptions::Cols::_newspaper_entitlements = "\"newspaper_entitlements\"";
 const std::string UserSubscriptions::Cols::_is_active = "\"is_active\"";
+const std::string UserSubscriptions::Cols::_start_date = "\"start_date\"";
+const std::string UserSubscriptions::Cols::_end_date = "\"end_date\"";
 const std::string UserSubscriptions::Cols::_created_at = "\"created_at\"";
 const std::string UserSubscriptions::Cols::_updated_at = "\"updated_at\"";
 const std::string UserSubscriptions::primaryKeyName = "id";
@@ -33,13 +35,15 @@ const std::vector<typename UserSubscriptions::MetaData> UserSubscriptions::metaD
 {"id","std::string","uuid",0,0,1,1},
 {"subscription_identifier","std::string","character varying",50,0,0,1},
 {"user_id","std::string","uuid",0,0,0,1},
-{"partner_id","std::string","uuid",0,0,0,0},
-{"subscription_plan_id","std::string","uuid",0,0,0,0},
+{"partner_id","std::string","uuid",0,0,0,1},
+{"subscription_plan_id","std::string","uuid",0,0,0,1},
 {"billing_cycle","std::string","character varying",25,0,0,0},
-{"subscription_plan_description","std::string","character varying",255,0,0,0},
+{"subscription_plan_description","std::string","character varying",255,0,0,1},
 {"email","std::string","character varying",255,0,0,0},
 {"newspaper_entitlements","std::string","jsonb",0,0,0,0},
 {"is_active","bool","boolean",1,0,0,1},
+{"start_date","::trantor::Date","timestamp without time zone",0,0,0,1},
+{"end_date","::trantor::Date","timestamp without time zone",0,0,0,1},
 {"created_at","::trantor::Date","timestamp without time zone",0,0,0,0},
 {"updated_at","::trantor::Date","timestamp without time zone",0,0,0,0}
 };
@@ -92,6 +96,50 @@ UserSubscriptions::UserSubscriptions(const Row &r, const ssize_t indexOffset) no
         {
             isActive_=std::make_shared<bool>(r["is_active"].as<bool>());
         }
+        if(!r["start_date"].isNull())
+        {
+            auto timeStr = r["start_date"].as<std::string>();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                startDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+        if(!r["end_date"].isNull())
+        {
+            auto timeStr = r["end_date"].as<std::string>();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                endDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
         if(!r["created_at"].isNull())
         {
             auto timeStr = r["created_at"].as<std::string>();
@@ -140,7 +188,7 @@ UserSubscriptions::UserSubscriptions(const Row &r, const ssize_t indexOffset) no
     else
     {
         size_t offset = (size_t)indexOffset;
-        if(offset + 12 > r.size())
+        if(offset + 14 > r.size())
         {
             LOG_FATAL << "Invalid SQL result for this model";
             return;
@@ -216,10 +264,56 @@ UserSubscriptions::UserSubscriptions(const Row &r, const ssize_t indexOffset) no
                     }
                     decimalNum = (size_t)atol(decimals.c_str());
                 }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+                startDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
         index = offset + 11;
+        if(!r[index].isNull())
+        {
+            auto timeStr = r[index].as<std::string>();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                endDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+        index = offset + 12;
+        if(!r[index].isNull())
+        {
+            auto timeStr = r[index].as<std::string>();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+        index = offset + 13;
         if(!r[index].isNull())
         {
             auto timeStr = r[index].as<std::string>();
@@ -248,7 +342,7 @@ UserSubscriptions::UserSubscriptions(const Row &r, const ssize_t indexOffset) no
 
 UserSubscriptions::UserSubscriptions(const Json::Value &pJson, const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 12)
+    if(pMasqueradingVector.size() != 14)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -355,7 +449,7 @@ UserSubscriptions::UserSubscriptions(const Json::Value &pJson, const std::vector
                     }
                     decimalNum = (size_t)atol(decimals.c_str());
                 }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+                startDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
     }
@@ -365,6 +459,58 @@ UserSubscriptions::UserSubscriptions(const Json::Value &pJson, const std::vector
         if(!pJson[pMasqueradingVector[11]].isNull())
         {
             auto timeStr = pJson[pMasqueradingVector[11]].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                endDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+    }
+    if(!pMasqueradingVector[12].empty() && pJson.isMember(pMasqueradingVector[12]))
+    {
+        dirtyFlag_[12] = true;
+        if(!pJson[pMasqueradingVector[12]].isNull())
+        {
+            auto timeStr = pJson[pMasqueradingVector[12]].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+    }
+    if(!pMasqueradingVector[13].empty() && pJson.isMember(pMasqueradingVector[13]))
+    {
+        dirtyFlag_[13] = true;
+        if(!pJson[pMasqueradingVector[13]].isNull())
+        {
+            auto timeStr = pJson[pMasqueradingVector[13]].asString();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -469,9 +615,61 @@ UserSubscriptions::UserSubscriptions(const Json::Value &pJson) noexcept(false)
             isActive_=std::make_shared<bool>(pJson["is_active"].asBool());
         }
     }
-    if(pJson.isMember("created_at"))
+    if(pJson.isMember("start_date"))
     {
         dirtyFlag_[10]=true;
+        if(!pJson["start_date"].isNull())
+        {
+            auto timeStr = pJson["start_date"].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                startDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+    }
+    if(pJson.isMember("end_date"))
+    {
+        dirtyFlag_[11]=true;
+        if(!pJson["end_date"].isNull())
+        {
+            auto timeStr = pJson["end_date"].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                endDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+    }
+    if(pJson.isMember("created_at"))
+    {
+        dirtyFlag_[12]=true;
         if(!pJson["created_at"].isNull())
         {
             auto timeStr = pJson["created_at"].asString();
@@ -497,7 +695,7 @@ UserSubscriptions::UserSubscriptions(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("updated_at"))
     {
-        dirtyFlag_[11]=true;
+        dirtyFlag_[13]=true;
         if(!pJson["updated_at"].isNull())
         {
             auto timeStr = pJson["updated_at"].asString();
@@ -526,7 +724,7 @@ UserSubscriptions::UserSubscriptions(const Json::Value &pJson) noexcept(false)
 void UserSubscriptions::updateByMasqueradedJson(const Json::Value &pJson,
                                             const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 12)
+    if(pMasqueradingVector.size() != 14)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -632,7 +830,7 @@ void UserSubscriptions::updateByMasqueradedJson(const Json::Value &pJson,
                     }
                     decimalNum = (size_t)atol(decimals.c_str());
                 }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+                startDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
     }
@@ -642,6 +840,58 @@ void UserSubscriptions::updateByMasqueradedJson(const Json::Value &pJson,
         if(!pJson[pMasqueradingVector[11]].isNull())
         {
             auto timeStr = pJson[pMasqueradingVector[11]].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                endDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+    }
+    if(!pMasqueradingVector[12].empty() && pJson.isMember(pMasqueradingVector[12]))
+    {
+        dirtyFlag_[12] = true;
+        if(!pJson[pMasqueradingVector[12]].isNull())
+        {
+            auto timeStr = pJson[pMasqueradingVector[12]].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+    }
+    if(!pMasqueradingVector[13].empty() && pJson.isMember(pMasqueradingVector[13]))
+    {
+        dirtyFlag_[13] = true;
+        if(!pJson[pMasqueradingVector[13]].isNull())
+        {
+            auto timeStr = pJson[pMasqueradingVector[13]].asString();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -745,9 +995,61 @@ void UserSubscriptions::updateByJson(const Json::Value &pJson) noexcept(false)
             isActive_=std::make_shared<bool>(pJson["is_active"].asBool());
         }
     }
-    if(pJson.isMember("created_at"))
+    if(pJson.isMember("start_date"))
     {
         dirtyFlag_[10] = true;
+        if(!pJson["start_date"].isNull())
+        {
+            auto timeStr = pJson["start_date"].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                startDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+    }
+    if(pJson.isMember("end_date"))
+    {
+        dirtyFlag_[11] = true;
+        if(!pJson["end_date"].isNull())
+        {
+            auto timeStr = pJson["end_date"].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                endDate_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+    }
+    if(pJson.isMember("created_at"))
+    {
+        dirtyFlag_[12] = true;
         if(!pJson["created_at"].isNull())
         {
             auto timeStr = pJson["created_at"].asString();
@@ -773,7 +1075,7 @@ void UserSubscriptions::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("updated_at"))
     {
-        dirtyFlag_[11] = true;
+        dirtyFlag_[13] = true;
         if(!pJson["updated_at"].isNull())
         {
             auto timeStr = pJson["updated_at"].asString();
@@ -891,11 +1193,6 @@ void UserSubscriptions::setPartnerId(std::string &&pPartnerId) noexcept
     partnerId_ = std::make_shared<std::string>(std::move(pPartnerId));
     dirtyFlag_[3] = true;
 }
-void UserSubscriptions::setPartnerIdToNull() noexcept
-{
-    partnerId_.reset();
-    dirtyFlag_[3] = true;
-}
 
 const std::string &UserSubscriptions::getValueOfSubscriptionPlanId() const noexcept
 {
@@ -916,11 +1213,6 @@ void UserSubscriptions::setSubscriptionPlanId(const std::string &pSubscriptionPl
 void UserSubscriptions::setSubscriptionPlanId(std::string &&pSubscriptionPlanId) noexcept
 {
     subscriptionPlanId_ = std::make_shared<std::string>(std::move(pSubscriptionPlanId));
-    dirtyFlag_[4] = true;
-}
-void UserSubscriptions::setSubscriptionPlanIdToNull() noexcept
-{
-    subscriptionPlanId_.reset();
     dirtyFlag_[4] = true;
 }
 
@@ -970,11 +1262,6 @@ void UserSubscriptions::setSubscriptionPlanDescription(const std::string &pSubsc
 void UserSubscriptions::setSubscriptionPlanDescription(std::string &&pSubscriptionPlanDescription) noexcept
 {
     subscriptionPlanDescription_ = std::make_shared<std::string>(std::move(pSubscriptionPlanDescription));
-    dirtyFlag_[6] = true;
-}
-void UserSubscriptions::setSubscriptionPlanDescriptionToNull() noexcept
-{
-    subscriptionPlanDescription_.reset();
     dirtyFlag_[6] = true;
 }
 
@@ -1049,6 +1336,40 @@ void UserSubscriptions::setIsActive(const bool &pIsActive) noexcept
     dirtyFlag_[9] = true;
 }
 
+const ::trantor::Date &UserSubscriptions::getValueOfStartDate() const noexcept
+{
+    static const ::trantor::Date defaultValue = ::trantor::Date();
+    if(startDate_)
+        return *startDate_;
+    return defaultValue;
+}
+const std::shared_ptr<::trantor::Date> &UserSubscriptions::getStartDate() const noexcept
+{
+    return startDate_;
+}
+void UserSubscriptions::setStartDate(const ::trantor::Date &pStartDate) noexcept
+{
+    startDate_ = std::make_shared<::trantor::Date>(pStartDate);
+    dirtyFlag_[10] = true;
+}
+
+const ::trantor::Date &UserSubscriptions::getValueOfEndDate() const noexcept
+{
+    static const ::trantor::Date defaultValue = ::trantor::Date();
+    if(endDate_)
+        return *endDate_;
+    return defaultValue;
+}
+const std::shared_ptr<::trantor::Date> &UserSubscriptions::getEndDate() const noexcept
+{
+    return endDate_;
+}
+void UserSubscriptions::setEndDate(const ::trantor::Date &pEndDate) noexcept
+{
+    endDate_ = std::make_shared<::trantor::Date>(pEndDate);
+    dirtyFlag_[11] = true;
+}
+
 const ::trantor::Date &UserSubscriptions::getValueOfCreatedAt() const noexcept
 {
     static const ::trantor::Date defaultValue = ::trantor::Date();
@@ -1063,12 +1384,12 @@ const std::shared_ptr<::trantor::Date> &UserSubscriptions::getCreatedAt() const 
 void UserSubscriptions::setCreatedAt(const ::trantor::Date &pCreatedAt) noexcept
 {
     createdAt_ = std::make_shared<::trantor::Date>(pCreatedAt);
-    dirtyFlag_[10] = true;
+    dirtyFlag_[12] = true;
 }
 void UserSubscriptions::setCreatedAtToNull() noexcept
 {
     createdAt_.reset();
-    dirtyFlag_[10] = true;
+    dirtyFlag_[12] = true;
 }
 
 const ::trantor::Date &UserSubscriptions::getValueOfUpdatedAt() const noexcept
@@ -1085,12 +1406,12 @@ const std::shared_ptr<::trantor::Date> &UserSubscriptions::getUpdatedAt() const 
 void UserSubscriptions::setUpdatedAt(const ::trantor::Date &pUpdatedAt) noexcept
 {
     updatedAt_ = std::make_shared<::trantor::Date>(pUpdatedAt);
-    dirtyFlag_[11] = true;
+    dirtyFlag_[13] = true;
 }
 void UserSubscriptions::setUpdatedAtToNull() noexcept
 {
     updatedAt_.reset();
-    dirtyFlag_[11] = true;
+    dirtyFlag_[13] = true;
 }
 
 void UserSubscriptions::updateId(const uint64_t id)
@@ -1110,6 +1431,8 @@ const std::vector<std::string> &UserSubscriptions::insertColumns() noexcept
         "email",
         "newspaper_entitlements",
         "is_active",
+        "start_date",
+        "end_date",
         "created_at",
         "updated_at"
     };
@@ -1230,6 +1553,28 @@ void UserSubscriptions::outputArgs(drogon::orm::internal::SqlBinder &binder) con
     }
     if(dirtyFlag_[10])
     {
+        if(getStartDate())
+        {
+            binder << getValueOfStartDate();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[11])
+    {
+        if(getEndDate())
+        {
+            binder << getValueOfEndDate();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[12])
+    {
         if(getCreatedAt())
         {
             binder << getValueOfCreatedAt();
@@ -1239,7 +1584,7 @@ void UserSubscriptions::outputArgs(drogon::orm::internal::SqlBinder &binder) con
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[11])
+    if(dirtyFlag_[13])
     {
         if(getUpdatedAt())
         {
@@ -1302,6 +1647,14 @@ const std::vector<std::string> UserSubscriptions::updateColumns() const
     if(dirtyFlag_[11])
     {
         ret.push_back(getColumnName(11));
+    }
+    if(dirtyFlag_[12])
+    {
+        ret.push_back(getColumnName(12));
+    }
+    if(dirtyFlag_[13])
+    {
+        ret.push_back(getColumnName(13));
     }
     return ret;
 }
@@ -1420,6 +1773,28 @@ void UserSubscriptions::updateArgs(drogon::orm::internal::SqlBinder &binder) con
     }
     if(dirtyFlag_[10])
     {
+        if(getStartDate())
+        {
+            binder << getValueOfStartDate();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[11])
+    {
+        if(getEndDate())
+        {
+            binder << getValueOfEndDate();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[12])
+    {
         if(getCreatedAt())
         {
             binder << getValueOfCreatedAt();
@@ -1429,7 +1804,7 @@ void UserSubscriptions::updateArgs(drogon::orm::internal::SqlBinder &binder) con
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[11])
+    if(dirtyFlag_[13])
     {
         if(getUpdatedAt())
         {
@@ -1524,6 +1899,22 @@ Json::Value UserSubscriptions::toJson() const
     {
         ret["is_active"]=Json::Value();
     }
+    if(getStartDate())
+    {
+        ret["start_date"]=getStartDate()->toDbStringLocal();
+    }
+    else
+    {
+        ret["start_date"]=Json::Value();
+    }
+    if(getEndDate())
+    {
+        ret["end_date"]=getEndDate()->toDbStringLocal();
+    }
+    else
+    {
+        ret["end_date"]=Json::Value();
+    }
     if(getCreatedAt())
     {
         ret["created_at"]=getCreatedAt()->toDbStringLocal();
@@ -1552,7 +1943,7 @@ Json::Value UserSubscriptions::toMasqueradedJson(
     const std::vector<std::string> &pMasqueradingVector) const
 {
     Json::Value ret;
-    if(pMasqueradingVector.size() == 12)
+    if(pMasqueradingVector.size() == 14)
     {
         if(!pMasqueradingVector[0].empty())
         {
@@ -1666,9 +2057,9 @@ Json::Value UserSubscriptions::toMasqueradedJson(
         }
         if(!pMasqueradingVector[10].empty())
         {
-            if(getCreatedAt())
+            if(getStartDate())
             {
-                ret[pMasqueradingVector[10]]=getCreatedAt()->toDbStringLocal();
+                ret[pMasqueradingVector[10]]=getStartDate()->toDbStringLocal();
             }
             else
             {
@@ -1677,13 +2068,35 @@ Json::Value UserSubscriptions::toMasqueradedJson(
         }
         if(!pMasqueradingVector[11].empty())
         {
-            if(getUpdatedAt())
+            if(getEndDate())
             {
-                ret[pMasqueradingVector[11]]=getUpdatedAt()->toDbStringLocal();
+                ret[pMasqueradingVector[11]]=getEndDate()->toDbStringLocal();
             }
             else
             {
                 ret[pMasqueradingVector[11]]=Json::Value();
+            }
+        }
+        if(!pMasqueradingVector[12].empty())
+        {
+            if(getCreatedAt())
+            {
+                ret[pMasqueradingVector[12]]=getCreatedAt()->toDbStringLocal();
+            }
+            else
+            {
+                ret[pMasqueradingVector[12]]=Json::Value();
+            }
+        }
+        if(!pMasqueradingVector[13].empty())
+        {
+            if(getUpdatedAt())
+            {
+                ret[pMasqueradingVector[13]]=getUpdatedAt()->toDbStringLocal();
+            }
+            else
+            {
+                ret[pMasqueradingVector[13]]=Json::Value();
             }
         }
         return ret;
@@ -1769,6 +2182,22 @@ Json::Value UserSubscriptions::toMasqueradedJson(
     {
         ret["is_active"]=Json::Value();
     }
+    if(getStartDate())
+    {
+        ret["start_date"]=getStartDate()->toDbStringLocal();
+    }
+    else
+    {
+        ret["start_date"]=Json::Value();
+    }
+    if(getEndDate())
+    {
+        ret["end_date"]=getEndDate()->toDbStringLocal();
+    }
+    else
+    {
+        ret["end_date"]=Json::Value();
+    }
     if(getCreatedAt())
     {
         ret["created_at"]=getCreatedAt()->toDbStringLocal();
@@ -1820,10 +2249,20 @@ bool UserSubscriptions::validateJsonForCreation(const Json::Value &pJson, std::s
         if(!validJsonOfField(3, "partner_id", pJson["partner_id"], err, true))
             return false;
     }
+    else
+    {
+        err="The partner_id column cannot be null";
+        return false;
+    }
     if(pJson.isMember("subscription_plan_id"))
     {
         if(!validJsonOfField(4, "subscription_plan_id", pJson["subscription_plan_id"], err, true))
             return false;
+    }
+    else
+    {
+        err="The subscription_plan_id column cannot be null";
+        return false;
     }
     if(pJson.isMember("billing_cycle"))
     {
@@ -1834,6 +2273,11 @@ bool UserSubscriptions::validateJsonForCreation(const Json::Value &pJson, std::s
     {
         if(!validJsonOfField(6, "subscription_plan_description", pJson["subscription_plan_description"], err, true))
             return false;
+    }
+    else
+    {
+        err="The subscription_plan_description column cannot be null";
+        return false;
     }
     if(pJson.isMember("email"))
     {
@@ -1850,14 +2294,34 @@ bool UserSubscriptions::validateJsonForCreation(const Json::Value &pJson, std::s
         if(!validJsonOfField(9, "is_active", pJson["is_active"], err, true))
             return false;
     }
+    if(pJson.isMember("start_date"))
+    {
+        if(!validJsonOfField(10, "start_date", pJson["start_date"], err, true))
+            return false;
+    }
+    else
+    {
+        err="The start_date column cannot be null";
+        return false;
+    }
+    if(pJson.isMember("end_date"))
+    {
+        if(!validJsonOfField(11, "end_date", pJson["end_date"], err, true))
+            return false;
+    }
+    else
+    {
+        err="The end_date column cannot be null";
+        return false;
+    }
     if(pJson.isMember("created_at"))
     {
-        if(!validJsonOfField(10, "created_at", pJson["created_at"], err, true))
+        if(!validJsonOfField(12, "created_at", pJson["created_at"], err, true))
             return false;
     }
     if(pJson.isMember("updated_at"))
     {
-        if(!validJsonOfField(11, "updated_at", pJson["updated_at"], err, true))
+        if(!validJsonOfField(13, "updated_at", pJson["updated_at"], err, true))
             return false;
     }
     return true;
@@ -1866,7 +2330,7 @@ bool UserSubscriptions::validateMasqueradedJsonForCreation(const Json::Value &pJ
                                                            const std::vector<std::string> &pMasqueradingVector,
                                                            std::string &err)
 {
-    if(pMasqueradingVector.size() != 12)
+    if(pMasqueradingVector.size() != 14)
     {
         err = "Bad masquerading vector";
         return false;
@@ -1913,6 +2377,11 @@ bool UserSubscriptions::validateMasqueradedJsonForCreation(const Json::Value &pJ
               if(!validJsonOfField(3, pMasqueradingVector[3], pJson[pMasqueradingVector[3]], err, true))
                   return false;
           }
+        else
+        {
+            err="The " + pMasqueradingVector[3] + " column cannot be null";
+            return false;
+        }
       }
       if(!pMasqueradingVector[4].empty())
       {
@@ -1921,6 +2390,11 @@ bool UserSubscriptions::validateMasqueradedJsonForCreation(const Json::Value &pJ
               if(!validJsonOfField(4, pMasqueradingVector[4], pJson[pMasqueradingVector[4]], err, true))
                   return false;
           }
+        else
+        {
+            err="The " + pMasqueradingVector[4] + " column cannot be null";
+            return false;
+        }
       }
       if(!pMasqueradingVector[5].empty())
       {
@@ -1937,6 +2411,11 @@ bool UserSubscriptions::validateMasqueradedJsonForCreation(const Json::Value &pJ
               if(!validJsonOfField(6, pMasqueradingVector[6], pJson[pMasqueradingVector[6]], err, true))
                   return false;
           }
+        else
+        {
+            err="The " + pMasqueradingVector[6] + " column cannot be null";
+            return false;
+        }
       }
       if(!pMasqueradingVector[7].empty())
       {
@@ -1969,12 +2448,38 @@ bool UserSubscriptions::validateMasqueradedJsonForCreation(const Json::Value &pJ
               if(!validJsonOfField(10, pMasqueradingVector[10], pJson[pMasqueradingVector[10]], err, true))
                   return false;
           }
+        else
+        {
+            err="The " + pMasqueradingVector[10] + " column cannot be null";
+            return false;
+        }
       }
       if(!pMasqueradingVector[11].empty())
       {
           if(pJson.isMember(pMasqueradingVector[11]))
           {
               if(!validJsonOfField(11, pMasqueradingVector[11], pJson[pMasqueradingVector[11]], err, true))
+                  return false;
+          }
+        else
+        {
+            err="The " + pMasqueradingVector[11] + " column cannot be null";
+            return false;
+        }
+      }
+      if(!pMasqueradingVector[12].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[12]))
+          {
+              if(!validJsonOfField(12, pMasqueradingVector[12], pJson[pMasqueradingVector[12]], err, true))
+                  return false;
+          }
+      }
+      if(!pMasqueradingVector[13].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[13]))
+          {
+              if(!validJsonOfField(13, pMasqueradingVector[13], pJson[pMasqueradingVector[13]], err, true))
                   return false;
           }
       }
@@ -2043,14 +2548,24 @@ bool UserSubscriptions::validateJsonForUpdate(const Json::Value &pJson, std::str
         if(!validJsonOfField(9, "is_active", pJson["is_active"], err, false))
             return false;
     }
+    if(pJson.isMember("start_date"))
+    {
+        if(!validJsonOfField(10, "start_date", pJson["start_date"], err, false))
+            return false;
+    }
+    if(pJson.isMember("end_date"))
+    {
+        if(!validJsonOfField(11, "end_date", pJson["end_date"], err, false))
+            return false;
+    }
     if(pJson.isMember("created_at"))
     {
-        if(!validJsonOfField(10, "created_at", pJson["created_at"], err, false))
+        if(!validJsonOfField(12, "created_at", pJson["created_at"], err, false))
             return false;
     }
     if(pJson.isMember("updated_at"))
     {
-        if(!validJsonOfField(11, "updated_at", pJson["updated_at"], err, false))
+        if(!validJsonOfField(13, "updated_at", pJson["updated_at"], err, false))
             return false;
     }
     return true;
@@ -2059,7 +2574,7 @@ bool UserSubscriptions::validateMasqueradedJsonForUpdate(const Json::Value &pJso
                                                          const std::vector<std::string> &pMasqueradingVector,
                                                          std::string &err)
 {
-    if(pMasqueradingVector.size() != 12)
+    if(pMasqueradingVector.size() != 14)
     {
         err = "Bad masquerading vector";
         return false;
@@ -2130,6 +2645,16 @@ bool UserSubscriptions::validateMasqueradedJsonForUpdate(const Json::Value &pJso
           if(!validJsonOfField(11, pMasqueradingVector[11], pJson[pMasqueradingVector[11]], err, false))
               return false;
       }
+      if(!pMasqueradingVector[12].empty() && pJson.isMember(pMasqueradingVector[12]))
+      {
+          if(!validJsonOfField(12, pMasqueradingVector[12], pJson[pMasqueradingVector[12]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[13].empty() && pJson.isMember(pMasqueradingVector[13]))
+      {
+          if(!validJsonOfField(13, pMasqueradingVector[13], pJson[pMasqueradingVector[13]], err, false))
+              return false;
+      }
     }
     catch(const Json::LogicError &e)
     {
@@ -2193,7 +2718,8 @@ bool UserSubscriptions::validJsonOfField(size_t index,
         case 3:
             if(pJson.isNull())
             {
-                return true;
+                err="The " + fieldName + " column cannot be null";
+                return false;
             }
             if(!pJson.isString())
             {
@@ -2204,7 +2730,8 @@ bool UserSubscriptions::validJsonOfField(size_t index,
         case 4:
             if(pJson.isNull())
             {
-                return true;
+                err="The " + fieldName + " column cannot be null";
+                return false;
             }
             if(!pJson.isString())
             {
@@ -2234,7 +2761,8 @@ bool UserSubscriptions::validJsonOfField(size_t index,
         case 6:
             if(pJson.isNull())
             {
-                return true;
+                err="The " + fieldName + " column cannot be null";
+                return false;
             }
             if(!pJson.isString())
             {
@@ -2295,7 +2823,8 @@ bool UserSubscriptions::validJsonOfField(size_t index,
         case 10:
             if(pJson.isNull())
             {
-                return true;
+                err="The " + fieldName + " column cannot be null";
+                return false;
             }
             if(!pJson.isString())
             {
@@ -2304,6 +2833,29 @@ bool UserSubscriptions::validJsonOfField(size_t index,
             }
             break;
         case 11:
+            if(pJson.isNull())
+            {
+                err="The " + fieldName + " column cannot be null";
+                return false;
+            }
+            if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 12:
+            if(pJson.isNull())
+            {
+                return true;
+            }
+            if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 13:
             if(pJson.isNull())
             {
                 return true;
