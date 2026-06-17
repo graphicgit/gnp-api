@@ -20,8 +20,7 @@ public:
               const std::string &startDate, const std::string &endDate,
               const std::string &query);
 
-
-    //drogon::Task<gnp::dto::BaseApiResponse> getRelatedContent(int pageNo, int pageSize);
+  //drogon::Task<gnp::dto::BaseApiResponse> getRelatedContent(int pageNo, int pageSize);
 
   drogon::Task<gnp::dto::BaseApiResponse> getLatestNewsPapers(int pageNo, int pageSize);
 
@@ -33,10 +32,7 @@ public:
 
   drogon::Task<gnp::dto::BaseApiResponse> getPaidNewsPaperDetailsByPublicationAsync(const std::string &publicationId, const std::string &date);
 
-
-  drogon::Task<gnp::dto::BaseApiResponse> listAllAsync(int pageNo, int pageSize, const std::string &publicationId,
-               const std::string &startDate, const std::string &endDate,
-               const std::string &query, const std::string &status);
+  drogon::Task<gnp::dto::BaseApiResponse> listAllAsync(int pageNo, int pageSize, const std::string &publicationId, const std::string &startDate, const std::string &endDate, const std::string &query, const std::string &status);
 
   drogon::Task<gnp::dto::BaseApiResponse> ingestAsync(const dto::IngestNewsPaperDto &dto);
 

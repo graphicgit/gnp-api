@@ -138,8 +138,8 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::getLatestNewsPapers(in
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Newspapers> mp(dbClient);
 
-  // 1. Build the search criteria: Only published newspapers
-  Criteria searchCriteria = Criteria(Newspapers::Cols::_is_published, CompareOperator::EQ, true);
+  // 1. Build the search criteria: Only published and non archived newspapers
+  Criteria searchCriteria = Criteria(Newspapers::Cols::_is_published, CompareOperator::EQ, true) && Criteria(Newspapers::Cols::_is_archived, CompareOperator::EQ, false);
 
   try {
     size_t totalCount = co_await mp.count(searchCriteria);
