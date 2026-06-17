@@ -13,6 +13,7 @@
 #include "services/partner_invoice/PartnerInvoiceService.h"
 #include "dto/PartnerInvoiceDto.h"
 
+
 drogon::Task<HttpResponsePtr> AdminController::getAllNewsPapers(const HttpRequestPtr req) {
   int pageSize = 10; // Default page size
   int pageNo = 1;    //  Default page number
@@ -69,6 +70,67 @@ drogon::Task<HttpResponsePtr> AdminController::getAllNewsPapers(const HttpReques
   auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
   co_return resp;
 }
+
+
+drogon::Task<HttpResponsePtr> AdminController::getAllArchivedNewsPapers(const HttpRequestPtr req) {
+  int pageSize = 10; // Default page size
+  int pageNo = 1;    //  Default page number
+
+  if (!req->getParameter("pageSize").empty()) {
+    try {
+      pageSize = std::stoi(req->getParameter("pageSize"));
+      pageSize = std::max(1, std::min(100, pageSize)); // Limit between 1-100
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  if (!req->getParameter("pageNo").empty()) {
+    try {
+      pageNo = std::stoi(req->getParameter("pageNo"));
+      pageNo = std::max(1, pageNo); // Ensure page number is at least 1
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  std::string query = req->getParameter("query");
+  if (query.empty()) {
+    query = ""; // Default to empty string if not specified
+  }
+
+  std::string publicationId = req->getParameter("publicationId");
+  if (publicationId.empty()) {
+    publicationId = ""; //
+  }
+
+  std::string startDate = req->getParameter("startDate");
+  if (startDate.empty()) {
+    startDate = ""; //
+  }
+
+  std::string endDate = req->getParameter("endDate");
+  if (endDate.empty()) {
+    endDate = ""; //
+  }
+
+  std::string status = req->getParameter("status");
+  if (status.empty()) {
+    status = ""; //
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &newsPaperService = plugin->getNewsPaperService();
+
+  auto result = co_await newsPaperService.listAllArchivedAsync(pageNo, pageSize, publicationId, startDate, endDate, query, status);
+
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+}
+
+
+
+
 
 drogon::Task<HttpResponsePtr> AdminController::getNewsPaperFullDetails(const HttpRequestPtr req) {
   if (req->getParameter("id").empty()) {

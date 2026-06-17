@@ -21,6 +21,7 @@
 #include "services/newspapers/NewspaperService.h"
 #include "services/partners/CommercialPartnerService.h"
 #include "services/partner_invoice/PartnerInvoiceService.h"
+#include "services/partner_user_logs/PartnerUserLogService.h"
 #include "services/payments/PaymentService.h"
 #include "services/paystack/PaystackApi.h"
 #include "services/publications/PublicationService.h"
@@ -79,6 +80,7 @@ public:
   ::gnp::services::PartnerInvoiceService &getPartnerInvoiceService() { return partnerInvoiceService_; }
   ::gnp::services::AdminUserInvitationService &getAdminUserInvitationService() { return adminUserInvitationService_; }
   ::gnp::services::AuditLogService &getAuditLogService() { return auditLogService_; }
+  ::gnp::services::PartnerUserLogService &getPartnerUserActivityLogService() { return partnerUserActivityLogService_; }
   ::gnp::services::TagService &getTagService() { return tagService_; }
   ::gnp::services::CategoryService &getCategoryService() { return categoryService_; }
 
@@ -105,6 +107,7 @@ private:
   ::gnp::services::AuditLogService auditLogService_;
   ::gnp::services::TagService tagService_;
   ::gnp::services::CategoryService categoryService_;
+  ::gnp::services::PartnerUserLogService partnerUserActivityLogService_;
 };
 
 } // namespace gnp::plugins

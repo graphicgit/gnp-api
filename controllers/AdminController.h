@@ -11,6 +11,7 @@ public:
   METHOD_LIST_BEGIN
   // newspaper
   ADD_METHOD_TO(AdminController::getAllNewsPapers,std::string(PREFIX) + "get-all-newspapers", Get, Options, "JwtAuthFilter");
+  ADD_METHOD_TO(AdminController::getAllArchivedNewsPapers,std::string(PREFIX) + "get-all-archived-newspapers", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::getNewsPaperFullDetails, std::string(PREFIX) + "get-full-details", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::publishNewsPaper, std::string(PREFIX) + "publish-newspaper", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::unPublishNewsPaper, std::string(PREFIX) + "unpublish-newspaper", Get, Options, "JwtAuthFilter");
@@ -110,6 +111,7 @@ public:
 
   // Newspapers
   drogon::Task<HttpResponsePtr> getAllNewsPapers(HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> getAllArchivedNewsPapers(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> getNewsPaperFullDetails(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> publishNewsPaper(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> unPublishNewsPaper(HttpRequestPtr req);

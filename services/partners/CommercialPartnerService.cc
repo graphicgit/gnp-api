@@ -1801,12 +1801,17 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
     // STEP 7: Fetch newspapers for the date window
     std::vector<drogon_model::Gnp::Newspapers> newspapers;
     if (!pubIds.empty()) {
+
       LOG_INFO << "[onboardSubscriberAsync] STEP 7 — Fetching newspapers for pubIds window";
+
       CoroMapper<drogon_model::Gnp::Newspapers> newsMapper(dbClient);
+
       Criteria pubCriteria =
           Criteria(drogon_model::Gnp::Newspapers::Cols::_publication_id, CompareOperator::In, pubIds) &&
+          Criteria(drogon_model::Gnp::Newspapers::Cols::_is_archived, CompareOperator::EQ, false) &&
           Criteria(drogon_model::Gnp::Newspapers::Cols::_publication_date, CompareOperator::GE, startDateObj) &&
           Criteria(drogon_model::Gnp::Newspapers::Cols::_publication_date, CompareOperator::LE, endDateObj);
+
       newspapers = co_await newsMapper.findBy(pubCriteria);
       LOG_INFO << "[onboardSubscriberAsync] STEP 7 — newspapers fetched count=" << newspapers.size();
     } else {

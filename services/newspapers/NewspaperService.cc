@@ -530,8 +530,7 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::getFreeNewsPaperDetail
 }
 
 // for admin use only
-drogon::Task<dto::BaseApiResponse> NewspaperService::listAllAsync(
-    int pageNo, int pageSize, const std::string &publicationId,
+drogon::Task<dto::BaseApiResponse> NewspaperService::listAllAsync(int pageNo, int pageSize, const std::string &publicationId,
     const std::string &startDate, const std::string &endDate,
     const std::string &query, const std::string &status) {
 
@@ -544,13 +543,15 @@ drogon::Task<dto::BaseApiResponse> NewspaperService::listAllAsync(
   // text search
   if (!query.empty()) {
     std::string likeQuery = "%" + query + "%";
+
     searchCriteria =
         Criteria(Newspapers::Cols::_title, CompareOperator::Like, likeQuery) ||
         Criteria(Newspapers::Cols::_full_description, CompareOperator::Like, likeQuery) ||
-          Criteria(Newspapers::Cols::_slug, CompareOperator::Like, likeQuery);
-  } else {
-    searchCriteria = Criteria(); // empty criteria
+        Criteria(Newspapers::Cols::_slug, CompareOperator::Like, likeQuery);
+
+
   }
+
 
   // filter by publicationId
   if (!publicationId.empty()) {
@@ -647,6 +648,127 @@ drogon::Task<dto::BaseApiResponse> NewspaperService::listAllAsync(
   }
 }
 
+
+
+drogon::Task<dto::BaseApiResponse> NewspaperService::listAllArchivedAsync(int pageNo, int pageSize, const std::string &publicationId,
+    const std::string &startDate, const std::string &endDate,
+    const std::string &query, const std::string &status) {
+
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<Newspapers> mp(dbClient);
+
+  // 1. Build the search criteria
+  Criteria searchCriteria = Criteria(Newspapers::Cols::_is_archived, CompareOperator::EQ, true);
+
+  // text search
+  if (!query.empty()) {
+    std::string likeQuery = "%" + query + "%";
+
+    searchCriteria = searchCriteria &&
+        Criteria(Newspapers::Cols::_title, CompareOperator::Like, likeQuery) ||
+        Criteria(Newspapers::Cols::_full_description, CompareOperator::Like, likeQuery) ||
+        Criteria(Newspapers::Cols::_slug, CompareOperator::Like, likeQuery);
+
+
+  }
+
+
+  // filter by publicationId
+  if (!publicationId.empty()) {
+    searchCriteria =
+        searchCriteria && Criteria(Newspapers::Cols::_publication_id,
+                                   CompareOperator::EQ, publicationId);
+  }
+
+  // filter by startDate (created_at >= startDate)
+  if (!startDate.empty()) {
+    searchCriteria =
+        searchCriteria && Criteria(Newspapers::Cols::_publication_date,
+                                   CompareOperator::GE, startDate);
+  }
+
+  // filter by endDate (created_at <= endDate)
+  if (!endDate.empty()) {
+    searchCriteria =
+        searchCriteria && Criteria(Newspapers::Cols::_publication_date,
+                                   CompareOperator::LE, endDate);
+  }
+
+  // status
+  if (!status.empty()) {
+    bool isPublished = (status == "published");
+    searchCriteria = searchCriteria &&
+        Criteria(Newspapers::Cols::_is_published, CompareOperator::EQ, isPublished);
+  }
+
+  try {
+    size_t totalCount = co_await mp.count(searchCriteria);
+
+    if (totalCount == 0) {
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.result["data"] = Json::arrayValue;
+      response.result["totalCount"] = 0;
+      co_return response;
+    }
+
+    int offset = (pageNo - 1) * pageSize;
+    auto publications =
+        co_await mp.limit(pageSize)
+            .offset(offset)
+            .orderBy(Newspapers::Cols::_publication_date, SortOrder::DESC)
+            .findBy(searchCriteria);
+
+    dto::BaseApiResponse response;
+    response.success = true;
+    response.result["totalCount"] = (Json::UInt64)totalCount;
+    response.result["pageNo"] = pageNo;
+    response.result["pageSize"] = pageSize;
+    response.result["totalPages"] =
+        (int)((totalCount + pageSize - 1) / pageSize);
+
+    Json::Value data = Json::arrayValue;
+    for (const auto &role : publications) {
+      Json::Value roleJson = role.toJson();
+
+      // Convert snake_case to camelCase
+      Json::Value camelCaseRole;
+      camelCaseRole["id"] = roleJson["id"];
+      camelCaseRole["title"] = roleJson["title"];
+      camelCaseRole["slug"] = roleJson["slug"];
+      camelCaseRole["price"] = roleJson["price"];
+      camelCaseRole["editionNumber"] = roleJson["edition_number"];
+      camelCaseRole["views"] = roleJson["views"];
+      camelCaseRole["sales"] = roleJson["sales"];
+      camelCaseRole["fullDescription"] = roleJson["full_description"];
+      camelCaseRole["thumbnailId"] = roleJson["thumbnail_id"];
+      camelCaseRole["documentId"] = roleJson["document_id"];
+      camelCaseRole["isPublished"] = roleJson["is_published"];
+      camelCaseRole["publicationId"] = roleJson["publication_id"];
+      camelCaseRole["publicationName"] = roleJson["publication_name"];
+      camelCaseRole["publicationDate"] = roleJson["publication_date"];
+      camelCaseRole["isFree"] = roleJson["is_free"];
+      camelCaseRole["createdAt"] = roleJson["created_at"];
+      camelCaseRole["updatedAt"] = roleJson["updated_at"];
+
+      data.append(camelCaseRole);
+    }
+
+    response.result["data"] = data;
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["message"] =
+        "Database error while fetching newspapers.";
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+
 drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::ingestAsync(const dto::IngestNewsPaperDto &dto) {
   auto dbClient = drogon::app().getDbClient();
   drogon::orm::CoroMapper<drogon_model::Gnp::Newspapers> mp(dbClient);
@@ -695,8 +817,7 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::ingestAsync(const dto:
   }
 }
 
-drogon::Task<gnp::dto::BaseApiResponse>
-NewspaperService::publishAsync(const std::string &id) {
+drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::publishAsync(const std::string &id) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Newspapers> mp(dbClient);
 
