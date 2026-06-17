@@ -70,7 +70,7 @@ Task<HttpResponsePtr> AuxiliaryController::handleMtnLoyaltyCallback(HttpRequestP
         auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
         auto &partnerService = plugin->getCommercialPartnerService();
 
-        auto onboardResp = co_await partnerService.onboardSubscriberAsync("gnp_1nx3uamMNY", "gnp_sk_MJ8Lp6qnPrISPXaIxr", partnerDto);
+        auto onboardResp = co_await partnerService.onboardSubscriberAsync("gnp_TDEXLvnWgM", "gnp_sk_dE7HYE14Q5f8Ug8RZR", partnerDto);
 
         if (onboardResp.success) {
             LOG_INFO << "GNP onboard response => success, email: " 
