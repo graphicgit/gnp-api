@@ -1647,45 +1647,107 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::updatePartne
 
 drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubscriberAsync(const std::string &clientId, const std::string &clientSecret, const ::gnp::dto::PartnerOnboardingDto &dto) {
 
+  LOG_INFO << "[onboardSubscriberAsync] START — clientId=" << clientId
+           << " phoneNumber=" << dto.getPhoneNumber()
+           << " fullName=" << dto.getFullName()
+           << " startDate=" << dto.getStartDate()
+           << " endDate=" << dto.getEndDate()
+           << " smsProvider=" << dto.getSmsProvider();
+
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> apiKeyMapper(
       dbClient);
 
   try {
-    // 1. Verify API Key
-    auto apiKey = co_await apiKeyMapper.findOne(
-        Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_client_id,
-                 CompareOperator::EQ, clientId) &&
-        Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_is_active,
-                 CompareOperator::EQ, true));
+    // STEP 1: Verify API Key exists and is active
+    LOG_INFO << "[onboardSubscriberAsync] STEP 1 — Looking up API key for clientId=" << clientId;
+    drogon_model::Gnp::CommercialPartnerApiKeys apiKey;
+    try {
+      apiKey = co_await apiKeyMapper.findOne(
+          Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_client_id,
+                   CompareOperator::EQ, clientId) &&
+          Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_is_active,
+                   CompareOperator::EQ, true));
+      LOG_INFO << "[onboardSubscriberAsync] STEP 1 — API key found, partnerId=" << apiKey.getValueOfPartnerId();
+    } catch (const DrogonDbException &e) {
+      LOG_ERROR << "[onboardSubscriberAsync] STEP 1 FAILED — API key lookup threw: " << e.base().what()
+                << " (clientId=" << clientId << " may not exist or is_active=false)";
+      gnp::dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.message = "Onboarding failed or unauthorized";
+      errorResponse.error["code"] = constants::ERR_DB_QUERY;
+      errorResponse.error["detail"] = e.base().what();
+      co_return errorResponse;
+    }
 
+    // STEP 2: Validate client secret via bcrypt
+    LOG_INFO << "[onboardSubscriberAsync] STEP 2 — Validating clientSecret against stored hash";
     if (!bcrypt::validatePassword(clientSecret,
                                   apiKey.getValueOfClientSecretHash())) {
+      LOG_ERROR << "[onboardSubscriberAsync] STEP 2 FAILED — clientSecret bcrypt mismatch for clientId=" << clientId;
       gnp::dto::BaseApiResponse errorResponse;
       errorResponse.success = false;
       errorResponse.message = "Invalid ClientSecret";
       errorResponse.error["code"] = constants::ERR_UNAUTHORIZED;
       co_return errorResponse;
     }
+    LOG_INFO << "[onboardSubscriberAsync] STEP 2 — clientSecret validated successfully";
 
     // Update last used at
     apiKey.setLastUsedAt(trantor::Date::now());
     co_await apiKeyMapper.update(apiKey);
 
+    // STEP 3: Look up existing user by phone + partnerId
+    const std::string partnerId = apiKey.getValueOfPartnerId();
+    LOG_INFO << "[onboardSubscriberAsync] STEP 3 — Searching for existing user: phoneNumber="
+             << dto.getPhoneNumber() << " partnerId=" << partnerId;
     CoroMapper<drogon_model::Gnp::Users> userMapper(dbClient);
     auto existingUsers = co_await userMapper.findBy(
         Criteria(drogon_model::Gnp::Users::Cols::_phone_number,
                  CompareOperator::EQ, dto.getPhoneNumber()) &&
         Criteria(drogon_model::Gnp::Users::Cols::_partner_id,
-                 CompareOperator::EQ, apiKey.getValueOfPartnerId()));
+                 CompareOperator::EQ, partnerId));
+    LOG_INFO << "[onboardSubscriberAsync] STEP 3 — existingUsers count=" << existingUsers.size();
 
+    // STEP 4: Load partner record
+    LOG_INFO << "[onboardSubscriberAsync] STEP 4 — Loading partner record for partnerId=" << partnerId;
     CoroMapper<drogon_model::Gnp::CommercialPartners> partnerMapper(dbClient);
-    auto partner =
-        co_await partnerMapper.findByPrimaryKey(apiKey.getValueOfPartnerId());
+    drogon_model::Gnp::CommercialPartners partner;
+    try {
+      partner = co_await partnerMapper.findByPrimaryKey(partnerId);
+      LOG_INFO << "[onboardSubscriberAsync] STEP 4 — Partner found: name=" << partner.getValueOfName()
+               << " defaultPlanId=" << partner.getValueOfDefaultSubscriptionPlanId()
+               << " remainingQuota=" << partner.getValueOfRemainingQuota();
+    } catch (const DrogonDbException &e) {
+      LOG_ERROR << "[onboardSubscriberAsync] STEP 4 FAILED — Partner lookup threw: " << e.base().what()
+                << " (partnerId=" << partnerId << " may not exist)";
+      gnp::dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.message = "Onboarding failed or unauthorized";
+      errorResponse.error["code"] = constants::ERR_DB_QUERY;
+      errorResponse.error["detail"] = e.base().what();
+      co_return errorResponse;
+    }
 
+    // STEP 5: Load default subscription plan
+    const std::string defaultPlanId = partner.getValueOfDefaultSubscriptionPlanId();
+    LOG_INFO << "[onboardSubscriberAsync] STEP 5 — Loading subscription plan for planId=" << defaultPlanId;
     CoroMapper<drogon_model::Gnp::SubscriptionPlans> planMapper(dbClient);
-    auto plan = co_await planMapper.findByPrimaryKey(
-        partner.getValueOfDefaultSubscriptionPlanId());
+    drogon_model::Gnp::SubscriptionPlans plan;
+    try {
+      plan = co_await planMapper.findByPrimaryKey(defaultPlanId);
+      LOG_INFO << "[onboardSubscriberAsync] STEP 5 — Plan found: name=" << plan.getValueOfName()
+               << " targetPublications=" << plan.getValueOfTargetPublications();
+    } catch (const DrogonDbException &e) {
+      LOG_ERROR << "[onboardSubscriberAsync] STEP 5 FAILED — Subscription plan lookup threw: " << e.base().what()
+                << " (planId=" << defaultPlanId << " may not exist or partner has no defaultSubscriptionPlanId)";
+      gnp::dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.message = "Onboarding failed or unauthorized";
+      errorResponse.error["code"] = constants::ERR_DB_QUERY;
+      errorResponse.error["detail"] = e.base().what();
+      co_return errorResponse;
+    }
 
     std::string targetPubsStr = plan.getValueOfTargetPublications();
     std::vector<std::string> pubIds;
@@ -1698,9 +1760,13 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
         for (const auto &p : targetPubs) {
           pubIds.push_back(p.asString());
         }
+      } else {
+        LOG_WARN << "[onboardSubscriberAsync] STEP 5 — Failed to parse targetPublications JSON: " << errs;
       }
     }
+    LOG_INFO << "[onboardSubscriberAsync] STEP 5 — pubIds count=" << pubIds.size();
 
+    // STEP 6: Resolve subscription date window
     trantor::Date startDateObj;
     trantor::Date endDateObj;
 
@@ -1711,13 +1777,20 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
     }
 
     if (!dto.getEndDate().empty()) {
-      endDateObj =  trantor::Date::fromDbStringLocal(dto.getEndDate() + " 23:59:59");
+      endDateObj = trantor::Date::fromDbStringLocal(dto.getEndDate() + " 23:59:59");
     } else {
       endDateObj = trantor::Date(trantor::Date::now().microSecondsSinceEpoch() + 30LL * 24 * 3600 * 1000000);
     }
 
+    LOG_INFO << "[onboardSubscriberAsync] STEP 6 — Date window: startDate="
+             << startDateObj.toCustomFormattedString("%Y-%m-%d")
+             << " endDate=" << endDateObj.toCustomFormattedString("%Y-%m-%d")
+             << " (dtoStartDate='" << dto.getStartDate()
+             << "' dtoEndDate='" << dto.getEndDate() << "')";
+
     if (endDateObj.microSecondsSinceEpoch() <
         startDateObj.microSecondsSinceEpoch()) {
+      LOG_ERROR << "[onboardSubscriberAsync] STEP 6 FAILED — endDate is before startDate";
       gnp::dto::BaseApiResponse errorResponse;
       errorResponse.success = false;
       errorResponse.message = "End date cannot be earlier than start date.";
@@ -1725,14 +1798,19 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
       co_return errorResponse;
     }
 
+    // STEP 7: Fetch newspapers for the date window
     std::vector<drogon_model::Gnp::Newspapers> newspapers;
     if (!pubIds.empty()) {
+      LOG_INFO << "[onboardSubscriberAsync] STEP 7 — Fetching newspapers for pubIds window";
       CoroMapper<drogon_model::Gnp::Newspapers> newsMapper(dbClient);
       Criteria pubCriteria =
           Criteria(drogon_model::Gnp::Newspapers::Cols::_publication_id, CompareOperator::In, pubIds) &&
-          Criteria(drogon_model::Gnp::Newspapers::Cols::_publication_date,CompareOperator::GE, startDateObj) &&
-          Criteria(drogon_model::Gnp::Newspapers::Cols::_publication_date,CompareOperator::LE, endDateObj);
+          Criteria(drogon_model::Gnp::Newspapers::Cols::_publication_date, CompareOperator::GE, startDateObj) &&
+          Criteria(drogon_model::Gnp::Newspapers::Cols::_publication_date, CompareOperator::LE, endDateObj);
       newspapers = co_await newsMapper.findBy(pubCriteria);
+      LOG_INFO << "[onboardSubscriberAsync] STEP 7 — newspapers fetched count=" << newspapers.size();
+    } else {
+      LOG_INFO << "[onboardSubscriberAsync] STEP 7 — No pubIds configured on plan, skipping newspaper fetch";
     }
 
     Json::StreamWriterBuilder writerBuilder;
@@ -1750,12 +1828,15 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
       return "Annual";
     };
 
-    // 1. Handle existing user
+    // STEP 8: Handle existing user path (renewal)
     if (!existingUsers.empty()) {
       auto existingUser = existingUsers[0];
+      LOG_INFO << "[onboardSubscriberAsync] STEP 8 — RENEWAL PATH: existing userId=" << existingUser.getValueOfId()
+               << " email=" << existingUser.getValueOfEmail();
 
       auto subs = co_await subMapper.findBy(
-          Criteria(UserSubscriptions::Cols::_user_id, CompareOperator::EQ,existingUser.getValueOfId()));
+          Criteria(UserSubscriptions::Cols::_user_id, CompareOperator::EQ, existingUser.getValueOfId()));
+      LOG_INFO << "[onboardSubscriberAsync] STEP 8 — existingSubscriptions count=" << subs.size();
 
       if (!subs.empty()) {
         auto sub = subs[0];
@@ -1768,7 +1849,11 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
         std::string newStartStr = startDateObj.toCustomFormattedString("%Y-%m-%d");
         std::string newEndStr = endDateObj.toCustomFormattedString("%Y-%m-%d");
 
+        LOG_INFO << "[onboardSubscriberAsync] STEP 8 — Existing sub period: " << currentStartStr
+                 << " -> " << currentEndStr << "; Requested: " << newStartStr << " -> " << newEndStr;
+
         if (currentStartStr == newStartStr && currentEndStr == newEndStr) {
+          LOG_WARN << "[onboardSubscriberAsync] STEP 8 — Duplicate period detected, rejecting";
           gnp::dto::BaseApiResponse errorResponse;
           errorResponse.success = false;
           errorResponse.message = "An active subscription already exists for the period " + newStartStr + " to " + newEndStr + ".";
@@ -1786,6 +1871,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
           std::string errs;
           std::istringstream s(currEntStr);
           if (!Json::parseFromStream(readerBuilder, s, &currEnt, &errs)) {
+            LOG_WARN << "[onboardSubscriberAsync] STEP 8 — Failed to parse existing entitlements: " << errs;
             currEnt = Json::arrayValue;
           }
         } else {
@@ -1810,6 +1896,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
         }
 
         sub.setNewspaperEntitlements(Json::writeString(writerBuilder, currEnt));
+        LOG_INFO << "[onboardSubscriberAsync] STEP 8 — Updating existing subscription record";
         co_await subMapper.update(sub);
 
         drogon_model::Gnp::SubscriptionRenewalHistory renewal;
@@ -1825,8 +1912,10 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
         renewal.setPaidBy(partner.getValueOfName());
         renewal.setAmountPaid("0.00");
         renewal.setCreatedAt(trantor::Date::now());
+        LOG_INFO << "[onboardSubscriberAsync] STEP 8 — Inserting renewal history record";
         co_await renewalMapper.insert(renewal);
       } else {
+        LOG_INFO << "[onboardSubscriberAsync] STEP 8 — No existing subscription for user, creating new sub record";
         drogon_model::Gnp::UserSubscriptions newSub;
         newSub.setUserId(existingUser.getValueOfId());
         newSub.setPartnerId(apiKey.getValueOfPartnerId());
@@ -1848,6 +1937,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
         newSub.setCreatedAt(trantor::Date::now());
         newSub.setSubscriptionIdentifier(gnp::utils::IdGeneratorUtils::generateRandomSixDigit());
         co_await subMapper.insert(newSub);
+        LOG_INFO << "[onboardSubscriberAsync] STEP 8 — New subscription inserted for existing user";
 
         drogon_model::Gnp::SubscriptionRenewalHistory renewal;
         renewal.setSubscriptionIdentifier(newSub.getValueOfSubscriptionIdentifier());
@@ -1863,10 +1953,12 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
         renewal.setAmountPaid("0.00");
         renewal.setCreatedAt(trantor::Date::now());
         co_await renewalMapper.insert(renewal);
+        LOG_INFO << "[onboardSubscriberAsync] STEP 8 — Renewal history inserted for existing user (first sub)";
       }
 
       if (dto.getSmsProvider() == "platform" ||
           dto.getSmsProvider() == "Platform") {
+        LOG_INFO << "[onboardSubscriberAsync] STEP 8 — Sending renewal SMS via platform to " << dto.getPhoneNumber();
         auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
         auto &hubtelSmsApi = plugin->getHubtelSmsApi();
         std::string endDateFmt = endDateObj.toCustomFormattedString("%d-%b-%Y");
@@ -1878,6 +1970,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
         co_await hubtelSmsApi.sendSms(dto.getPhoneNumber(), messageContent);
       }
 
+      LOG_INFO << "[onboardSubscriberAsync] DONE — Renewal completed for userId=" << existingUser.getValueOfId();
       gnp::dto::BaseApiResponse response;
       response.success = true;
       response.message = "Subscriber renewed successfully";
@@ -1888,7 +1981,8 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
       co_return response;
     }
 
-    // 2. Process Subscriber creation ...
+    // STEP 9: New subscriber creation path
+    LOG_INFO << "[onboardSubscriberAsync] STEP 9 — NEW USER PATH: creating subscriber for phoneNumber=" << dto.getPhoneNumber();
     std::string fullName = dto.getFullName();
     std::string firstName, lastName;
     size_t lastSpace = fullName.find_last_of(' ');
@@ -1898,9 +1992,8 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
     } else {
       firstName = fullName;
     }
+    LOG_INFO << "[onboardSubscriberAsync] STEP 9 — Parsed name: firstName='" << firstName << "' lastName='" << lastName << "'";
 
-    // Check if subscriber profile already exists (optional, keeping it simple
-    // based on original logic)
     drogon_model::Gnp::Users newUser;
     newUser.setFirstName(firstName);
     if (!lastName.empty())
@@ -1911,22 +2004,27 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
     newUser.setIsActive(true);
     newUser.setIsLockedOut(false);
     newUser.setCreatedAt(trantor::Date::now());
-    // Since it's via API, we might not have email, or phone is used as username
     newUser.setUsername(dto.getPhoneNumber());
-    // Generate a random password for them
     std::string password = utils::PasswordUtils::generateRandomPassword(8);
     newUser.setPasswordHash(bcrypt::generateHash(password));
 
+    LOG_INFO << "[onboardSubscriberAsync] STEP 9 — Inserting new user record (email=" << dto.getPhoneNumber() + "@graphicnewsplus.com.gh" << ")";
     auto newUserResult = co_await userMapper.insert(newUser);
+    LOG_INFO << "[onboardSubscriberAsync] STEP 9 — New user inserted, userId=" << newUserResult.getValueOfId();
 
-    // 3. Update Partner Quota
+    // STEP 10: Update partner quota
     auto remainingQuota = partner.getValueOfRemainingQuota();
+    LOG_INFO << "[onboardSubscriberAsync] STEP 10 — remainingQuota=" << remainingQuota;
     if (remainingQuota > 0) {
       partner.setRemainingQuota(remainingQuota - 1);
       co_await partnerMapper.update(partner);
+      LOG_INFO << "[onboardSubscriberAsync] STEP 10 — Partner quota decremented to " << (remainingQuota - 1);
+    } else {
+      LOG_WARN << "[onboardSubscriberAsync] STEP 10 — remainingQuota is 0, quota NOT decremented";
     }
 
-    // handle subscription logic here
+    // STEP 11: Create subscription record
+    LOG_INFO << "[onboardSubscriberAsync] STEP 11 — Creating UserSubscription record";
     drogon_model::Gnp::UserSubscriptions newSub;
     newSub.setUserId(newUserResult.getValueOfId());
     newSub.setPartnerId(apiKey.getValueOfPartnerId());
@@ -1938,7 +2036,6 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
     newSub.setIsActive(true);
 
     Json::Value newEntArray = Json::arrayValue;
-
     for (const auto &news : newspapers) {
       Json::Value ent;
       ent["id"] = news.getValueOfId();
@@ -1949,7 +2046,10 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
     newSub.setCreatedAt(trantor::Date::now());
     newSub.setSubscriptionIdentifier(utils::IdGeneratorUtils::generateRandomSixDigit());
     co_await subMapper.insert(newSub);
+    LOG_INFO << "[onboardSubscriberAsync] STEP 11 — UserSubscription inserted, identifier=" << newSub.getValueOfSubscriptionIdentifier();
 
+    // STEP 12: Insert renewal history
+    LOG_INFO << "[onboardSubscriberAsync] STEP 12 — Inserting SubscriptionRenewalHistory";
     drogon_model::Gnp::SubscriptionRenewalHistory renewal;
     renewal.setSubscriptionIdentifier(newSub.getValueOfSubscriptionIdentifier());
     renewal.setUserId(newUserResult.getValueOfId());
@@ -1964,9 +2064,11 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
     renewal.setAmountPaid("0.00");
     renewal.setCreatedAt(trantor::Date::now());
     co_await renewalMapper.insert(renewal);
+    LOG_INFO << "[onboardSubscriberAsync] STEP 12 — SubscriptionRenewalHistory inserted";
 
     if (dto.getSmsProvider() != "platform") {
-
+      LOG_INFO << "[onboardSubscriberAsync] DONE — smsProvider='" << dto.getSmsProvider()
+               << "' (not 'platform'), returning credentials without sending SMS";
       gnp::dto::BaseApiResponse response;
       response.success = true;
       response.message = "Subscriber onboarded successfully";
@@ -1980,7 +2082,8 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
       co_return response;
     }
 
-    // 4. Send welcome SMS to the user
+    // STEP 13: Send welcome SMS
+    LOG_INFO << "[onboardSubscriberAsync] STEP 13 — Sending welcome SMS to phoneNumber=" << dto.getPhoneNumber();
     auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
     auto &hubtelSmsApi = plugin->getHubtelSmsApi();
 
@@ -1990,7 +2093,9 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
         dto.getPhoneNumber() + " & Password: " + password;
 
     co_await hubtelSmsApi.sendSms(dto.getPhoneNumber(), messageContent);
+    LOG_INFO << "[onboardSubscriberAsync] STEP 13 — SMS sent";
 
+    LOG_INFO << "[onboardSubscriberAsync] DONE — New subscriber onboarded successfully for phoneNumber=" << dto.getPhoneNumber();
     gnp::dto::BaseApiResponse response;
     response.success = true;
     response.message = "Subscriber onboarded successfully";
@@ -2001,6 +2106,8 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
     co_return response;
 
   } catch (const DrogonDbException &e) {
+    LOG_ERROR << "[onboardSubscriberAsync] UNHANDLED DB EXCEPTION — " << e.base().what()
+              << " (clientId=" << clientId << " phoneNumber=" << dto.getPhoneNumber() << ")";
     gnp::dto::BaseApiResponse errorResponse;
     errorResponse.success = false;
     errorResponse.message = "Onboarding failed or unauthorized";
