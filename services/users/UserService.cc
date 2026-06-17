@@ -975,10 +975,8 @@ drogon::Task<dto::BaseApiResponse> UserService::validateUserCredentials(const dt
   CoroMapper<Users> mapper(dbClient);
 
   Criteria criteria =
-      (Criteria(Users::Cols::_username, CompareOperator::EQ,
-                signin_dto.getUsernameOrEmail()) ||
-       Criteria(Users::Cols::_email, CompareOperator::EQ,
-                signin_dto.getUsernameOrEmail())) &&
+      (Criteria(Users::Cols::_username, CompareOperator::EQ, signin_dto.getUsernameOrEmail()) || Criteria(Users::Cols::_phone_number, CompareOperator::EQ, signin_dto.getUsernameOrEmail()) ||
+       Criteria(Users::Cols::_email, CompareOperator::EQ, signin_dto.getUsernameOrEmail())) &&
       Criteria(Users::Cols::_is_active, CompareOperator::EQ, true) &&
       Criteria(Users::Cols::_is_locked_out, CompareOperator::EQ, false);
 
@@ -1589,10 +1587,14 @@ void UserService::checkAccountStatus(
     criteria = Criteria(Users::Cols::_email, CompareOperator::EQ, identifier);
   } else if (identifierType == "username") {
     criteria = Criteria(Users::Cols::_username, CompareOperator::EQ, identifier);
-  } else {
+  }
+  else if (identifierType == "phone") {
+    criteria = Criteria(Users::Cols::_phone_number, CompareOperator::EQ, identifier);
+  }
+  else {
     gnp::dto::BaseApiResponse response;
     response.success = false;
-    response.message = "Invalid identifier type. Must be 'email' or 'username'.";
+    response.message = "Invalid identifier type. Must be 'email' or 'username' or 'phone number'.";
     callback(response);
     return;
   }
