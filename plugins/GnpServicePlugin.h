@@ -20,6 +20,7 @@
 #include "services/media/MediaService.h"
 #include "services/newspapers/NewspaperService.h"
 #include "services/partners/CommercialPartnerService.h"
+#include "services/partner_api_request_logs/PartnerApiLogService.h"
 #include "services/partner_invoice/PartnerInvoiceService.h"
 #include "services/partner_user_logs/PartnerUserLogService.h"
 #include "services/payments/PaymentService.h"
@@ -81,6 +82,7 @@ public:
   ::gnp::services::AdminUserInvitationService &getAdminUserInvitationService() { return adminUserInvitationService_; }
   ::gnp::services::AuditLogService &getAuditLogService() { return auditLogService_; }
   ::gnp::services::PartnerUserLogService &getPartnerUserActivityLogService() { return partnerUserActivityLogService_; }
+  ::gnp::services::PartnerApiLogService &getPartnerApiLogService() { return partnerApiLogService_; }
   ::gnp::services::TagService &getTagService() { return tagService_; }
   ::gnp::services::CategoryService &getCategoryService() { return categoryService_; }
 
@@ -108,6 +110,7 @@ private:
   ::gnp::services::TagService tagService_;
   ::gnp::services::CategoryService categoryService_;
   ::gnp::services::PartnerUserLogService partnerUserActivityLogService_;
+  ::gnp::services::PartnerApiLogService partnerApiLogService_;
 };
 
 } // namespace gnp::plugins

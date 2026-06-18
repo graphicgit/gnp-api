@@ -21,8 +21,9 @@ file(GLOB INGESTION_JOB_SVC "../services/ingestion_jobs/*.cc")
 file(GLOB SUB_PLAN_SVC "../services/subscription_plans/*.cc")
 file(GLOB PARTNER_SVC "../services/partners/*.cc")
 file(GLOB PARTNER_INVOICE_SVC "../services/partner_invoice/*.cc")
-file(GLOB PARTNER_ACTIVITY_LOG_SVC "../services/partner_activity_logs/*.cc")
+file(GLOB PARTNER_USER_LOGS_SVC "../services/partner_user_logs/*.cc")
 file(GLOB COUPON_SVC "../services/coupons/*.cc")
+file(GLOB PARTNER_API_REQUEST_LOGS_SVC "../services/partner_api_request_logs/*.cc")
 file(GLOB ADMIN_USER_INVITATION_SVC "../services/user_invitations/*.cc")
 file(GLOB ROLE_SVC "../services/roles/*.cc")
 file(GLOB MEDIA_SVC "../services/media/*.cc")
@@ -53,7 +54,8 @@ add_executable(${PROJECT_NAME} test_main.cc
     ${ROLE_SVC}
     ${PARTNER_SVC}
     ${PARTNER_INVOICE_SVC}
-    ${PARTNER_ACTIVITY_LOG_SVC}
+    ${PARTNER_USER_LOGS_SVC}
+    ${PARTNER_API_REQUEST_LOGS_SVC}
     ${ADMIN_USER_INVITATION_SVC}
     ${UTILS_SVC}
 )

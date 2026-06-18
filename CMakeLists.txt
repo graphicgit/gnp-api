@@ -130,7 +130,6 @@ add_executable(${PROJECT_NAME} main.cc
         utils/codecvt_helper.h
         dto/MtnBroadBandCallbackResponseDto.h
         services/partner_user_logs/PartnerUserLogService.h
-        dto/PartnerApiLogDto.h
         services/partner_api_request_logs/PartnerApiLogService.h
         services/partner_api_request_logs/PartnerApiLogService.cc
         services/partner_user_logs/PartnerUserLogService.cc
