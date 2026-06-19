@@ -39,6 +39,8 @@ class PartnerController : public drogon::HttpController<PartnerController>
     ADD_METHOD_TO(PartnerController::updateAdminUser, std::string(PREFIX) + "update-admin-user/{1}", Post, Options, "PartnerJwtAuthFilter");
     ADD_METHOD_TO(PartnerController::deleteAdminUser, std::string(PREFIX) + "delete-admin-user", Delete, Options, "PartnerJwtAuthFilter");
 
+    //subscription
+    ADD_METHOD_TO(PartnerController::getSubscriberSubscriptionDetails, std::string(PREFIX) + "subscriber-subscription-details/{1}", Get, Options, "PartnerJwtAuthFilter");
 
   METHOD_LIST_END
 
@@ -69,6 +71,9 @@ class PartnerController : public drogon::HttpController<PartnerController>
     Task<HttpResponsePtr> createAdminUser(HttpRequestPtr req);
     Task<HttpResponsePtr> updateAdminUser(HttpRequestPtr req, const std::string &adminUserId);
     Task<HttpResponsePtr> deleteAdminUser(HttpRequestPtr req);
+
+    //
+    Task<HttpResponsePtr> getSubscriberSubscriptionDetails(HttpRequestPtr req, const std::string &userId);
 
 
 };

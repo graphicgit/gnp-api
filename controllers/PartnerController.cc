@@ -787,3 +787,25 @@ Task<HttpResponsePtr> PartnerController::deleteAdminUser(HttpRequestPtr req) {
 }
 
 
+Task<HttpResponsePtr> PartnerController::getSubscriberSubscriptionDetails(HttpRequestPtr req, const std::string &userId) {
+
+  auto partnerId = req->attributes()->get<std::string>("partnerId");
+
+  if (partnerId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Authorization token required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &commercialPartnerService = plugin->getCommercialPartnerService();
+
+  auto result = co_await commercialPartnerService.getSubscriberSubscriptionSummary(partnerId, userId);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+
+}
+

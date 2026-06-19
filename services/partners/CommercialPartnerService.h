@@ -77,15 +77,13 @@ public:
 
   drogon::Task<::gnp::dto::BaseApiResponse> deletePartnerApiKey(const std::string &id);
 
-  drogon::Task<::gnp::dto::BaseApiResponse> onboardSubscriberAsync(const std::string &clientId, const std::string &clientSecret, const ::gnp::dto::PartnerOnboardingDto &dto);
+  drogon::Task<::gnp::dto::BaseApiResponse> onboardSubscriberAsync(const std::string &clientId, const std::string &clientSecret, const dto::PartnerOnboardingDto &dto);
 
-    drogon::Task<::gnp::dto::BaseApiResponse> checkSubscriberStatus(const std::string &clientId,
-                        const std::string &clientSecret,
-                        const std::string &phoneNumber);
+  drogon::Task<::gnp::dto::BaseApiResponse> getSubscriberSubscriptionSummary(std::string partnerId, std::string userId);
 
-    drogon::Task<::gnp::dto::BaseApiResponse> retrieveSubscriberDetails(const std::string &clientId,
-                        const std::string &clientSecret,
-                        const std::string &phoneNumber);
+    drogon::Task<::gnp::dto::BaseApiResponse> checkSubscriberStatus(const std::string &clientId, const std::string &clientSecret, const std::string &phoneNumber);
+
+    drogon::Task<::gnp::dto::BaseApiResponse> retrieveSubscriberDetails(const std::string &clientId, const std::string &clientSecret, const std::string &phoneNumber);
 
     // getPartnerStats for admin use only
     drogon::Task<::gnp::dto::BaseApiResponse> getPartnerStats();
@@ -97,6 +95,7 @@ public:
     drogon::Task<::gnp::dto::BaseApiResponse> getPartnerAnalyticsCharts(const std::string &partnerId, const std::string &period);
 
     drogon::Task<::gnp::dto::BaseApiResponse> bulkUploadSubscribersFile(const std::string &partnerId, const std::string &fileContent, const std::string &fileName);
+
     drogon::Task<::gnp::dto::BaseApiResponse> bulkUploadSubscribersJson(const std::string &partnerId, const Json::Value &jsonArray);
 
 };

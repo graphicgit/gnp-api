@@ -59,6 +59,7 @@ class SubscriptionRenewalHistory
         static const std::string _paid_by;
         static const std::string _created_at;
         static const std::string _updated_at;
+        static const std::string _partner_id;
     };
 
     static const int primaryKeyNumber;
@@ -248,8 +249,18 @@ class SubscriptionRenewalHistory
     void setUpdatedAt(const ::trantor::Date &pUpdatedAt) noexcept;
     void setUpdatedAtToNull() noexcept;
 
+    /**  For column partner_id  */
+    ///Get the value of the column partner_id, returns the default value if the column is null
+    const std::string &getValueOfPartnerId() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getPartnerId() const noexcept;
+    ///Set the value of the column partner_id
+    void setPartnerId(const std::string &pPartnerId) noexcept;
+    void setPartnerId(std::string &&pPartnerId) noexcept;
+    void setPartnerIdToNull() noexcept;
 
-    static size_t getColumnNumber() noexcept {  return 15;  }
+
+    static size_t getColumnNumber() noexcept {  return 16;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -286,6 +297,7 @@ class SubscriptionRenewalHistory
     std::shared_ptr<std::string> paidBy_;
     std::shared_ptr<::trantor::Date> createdAt_;
     std::shared_ptr<::trantor::Date> updatedAt_;
+    std::shared_ptr<std::string> partnerId_;
     struct MetaData
     {
         const std::string colName_;
@@ -297,7 +309,7 @@ class SubscriptionRenewalHistory
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[15]={ false };
+    bool dirtyFlag_[16]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -391,6 +403,11 @@ class SubscriptionRenewalHistory
             sql += "updated_at,";
             ++parametersCount;
         }
+        if(dirtyFlag_[15])
+        {
+            sql += "partner_id,";
+            ++parametersCount;
+        }
         if(parametersCount > 0)
         {
             sql[sql.length()-1]=')';
@@ -477,6 +494,11 @@ class SubscriptionRenewalHistory
             sql.append(placeholderStr, n);
         }
         if(dirtyFlag_[14])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[15])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);

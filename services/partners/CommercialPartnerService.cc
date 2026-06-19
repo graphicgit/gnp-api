@@ -1645,6 +1645,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::updatePartne
   }
 }
 
+
 drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubscriberAsync(const std::string &clientId, const std::string &clientSecret, const ::gnp::dto::PartnerOnboardingDto &dto) {
 
   LOG_INFO << "[onboardSubscriberAsync] START — clientId=" << clientId
@@ -1655,16 +1656,14 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
            << " smsProvider=" << dto.getSmsProvider();
 
   auto dbClient = drogon::app().getDbClient();
-  CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> apiKeyMapper(
-      dbClient);
+  CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> apiKeyMapper(dbClient);
 
   try {
     // STEP 1: Verify API Key exists and is active
     LOG_INFO << "[onboardSubscriberAsync] STEP 1 — Looking up API key for clientId=" << clientId;
     drogon_model::Gnp::CommercialPartnerApiKeys apiKey;
     try {
-      apiKey = co_await apiKeyMapper.findOne(
-          Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_client_id,
+      apiKey = co_await apiKeyMapper.findOne(Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_client_id,
                    CompareOperator::EQ, clientId) &&
           Criteria(drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_is_active,
                    CompareOperator::EQ, true));
@@ -1910,6 +1909,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
         renewal.setUserName(existingUser.getValueOfFirstName() + " " + existingUser.getValueOfLastName());
         renewal.setEmail(existingUser.getValueOfEmail());
         renewal.setSubscriptionPlanId(plan.getValueOfId());
+        renewal.setPartnerId(partnerId);
         renewal.setSubscriptionPlanName(plan.getValueOfName());
         renewal.setPastBillingCycle(determineBillingCycle(oldStartDate, oldEndDate));
         renewal.setCurrentBillingCycle(determineBillingCycle(startDateObj, endDateObj));
@@ -1929,6 +1929,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
         newSub.setEmail(existingUser.getValueOfEmail());
         newSub.setStartDate(startDateObj);
         newSub.setEndDate(endDateObj);
+        newSub.setBillingCycle(determineBillingCycle(startDateObj, endDateObj));
         newSub.setIsActive(true);
 
         Json::Value newEntArray = Json::arrayValue;
@@ -2122,6 +2123,87 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
   }
 }
 
+
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getSubscriberSubscriptionSummary(std::string partnerId, std::string userId) {
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<UserSubscriptions> subMapper(dbClient);
+  CoroMapper<drogon_model::Gnp::SubscriptionRenewalHistory> renewalMapper(dbClient);
+  CoroMapper<CommercialPartners> partnerMapper(dbClient);
+
+  try {
+    // 1. Fetch UserSubscription summary
+    auto subscriptions = co_await subMapper.findBy(
+        Criteria(UserSubscriptions::Cols::_user_id, CompareOperator::EQ, userId) && Criteria(UserSubscriptions::Cols::_partner_id, CompareOperator::EQ, partnerId) && Criteria(UserSubscriptions::Cols::_is_active, CompareOperator::EQ, true)
+    );
+
+    if (subscriptions.empty()) {
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.result["subscriptionSummary"] = Json::nullValue;
+      response.result["renewalHistory"] = Json::arrayValue;
+      co_return response;
+    }
+    
+    auto subscription = subscriptions.front();
+
+    // 2. Fetch Partner for Name
+    auto partner = co_await partnerMapper.findOne(
+        Criteria(CommercialPartners::Cols::_id, CompareOperator::EQ, partnerId)
+    );
+
+    // 3. Fetch Renewal History
+    auto renewals = co_await renewalMapper.orderBy(drogon_model::Gnp::SubscriptionRenewalHistory::Cols::_created_at, SortOrder::DESC).findBy(
+        Criteria(drogon_model::Gnp::SubscriptionRenewalHistory::Cols::_user_id, CompareOperator::EQ, userId) && Criteria(drogon_model::Gnp::SubscriptionRenewalHistory::Cols::_partner_id, CompareOperator::EQ, partnerId)
+    );
+
+    // 4. Build JSON Response
+    Json::Value result;
+    
+    Json::Value summary;
+    summary["package"] = subscription.getValueOfSubscriptionPlanDescription() + " (Assigned)";
+    summary["dueDate"] = subscription.getValueOfEndDate().toCustomFormattedString("%b %d, %Y");
+    summary["billingCycle"] = subscription.getValueOfBillingCycle();
+    summary["subscriptionId"] = subscription.getValueOfId();
+
+    result["subscriptionSummary"] = summary;
+
+    Json::Value historyArray = Json::arrayValue;
+    for (const auto& renewal : renewals) {
+      Json::Value historyItem;
+      historyItem["date"] = renewal.getValueOfCreatedAt().toCustomFormattedString("%b %d, %Y");
+      historyItem["package"] = renewal.getValueOfSubscriptionPlanName();
+      
+      // Amount format: $0.00 (Covered by {Partner Name})
+      std::string amountStr = renewal.getValueOfAmountPaid();
+      std::string partnerName = partner.getValueOfName();
+      historyItem["amount"] = "GHS" + amountStr + " (Covered by " + partnerName + ")";
+      
+      historyItem["status"] = renewal.getValueOfTransactionStatus();
+      
+      // Reference from created_at yyyymmddhhmmss
+      historyItem["reference"] = renewal.getValueOfCreatedAt().toCustomFormattedString("%Y%m%d%H%M%S");
+      
+      historyArray.append(historyItem);
+    }
+    
+    result["renewalHistory"] = historyArray;
+
+    ::gnp::dto::BaseApiResponse response;
+    response.success = true;
+    response.result = result;
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    ::gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to fetch subscriber subscription details";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+
 drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::checkSubscriberStatus(const std::string &clientId, const std::string &clientSecret, const std::string &phoneNumber) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> apiKeyMapper(
@@ -2219,6 +2301,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::checkSubscri
   }
 }
 
+
 drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::retrieveSubscriberDetails(const std::string &clientId, const std::string &clientSecret, const std::string &phoneNumber) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -2289,6 +2372,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::retrieveSubs
     co_return errorResponse;
   }
 }
+
 
 drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerOverviewStats(const std::string &partnerId) {
 
@@ -2447,6 +2531,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerOv
   }
 }
 
+
 drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerEngagementReport(const std::string &partnerId, const std::string &period) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -2564,6 +2649,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerEn
   }
 }
 
+
 drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerAnalyticsCharts(const std::string &partnerId, const std::string &period) {
   auto dbClient = drogon::app().getDbClient();
   try {
@@ -2634,6 +2720,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerAn
   }
 }
 
+
 drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::bulkUploadSubscribersJson(const std::string &partnerId, const Json::Value &jsonArray) {
   gnp::dto::BaseApiResponse response;
   int successCount = 0;
@@ -2671,6 +2758,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::bulkUploadSu
 
   co_return response;
 }
+
 
 drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::bulkUploadSubscribersFile(const std::string &partnerId, const std::string &fileContent, const std::string &fileName) {
   gnp::dto::BaseApiResponse response;

@@ -50,7 +50,6 @@ class PartnerApiRequestLogs
         static const std::string _endpoint;
         static const std::string _method;
         static const std::string _client_id;
-        static const std::string _client_secret_hash;
         static const std::string _request_params;
         static const std::string _request_body;
         static const std::string _request_headers;
@@ -173,16 +172,6 @@ class PartnerApiRequestLogs
     void setClientId(const std::string &pClientId) noexcept;
     void setClientId(std::string &&pClientId) noexcept;
     void setClientIdToNull() noexcept;
-
-    /**  For column client_secret_hash  */
-    ///Get the value of the column client_secret_hash, returns the default value if the column is null
-    const std::string &getValueOfClientSecretHash() const noexcept;
-    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<std::string> &getClientSecretHash() const noexcept;
-    ///Set the value of the column client_secret_hash
-    void setClientSecretHash(const std::string &pClientSecretHash) noexcept;
-    void setClientSecretHash(std::string &&pClientSecretHash) noexcept;
-    void setClientSecretHashToNull() noexcept;
 
     /**  For column request_params  */
     ///Get the value of the column request_params, returns the default value if the column is null
@@ -329,7 +318,7 @@ class PartnerApiRequestLogs
     void setRequestIdToNull() noexcept;
 
 
-    static size_t getColumnNumber() noexcept {  return 22;  }
+    static size_t getColumnNumber() noexcept {  return 21;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -357,7 +346,6 @@ class PartnerApiRequestLogs
     std::shared_ptr<std::string> endpoint_;
     std::shared_ptr<std::string> method_;
     std::shared_ptr<std::string> clientId_;
-    std::shared_ptr<std::string> clientSecretHash_;
     std::shared_ptr<std::string> requestParams_;
     std::shared_ptr<std::string> requestBody_;
     std::shared_ptr<std::string> requestHeaders_;
@@ -384,7 +372,7 @@ class PartnerApiRequestLogs
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[22]={ false };
+    bool dirtyFlag_[21]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -435,84 +423,79 @@ class PartnerApiRequestLogs
         }
         if(dirtyFlag_[6])
         {
-            sql += "client_secret_hash,";
+            sql += "request_params,";
             ++parametersCount;
         }
         if(dirtyFlag_[7])
         {
-            sql += "request_params,";
+            sql += "request_body,";
             ++parametersCount;
         }
         if(dirtyFlag_[8])
         {
-            sql += "request_body,";
+            sql += "request_headers,";
             ++parametersCount;
         }
         if(dirtyFlag_[9])
         {
-            sql += "request_headers,";
+            sql += "request_ip,";
             ++parametersCount;
         }
         if(dirtyFlag_[10])
         {
-            sql += "request_ip,";
+            sql += "user_agent,";
             ++parametersCount;
         }
         if(dirtyFlag_[11])
         {
-            sql += "user_agent,";
+            sql += "response_status_code,";
             ++parametersCount;
         }
         if(dirtyFlag_[12])
         {
-            sql += "response_status_code,";
+            sql += "response_body,";
             ++parametersCount;
         }
         if(dirtyFlag_[13])
         {
-            sql += "response_body,";
+            sql += "response_headers,";
             ++parametersCount;
         }
         if(dirtyFlag_[14])
         {
-            sql += "response_headers,";
+            sql += "response_time_ms,";
             ++parametersCount;
         }
         if(dirtyFlag_[15])
         {
-            sql += "response_time_ms,";
-            ++parametersCount;
-        }
-        if(dirtyFlag_[16])
-        {
             sql += "error_message,";
             ++parametersCount;
         }
-        if(dirtyFlag_[17])
+        if(dirtyFlag_[16])
         {
             sql += "error_stack,";
             ++parametersCount;
         }
         sql += "is_successful,";
         ++parametersCount;
-        if(!dirtyFlag_[18])
+        if(!dirtyFlag_[17])
         {
             needSelection=true;
         }
         sql += "created_at,";
         ++parametersCount;
-        if(!dirtyFlag_[19])
+        if(!dirtyFlag_[18])
         {
             needSelection=true;
         }
-        if(dirtyFlag_[20])
+        if(dirtyFlag_[19])
         {
             sql += "completed_at,";
             ++parametersCount;
         }
         sql += "request_id,";
         ++parametersCount;
-        if(!dirtyFlag_[21])
+        if(!dirtyFlag_[20])
         {
             needSelection=true;
         }
@@ -621,6 +604,10 @@ class PartnerApiRequestLogs
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
+        else
+        {
+            sql +="default,";
+        }
         if(dirtyFlag_[18])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
@@ -635,16 +622,7 @@ class PartnerApiRequestLogs
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
-        else
-        {
-            sql +="default,";
-        }
         if(dirtyFlag_[20])
-        {
-            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
-            sql.append(placeholderStr, n);
-        }
-        if(dirtyFlag_[21])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);

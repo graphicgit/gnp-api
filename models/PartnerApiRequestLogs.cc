@@ -19,7 +19,6 @@ const std::string PartnerApiRequestLogs::Cols::_api_key_id = "\"api_key_id\"";
 const std::string PartnerApiRequestLogs::Cols::_endpoint = "\"endpoint\"";
 const std::string PartnerApiRequestLogs::Cols::_method = "\"method\"";
 const std::string PartnerApiRequestLogs::Cols::_client_id = "\"client_id\"";
-const std::string PartnerApiRequestLogs::Cols::_client_secret_hash = "\"client_secret_hash\"";
 const std::string PartnerApiRequestLogs::Cols::_request_params = "\"request_params\"";
 const std::string PartnerApiRequestLogs::Cols::_request_body = "\"request_body\"";
 const std::string PartnerApiRequestLogs::Cols::_request_headers = "\"request_headers\"";
@@ -46,7 +45,6 @@ const std::vector<typename PartnerApiRequestLogs::MetaData> PartnerApiRequestLog
 {"endpoint","std::string","character varying",255,0,0,1},
 {"method","std::string","character varying",10,0,0,1},
 {"client_id","std::string","character varying",100,0,0,0},
-{"client_secret_hash","std::string","character varying",255,0,0,0},
 {"request_params","std::string","jsonb",0,0,0,0},
 {"request_body","std::string","text",0,0,0,0},
 {"request_headers","std::string","jsonb",0,0,0,0},
@@ -95,10 +93,6 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Row &r, const ssize_t indexOf
         if(!r["client_id"].isNull())
         {
             clientId_=std::make_shared<std::string>(r["client_id"].as<std::string>());
-        }
-        if(!r["client_secret_hash"].isNull())
-        {
-            clientSecretHash_=std::make_shared<std::string>(r["client_secret_hash"].as<std::string>());
         }
         if(!r["request_params"].isNull())
         {
@@ -200,7 +194,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Row &r, const ssize_t indexOf
     else
     {
         size_t offset = (size_t)indexOffset;
-        if(offset + 22 > r.size())
+        if(offset + 21 > r.size())
         {
             LOG_FATAL << "Invalid SQL result for this model";
             return;
@@ -239,69 +233,64 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Row &r, const ssize_t indexOf
         index = offset + 6;
         if(!r[index].isNull())
         {
-            clientSecretHash_=std::make_shared<std::string>(r[index].as<std::string>());
+            requestParams_=std::make_shared<std::string>(r[index].as<std::string>());
         }
         index = offset + 7;
         if(!r[index].isNull())
         {
-            requestParams_=std::make_shared<std::string>(r[index].as<std::string>());
+            requestBody_=std::make_shared<std::string>(r[index].as<std::string>());
         }
         index = offset + 8;
         if(!r[index].isNull())
         {
-            requestBody_=std::make_shared<std::string>(r[index].as<std::string>());
+            requestHeaders_=std::make_shared<std::string>(r[index].as<std::string>());
         }
         index = offset + 9;
         if(!r[index].isNull())
         {
-            requestHeaders_=std::make_shared<std::string>(r[index].as<std::string>());
+            requestIp_=std::make_shared<std::string>(r[index].as<std::string>());
         }
         index = offset + 10;
         if(!r[index].isNull())
         {
-            requestIp_=std::make_shared<std::string>(r[index].as<std::string>());
+            userAgent_=std::make_shared<std::string>(r[index].as<std::string>());
         }
         index = offset + 11;
         if(!r[index].isNull())
         {
-            userAgent_=std::make_shared<std::string>(r[index].as<std::string>());
+            responseStatusCode_=std::make_shared<int32_t>(r[index].as<int32_t>());
         }
         index = offset + 12;
         if(!r[index].isNull())
         {
-            responseStatusCode_=std::make_shared<int32_t>(r[index].as<int32_t>());
+            responseBody_=std::make_shared<std::string>(r[index].as<std::string>());
         }
         index = offset + 13;
         if(!r[index].isNull())
         {
-            responseBody_=std::make_shared<std::string>(r[index].as<std::string>());
+            responseHeaders_=std::make_shared<std::string>(r[index].as<std::string>());
         }
         index = offset + 14;
         if(!r[index].isNull())
         {
-            responseHeaders_=std::make_shared<std::string>(r[index].as<std::string>());
+            responseTimeMs_=std::make_shared<int32_t>(r[index].as<int32_t>());
         }
         index = offset + 15;
         if(!r[index].isNull())
         {
-            responseTimeMs_=std::make_shared<int32_t>(r[index].as<int32_t>());
+            errorMessage_=std::make_shared<std::string>(r[index].as<std::string>());
         }
         index = offset + 16;
         if(!r[index].isNull())
         {
-            errorMessage_=std::make_shared<std::string>(r[index].as<std::string>());
+            errorStack_=std::make_shared<std::string>(r[index].as<std::string>());
         }
         index = offset + 17;
         if(!r[index].isNull())
         {
-            errorStack_=std::make_shared<std::string>(r[index].as<std::string>());
-        }
-        index = offset + 18;
-        if(!r[index].isNull())
-        {
             isSuccessful_=std::make_shared<bool>(r[index].as<bool>());
         }
-        index = offset + 19;
+        index = offset + 18;
         if(!r[index].isNull())
         {
             auto timeStr = r[index].as<std::string>();
@@ -324,7 +313,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Row &r, const ssize_t indexOf
                 createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
-        index = offset + 20;
+        index = offset + 19;
         if(!r[index].isNull())
         {
             auto timeStr = r[index].as<std::string>();
@@ -347,7 +336,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Row &r, const ssize_t indexOf
                 completedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
-        index = offset + 21;
+        index = offset + 20;
         if(!r[index].isNull())
         {
             requestId_=std::make_shared<std::string>(r[index].as<std::string>());
@@ -358,7 +347,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Row &r, const ssize_t indexOf
 
 PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson, const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 22)
+    if(pMasqueradingVector.size() != 21)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -416,7 +405,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson, const std
         dirtyFlag_[6] = true;
         if(!pJson[pMasqueradingVector[6]].isNull())
         {
-            clientSecretHash_=std::make_shared<std::string>(pJson[pMasqueradingVector[6]].asString());
+            requestParams_=std::make_shared<std::string>(pJson[pMasqueradingVector[6]].asString());
         }
     }
     if(!pMasqueradingVector[7].empty() && pJson.isMember(pMasqueradingVector[7]))
@@ -424,7 +413,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson, const std
         dirtyFlag_[7] = true;
         if(!pJson[pMasqueradingVector[7]].isNull())
         {
-            requestParams_=std::make_shared<std::string>(pJson[pMasqueradingVector[7]].asString());
+            requestBody_=std::make_shared<std::string>(pJson[pMasqueradingVector[7]].asString());
         }
     }
     if(!pMasqueradingVector[8].empty() && pJson.isMember(pMasqueradingVector[8]))
@@ -432,7 +421,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson, const std
         dirtyFlag_[8] = true;
         if(!pJson[pMasqueradingVector[8]].isNull())
         {
-            requestBody_=std::make_shared<std::string>(pJson[pMasqueradingVector[8]].asString());
+            requestHeaders_=std::make_shared<std::string>(pJson[pMasqueradingVector[8]].asString());
         }
     }
     if(!pMasqueradingVector[9].empty() && pJson.isMember(pMasqueradingVector[9]))
@@ -440,7 +429,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson, const std
         dirtyFlag_[9] = true;
         if(!pJson[pMasqueradingVector[9]].isNull())
         {
-            requestHeaders_=std::make_shared<std::string>(pJson[pMasqueradingVector[9]].asString());
+            requestIp_=std::make_shared<std::string>(pJson[pMasqueradingVector[9]].asString());
         }
     }
     if(!pMasqueradingVector[10].empty() && pJson.isMember(pMasqueradingVector[10]))
@@ -448,7 +437,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson, const std
         dirtyFlag_[10] = true;
         if(!pJson[pMasqueradingVector[10]].isNull())
         {
-            requestIp_=std::make_shared<std::string>(pJson[pMasqueradingVector[10]].asString());
+            userAgent_=std::make_shared<std::string>(pJson[pMasqueradingVector[10]].asString());
         }
     }
     if(!pMasqueradingVector[11].empty() && pJson.isMember(pMasqueradingVector[11]))
@@ -456,7 +445,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson, const std
         dirtyFlag_[11] = true;
         if(!pJson[pMasqueradingVector[11]].isNull())
         {
-            userAgent_=std::make_shared<std::string>(pJson[pMasqueradingVector[11]].asString());
+            responseStatusCode_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[11]].asInt64());
         }
     }
     if(!pMasqueradingVector[12].empty() && pJson.isMember(pMasqueradingVector[12]))
@@ -464,7 +453,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson, const std
         dirtyFlag_[12] = true;
         if(!pJson[pMasqueradingVector[12]].isNull())
         {
-            responseStatusCode_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[12]].asInt64());
+            responseBody_=std::make_shared<std::string>(pJson[pMasqueradingVector[12]].asString());
         }
     }
     if(!pMasqueradingVector[13].empty() && pJson.isMember(pMasqueradingVector[13]))
@@ -472,7 +461,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson, const std
         dirtyFlag_[13] = true;
         if(!pJson[pMasqueradingVector[13]].isNull())
         {
-            responseBody_=std::make_shared<std::string>(pJson[pMasqueradingVector[13]].asString());
+            responseHeaders_=std::make_shared<std::string>(pJson[pMasqueradingVector[13]].asString());
         }
     }
     if(!pMasqueradingVector[14].empty() && pJson.isMember(pMasqueradingVector[14]))
@@ -480,7 +469,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson, const std
         dirtyFlag_[14] = true;
         if(!pJson[pMasqueradingVector[14]].isNull())
         {
-            responseHeaders_=std::make_shared<std::string>(pJson[pMasqueradingVector[14]].asString());
+            responseTimeMs_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[14]].asInt64());
         }
     }
     if(!pMasqueradingVector[15].empty() && pJson.isMember(pMasqueradingVector[15]))
@@ -488,7 +477,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson, const std
         dirtyFlag_[15] = true;
         if(!pJson[pMasqueradingVector[15]].isNull())
         {
-            responseTimeMs_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[15]].asInt64());
+            errorMessage_=std::make_shared<std::string>(pJson[pMasqueradingVector[15]].asString());
         }
     }
     if(!pMasqueradingVector[16].empty() && pJson.isMember(pMasqueradingVector[16]))
@@ -496,7 +485,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson, const std
         dirtyFlag_[16] = true;
         if(!pJson[pMasqueradingVector[16]].isNull())
         {
-            errorMessage_=std::make_shared<std::string>(pJson[pMasqueradingVector[16]].asString());
+            errorStack_=std::make_shared<std::string>(pJson[pMasqueradingVector[16]].asString());
         }
     }
     if(!pMasqueradingVector[17].empty() && pJson.isMember(pMasqueradingVector[17]))
@@ -504,7 +493,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson, const std
         dirtyFlag_[17] = true;
         if(!pJson[pMasqueradingVector[17]].isNull())
         {
-            errorStack_=std::make_shared<std::string>(pJson[pMasqueradingVector[17]].asString());
+            isSuccessful_=std::make_shared<bool>(pJson[pMasqueradingVector[17]].asBool());
         }
     }
     if(!pMasqueradingVector[18].empty() && pJson.isMember(pMasqueradingVector[18]))
@@ -512,7 +501,25 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson, const std
         dirtyFlag_[18] = true;
         if(!pJson[pMasqueradingVector[18]].isNull())
         {
-            isSuccessful_=std::make_shared<bool>(pJson[pMasqueradingVector[18]].asBool());
+            auto timeStr = pJson[pMasqueradingVector[18]].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
         }
     }
     if(!pMasqueradingVector[19].empty() && pJson.isMember(pMasqueradingVector[19]))
@@ -537,7 +544,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson, const std
                     }
                     decimalNum = (size_t)atol(decimals.c_str());
                 }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+                completedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
     }
@@ -546,33 +553,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson, const std
         dirtyFlag_[20] = true;
         if(!pJson[pMasqueradingVector[20]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[20]].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                completedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
-        }
-    }
-    if(!pMasqueradingVector[21].empty() && pJson.isMember(pMasqueradingVector[21]))
-    {
-        dirtyFlag_[21] = true;
-        if(!pJson[pMasqueradingVector[21]].isNull())
-        {
-            requestId_=std::make_shared<std::string>(pJson[pMasqueradingVector[21]].asString());
+            requestId_=std::make_shared<std::string>(pJson[pMasqueradingVector[20]].asString());
         }
     }
 }
@@ -627,17 +608,9 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson) noexcept(
             clientId_=std::make_shared<std::string>(pJson["client_id"].asString());
         }
     }
-    if(pJson.isMember("client_secret_hash"))
-    {
-        dirtyFlag_[6]=true;
-        if(!pJson["client_secret_hash"].isNull())
-        {
-            clientSecretHash_=std::make_shared<std::string>(pJson["client_secret_hash"].asString());
-        }
-    }
     if(pJson.isMember("request_params"))
     {
-        dirtyFlag_[7]=true;
+        dirtyFlag_[6]=true;
         if(!pJson["request_params"].isNull())
         {
             requestParams_=std::make_shared<std::string>(pJson["request_params"].asString());
@@ -645,7 +618,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson) noexcept(
     }
     if(pJson.isMember("request_body"))
     {
-        dirtyFlag_[8]=true;
+        dirtyFlag_[7]=true;
         if(!pJson["request_body"].isNull())
         {
             requestBody_=std::make_shared<std::string>(pJson["request_body"].asString());
@@ -653,7 +626,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson) noexcept(
     }
     if(pJson.isMember("request_headers"))
     {
-        dirtyFlag_[9]=true;
+        dirtyFlag_[8]=true;
         if(!pJson["request_headers"].isNull())
         {
             requestHeaders_=std::make_shared<std::string>(pJson["request_headers"].asString());
@@ -661,7 +634,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson) noexcept(
     }
     if(pJson.isMember("request_ip"))
     {
-        dirtyFlag_[10]=true;
+        dirtyFlag_[9]=true;
         if(!pJson["request_ip"].isNull())
         {
             requestIp_=std::make_shared<std::string>(pJson["request_ip"].asString());
@@ -669,7 +642,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson) noexcept(
     }
     if(pJson.isMember("user_agent"))
     {
-        dirtyFlag_[11]=true;
+        dirtyFlag_[10]=true;
         if(!pJson["user_agent"].isNull())
         {
             userAgent_=std::make_shared<std::string>(pJson["user_agent"].asString());
@@ -677,7 +650,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson) noexcept(
     }
     if(pJson.isMember("response_status_code"))
     {
-        dirtyFlag_[12]=true;
+        dirtyFlag_[11]=true;
         if(!pJson["response_status_code"].isNull())
         {
             responseStatusCode_=std::make_shared<int32_t>((int32_t)pJson["response_status_code"].asInt64());
@@ -685,7 +658,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson) noexcept(
     }
     if(pJson.isMember("response_body"))
     {
-        dirtyFlag_[13]=true;
+        dirtyFlag_[12]=true;
         if(!pJson["response_body"].isNull())
         {
             responseBody_=std::make_shared<std::string>(pJson["response_body"].asString());
@@ -693,7 +666,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson) noexcept(
     }
     if(pJson.isMember("response_headers"))
     {
-        dirtyFlag_[14]=true;
+        dirtyFlag_[13]=true;
         if(!pJson["response_headers"].isNull())
         {
             responseHeaders_=std::make_shared<std::string>(pJson["response_headers"].asString());
@@ -701,7 +674,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson) noexcept(
     }
     if(pJson.isMember("response_time_ms"))
     {
-        dirtyFlag_[15]=true;
+        dirtyFlag_[14]=true;
         if(!pJson["response_time_ms"].isNull())
         {
             responseTimeMs_=std::make_shared<int32_t>((int32_t)pJson["response_time_ms"].asInt64());
@@ -709,7 +682,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson) noexcept(
     }
     if(pJson.isMember("error_message"))
     {
-        dirtyFlag_[16]=true;
+        dirtyFlag_[15]=true;
         if(!pJson["error_message"].isNull())
         {
             errorMessage_=std::make_shared<std::string>(pJson["error_message"].asString());
@@ -717,7 +690,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson) noexcept(
     }
     if(pJson.isMember("error_stack"))
     {
-        dirtyFlag_[17]=true;
+        dirtyFlag_[16]=true;
         if(!pJson["error_stack"].isNull())
         {
             errorStack_=std::make_shared<std::string>(pJson["error_stack"].asString());
@@ -725,7 +698,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson) noexcept(
     }
     if(pJson.isMember("is_successful"))
     {
-        dirtyFlag_[18]=true;
+        dirtyFlag_[17]=true;
         if(!pJson["is_successful"].isNull())
         {
             isSuccessful_=std::make_shared<bool>(pJson["is_successful"].asBool());
@@ -733,7 +706,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson) noexcept(
     }
     if(pJson.isMember("created_at"))
     {
-        dirtyFlag_[19]=true;
+        dirtyFlag_[18]=true;
         if(!pJson["created_at"].isNull())
         {
             auto timeStr = pJson["created_at"].asString();
@@ -759,7 +732,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson) noexcept(
     }
     if(pJson.isMember("completed_at"))
     {
-        dirtyFlag_[20]=true;
+        dirtyFlag_[19]=true;
         if(!pJson["completed_at"].isNull())
         {
             auto timeStr = pJson["completed_at"].asString();
@@ -785,7 +758,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson) noexcept(
     }
     if(pJson.isMember("request_id"))
     {
-        dirtyFlag_[21]=true;
+        dirtyFlag_[20]=true;
         if(!pJson["request_id"].isNull())
         {
             requestId_=std::make_shared<std::string>(pJson["request_id"].asString());
@@ -796,7 +769,7 @@ PartnerApiRequestLogs::PartnerApiRequestLogs(const Json::Value &pJson) noexcept(
 void PartnerApiRequestLogs::updateByMasqueradedJson(const Json::Value &pJson,
                                             const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 22)
+    if(pMasqueradingVector.size() != 21)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -853,7 +826,7 @@ void PartnerApiRequestLogs::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[6] = true;
         if(!pJson[pMasqueradingVector[6]].isNull())
         {
-            clientSecretHash_=std::make_shared<std::string>(pJson[pMasqueradingVector[6]].asString());
+            requestParams_=std::make_shared<std::string>(pJson[pMasqueradingVector[6]].asString());
         }
     }
     if(!pMasqueradingVector[7].empty() && pJson.isMember(pMasqueradingVector[7]))
@@ -861,7 +834,7 @@ void PartnerApiRequestLogs::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[7] = true;
         if(!pJson[pMasqueradingVector[7]].isNull())
         {
-            requestParams_=std::make_shared<std::string>(pJson[pMasqueradingVector[7]].asString());
+            requestBody_=std::make_shared<std::string>(pJson[pMasqueradingVector[7]].asString());
         }
     }
     if(!pMasqueradingVector[8].empty() && pJson.isMember(pMasqueradingVector[8]))
@@ -869,7 +842,7 @@ void PartnerApiRequestLogs::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[8] = true;
         if(!pJson[pMasqueradingVector[8]].isNull())
         {
-            requestBody_=std::make_shared<std::string>(pJson[pMasqueradingVector[8]].asString());
+            requestHeaders_=std::make_shared<std::string>(pJson[pMasqueradingVector[8]].asString());
         }
     }
     if(!pMasqueradingVector[9].empty() && pJson.isMember(pMasqueradingVector[9]))
@@ -877,7 +850,7 @@ void PartnerApiRequestLogs::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[9] = true;
         if(!pJson[pMasqueradingVector[9]].isNull())
         {
-            requestHeaders_=std::make_shared<std::string>(pJson[pMasqueradingVector[9]].asString());
+            requestIp_=std::make_shared<std::string>(pJson[pMasqueradingVector[9]].asString());
         }
     }
     if(!pMasqueradingVector[10].empty() && pJson.isMember(pMasqueradingVector[10]))
@@ -885,7 +858,7 @@ void PartnerApiRequestLogs::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[10] = true;
         if(!pJson[pMasqueradingVector[10]].isNull())
         {
-            requestIp_=std::make_shared<std::string>(pJson[pMasqueradingVector[10]].asString());
+            userAgent_=std::make_shared<std::string>(pJson[pMasqueradingVector[10]].asString());
         }
     }
     if(!pMasqueradingVector[11].empty() && pJson.isMember(pMasqueradingVector[11]))
@@ -893,7 +866,7 @@ void PartnerApiRequestLogs::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[11] = true;
         if(!pJson[pMasqueradingVector[11]].isNull())
         {
-            userAgent_=std::make_shared<std::string>(pJson[pMasqueradingVector[11]].asString());
+            responseStatusCode_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[11]].asInt64());
         }
     }
     if(!pMasqueradingVector[12].empty() && pJson.isMember(pMasqueradingVector[12]))
@@ -901,7 +874,7 @@ void PartnerApiRequestLogs::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[12] = true;
         if(!pJson[pMasqueradingVector[12]].isNull())
         {
-            responseStatusCode_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[12]].asInt64());
+            responseBody_=std::make_shared<std::string>(pJson[pMasqueradingVector[12]].asString());
         }
     }
     if(!pMasqueradingVector[13].empty() && pJson.isMember(pMasqueradingVector[13]))
@@ -909,7 +882,7 @@ void PartnerApiRequestLogs::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[13] = true;
         if(!pJson[pMasqueradingVector[13]].isNull())
         {
-            responseBody_=std::make_shared<std::string>(pJson[pMasqueradingVector[13]].asString());
+            responseHeaders_=std::make_shared<std::string>(pJson[pMasqueradingVector[13]].asString());
         }
     }
     if(!pMasqueradingVector[14].empty() && pJson.isMember(pMasqueradingVector[14]))
@@ -917,7 +890,7 @@ void PartnerApiRequestLogs::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[14] = true;
         if(!pJson[pMasqueradingVector[14]].isNull())
         {
-            responseHeaders_=std::make_shared<std::string>(pJson[pMasqueradingVector[14]].asString());
+            responseTimeMs_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[14]].asInt64());
         }
     }
     if(!pMasqueradingVector[15].empty() && pJson.isMember(pMasqueradingVector[15]))
@@ -925,7 +898,7 @@ void PartnerApiRequestLogs::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[15] = true;
         if(!pJson[pMasqueradingVector[15]].isNull())
         {
-            responseTimeMs_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[15]].asInt64());
+            errorMessage_=std::make_shared<std::string>(pJson[pMasqueradingVector[15]].asString());
         }
     }
     if(!pMasqueradingVector[16].empty() && pJson.isMember(pMasqueradingVector[16]))
@@ -933,7 +906,7 @@ void PartnerApiRequestLogs::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[16] = true;
         if(!pJson[pMasqueradingVector[16]].isNull())
         {
-            errorMessage_=std::make_shared<std::string>(pJson[pMasqueradingVector[16]].asString());
+            errorStack_=std::make_shared<std::string>(pJson[pMasqueradingVector[16]].asString());
         }
     }
     if(!pMasqueradingVector[17].empty() && pJson.isMember(pMasqueradingVector[17]))
@@ -941,7 +914,7 @@ void PartnerApiRequestLogs::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[17] = true;
         if(!pJson[pMasqueradingVector[17]].isNull())
         {
-            errorStack_=std::make_shared<std::string>(pJson[pMasqueradingVector[17]].asString());
+            isSuccessful_=std::make_shared<bool>(pJson[pMasqueradingVector[17]].asBool());
         }
     }
     if(!pMasqueradingVector[18].empty() && pJson.isMember(pMasqueradingVector[18]))
@@ -949,7 +922,25 @@ void PartnerApiRequestLogs::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[18] = true;
         if(!pJson[pMasqueradingVector[18]].isNull())
         {
-            isSuccessful_=std::make_shared<bool>(pJson[pMasqueradingVector[18]].asBool());
+            auto timeStr = pJson[pMasqueradingVector[18]].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
         }
     }
     if(!pMasqueradingVector[19].empty() && pJson.isMember(pMasqueradingVector[19]))
@@ -974,7 +965,7 @@ void PartnerApiRequestLogs::updateByMasqueradedJson(const Json::Value &pJson,
                     }
                     decimalNum = (size_t)atol(decimals.c_str());
                 }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+                completedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
     }
@@ -983,33 +974,7 @@ void PartnerApiRequestLogs::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[20] = true;
         if(!pJson[pMasqueradingVector[20]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[20]].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                completedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
-        }
-    }
-    if(!pMasqueradingVector[21].empty() && pJson.isMember(pMasqueradingVector[21]))
-    {
-        dirtyFlag_[21] = true;
-        if(!pJson[pMasqueradingVector[21]].isNull())
-        {
-            requestId_=std::make_shared<std::string>(pJson[pMasqueradingVector[21]].asString());
+            requestId_=std::make_shared<std::string>(pJson[pMasqueradingVector[20]].asString());
         }
     }
 }
@@ -1063,17 +1028,9 @@ void PartnerApiRequestLogs::updateByJson(const Json::Value &pJson) noexcept(fals
             clientId_=std::make_shared<std::string>(pJson["client_id"].asString());
         }
     }
-    if(pJson.isMember("client_secret_hash"))
-    {
-        dirtyFlag_[6] = true;
-        if(!pJson["client_secret_hash"].isNull())
-        {
-            clientSecretHash_=std::make_shared<std::string>(pJson["client_secret_hash"].asString());
-        }
-    }
     if(pJson.isMember("request_params"))
     {
-        dirtyFlag_[7] = true;
+        dirtyFlag_[6] = true;
         if(!pJson["request_params"].isNull())
         {
             requestParams_=std::make_shared<std::string>(pJson["request_params"].asString());
@@ -1081,7 +1038,7 @@ void PartnerApiRequestLogs::updateByJson(const Json::Value &pJson) noexcept(fals
     }
     if(pJson.isMember("request_body"))
     {
-        dirtyFlag_[8] = true;
+        dirtyFlag_[7] = true;
         if(!pJson["request_body"].isNull())
         {
             requestBody_=std::make_shared<std::string>(pJson["request_body"].asString());
@@ -1089,7 +1046,7 @@ void PartnerApiRequestLogs::updateByJson(const Json::Value &pJson) noexcept(fals
     }
     if(pJson.isMember("request_headers"))
     {
-        dirtyFlag_[9] = true;
+        dirtyFlag_[8] = true;
         if(!pJson["request_headers"].isNull())
         {
             requestHeaders_=std::make_shared<std::string>(pJson["request_headers"].asString());
@@ -1097,7 +1054,7 @@ void PartnerApiRequestLogs::updateByJson(const Json::Value &pJson) noexcept(fals
     }
     if(pJson.isMember("request_ip"))
     {
-        dirtyFlag_[10] = true;
+        dirtyFlag_[9] = true;
         if(!pJson["request_ip"].isNull())
         {
             requestIp_=std::make_shared<std::string>(pJson["request_ip"].asString());
@@ -1105,7 +1062,7 @@ void PartnerApiRequestLogs::updateByJson(const Json::Value &pJson) noexcept(fals
     }
     if(pJson.isMember("user_agent"))
     {
-        dirtyFlag_[11] = true;
+        dirtyFlag_[10] = true;
         if(!pJson["user_agent"].isNull())
         {
             userAgent_=std::make_shared<std::string>(pJson["user_agent"].asString());
@@ -1113,7 +1070,7 @@ void PartnerApiRequestLogs::updateByJson(const Json::Value &pJson) noexcept(fals
     }
     if(pJson.isMember("response_status_code"))
     {
-        dirtyFlag_[12] = true;
+        dirtyFlag_[11] = true;
         if(!pJson["response_status_code"].isNull())
         {
             responseStatusCode_=std::make_shared<int32_t>((int32_t)pJson["response_status_code"].asInt64());
@@ -1121,7 +1078,7 @@ void PartnerApiRequestLogs::updateByJson(const Json::Value &pJson) noexcept(fals
     }
     if(pJson.isMember("response_body"))
     {
-        dirtyFlag_[13] = true;
+        dirtyFlag_[12] = true;
         if(!pJson["response_body"].isNull())
         {
             responseBody_=std::make_shared<std::string>(pJson["response_body"].asString());
@@ -1129,7 +1086,7 @@ void PartnerApiRequestLogs::updateByJson(const Json::Value &pJson) noexcept(fals
     }
     if(pJson.isMember("response_headers"))
     {
-        dirtyFlag_[14] = true;
+        dirtyFlag_[13] = true;
         if(!pJson["response_headers"].isNull())
         {
             responseHeaders_=std::make_shared<std::string>(pJson["response_headers"].asString());
@@ -1137,7 +1094,7 @@ void PartnerApiRequestLogs::updateByJson(const Json::Value &pJson) noexcept(fals
     }
     if(pJson.isMember("response_time_ms"))
     {
-        dirtyFlag_[15] = true;
+        dirtyFlag_[14] = true;
         if(!pJson["response_time_ms"].isNull())
         {
             responseTimeMs_=std::make_shared<int32_t>((int32_t)pJson["response_time_ms"].asInt64());
@@ -1145,7 +1102,7 @@ void PartnerApiRequestLogs::updateByJson(const Json::Value &pJson) noexcept(fals
     }
     if(pJson.isMember("error_message"))
     {
-        dirtyFlag_[16] = true;
+        dirtyFlag_[15] = true;
         if(!pJson["error_message"].isNull())
         {
             errorMessage_=std::make_shared<std::string>(pJson["error_message"].asString());
@@ -1153,7 +1110,7 @@ void PartnerApiRequestLogs::updateByJson(const Json::Value &pJson) noexcept(fals
     }
     if(pJson.isMember("error_stack"))
     {
-        dirtyFlag_[17] = true;
+        dirtyFlag_[16] = true;
         if(!pJson["error_stack"].isNull())
         {
             errorStack_=std::make_shared<std::string>(pJson["error_stack"].asString());
@@ -1161,7 +1118,7 @@ void PartnerApiRequestLogs::updateByJson(const Json::Value &pJson) noexcept(fals
     }
     if(pJson.isMember("is_successful"))
     {
-        dirtyFlag_[18] = true;
+        dirtyFlag_[17] = true;
         if(!pJson["is_successful"].isNull())
         {
             isSuccessful_=std::make_shared<bool>(pJson["is_successful"].asBool());
@@ -1169,7 +1126,7 @@ void PartnerApiRequestLogs::updateByJson(const Json::Value &pJson) noexcept(fals
     }
     if(pJson.isMember("created_at"))
     {
-        dirtyFlag_[19] = true;
+        dirtyFlag_[18] = true;
         if(!pJson["created_at"].isNull())
         {
             auto timeStr = pJson["created_at"].asString();
@@ -1195,7 +1152,7 @@ void PartnerApiRequestLogs::updateByJson(const Json::Value &pJson) noexcept(fals
     }
     if(pJson.isMember("completed_at"))
     {
-        dirtyFlag_[20] = true;
+        dirtyFlag_[19] = true;
         if(!pJson["completed_at"].isNull())
         {
             auto timeStr = pJson["completed_at"].asString();
@@ -1221,7 +1178,7 @@ void PartnerApiRequestLogs::updateByJson(const Json::Value &pJson) noexcept(fals
     }
     if(pJson.isMember("request_id"))
     {
-        dirtyFlag_[21] = true;
+        dirtyFlag_[20] = true;
         if(!pJson["request_id"].isNull())
         {
             requestId_=std::make_shared<std::string>(pJson["request_id"].asString());
@@ -1381,33 +1338,6 @@ void PartnerApiRequestLogs::setClientIdToNull() noexcept
     dirtyFlag_[5] = true;
 }
 
-const std::string &PartnerApiRequestLogs::getValueOfClientSecretHash() const noexcept
-{
-    static const std::string defaultValue = std::string();
-    if(clientSecretHash_)
-        return *clientSecretHash_;
-    return defaultValue;
-}
-const std::shared_ptr<std::string> &PartnerApiRequestLogs::getClientSecretHash() const noexcept
-{
-    return clientSecretHash_;
-}
-void PartnerApiRequestLogs::setClientSecretHash(const std::string &pClientSecretHash) noexcept
-{
-    clientSecretHash_ = std::make_shared<std::string>(pClientSecretHash);
-    dirtyFlag_[6] = true;
-}
-void PartnerApiRequestLogs::setClientSecretHash(std::string &&pClientSecretHash) noexcept
-{
-    clientSecretHash_ = std::make_shared<std::string>(std::move(pClientSecretHash));
-    dirtyFlag_[6] = true;
-}
-void PartnerApiRequestLogs::setClientSecretHashToNull() noexcept
-{
-    clientSecretHash_.reset();
-    dirtyFlag_[6] = true;
-}
-
 const std::string &PartnerApiRequestLogs::getValueOfRequestParams() const noexcept
 {
     static const std::string defaultValue = std::string();
@@ -1422,17 +1352,17 @@ const std::shared_ptr<std::string> &PartnerApiRequestLogs::getRequestParams() co
 void PartnerApiRequestLogs::setRequestParams(const std::string &pRequestParams) noexcept
 {
     requestParams_ = std::make_shared<std::string>(pRequestParams);
-    dirtyFlag_[7] = true;
+    dirtyFlag_[6] = true;
 }
 void PartnerApiRequestLogs::setRequestParams(std::string &&pRequestParams) noexcept
 {
     requestParams_ = std::make_shared<std::string>(std::move(pRequestParams));
-    dirtyFlag_[7] = true;
+    dirtyFlag_[6] = true;
 }
 void PartnerApiRequestLogs::setRequestParamsToNull() noexcept
 {
     requestParams_.reset();
-    dirtyFlag_[7] = true;
+    dirtyFlag_[6] = true;
 }
 
 const std::string &PartnerApiRequestLogs::getValueOfRequestBody() const noexcept
@@ -1449,17 +1379,17 @@ const std::shared_ptr<std::string> &PartnerApiRequestLogs::getRequestBody() cons
 void PartnerApiRequestLogs::setRequestBody(const std::string &pRequestBody) noexcept
 {
     requestBody_ = std::make_shared<std::string>(pRequestBody);
-    dirtyFlag_[8] = true;
+    dirtyFlag_[7] = true;
 }
 void PartnerApiRequestLogs::setRequestBody(std::string &&pRequestBody) noexcept
 {
     requestBody_ = std::make_shared<std::string>(std::move(pRequestBody));
-    dirtyFlag_[8] = true;
+    dirtyFlag_[7] = true;
 }
 void PartnerApiRequestLogs::setRequestBodyToNull() noexcept
 {
     requestBody_.reset();
-    dirtyFlag_[8] = true;
+    dirtyFlag_[7] = true;
 }
 
 const std::string &PartnerApiRequestLogs::getValueOfRequestHeaders() const noexcept
@@ -1476,17 +1406,17 @@ const std::shared_ptr<std::string> &PartnerApiRequestLogs::getRequestHeaders() c
 void PartnerApiRequestLogs::setRequestHeaders(const std::string &pRequestHeaders) noexcept
 {
     requestHeaders_ = std::make_shared<std::string>(pRequestHeaders);
-    dirtyFlag_[9] = true;
+    dirtyFlag_[8] = true;
 }
 void PartnerApiRequestLogs::setRequestHeaders(std::string &&pRequestHeaders) noexcept
 {
     requestHeaders_ = std::make_shared<std::string>(std::move(pRequestHeaders));
-    dirtyFlag_[9] = true;
+    dirtyFlag_[8] = true;
 }
 void PartnerApiRequestLogs::setRequestHeadersToNull() noexcept
 {
     requestHeaders_.reset();
-    dirtyFlag_[9] = true;
+    dirtyFlag_[8] = true;
 }
 
 const std::string &PartnerApiRequestLogs::getValueOfRequestIp() const noexcept
@@ -1503,17 +1433,17 @@ const std::shared_ptr<std::string> &PartnerApiRequestLogs::getRequestIp() const 
 void PartnerApiRequestLogs::setRequestIp(const std::string &pRequestIp) noexcept
 {
     requestIp_ = std::make_shared<std::string>(pRequestIp);
-    dirtyFlag_[10] = true;
+    dirtyFlag_[9] = true;
 }
 void PartnerApiRequestLogs::setRequestIp(std::string &&pRequestIp) noexcept
 {
     requestIp_ = std::make_shared<std::string>(std::move(pRequestIp));
-    dirtyFlag_[10] = true;
+    dirtyFlag_[9] = true;
 }
 void PartnerApiRequestLogs::setRequestIpToNull() noexcept
 {
     requestIp_.reset();
-    dirtyFlag_[10] = true;
+    dirtyFlag_[9] = true;
 }
 
 const std::string &PartnerApiRequestLogs::getValueOfUserAgent() const noexcept
@@ -1530,17 +1460,17 @@ const std::shared_ptr<std::string> &PartnerApiRequestLogs::getUserAgent() const 
 void PartnerApiRequestLogs::setUserAgent(const std::string &pUserAgent) noexcept
 {
     userAgent_ = std::make_shared<std::string>(pUserAgent);
-    dirtyFlag_[11] = true;
+    dirtyFlag_[10] = true;
 }
 void PartnerApiRequestLogs::setUserAgent(std::string &&pUserAgent) noexcept
 {
     userAgent_ = std::make_shared<std::string>(std::move(pUserAgent));
-    dirtyFlag_[11] = true;
+    dirtyFlag_[10] = true;
 }
 void PartnerApiRequestLogs::setUserAgentToNull() noexcept
 {
     userAgent_.reset();
-    dirtyFlag_[11] = true;
+    dirtyFlag_[10] = true;
 }
 
 const int32_t &PartnerApiRequestLogs::getValueOfResponseStatusCode() const noexcept
@@ -1557,7 +1487,7 @@ const std::shared_ptr<int32_t> &PartnerApiRequestLogs::getResponseStatusCode() c
 void PartnerApiRequestLogs::setResponseStatusCode(const int32_t &pResponseStatusCode) noexcept
 {
     responseStatusCode_ = std::make_shared<int32_t>(pResponseStatusCode);
-    dirtyFlag_[12] = true;
+    dirtyFlag_[11] = true;
 }
 
 const std::string &PartnerApiRequestLogs::getValueOfResponseBody() const noexcept
@@ -1574,17 +1504,17 @@ const std::shared_ptr<std::string> &PartnerApiRequestLogs::getResponseBody() con
 void PartnerApiRequestLogs::setResponseBody(const std::string &pResponseBody) noexcept
 {
     responseBody_ = std::make_shared<std::string>(pResponseBody);
-    dirtyFlag_[13] = true;
+    dirtyFlag_[12] = true;
 }
 void PartnerApiRequestLogs::setResponseBody(std::string &&pResponseBody) noexcept
 {
     responseBody_ = std::make_shared<std::string>(std::move(pResponseBody));
-    dirtyFlag_[13] = true;
+    dirtyFlag_[12] = true;
 }
 void PartnerApiRequestLogs::setResponseBodyToNull() noexcept
 {
     responseBody_.reset();
-    dirtyFlag_[13] = true;
+    dirtyFlag_[12] = true;
 }
 
 const std::string &PartnerApiRequestLogs::getValueOfResponseHeaders() const noexcept
@@ -1601,17 +1531,17 @@ const std::shared_ptr<std::string> &PartnerApiRequestLogs::getResponseHeaders() 
 void PartnerApiRequestLogs::setResponseHeaders(const std::string &pResponseHeaders) noexcept
 {
     responseHeaders_ = std::make_shared<std::string>(pResponseHeaders);
-    dirtyFlag_[14] = true;
+    dirtyFlag_[13] = true;
 }
 void PartnerApiRequestLogs::setResponseHeaders(std::string &&pResponseHeaders) noexcept
 {
     responseHeaders_ = std::make_shared<std::string>(std::move(pResponseHeaders));
-    dirtyFlag_[14] = true;
+    dirtyFlag_[13] = true;
 }
 void PartnerApiRequestLogs::setResponseHeadersToNull() noexcept
 {
     responseHeaders_.reset();
-    dirtyFlag_[14] = true;
+    dirtyFlag_[13] = true;
 }
 
 const int32_t &PartnerApiRequestLogs::getValueOfResponseTimeMs() const noexcept
@@ -1628,12 +1558,12 @@ const std::shared_ptr<int32_t> &PartnerApiRequestLogs::getResponseTimeMs() const
 void PartnerApiRequestLogs::setResponseTimeMs(const int32_t &pResponseTimeMs) noexcept
 {
     responseTimeMs_ = std::make_shared<int32_t>(pResponseTimeMs);
-    dirtyFlag_[15] = true;
+    dirtyFlag_[14] = true;
 }
 void PartnerApiRequestLogs::setResponseTimeMsToNull() noexcept
 {
     responseTimeMs_.reset();
-    dirtyFlag_[15] = true;
+    dirtyFlag_[14] = true;
 }
 
 const std::string &PartnerApiRequestLogs::getValueOfErrorMessage() const noexcept
@@ -1650,17 +1580,17 @@ const std::shared_ptr<std::string> &PartnerApiRequestLogs::getErrorMessage() con
 void PartnerApiRequestLogs::setErrorMessage(const std::string &pErrorMessage) noexcept
 {
     errorMessage_ = std::make_shared<std::string>(pErrorMessage);
-    dirtyFlag_[16] = true;
+    dirtyFlag_[15] = true;
 }
 void PartnerApiRequestLogs::setErrorMessage(std::string &&pErrorMessage) noexcept
 {
     errorMessage_ = std::make_shared<std::string>(std::move(pErrorMessage));
-    dirtyFlag_[16] = true;
+    dirtyFlag_[15] = true;
 }
 void PartnerApiRequestLogs::setErrorMessageToNull() noexcept
 {
     errorMessage_.reset();
-    dirtyFlag_[16] = true;
+    dirtyFlag_[15] = true;
 }
 
 const std::string &PartnerApiRequestLogs::getValueOfErrorStack() const noexcept
@@ -1677,17 +1607,17 @@ const std::shared_ptr<std::string> &PartnerApiRequestLogs::getErrorStack() const
 void PartnerApiRequestLogs::setErrorStack(const std::string &pErrorStack) noexcept
 {
     errorStack_ = std::make_shared<std::string>(pErrorStack);
-    dirtyFlag_[17] = true;
+    dirtyFlag_[16] = true;
 }
 void PartnerApiRequestLogs::setErrorStack(std::string &&pErrorStack) noexcept
 {
     errorStack_ = std::make_shared<std::string>(std::move(pErrorStack));
-    dirtyFlag_[17] = true;
+    dirtyFlag_[16] = true;
 }
 void PartnerApiRequestLogs::setErrorStackToNull() noexcept
 {
     errorStack_.reset();
-    dirtyFlag_[17] = true;
+    dirtyFlag_[16] = true;
 }
 
 const bool &PartnerApiRequestLogs::getValueOfIsSuccessful() const noexcept
@@ -1704,12 +1634,12 @@ const std::shared_ptr<bool> &PartnerApiRequestLogs::getIsSuccessful() const noex
 void PartnerApiRequestLogs::setIsSuccessful(const bool &pIsSuccessful) noexcept
 {
     isSuccessful_ = std::make_shared<bool>(pIsSuccessful);
-    dirtyFlag_[18] = true;
+    dirtyFlag_[17] = true;
 }
 void PartnerApiRequestLogs::setIsSuccessfulToNull() noexcept
 {
     isSuccessful_.reset();
-    dirtyFlag_[18] = true;
+    dirtyFlag_[17] = true;
 }
 
 const ::trantor::Date &PartnerApiRequestLogs::getValueOfCreatedAt() const noexcept
@@ -1726,12 +1656,12 @@ const std::shared_ptr<::trantor::Date> &PartnerApiRequestLogs::getCreatedAt() co
 void PartnerApiRequestLogs::setCreatedAt(const ::trantor::Date &pCreatedAt) noexcept
 {
     createdAt_ = std::make_shared<::trantor::Date>(pCreatedAt);
-    dirtyFlag_[19] = true;
+    dirtyFlag_[18] = true;
 }
 void PartnerApiRequestLogs::setCreatedAtToNull() noexcept
 {
     createdAt_.reset();
-    dirtyFlag_[19] = true;
+    dirtyFlag_[18] = true;
 }
 
 const ::trantor::Date &PartnerApiRequestLogs::getValueOfCompletedAt() const noexcept
@@ -1748,12 +1678,12 @@ const std::shared_ptr<::trantor::Date> &PartnerApiRequestLogs::getCompletedAt() 
 void PartnerApiRequestLogs::setCompletedAt(const ::trantor::Date &pCompletedAt) noexcept
 {
     completedAt_ = std::make_shared<::trantor::Date>(pCompletedAt);
-    dirtyFlag_[20] = true;
+    dirtyFlag_[19] = true;
 }
 void PartnerApiRequestLogs::setCompletedAtToNull() noexcept
 {
     completedAt_.reset();
-    dirtyFlag_[20] = true;
+    dirtyFlag_[19] = true;
 }
 
 const std::string &PartnerApiRequestLogs::getValueOfRequestId() const noexcept
@@ -1770,17 +1700,17 @@ const std::shared_ptr<std::string> &PartnerApiRequestLogs::getRequestId() const 
 void PartnerApiRequestLogs::setRequestId(const std::string &pRequestId) noexcept
 {
     requestId_ = std::make_shared<std::string>(pRequestId);
-    dirtyFlag_[21] = true;
+    dirtyFlag_[20] = true;
 }
 void PartnerApiRequestLogs::setRequestId(std::string &&pRequestId) noexcept
 {
     requestId_ = std::make_shared<std::string>(std::move(pRequestId));
-    dirtyFlag_[21] = true;
+    dirtyFlag_[20] = true;
 }
 void PartnerApiRequestLogs::setRequestIdToNull() noexcept
 {
     requestId_.reset();
-    dirtyFlag_[21] = true;
+    dirtyFlag_[20] = true;
 }
 
 void PartnerApiRequestLogs::updateId(const uint64_t id)
@@ -1796,7 +1726,6 @@ const std::vector<std::string> &PartnerApiRequestLogs::insertColumns() noexcept
         "endpoint",
         "method",
         "client_id",
-        "client_secret_hash",
         "request_params",
         "request_body",
         "request_headers",
@@ -1886,17 +1815,6 @@ void PartnerApiRequestLogs::outputArgs(drogon::orm::internal::SqlBinder &binder)
     }
     if(dirtyFlag_[6])
     {
-        if(getClientSecretHash())
-        {
-            binder << getValueOfClientSecretHash();
-        }
-        else
-        {
-            binder << nullptr;
-        }
-    }
-    if(dirtyFlag_[7])
-    {
         if(getRequestParams())
         {
             binder << getValueOfRequestParams();
@@ -1906,7 +1824,7 @@ void PartnerApiRequestLogs::outputArgs(drogon::orm::internal::SqlBinder &binder)
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[8])
+    if(dirtyFlag_[7])
     {
         if(getRequestBody())
         {
@@ -1917,7 +1835,7 @@ void PartnerApiRequestLogs::outputArgs(drogon::orm::internal::SqlBinder &binder)
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[9])
+    if(dirtyFlag_[8])
     {
         if(getRequestHeaders())
         {
@@ -1928,7 +1846,7 @@ void PartnerApiRequestLogs::outputArgs(drogon::orm::internal::SqlBinder &binder)
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[10])
+    if(dirtyFlag_[9])
     {
         if(getRequestIp())
         {
@@ -1939,7 +1857,7 @@ void PartnerApiRequestLogs::outputArgs(drogon::orm::internal::SqlBinder &binder)
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[11])
+    if(dirtyFlag_[10])
     {
         if(getUserAgent())
         {
@@ -1950,7 +1868,7 @@ void PartnerApiRequestLogs::outputArgs(drogon::orm::internal::SqlBinder &binder)
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[12])
+    if(dirtyFlag_[11])
     {
         if(getResponseStatusCode())
         {
@@ -1961,7 +1879,7 @@ void PartnerApiRequestLogs::outputArgs(drogon::orm::internal::SqlBinder &binder)
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[13])
+    if(dirtyFlag_[12])
     {
         if(getResponseBody())
         {
@@ -1972,7 +1890,7 @@ void PartnerApiRequestLogs::outputArgs(drogon::orm::internal::SqlBinder &binder)
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[14])
+    if(dirtyFlag_[13])
     {
         if(getResponseHeaders())
         {
@@ -1983,7 +1901,7 @@ void PartnerApiRequestLogs::outputArgs(drogon::orm::internal::SqlBinder &binder)
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[15])
+    if(dirtyFlag_[14])
     {
         if(getResponseTimeMs())
         {
@@ -1994,7 +1912,7 @@ void PartnerApiRequestLogs::outputArgs(drogon::orm::internal::SqlBinder &binder)
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[16])
+    if(dirtyFlag_[15])
     {
         if(getErrorMessage())
         {
@@ -2005,7 +1923,7 @@ void PartnerApiRequestLogs::outputArgs(drogon::orm::internal::SqlBinder &binder)
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[17])
+    if(dirtyFlag_[16])
     {
         if(getErrorStack())
         {
@@ -2016,7 +1934,7 @@ void PartnerApiRequestLogs::outputArgs(drogon::orm::internal::SqlBinder &binder)
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[18])
+    if(dirtyFlag_[17])
     {
         if(getIsSuccessful())
         {
@@ -2027,7 +1945,7 @@ void PartnerApiRequestLogs::outputArgs(drogon::orm::internal::SqlBinder &binder)
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[19])
+    if(dirtyFlag_[18])
     {
         if(getCreatedAt())
         {
@@ -2038,7 +1956,7 @@ void PartnerApiRequestLogs::outputArgs(drogon::orm::internal::SqlBinder &binder)
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[20])
+    if(dirtyFlag_[19])
     {
         if(getCompletedAt())
         {
@@ -2049,7 +1967,7 @@ void PartnerApiRequestLogs::outputArgs(drogon::orm::internal::SqlBinder &binder)
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[21])
+    if(dirtyFlag_[20])
     {
         if(getRequestId())
         {
@@ -2149,10 +2067,6 @@ const std::vector<std::string> PartnerApiRequestLogs::updateColumns() const
     {
         ret.push_back(getColumnName(20));
     }
-    if(dirtyFlag_[21])
-    {
-        ret.push_back(getColumnName(21));
-    }
     return ret;
 }
 
@@ -2226,17 +2140,6 @@ void PartnerApiRequestLogs::updateArgs(drogon::orm::internal::SqlBinder &binder)
     }
     if(dirtyFlag_[6])
     {
-        if(getClientSecretHash())
-        {
-            binder << getValueOfClientSecretHash();
-        }
-        else
-        {
-            binder << nullptr;
-        }
-    }
-    if(dirtyFlag_[7])
-    {
         if(getRequestParams())
         {
             binder << getValueOfRequestParams();
@@ -2246,7 +2149,7 @@ void PartnerApiRequestLogs::updateArgs(drogon::orm::internal::SqlBinder &binder)
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[8])
+    if(dirtyFlag_[7])
     {
         if(getRequestBody())
         {
@@ -2257,7 +2160,7 @@ void PartnerApiRequestLogs::updateArgs(drogon::orm::internal::SqlBinder &binder)
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[9])
+    if(dirtyFlag_[8])
     {
         if(getRequestHeaders())
         {
@@ -2268,7 +2171,7 @@ void PartnerApiRequestLogs::updateArgs(drogon::orm::internal::SqlBinder &binder)
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[10])
+    if(dirtyFlag_[9])
     {
         if(getRequestIp())
         {
@@ -2279,7 +2182,7 @@ void PartnerApiRequestLogs::updateArgs(drogon::orm::internal::SqlBinder &binder)
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[11])
+    if(dirtyFlag_[10])
     {
         if(getUserAgent())
         {
@@ -2290,7 +2193,7 @@ void PartnerApiRequestLogs::updateArgs(drogon::orm::internal::SqlBinder &binder)
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[12])
+    if(dirtyFlag_[11])
     {
         if(getResponseStatusCode())
         {
@@ -2301,7 +2204,7 @@ void PartnerApiRequestLogs::updateArgs(drogon::orm::internal::SqlBinder &binder)
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[13])
+    if(dirtyFlag_[12])
     {
         if(getResponseBody())
         {
@@ -2312,7 +2215,7 @@ void PartnerApiRequestLogs::updateArgs(drogon::orm::internal::SqlBinder &binder)
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[14])
+    if(dirtyFlag_[13])
     {
         if(getResponseHeaders())
         {
@@ -2323,7 +2226,7 @@ void PartnerApiRequestLogs::updateArgs(drogon::orm::internal::SqlBinder &binder)
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[15])
+    if(dirtyFlag_[14])
     {
         if(getResponseTimeMs())
         {
@@ -2334,7 +2237,7 @@ void PartnerApiRequestLogs::updateArgs(drogon::orm::internal::SqlBinder &binder)
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[16])
+    if(dirtyFlag_[15])
     {
         if(getErrorMessage())
         {
@@ -2345,7 +2248,7 @@ void PartnerApiRequestLogs::updateArgs(drogon::orm::internal::SqlBinder &binder)
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[17])
+    if(dirtyFlag_[16])
     {
         if(getErrorStack())
         {
@@ -2356,7 +2259,7 @@ void PartnerApiRequestLogs::updateArgs(drogon::orm::internal::SqlBinder &binder)
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[18])
+    if(dirtyFlag_[17])
     {
         if(getIsSuccessful())
         {
@@ -2367,7 +2270,7 @@ void PartnerApiRequestLogs::updateArgs(drogon::orm::internal::SqlBinder &binder)
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[19])
+    if(dirtyFlag_[18])
     {
         if(getCreatedAt())
         {
@@ -2378,7 +2281,7 @@ void PartnerApiRequestLogs::updateArgs(drogon::orm::internal::SqlBinder &binder)
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[20])
+    if(dirtyFlag_[19])
     {
         if(getCompletedAt())
         {
@@ -2389,7 +2292,7 @@ void PartnerApiRequestLogs::updateArgs(drogon::orm::internal::SqlBinder &binder)
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[21])
+    if(dirtyFlag_[20])
     {
         if(getRequestId())
         {
@@ -2451,14 +2354,6 @@ Json::Value PartnerApiRequestLogs::toJson() const
     else
     {
         ret["client_id"]=Json::Value();
-    }
-    if(getClientSecretHash())
-    {
-        ret["client_secret_hash"]=getValueOfClientSecretHash();
-    }
-    else
-    {
-        ret["client_secret_hash"]=Json::Value();
     }
     if(getRequestParams())
     {
@@ -2592,7 +2487,7 @@ Json::Value PartnerApiRequestLogs::toMasqueradedJson(
     const std::vector<std::string> &pMasqueradingVector) const
 {
     Json::Value ret;
-    if(pMasqueradingVector.size() == 22)
+    if(pMasqueradingVector.size() == 21)
     {
         if(!pMasqueradingVector[0].empty())
         {
@@ -2662,9 +2557,9 @@ Json::Value PartnerApiRequestLogs::toMasqueradedJson(
         }
         if(!pMasqueradingVector[6].empty())
         {
-            if(getClientSecretHash())
+            if(getRequestParams())
             {
-                ret[pMasqueradingVector[6]]=getValueOfClientSecretHash();
+                ret[pMasqueradingVector[6]]=getValueOfRequestParams();
             }
             else
             {
@@ -2673,9 +2568,9 @@ Json::Value PartnerApiRequestLogs::toMasqueradedJson(
         }
         if(!pMasqueradingVector[7].empty())
         {
-            if(getRequestParams())
+            if(getRequestBody())
             {
-                ret[pMasqueradingVector[7]]=getValueOfRequestParams();
+                ret[pMasqueradingVector[7]]=getValueOfRequestBody();
             }
             else
             {
@@ -2684,9 +2579,9 @@ Json::Value PartnerApiRequestLogs::toMasqueradedJson(
         }
         if(!pMasqueradingVector[8].empty())
         {
-            if(getRequestBody())
+            if(getRequestHeaders())
             {
-                ret[pMasqueradingVector[8]]=getValueOfRequestBody();
+                ret[pMasqueradingVector[8]]=getValueOfRequestHeaders();
             }
             else
             {
@@ -2695,9 +2590,9 @@ Json::Value PartnerApiRequestLogs::toMasqueradedJson(
         }
         if(!pMasqueradingVector[9].empty())
         {
-            if(getRequestHeaders())
+            if(getRequestIp())
             {
-                ret[pMasqueradingVector[9]]=getValueOfRequestHeaders();
+                ret[pMasqueradingVector[9]]=getValueOfRequestIp();
             }
             else
             {
@@ -2706,9 +2601,9 @@ Json::Value PartnerApiRequestLogs::toMasqueradedJson(
         }
         if(!pMasqueradingVector[10].empty())
         {
-            if(getRequestIp())
+            if(getUserAgent())
             {
-                ret[pMasqueradingVector[10]]=getValueOfRequestIp();
+                ret[pMasqueradingVector[10]]=getValueOfUserAgent();
             }
             else
             {
@@ -2717,9 +2612,9 @@ Json::Value PartnerApiRequestLogs::toMasqueradedJson(
         }
         if(!pMasqueradingVector[11].empty())
         {
-            if(getUserAgent())
+            if(getResponseStatusCode())
             {
-                ret[pMasqueradingVector[11]]=getValueOfUserAgent();
+                ret[pMasqueradingVector[11]]=getValueOfResponseStatusCode();
             }
             else
             {
@@ -2728,9 +2623,9 @@ Json::Value PartnerApiRequestLogs::toMasqueradedJson(
         }
         if(!pMasqueradingVector[12].empty())
         {
-            if(getResponseStatusCode())
+            if(getResponseBody())
             {
-                ret[pMasqueradingVector[12]]=getValueOfResponseStatusCode();
+                ret[pMasqueradingVector[12]]=getValueOfResponseBody();
             }
             else
             {
@@ -2739,9 +2634,9 @@ Json::Value PartnerApiRequestLogs::toMasqueradedJson(
         }
         if(!pMasqueradingVector[13].empty())
         {
-            if(getResponseBody())
+            if(getResponseHeaders())
             {
-                ret[pMasqueradingVector[13]]=getValueOfResponseBody();
+                ret[pMasqueradingVector[13]]=getValueOfResponseHeaders();
             }
             else
             {
@@ -2750,9 +2645,9 @@ Json::Value PartnerApiRequestLogs::toMasqueradedJson(
         }
         if(!pMasqueradingVector[14].empty())
         {
-            if(getResponseHeaders())
+            if(getResponseTimeMs())
             {
-                ret[pMasqueradingVector[14]]=getValueOfResponseHeaders();
+                ret[pMasqueradingVector[14]]=getValueOfResponseTimeMs();
             }
             else
             {
@@ -2761,9 +2656,9 @@ Json::Value PartnerApiRequestLogs::toMasqueradedJson(
         }
         if(!pMasqueradingVector[15].empty())
         {
-            if(getResponseTimeMs())
+            if(getErrorMessage())
             {
-                ret[pMasqueradingVector[15]]=getValueOfResponseTimeMs();
+                ret[pMasqueradingVector[15]]=getValueOfErrorMessage();
             }
             else
             {
@@ -2772,9 +2667,9 @@ Json::Value PartnerApiRequestLogs::toMasqueradedJson(
         }
         if(!pMasqueradingVector[16].empty())
         {
-            if(getErrorMessage())
+            if(getErrorStack())
             {
-                ret[pMasqueradingVector[16]]=getValueOfErrorMessage();
+                ret[pMasqueradingVector[16]]=getValueOfErrorStack();
             }
             else
             {
@@ -2783,9 +2678,9 @@ Json::Value PartnerApiRequestLogs::toMasqueradedJson(
         }
         if(!pMasqueradingVector[17].empty())
         {
-            if(getErrorStack())
+            if(getIsSuccessful())
             {
-                ret[pMasqueradingVector[17]]=getValueOfErrorStack();
+                ret[pMasqueradingVector[17]]=getValueOfIsSuccessful();
             }
             else
             {
@@ -2794,9 +2689,9 @@ Json::Value PartnerApiRequestLogs::toMasqueradedJson(
         }
         if(!pMasqueradingVector[18].empty())
         {
-            if(getIsSuccessful())
+            if(getCreatedAt())
             {
-                ret[pMasqueradingVector[18]]=getValueOfIsSuccessful();
+                ret[pMasqueradingVector[18]]=getCreatedAt()->toDbStringLocal();
             }
             else
             {
@@ -2805,9 +2700,9 @@ Json::Value PartnerApiRequestLogs::toMasqueradedJson(
         }
         if(!pMasqueradingVector[19].empty())
         {
-            if(getCreatedAt())
+            if(getCompletedAt())
             {
-                ret[pMasqueradingVector[19]]=getCreatedAt()->toDbStringLocal();
+                ret[pMasqueradingVector[19]]=getCompletedAt()->toDbStringLocal();
             }
             else
             {
@@ -2816,24 +2711,13 @@ Json::Value PartnerApiRequestLogs::toMasqueradedJson(
         }
         if(!pMasqueradingVector[20].empty())
         {
-            if(getCompletedAt())
+            if(getRequestId())
             {
-                ret[pMasqueradingVector[20]]=getCompletedAt()->toDbStringLocal();
+                ret[pMasqueradingVector[20]]=getValueOfRequestId();
             }
             else
             {
                 ret[pMasqueradingVector[20]]=Json::Value();
-            }
-        }
-        if(!pMasqueradingVector[21].empty())
-        {
-            if(getRequestId())
-            {
-                ret[pMasqueradingVector[21]]=getValueOfRequestId();
-            }
-            else
-            {
-                ret[pMasqueradingVector[21]]=Json::Value();
             }
         }
         return ret;
@@ -2886,14 +2770,6 @@ Json::Value PartnerApiRequestLogs::toMasqueradedJson(
     else
     {
         ret["client_id"]=Json::Value();
-    }
-    if(getClientSecretHash())
-    {
-        ret["client_secret_hash"]=getValueOfClientSecretHash();
-    }
-    else
-    {
-        ret["client_secret_hash"]=Json::Value();
     }
     if(getRequestParams())
     {
@@ -3060,39 +2936,34 @@ bool PartnerApiRequestLogs::validateJsonForCreation(const Json::Value &pJson, st
         if(!validJsonOfField(5, "client_id", pJson["client_id"], err, true))
             return false;
     }
-    if(pJson.isMember("client_secret_hash"))
-    {
-        if(!validJsonOfField(6, "client_secret_hash", pJson["client_secret_hash"], err, true))
-            return false;
-    }
     if(pJson.isMember("request_params"))
     {
-        if(!validJsonOfField(7, "request_params", pJson["request_params"], err, true))
+        if(!validJsonOfField(6, "request_params", pJson["request_params"], err, true))
             return false;
     }
     if(pJson.isMember("request_body"))
     {
-        if(!validJsonOfField(8, "request_body", pJson["request_body"], err, true))
+        if(!validJsonOfField(7, "request_body", pJson["request_body"], err, true))
             return false;
     }
     if(pJson.isMember("request_headers"))
     {
-        if(!validJsonOfField(9, "request_headers", pJson["request_headers"], err, true))
+        if(!validJsonOfField(8, "request_headers", pJson["request_headers"], err, true))
             return false;
     }
     if(pJson.isMember("request_ip"))
     {
-        if(!validJsonOfField(10, "request_ip", pJson["request_ip"], err, true))
+        if(!validJsonOfField(9, "request_ip", pJson["request_ip"], err, true))
             return false;
     }
     if(pJson.isMember("user_agent"))
     {
-        if(!validJsonOfField(11, "user_agent", pJson["user_agent"], err, true))
+        if(!validJsonOfField(10, "user_agent", pJson["user_agent"], err, true))
             return false;
     }
     if(pJson.isMember("response_status_code"))
     {
-        if(!validJsonOfField(12, "response_status_code", pJson["response_status_code"], err, true))
+        if(!validJsonOfField(11, "response_status_code", pJson["response_status_code"], err, true))
             return false;
     }
     else
@@ -3102,47 +2973,47 @@ bool PartnerApiRequestLogs::validateJsonForCreation(const Json::Value &pJson, st
     }
     if(pJson.isMember("response_body"))
     {
-        if(!validJsonOfField(13, "response_body", pJson["response_body"], err, true))
+        if(!validJsonOfField(12, "response_body", pJson["response_body"], err, true))
             return false;
     }
     if(pJson.isMember("response_headers"))
     {
-        if(!validJsonOfField(14, "response_headers", pJson["response_headers"], err, true))
+        if(!validJsonOfField(13, "response_headers", pJson["response_headers"], err, true))
             return false;
     }
     if(pJson.isMember("response_time_ms"))
     {
-        if(!validJsonOfField(15, "response_time_ms", pJson["response_time_ms"], err, true))
+        if(!validJsonOfField(14, "response_time_ms", pJson["response_time_ms"], err, true))
             return false;
     }
     if(pJson.isMember("error_message"))
     {
-        if(!validJsonOfField(16, "error_message", pJson["error_message"], err, true))
+        if(!validJsonOfField(15, "error_message", pJson["error_message"], err, true))
             return false;
     }
     if(pJson.isMember("error_stack"))
     {
-        if(!validJsonOfField(17, "error_stack", pJson["error_stack"], err, true))
+        if(!validJsonOfField(16, "error_stack", pJson["error_stack"], err, true))
             return false;
     }
     if(pJson.isMember("is_successful"))
     {
-        if(!validJsonOfField(18, "is_successful", pJson["is_successful"], err, true))
+        if(!validJsonOfField(17, "is_successful", pJson["is_successful"], err, true))
             return false;
     }
     if(pJson.isMember("created_at"))
     {
-        if(!validJsonOfField(19, "created_at", pJson["created_at"], err, true))
+        if(!validJsonOfField(18, "created_at", pJson["created_at"], err, true))
             return false;
     }
     if(pJson.isMember("completed_at"))
     {
-        if(!validJsonOfField(20, "completed_at", pJson["completed_at"], err, true))
+        if(!validJsonOfField(19, "completed_at", pJson["completed_at"], err, true))
             return false;
     }
     if(pJson.isMember("request_id"))
     {
-        if(!validJsonOfField(21, "request_id", pJson["request_id"], err, true))
+        if(!validJsonOfField(20, "request_id", pJson["request_id"], err, true))
             return false;
     }
     return true;
@@ -3151,7 +3022,7 @@ bool PartnerApiRequestLogs::validateMasqueradedJsonForCreation(const Json::Value
                                                                const std::vector<std::string> &pMasqueradingVector,
                                                                std::string &err)
 {
-    if(pMasqueradingVector.size() != 22)
+    if(pMasqueradingVector.size() != 21)
     {
         err = "Bad masquerading vector";
         return false;
@@ -3262,6 +3133,11 @@ bool PartnerApiRequestLogs::validateMasqueradedJsonForCreation(const Json::Value
               if(!validJsonOfField(11, pMasqueradingVector[11], pJson[pMasqueradingVector[11]], err, true))
                   return false;
           }
+        else
+        {
+            err="The " + pMasqueradingVector[11] + " column cannot be null";
+            return false;
+        }
       }
       if(!pMasqueradingVector[12].empty())
       {
@@ -3270,11 +3146,6 @@ bool PartnerApiRequestLogs::validateMasqueradedJsonForCreation(const Json::Value
               if(!validJsonOfField(12, pMasqueradingVector[12], pJson[pMasqueradingVector[12]], err, true))
                   return false;
           }
-        else
-        {
-            err="The " + pMasqueradingVector[12] + " column cannot be null";
-            return false;
-        }
       }
       if(!pMasqueradingVector[13].empty())
       {
@@ -3340,14 +3211,6 @@ bool PartnerApiRequestLogs::validateMasqueradedJsonForCreation(const Json::Value
                   return false;
           }
       }
-      if(!pMasqueradingVector[21].empty())
-      {
-          if(pJson.isMember(pMasqueradingVector[21]))
-          {
-              if(!validJsonOfField(21, pMasqueradingVector[21], pJson[pMasqueradingVector[21]], err, true))
-                  return false;
-          }
-      }
     }
     catch(const Json::LogicError &e)
     {
@@ -3393,84 +3256,79 @@ bool PartnerApiRequestLogs::validateJsonForUpdate(const Json::Value &pJson, std:
         if(!validJsonOfField(5, "client_id", pJson["client_id"], err, false))
             return false;
     }
-    if(pJson.isMember("client_secret_hash"))
-    {
-        if(!validJsonOfField(6, "client_secret_hash", pJson["client_secret_hash"], err, false))
-            return false;
-    }
     if(pJson.isMember("request_params"))
     {
-        if(!validJsonOfField(7, "request_params", pJson["request_params"], err, false))
+        if(!validJsonOfField(6, "request_params", pJson["request_params"], err, false))
             return false;
     }
     if(pJson.isMember("request_body"))
     {
-        if(!validJsonOfField(8, "request_body", pJson["request_body"], err, false))
+        if(!validJsonOfField(7, "request_body", pJson["request_body"], err, false))
             return false;
     }
     if(pJson.isMember("request_headers"))
     {
-        if(!validJsonOfField(9, "request_headers", pJson["request_headers"], err, false))
+        if(!validJsonOfField(8, "request_headers", pJson["request_headers"], err, false))
             return false;
     }
     if(pJson.isMember("request_ip"))
     {
-        if(!validJsonOfField(10, "request_ip", pJson["request_ip"], err, false))
+        if(!validJsonOfField(9, "request_ip", pJson["request_ip"], err, false))
             return false;
     }
     if(pJson.isMember("user_agent"))
     {
-        if(!validJsonOfField(11, "user_agent", pJson["user_agent"], err, false))
+        if(!validJsonOfField(10, "user_agent", pJson["user_agent"], err, false))
             return false;
     }
     if(pJson.isMember("response_status_code"))
     {
-        if(!validJsonOfField(12, "response_status_code", pJson["response_status_code"], err, false))
+        if(!validJsonOfField(11, "response_status_code", pJson["response_status_code"], err, false))
             return false;
     }
     if(pJson.isMember("response_body"))
     {
-        if(!validJsonOfField(13, "response_body", pJson["response_body"], err, false))
+        if(!validJsonOfField(12, "response_body", pJson["response_body"], err, false))
             return false;
     }
     if(pJson.isMember("response_headers"))
     {
-        if(!validJsonOfField(14, "response_headers", pJson["response_headers"], err, false))
+        if(!validJsonOfField(13, "response_headers", pJson["response_headers"], err, false))
             return false;
     }
     if(pJson.isMember("response_time_ms"))
     {
-        if(!validJsonOfField(15, "response_time_ms", pJson["response_time_ms"], err, false))
+        if(!validJsonOfField(14, "response_time_ms", pJson["response_time_ms"], err, false))
             return false;
     }
     if(pJson.isMember("error_message"))
     {
-        if(!validJsonOfField(16, "error_message", pJson["error_message"], err, false))
+        if(!validJsonOfField(15, "error_message", pJson["error_message"], err, false))
             return false;
     }
     if(pJson.isMember("error_stack"))
     {
-        if(!validJsonOfField(17, "error_stack", pJson["error_stack"], err, false))
+        if(!validJsonOfField(16, "error_stack", pJson["error_stack"], err, false))
             return false;
     }
     if(pJson.isMember("is_successful"))
     {
-        if(!validJsonOfField(18, "is_successful", pJson["is_successful"], err, false))
+        if(!validJsonOfField(17, "is_successful", pJson["is_successful"], err, false))
             return false;
     }
     if(pJson.isMember("created_at"))
     {
-        if(!validJsonOfField(19, "created_at", pJson["created_at"], err, false))
+        if(!validJsonOfField(18, "created_at", pJson["created_at"], err, false))
             return false;
     }
     if(pJson.isMember("completed_at"))
     {
-        if(!validJsonOfField(20, "completed_at", pJson["completed_at"], err, false))
+        if(!validJsonOfField(19, "completed_at", pJson["completed_at"], err, false))
             return false;
     }
     if(pJson.isMember("request_id"))
     {
-        if(!validJsonOfField(21, "request_id", pJson["request_id"], err, false))
+        if(!validJsonOfField(20, "request_id", pJson["request_id"], err, false))
             return false;
     }
     return true;
@@ -3479,7 +3337,7 @@ bool PartnerApiRequestLogs::validateMasqueradedJsonForUpdate(const Json::Value &
                                                              const std::vector<std::string> &pMasqueradingVector,
                                                              std::string &err)
 {
-    if(pMasqueradingVector.size() != 22)
+    if(pMasqueradingVector.size() != 21)
     {
         err = "Bad masquerading vector";
         return false;
@@ -3593,11 +3451,6 @@ bool PartnerApiRequestLogs::validateMasqueradedJsonForUpdate(const Json::Value &
       if(!pMasqueradingVector[20].empty() && pJson.isMember(pMasqueradingVector[20]))
       {
           if(!validJsonOfField(20, pMasqueradingVector[20], pJson[pMasqueradingVector[20]], err, false))
-              return false;
-      }
-      if(!pMasqueradingVector[21].empty() && pJson.isMember(pMasqueradingVector[21]))
-      {
-          if(!validJsonOfField(21, pMasqueradingVector[21], pJson[pMasqueradingVector[21]], err, false))
               return false;
       }
     }
@@ -3727,14 +3580,6 @@ bool PartnerApiRequestLogs::validJsonOfField(size_t index,
                 err="Type error in the "+fieldName+" field";
                 return false;
             }
-            if(pJson.isString() && std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>{}
-                .from_bytes(pJson.asCString()).size() > 255)
-            {
-                err="String length exceeds limit for the " +
-                    fieldName +
-                    " field (the maximum value is 255)";
-                return false;
-            }
             break;
         case 7:
             if(pJson.isNull())
@@ -3768,6 +3613,14 @@ bool PartnerApiRequestLogs::validJsonOfField(size_t index,
                 err="Type error in the "+fieldName+" field";
                 return false;
             }
+            if(pJson.isString() && std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>{}
+                .from_bytes(pJson.asCString()).size() > 45)
+            {
+                err="String length exceeds limit for the " +
+                    fieldName +
+                    " field (the maximum value is 45)";
+                return false;
+            }
             break;
         case 10:
             if(pJson.isNull())
@@ -3779,21 +3632,14 @@ bool PartnerApiRequestLogs::validJsonOfField(size_t index,
                 err="Type error in the "+fieldName+" field";
                 return false;
             }
-            if(pJson.isString() && std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>{}
-                .from_bytes(pJson.asCString()).size() > 45)
-            {
-                err="String length exceeds limit for the " +
-                    fieldName +
-                    " field (the maximum value is 45)";
-                return false;
-            }
             break;
         case 11:
             if(pJson.isNull())
             {
-                return true;
+                err="The " + fieldName + " column cannot be null";
+                return false;
             }
-            if(!pJson.isString())
+            if(!pJson.isInt())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;
@@ -3802,10 +3648,9 @@ bool PartnerApiRequestLogs::validJsonOfField(size_t index,
         case 12:
             if(pJson.isNull())
             {
-                err="The " + fieldName + " column cannot be null";
-                return false;
+                return true;
             }
-            if(!pJson.isInt())
+            if(!pJson.isString())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;
@@ -3827,7 +3672,7 @@ bool PartnerApiRequestLogs::validJsonOfField(size_t index,
             {
                 return true;
             }
-            if(!pJson.isString())
+            if(!pJson.isInt())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;
@@ -3838,7 +3683,7 @@ bool PartnerApiRequestLogs::validJsonOfField(size_t index,
             {
                 return true;
             }
-            if(!pJson.isInt())
+            if(!pJson.isString())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;
@@ -3860,7 +3705,7 @@ bool PartnerApiRequestLogs::validJsonOfField(size_t index,
             {
                 return true;
             }
-            if(!pJson.isString())
+            if(!pJson.isBool())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;
@@ -3871,7 +3716,7 @@ bool PartnerApiRequestLogs::validJsonOfField(size_t index,
             {
                 return true;
             }
-            if(!pJson.isBool())
+            if(!pJson.isString())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;
@@ -3889,17 +3734,6 @@ bool PartnerApiRequestLogs::validJsonOfField(size_t index,
             }
             break;
         case 20:
-            if(pJson.isNull())
-            {
-                return true;
-            }
-            if(!pJson.isString())
-            {
-                err="Type error in the "+fieldName+" field";
-                return false;
-            }
-            break;
-        case 21:
             if(pJson.isNull())
             {
                 return true;
