@@ -2176,7 +2176,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getSubscribe
       // Amount format: $0.00 (Covered by {Partner Name})
       std::string amountStr = renewal.getValueOfAmountPaid();
       std::string partnerName = partner.getValueOfName();
-      historyItem["amount"] = "GHS" + amountStr + " (Covered by " + partnerName + ")";
+      historyItem["amount"] = "GHS " + amountStr + " (Covered by " + partnerName + ")";
       
       historyItem["status"] = renewal.getValueOfTransactionStatus();
       
