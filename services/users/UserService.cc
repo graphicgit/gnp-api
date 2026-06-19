@@ -4,6 +4,7 @@
 
 #include "UserService.h"
 #include "UserSubscriptions.h"
+#include "Payments.h"
 
 #include <algorithm>
 #include <cctype>
@@ -1573,7 +1574,99 @@ drogon::Task<gnp::dto::BaseApiResponse> UserService::deletePartnerAdminUser(cons
 }
 
 
-// auth
+ // user profile
+drogon::Task<dto::BaseApiResponse> UserService::getUserMetaData(const std::string &userId) {
+
+  auto dbClient = drogon::app().getDbClient();
+  dto::BaseApiResponse response;
+
+  try {
+    auto userMp = drogon::orm::CoroMapper<Users>(dbClient);
+    auto user = co_await userMp.findOne(Criteria(Users::Cols::_id, CompareOperator::EQ, userId));
+
+    Json::Value result;
+    
+    // BioData
+    Json::Value bioData;
+    bioData["fullname"] = user.getValueOfFirstName() + " " + user.getValueOfLastName();
+    bioData["username"] = user.getValueOfUsername();
+    bioData["email"] = user.getValueOfEmail();
+    bioData["phoneNumber"] = user.getValueOfPhoneNumber();
+    result["bioData"] = bioData;
+
+    // Subscriptions
+    Json::Value subscriptions = Json::arrayValue;
+
+    auto subMp = drogon::orm::CoroMapper<drogon_model::Gnp::UserSubscriptions>(dbClient);
+
+    auto subs = co_await subMp.findBy(Criteria(drogon_model::Gnp::UserSubscriptions::Cols::_user_id, CompareOperator::EQ, userId));
+    
+    for (const auto &sub : subs)
+    {
+      Json::Value subJson;
+      Json::Value subModelJson = sub.toJson();
+      
+      subJson["id"] = subModelJson["id"];
+      
+      std::string identifier = subModelJson["subscription_plan_description"].asString();
+      if (identifier.empty()) {
+         identifier = subModelJson["subscription_identifier"].asString();
+      }
+      subJson["subscriptionIdentifier"] = identifier;
+      
+      subJson["email"] = subModelJson["email"];
+      subJson["currentSubscriptionPlanId"] = subModelJson["subscription_plan_id"];
+      subJson["startDate"] = subModelJson["start_date"];
+      subJson["endDate"] = subModelJson["end_date"];
+      subJson["currentBillingCycle"] = subModelJson["billing_cycle"];
+      subJson["isActive"] = subModelJson["is_active"].asBool();
+      subJson["nextRenewalDate"] = subModelJson["end_date"];
+      subJson["createdAt"] = subModelJson["created_at"];
+      
+      subscriptions.append(subJson);
+    }
+    result["subscriptions"] = subscriptions;
+
+    // Transactions
+    Json::Value transactions = Json::arrayValue;
+    auto payMp = drogon::orm::CoroMapper<drogon_model::Gnp::Payments>(dbClient);
+    auto pays = co_await payMp.orderBy(drogon_model::Gnp::Payments::Cols::_created_at, SortOrder::DESC).limit(5).findBy(Criteria(drogon_model::Gnp::Payments::Cols::_user_id, CompareOperator::EQ, userId));
+
+    for (const auto &pay : pays) {
+      Json::Value payJson;
+      Json::Value payModelJson = pay.toJson();
+      
+      payJson["id"] = payModelJson["id"];
+      payJson["userName"] = payModelJson["user_name"];
+      payJson["userEmail"] = payModelJson["user_email"];
+      payJson["packageName"] = payModelJson["package_name"];
+      payJson["amountPaid"] = payModelJson["amount_paid"];
+      payJson["receiptNo"] = payModelJson["receipt_no"];
+      payJson["transactionReference"] = payModelJson["transaction_reference"];
+      payJson["status"] = payModelJson["status"];
+      payJson["createdAt"] = payModelJson["created_at"];
+      
+      transactions.append(payJson);
+    }
+    result["transactions"] = transactions;
+
+    response.success = true;
+    response.result = result;
+
+  } catch (const drogon::orm::DrogonDbException &e) {
+    response.success = false;
+    if (e.base().what() == std::string("Unexpected row number")) {
+      response.message = "User not found";
+      response.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+    } else {
+      response.message = "Database error while fetching user metadata.";
+      response.error["code"] = constants::ERR_DB_QUERY;
+      response.error["detail"] = e.base().what();
+    }
+  }
+
+  co_return response;
+}
 
 void UserService::checkAccountStatus(
     const std::string &identifier, const std::string &identifierType,

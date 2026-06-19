@@ -720,6 +720,7 @@ Task<HttpResponsePtr> PartnerController::createAdminUser(HttpRequestPtr req) {
 
 }
 
+
 Task<HttpResponsePtr> PartnerController::updateAdminUser(HttpRequestPtr req, const std::string &adminUserId) {
 
   auto partnerId = req->attributes()->get<std::string>("partnerId");
@@ -754,6 +755,7 @@ Task<HttpResponsePtr> PartnerController::updateAdminUser(HttpRequestPtr req, con
   auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
   co_return resp;
 }
+
 
 Task<HttpResponsePtr> PartnerController::deleteAdminUser(HttpRequestPtr req) {
 

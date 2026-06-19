@@ -65,6 +65,8 @@ public:
 
   drogon::Task<gnp::dto::BaseApiResponse> validatePartnerUserOtp(const dto::VerifyPartnerUserOtpDto &dto);
 
+  // user profile
+    drogon::Task<dto::BaseApiResponse> getUserMetaData(const std::string &userId);
 
   void checkAccountStatus(
       const std::string &identifier, const std::string &identifierType,
