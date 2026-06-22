@@ -93,6 +93,7 @@ public:
 
     //admin roles
     ADD_METHOD_TO(AdminController::getAllRoles, std::string(PREFIX) + "get-all-roles", Get, Options, "JwtAuthFilter");
+    ADD_METHOD_TO(AdminController::getAllPermissions, std::string(PREFIX) + "get-all-permissions", Get, Options, "JwtAuthFilter");
     ADD_METHOD_TO(AdminController::createRole, std::string(PREFIX) + "create-role", Post, Options, "JwtAuthFilter");
     ADD_METHOD_TO(AdminController::updateRole, std::string(PREFIX) + "update-role/{1}", Post, Options, "JwtAuthFilter");
     ADD_METHOD_TO(AdminController::deleteRole, std::string(PREFIX) + "delete-role/{1}", Delete, Options, "JwtAuthFilter");
@@ -204,6 +205,7 @@ public:
    drogon::Task<HttpResponsePtr> deletePartnerInvoice(HttpRequestPtr req);
 
     // admin roles
+    Task<HttpResponsePtr> getAllPermissions(HttpRequestPtr req);
     Task<HttpResponsePtr> getAllRoles(HttpRequestPtr req);
     Task<HttpResponsePtr> createRole(HttpRequestPtr req);
     Task<HttpResponsePtr> updateRole(HttpRequestPtr req, const std::string &roleId);

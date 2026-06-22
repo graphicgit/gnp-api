@@ -1386,6 +1386,19 @@ Task<HttpResponsePtr> AdminController::getAllRoles(HttpRequestPtr req) {
   co_return resp;
 }
 
+
+Task<HttpResponsePtr> AdminController::getAllPermissions(HttpRequestPtr req) {
+
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &roleService = plugin->getRoleService();
+
+  auto result = co_await roleService.getAllPermissions();
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+
+}
+
+
 Task<HttpResponsePtr> AdminController::createRole(HttpRequestPtr req) {
 
   auto jsonBody = req->getJsonObject();

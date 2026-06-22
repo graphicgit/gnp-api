@@ -18,6 +18,8 @@ namespace gnp::services {
 
         drogon::Task<gnp::dto::BaseApiResponse> getAll(int pageNo, int pageSize, const std::string &query);
 
+        drogon::Task<gnp::dto::BaseApiResponse> getAllPermissions();
+
         drogon::Task<gnp::dto::BaseApiResponse> getAll(int pageNo, int pageSize, const std::string &partnerId, const std::string &query);
 
         drogon::Task<gnp::dto::BaseApiResponse> create(const dto::RoleDto &roleDto);

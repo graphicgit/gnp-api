@@ -35,6 +35,7 @@ const std::string CommercialPartners::Cols::_subscription_start_date = "\"subscr
 const std::string CommercialPartners::Cols::_subscription_end_date = "\"subscription_end_date\"";
 const std::string CommercialPartners::Cols::_total_amount_due = "\"total_amount_due\"";
 const std::string CommercialPartners::Cols::_current_invoice_no = "\"current_invoice_no\"";
+const std::string CommercialPartners::Cols::_cost_per_head = "\"cost_per_head\"";
 const std::string CommercialPartners::primaryKeyName = "id";
 const bool CommercialPartners::hasPrimaryKey = true;
 const std::string CommercialPartners::tableName = "\"commercial_partners\"";
@@ -61,7 +62,8 @@ const std::vector<typename CommercialPartners::MetaData> CommercialPartners::met
 {"subscription_start_date","::trantor::Date","timestamp with time zone",0,0,0,0},
 {"subscription_end_date","::trantor::Date","timestamp with time zone",0,0,0,0},
 {"total_amount_due","std::string","numeric",0,0,0,1},
-{"current_invoice_no","std::string","character varying",20,0,0,0}
+{"current_invoice_no","std::string","character varying",20,0,0,0},
+{"cost_per_head","std::string","numeric",0,0,0,1}
 };
 const std::string &CommercialPartners::getColumnName(size_t index) noexcept(false)
 {
@@ -237,11 +239,15 @@ CommercialPartners::CommercialPartners(const Row &r, const ssize_t indexOffset) 
         {
             currentInvoiceNo_=std::make_shared<std::string>(r["current_invoice_no"].as<std::string>());
         }
+        if(!r["cost_per_head"].isNull())
+        {
+            costPerHead_=std::make_shared<std::string>(r["cost_per_head"].as<std::string>());
+        }
     }
     else
     {
         size_t offset = (size_t)indexOffset;
-        if(offset + 22 > r.size())
+        if(offset + 23 > r.size())
         {
             LOG_FATAL << "Invalid SQL result for this model";
             return;
@@ -434,13 +440,18 @@ CommercialPartners::CommercialPartners(const Row &r, const ssize_t indexOffset) 
         {
             currentInvoiceNo_=std::make_shared<std::string>(r[index].as<std::string>());
         }
+        index = offset + 22;
+        if(!r[index].isNull())
+        {
+            costPerHead_=std::make_shared<std::string>(r[index].as<std::string>());
+        }
     }
 
 }
 
 CommercialPartners::CommercialPartners(const Json::Value &pJson, const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 22)
+    if(pMasqueradingVector.size() != 23)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -692,6 +703,14 @@ CommercialPartners::CommercialPartners(const Json::Value &pJson, const std::vect
         if(!pJson[pMasqueradingVector[21]].isNull())
         {
             currentInvoiceNo_=std::make_shared<std::string>(pJson[pMasqueradingVector[21]].asString());
+        }
+    }
+    if(!pMasqueradingVector[22].empty() && pJson.isMember(pMasqueradingVector[22]))
+    {
+        dirtyFlag_[22] = true;
+        if(!pJson[pMasqueradingVector[22]].isNull())
+        {
+            costPerHead_=std::make_shared<std::string>(pJson[pMasqueradingVector[22]].asString());
         }
     }
 }
@@ -947,12 +966,20 @@ CommercialPartners::CommercialPartners(const Json::Value &pJson) noexcept(false)
             currentInvoiceNo_=std::make_shared<std::string>(pJson["current_invoice_no"].asString());
         }
     }
+    if(pJson.isMember("cost_per_head"))
+    {
+        dirtyFlag_[22]=true;
+        if(!pJson["cost_per_head"].isNull())
+        {
+            costPerHead_=std::make_shared<std::string>(pJson["cost_per_head"].asString());
+        }
+    }
 }
 
 void CommercialPartners::updateByMasqueradedJson(const Json::Value &pJson,
                                             const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 22)
+    if(pMasqueradingVector.size() != 23)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -1205,6 +1232,14 @@ void CommercialPartners::updateByMasqueradedJson(const Json::Value &pJson,
             currentInvoiceNo_=std::make_shared<std::string>(pJson[pMasqueradingVector[21]].asString());
         }
     }
+    if(!pMasqueradingVector[22].empty() && pJson.isMember(pMasqueradingVector[22]))
+    {
+        dirtyFlag_[22] = true;
+        if(!pJson[pMasqueradingVector[22]].isNull())
+        {
+            costPerHead_=std::make_shared<std::string>(pJson[pMasqueradingVector[22]].asString());
+        }
+    }
 }
 
 void CommercialPartners::updateByJson(const Json::Value &pJson) noexcept(false)
@@ -1455,6 +1490,14 @@ void CommercialPartners::updateByJson(const Json::Value &pJson) noexcept(false)
         if(!pJson["current_invoice_no"].isNull())
         {
             currentInvoiceNo_=std::make_shared<std::string>(pJson["current_invoice_no"].asString());
+        }
+    }
+    if(pJson.isMember("cost_per_head"))
+    {
+        dirtyFlag_[22] = true;
+        if(!pJson["cost_per_head"].isNull())
+        {
+            costPerHead_=std::make_shared<std::string>(pJson["cost_per_head"].asString());
         }
     }
 }
@@ -1995,6 +2038,28 @@ void CommercialPartners::setCurrentInvoiceNoToNull() noexcept
     dirtyFlag_[21] = true;
 }
 
+const std::string &CommercialPartners::getValueOfCostPerHead() const noexcept
+{
+    static const std::string defaultValue = std::string();
+    if(costPerHead_)
+        return *costPerHead_;
+    return defaultValue;
+}
+const std::shared_ptr<std::string> &CommercialPartners::getCostPerHead() const noexcept
+{
+    return costPerHead_;
+}
+void CommercialPartners::setCostPerHead(const std::string &pCostPerHead) noexcept
+{
+    costPerHead_ = std::make_shared<std::string>(pCostPerHead);
+    dirtyFlag_[22] = true;
+}
+void CommercialPartners::setCostPerHead(std::string &&pCostPerHead) noexcept
+{
+    costPerHead_ = std::make_shared<std::string>(std::move(pCostPerHead));
+    dirtyFlag_[22] = true;
+}
+
 void CommercialPartners::updateId(const uint64_t id)
 {
 }
@@ -2023,7 +2088,8 @@ const std::vector<std::string> &CommercialPartners::insertColumns() noexcept
         "subscription_start_date",
         "subscription_end_date",
         "total_amount_due",
-        "current_invoice_no"
+        "current_invoice_no",
+        "cost_per_head"
     };
     return inCols;
 }
@@ -2272,6 +2338,17 @@ void CommercialPartners::outputArgs(drogon::orm::internal::SqlBinder &binder) co
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[22])
+    {
+        if(getCostPerHead())
+        {
+            binder << getValueOfCostPerHead();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 
 const std::vector<std::string> CommercialPartners::updateColumns() const
@@ -2364,6 +2441,10 @@ const std::vector<std::string> CommercialPartners::updateColumns() const
     if(dirtyFlag_[21])
     {
         ret.push_back(getColumnName(21));
+    }
+    if(dirtyFlag_[22])
+    {
+        ret.push_back(getColumnName(22));
     }
     return ret;
 }
@@ -2612,6 +2693,17 @@ void CommercialPartners::updateArgs(drogon::orm::internal::SqlBinder &binder) co
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[22])
+    {
+        if(getCostPerHead())
+        {
+            binder << getValueOfCostPerHead();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 Json::Value CommercialPartners::toJson() const
 {
@@ -2792,6 +2884,14 @@ Json::Value CommercialPartners::toJson() const
     {
         ret["current_invoice_no"]=Json::Value();
     }
+    if(getCostPerHead())
+    {
+        ret["cost_per_head"]=getValueOfCostPerHead();
+    }
+    else
+    {
+        ret["cost_per_head"]=Json::Value();
+    }
     return ret;
 }
 
@@ -2804,7 +2904,7 @@ Json::Value CommercialPartners::toMasqueradedJson(
     const std::vector<std::string> &pMasqueradingVector) const
 {
     Json::Value ret;
-    if(pMasqueradingVector.size() == 22)
+    if(pMasqueradingVector.size() == 23)
     {
         if(!pMasqueradingVector[0].empty())
         {
@@ -3048,6 +3148,17 @@ Json::Value CommercialPartners::toMasqueradedJson(
                 ret[pMasqueradingVector[21]]=Json::Value();
             }
         }
+        if(!pMasqueradingVector[22].empty())
+        {
+            if(getCostPerHead())
+            {
+                ret[pMasqueradingVector[22]]=getValueOfCostPerHead();
+            }
+            else
+            {
+                ret[pMasqueradingVector[22]]=Json::Value();
+            }
+        }
         return ret;
     }
     LOG_ERROR << "Masquerade failed";
@@ -3227,6 +3338,14 @@ Json::Value CommercialPartners::toMasqueradedJson(
     {
         ret["current_invoice_no"]=Json::Value();
     }
+    if(getCostPerHead())
+    {
+        ret["cost_per_head"]=getValueOfCostPerHead();
+    }
+    else
+    {
+        ret["cost_per_head"]=Json::Value();
+    }
     return ret;
 }
 
@@ -3347,13 +3466,18 @@ bool CommercialPartners::validateJsonForCreation(const Json::Value &pJson, std::
         if(!validJsonOfField(21, "current_invoice_no", pJson["current_invoice_no"], err, true))
             return false;
     }
+    if(pJson.isMember("cost_per_head"))
+    {
+        if(!validJsonOfField(22, "cost_per_head", pJson["cost_per_head"], err, true))
+            return false;
+    }
     return true;
 }
 bool CommercialPartners::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                                                             const std::vector<std::string> &pMasqueradingVector,
                                                             std::string &err)
 {
-    if(pMasqueradingVector.size() != 22)
+    if(pMasqueradingVector.size() != 23)
     {
         err = "Bad masquerading vector";
         return false;
@@ -3540,6 +3664,14 @@ bool CommercialPartners::validateMasqueradedJsonForCreation(const Json::Value &p
                   return false;
           }
       }
+      if(!pMasqueradingVector[22].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[22]))
+          {
+              if(!validJsonOfField(22, pMasqueradingVector[22], pJson[pMasqueradingVector[22]], err, true))
+                  return false;
+          }
+      }
     }
     catch(const Json::LogicError &e)
     {
@@ -3665,13 +3797,18 @@ bool CommercialPartners::validateJsonForUpdate(const Json::Value &pJson, std::st
         if(!validJsonOfField(21, "current_invoice_no", pJson["current_invoice_no"], err, false))
             return false;
     }
+    if(pJson.isMember("cost_per_head"))
+    {
+        if(!validJsonOfField(22, "cost_per_head", pJson["cost_per_head"], err, false))
+            return false;
+    }
     return true;
 }
 bool CommercialPartners::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
                                                           const std::vector<std::string> &pMasqueradingVector,
                                                           std::string &err)
 {
-    if(pMasqueradingVector.size() != 22)
+    if(pMasqueradingVector.size() != 23)
     {
         err = "Bad masquerading vector";
         return false;
@@ -3790,6 +3927,11 @@ bool CommercialPartners::validateMasqueradedJsonForUpdate(const Json::Value &pJs
       if(!pMasqueradingVector[21].empty() && pJson.isMember(pMasqueradingVector[21]))
       {
           if(!validJsonOfField(21, pMasqueradingVector[21], pJson[pMasqueradingVector[21]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[22].empty() && pJson.isMember(pMasqueradingVector[22]))
+      {
+          if(!validJsonOfField(22, pMasqueradingVector[22], pJson[pMasqueradingVector[22]], err, false))
               return false;
       }
     }
@@ -4133,6 +4275,18 @@ bool CommercialPartners::validJsonOfField(size_t index,
                 err="String length exceeds limit for the " +
                     fieldName +
                     " field (the maximum value is 20)";
+                return false;
+            }
+            break;
+        case 22:
+            if(pJson.isNull())
+            {
+                err="The " + fieldName + " column cannot be null";
+                return false;
+            }
+            if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
                 return false;
             }
             break;

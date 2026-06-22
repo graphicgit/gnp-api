@@ -15,6 +15,7 @@
 #include "services/categories/CategoryService.h"
 #include "services/coupons/CouponService.h"
 #include "services/email/EmailService.h"
+#include "services/google_drive/GoogleDriveService.h"
 #include "services/hubtel_sms/HubtelSmsApi.h"
 #include "services/ingestion_jobs/IngestionJobService.h"
 #include "services/media/MediaService.h"
@@ -27,6 +28,8 @@
 #include "services/paystack/PaystackApi.h"
 #include "services/publications/PublicationService.h"
 #include "services/quartz/QuartzApi.h"
+#include "services/redis/RedisCacheManager.h"
+#include "services/reports/ReportingService.h"
 #include "services/roles/RoleService.h"
 #include "services/subscription_plans/SubscriptionPlanService.h"
 #include "services/subscriptions/SubscriptionService.h"
@@ -45,32 +48,17 @@ public:
   void initAndStart(const Json::Value &config) override;
   void shutdown() override;
 
+  services::RedisCacheManager &getRedisCacheManager() { return redisCacheService_; }
   ::gnp::services::UserService &getUserService() { return userService_; }
   ::gnp::services::EmailService &getEmailService() { return emailService_; }
-  ::gnp::services::NewspaperService &getNewsPaperService() {
-    return newspaperService_;
-  }
-  ::gnp::services::CommercialPartnerService &getCommercialPartnerService() {
-    return commercialPartnerService_;
-  }
-  ::gnp::services::PaymentService &getPaymentService() {
-    return paymentService_;
-  }
-  ::gnp::services::IngestionJobService &getIngestionJobService() {
-    return ingestionJobService_;
-  }
-  ::gnp::services::CampaignService &getCampaignService() {
-    return campaignService_;
-  }
-  ::gnp::services::SubscriptionPlanService &getSubscriptionPlanService() {
-    return subscriptionPlanService_;
-  }
-  ::gnp::services::SubscriptionService &getSubscriptionService() {
-    return subscriptionService_;
-  }
-  ::gnp::services::PublicationService &getPublicationService() {
-    return publicationService_;
-  }
+  ::gnp::services::NewspaperService &getNewsPaperService() { return newspaperService_; }
+  ::gnp::services::CommercialPartnerService &getCommercialPartnerService() { return commercialPartnerService_; }
+  ::gnp::services::PaymentService &getPaymentService() { return paymentService_; }
+  ::gnp::services::IngestionJobService &getIngestionJobService() { return ingestionJobService_; }
+  ::gnp::services::CampaignService &getCampaignService() { return campaignService_; }
+  ::gnp::services::SubscriptionPlanService &getSubscriptionPlanService() { return subscriptionPlanService_; }
+  ::gnp::services::SubscriptionService &getSubscriptionService() { return subscriptionService_; }
+  ::gnp::services::PublicationService &getPublicationService() { return publicationService_; }
   ::gnp::services::AffiliateService &getAffiliateService() { return affiliate_service_; }
   ::gnp::services::PaystackApi &getPaystackApi() { return paystackApi_; }
   ::gnp::services::HubtelSmsApi &getHubtelSmsApi() { return hubtelSmsApi_; }
@@ -85,8 +73,11 @@ public:
   ::gnp::services::PartnerApiLogService &getPartnerApiLogService() { return partnerApiLogService_; }
   ::gnp::services::TagService &getTagService() { return tagService_; }
   ::gnp::services::CategoryService &getCategoryService() { return categoryService_; }
+  ::gnp::services::ReportingService &getReportingService() { return reportingService_; }
 
 private:
+  services::RedisCacheManager redisCacheService_;
+  //services::GoogleDriveService googleDriveService_;
   ::gnp::services::AffiliateService affiliate_service_;
   ::gnp::services::UserService userService_;
   ::gnp::services::EmailService emailService_;
@@ -111,6 +102,7 @@ private:
   ::gnp::services::CategoryService categoryService_;
   ::gnp::services::PartnerUserLogService partnerUserActivityLogService_;
   ::gnp::services::PartnerApiLogService partnerApiLogService_;
+  ::gnp::services::ReportingService reportingService_;
 };
 
 } // namespace gnp::plugins

@@ -2,7 +2,6 @@
 // Created by Emmanuel Addo-Odame on 27/04/2026.
 //
 #include "RoleService.h"
-
 #include "Roles.h"
 #include "Users.h"
 
@@ -32,6 +31,9 @@ drogon::Task<dto::BaseApiResponse> RoleService::getAll(int pageNo, int pageSize,
       response.success = true;
       response.result["data"] = Json::arrayValue;
       response.result["totalCount"] = 0;
+      response.result["totalPages"] = 0;
+      response.result["pageNo"] = pageNo;
+      response.result["pageSize"] = pageSize;
       co_return response;
     }
 
@@ -39,12 +41,16 @@ drogon::Task<dto::BaseApiResponse> RoleService::getAll(int pageNo, int pageSize,
     int offset = (pageNo - 1) * pageSize;
     auto users = co_await mp.limit(pageSize).offset(offset).findBy(searchCriteria);
 
+    auto totalPages = (totalCount + pageSize - 1) / pageSize;
+
     // 4. Build the final response
     response.success = true;
     response.result["totalCount"] = (Json::UInt64)totalCount;
     response.result["pageNo"] = pageNo;
     response.result["pageSize"] = pageSize;
     response.result["totalPages"] = (int)((totalCount + pageSize - 1) / pageSize);
+    response.result["lowerBound"] = pageSize * (pageNo - 1) + 1;
+    response.result["upperBound"] = (int)totalPages == pageNo ? (Json::UInt64)totalCount  : (Json::UInt64)(pageNo * pageSize);
 
     Json::Value data = Json::arrayValue;
 
@@ -82,7 +88,26 @@ drogon::Task<dto::BaseApiResponse> RoleService::getAll(int pageNo, int pageSize,
 }
 
 
-drogon::Task<gnp::dto::BaseApiResponse> RoleService::create(const dto::RoleDto &roleDto) {
+drogon::Task<dto::BaseApiResponse> RoleService::getAllPermissions() {
+  dto::BaseApiResponse response;
+  try {
+    auto customConfig = drogon::app().getCustomConfig();
+    if (customConfig.isMember("AdminPermissions")) {
+      response.success = true;
+      response.result = customConfig["AdminPermissions"];
+    } else {
+      response.success = false;
+      response.error["message"] = "AdminPermissions not found in configuration.";
+    }
+  } catch (const std::exception &e) {
+    response.success = false;
+    response.error["message"] = "Error retrieving permissions.";
+    response.error["detail"] = e.what();
+  }
+  co_return response;
+}
+
+drogon::Task<dto::BaseApiResponse> RoleService::create(const dto::RoleDto &roleDto) {
   auto dbClient = drogon::app().getDbClient();
   auto mp = CoroMapper<Roles>(dbClient);
 
@@ -116,7 +141,7 @@ drogon::Task<gnp::dto::BaseApiResponse> RoleService::create(const dto::RoleDto &
 }
 
 
-drogon::Task<gnp::dto::BaseApiResponse> RoleService::update(const dto::RoleDto &roleDto, const std::string &roleId) {
+drogon::Task<dto::BaseApiResponse> RoleService::update(const dto::RoleDto &roleDto, const std::string &roleId) {
   auto dbClient = drogon::app().getDbClient();
   auto mp = CoroMapper<Roles>(dbClient);
 
@@ -151,7 +176,7 @@ drogon::Task<gnp::dto::BaseApiResponse> RoleService::update(const dto::RoleDto &
 }
 
 
-drogon::Task<gnp::dto::BaseApiResponse> RoleService::deleteRole(const std::string &roleId) {
+drogon::Task<dto::BaseApiResponse> RoleService::deleteRole(const std::string &roleId) {
   auto dbClient = drogon::app().getDbClient();
   auto mp = CoroMapper<Roles>(dbClient);
 
@@ -169,7 +194,7 @@ drogon::Task<gnp::dto::BaseApiResponse> RoleService::deleteRole(const std::strin
   co_return response;
 }
 
-  //partner role
+//partner roles
 
 drogon::Task<dto::BaseApiResponse> RoleService::getAll(int pageNo, int pageSize, const std::string &partnerId, const std::string &query) {
 

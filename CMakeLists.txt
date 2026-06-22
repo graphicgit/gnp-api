@@ -133,6 +133,11 @@ add_executable(${PROJECT_NAME} main.cc
         services/partner_api_request_logs/PartnerApiLogService.h
         services/partner_api_request_logs/PartnerApiLogService.cc
         services/partner_user_logs/PartnerUserLogService.cc
+        services/redis/RedisCacheManager.h
+        services/redis/RedisCacheManager.cc
+        services/google_drive/GoogleDriveService.h
+        services/google_drive/GoogleDriveService.cc
+        services/reports/ReportingService.h
 )
 
 # ##############################################################################

@@ -47,10 +47,17 @@ drogon::Task<dto::BaseApiResponse> UserService::getAll(int pageNo, int pageSize,
   try {
     // 2. Get the total count matching the criteria
     size_t totalCount = co_await mp.count(searchCriteria);
+
     if (totalCount == 0) {
       response.success = true;
       response.result["data"] = Json::arrayValue;
       response.result["totalCount"] = 0;
+      response.result["pageNo"] = pageNo;
+      response.result["pageSize"] = pageSize;
+      response.result["totalPages"] = 0;
+      response.result["lowerBound"] = 0;
+      response.result["upperBound"] = 0;
+
       co_return response;
     }
 
@@ -58,13 +65,17 @@ drogon::Task<dto::BaseApiResponse> UserService::getAll(int pageNo, int pageSize,
     int offset = (pageNo - 1) * pageSize;
     auto users = co_await mp.limit(pageSize).offset(offset).findBy(searchCriteria);
 
+    auto totalPages = (totalCount + pageSize - 1) / pageSize;
+
     // 4. Build the final response
     response.success = true;
     response.result["totalCount"] = (Json::UInt64)totalCount;
     response.result["pageNo"] = pageNo;
     response.result["pageSize"] = pageSize;
-    response.result["totalPages"] =
-        (int)((totalCount + pageSize - 1) / pageSize);
+    response.result["totalPages"] = (int)((totalCount + pageSize - 1) / pageSize);
+    response.result["lowerBound"] = pageSize * (pageNo - 1) + 1;
+    response.result["upperBound"] = (int)totalPages == pageNo ? (Json::UInt64)totalCount  : (Json::UInt64)(pageNo * pageSize);
+
 
     Json::Value data = Json::arrayValue;
 
