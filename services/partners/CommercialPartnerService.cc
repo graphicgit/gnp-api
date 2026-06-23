@@ -177,6 +177,19 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::getAllSubscribers(i
                      .orderBy(Users::Cols::_created_at, SortOrder::DESC)
                      .findBy(searchCriteria);
 
+    std::vector<std::string> userIds;
+    for (const auto &user : users) {
+      userIds.push_back(user.getValueOfId());
+    }
+
+    CoroMapper<UserSubscriptions> subMapper(dbClient);
+    std::vector<UserSubscriptions> subs;
+    if (!userIds.empty()) {
+      subs = co_await subMapper.findBy(
+          Criteria(UserSubscriptions::Cols::_user_id, CompareOperator::In, userIds) &&
+          Criteria(UserSubscriptions::Cols::_is_active, CompareOperator::EQ, true));
+    }
+
     // 4. Build the final response
     gnp::dto::BaseApiResponse response;
     auto totalPages = (totalCount + pageSize - 1) / pageSize;
@@ -205,6 +218,18 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::getAllSubscribers(i
       camelCaseRole["profileImageUrl"] = userJson["profile_image_url"];
       camelCaseRole["isActive"] = userJson["is_active"];
       camelCaseRole["lastActive"] = userJson["last_active"];
+
+      auto subIt = std::find_if(subs.begin(), subs.end(), [&](const UserSubscriptions& s) {
+        return s.getValueOfUserId() == user.getValueOfId();
+      });
+
+      if (subIt != subs.end()) {
+        camelCaseRole["activatedOn"] = subIt->getValueOfStartDate().toDbString();
+        camelCaseRole["validUntil"] = subIt->getValueOfEndDate().toDbString();
+      } else {
+        camelCaseRole["activatedOn"] = Json::nullValue;
+        camelCaseRole["validUntil"] = Json::nullValue;
+      }
 
       data.append(camelCaseRole);
     }
