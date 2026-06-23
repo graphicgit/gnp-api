@@ -1468,4 +1468,16 @@ Task<HttpResponsePtr> AdminController::deleteRole(HttpRequestPtr req, const std:
   co_return resp;
 }
 
+Task<HttpResponsePtr> AdminController::regenerateNewspaperEntitlements(HttpRequestPtr req)
+{
 
+  auto date = req->getParameter("date");
+
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &newspaperService = plugin->getNewsPaperService();
+
+  auto result = co_await newspaperService.regenerateNewspaperEntitlement(date);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+
+}

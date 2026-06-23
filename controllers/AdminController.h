@@ -108,6 +108,9 @@ public:
 
   // affiliates
 
+    //utils
+   ADD_METHOD_TO(AdminController::regenerateNewspaperEntitlements, std::string(PREFIX) + "regenerate-newspaper-entitlements", Get, Options, "JwtAuthFilter");
+
   METHOD_LIST_END
 
   // Newspapers
@@ -160,8 +163,7 @@ public:
   drogon::Task<HttpResponsePtr> assignPartnerSubscribersPlan(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> updatePartner(const HttpRequestPtr req);
   void getPartnerDetails(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
-  void
-  updatePartnerStatus(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+  void updatePartnerStatus(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   drogon::Task<HttpResponsePtr> deletePartner(HttpRequestPtr req);
 
   drogon::Task<HttpResponsePtr> deletePartnerSubscriber(HttpRequestPtr req);
@@ -177,8 +179,7 @@ public:
   Task<HttpResponsePtr> updatePartnerApiKey(HttpRequestPtr req);
 
   // payments
-  void getAllPayments(const HttpRequestPtr &req,
-                      std::function<void(const HttpResponsePtr &)> &&callback);
+  void getAllPayments(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
 
   // ingestion Jobs
   void
@@ -210,4 +211,8 @@ public:
     Task<HttpResponsePtr> createRole(HttpRequestPtr req);
     Task<HttpResponsePtr> updateRole(HttpRequestPtr req, const std::string &roleId);
     Task<HttpResponsePtr> deleteRole(HttpRequestPtr req, const std::string &roleId);
+
+    //utils
+    Task<HttpResponsePtr> regenerateNewspaperEntitlements(HttpRequestPtr req);
+
 };

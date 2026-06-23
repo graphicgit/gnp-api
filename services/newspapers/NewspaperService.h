@@ -49,9 +49,11 @@ public:
 
   drogon::Task<gnp::dto::BaseApiResponse> deleteNewspaperAsync(const std::string &id);
 
-   void incrementViewCount(const std::string &id, const std::function<void(const dto::BaseApiResponse &)> &callback);
+  drogon::Task<gnp::dto::BaseApiResponse> regenerateNewspaperEntitlement(const std::string &startDate);
 
-   //ocr ingestion...
+  void incrementViewCount(const std::string &id, const std::function<void(const dto::BaseApiResponse &)> &callback);
+
+   //ocr ingestion ...
    drogon::Task<gnp::dto::BaseApiResponse> handleOcrIngestion(const dto::OcrIngestionDto &dto);
 };
 

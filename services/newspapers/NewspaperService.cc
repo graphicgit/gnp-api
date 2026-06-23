@@ -9,6 +9,8 @@
 #include <jwt-cpp/jwt.h>
 
 #include "NewspaperDetail.h"
+#include "UserSubscriptions.h"
+#include "utils/IdGeneratorUtils.h"
 
 using namespace drogon::orm;
 using drogon_model::Gnp::Newspapers;
@@ -897,8 +899,7 @@ NewspaperService::unPublishAsync(const std::string &id) {
   }
 }
 
-drogon::Task<gnp::dto::BaseApiResponse>
-NewspaperService::deleteNewspaperAsync(const std::string &id) {
+drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::deleteNewspaperAsync(const std::string &id) {
   auto dbClient = drogon::app().getDbClient();
   auto mp = drogon::orm::CoroMapper<drogon_model::Gnp::Newspapers>(dbClient);
 
@@ -937,6 +938,106 @@ NewspaperService::deleteNewspaperAsync(const std::string &id) {
     co_return errorResponse;
   }
 }
+
+
+drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::regenerateNewspaperEntitlement(const std::string &startDate) {
+  auto dbClient = drogon::app().getDbClient();
+  drogon::orm::CoroMapper<drogon_model::Gnp::Newspapers> newsMapper(dbClient);
+  drogon::orm::CoroMapper<drogon_model::Gnp::UserSubscriptions> subMapper(dbClient);
+
+  try {
+    // 1. Get all newspapers from startDate onwards
+    Criteria newsCriteria(Newspapers::Cols::_publication_date, CompareOperator::GE, startDate);
+    auto newspapers = co_await newsMapper.findBy(newsCriteria);
+
+    if (newspapers.empty()) {
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.message = "No newspapers found from the given start date.";
+      co_return response;
+    }
+
+    // 2. Get all user subscriptions
+    auto subscriptions = co_await subMapper.findAll();
+
+    int updatedCount = 0;
+
+    // 3. For each user, update their entitlements
+    for (auto &userSub : subscriptions) {
+      std::string currentEntitlementsStr = userSub.getValueOfNewspaperEntitlements();
+      Json::Value entitlements;
+
+      if (!currentEntitlementsStr.empty()) {
+        Json::CharReaderBuilder readerBuilder;
+        std::string errs;
+        std::istringstream s(currentEntitlementsStr);
+        if (!Json::parseFromStream(readerBuilder, s, &entitlements, &errs)) {
+          entitlements = Json::arrayValue;
+        }
+      } else {
+        entitlements = Json::arrayValue;
+      }
+
+      bool changed = false;
+
+      // Check against all fetched newspapers
+      for (const auto &newspaper : newspapers) {
+        std::string newPaperId = newspaper.getValueOfId();
+        bool alreadyExists = false;
+
+        for (const auto &ent : entitlements) {
+          if (ent.isObject() && ent.isMember("id") && ent["id"].isString() &&
+              ent["id"].asString() == newPaperId) {
+            alreadyExists = true;
+            break;
+          } else if (ent.isString() && ent.asString() == newPaperId) {
+            alreadyExists = true;
+            break;
+          }
+        }
+
+        if (!alreadyExists) {
+          Json::Value newEnt;
+          newEnt["id"] = newPaperId;
+          newEnt["uniqueId"] = gnp::utils::IdGeneratorUtils::generateAlphanumericId();
+          entitlements.append(newEnt);
+          changed = true;
+        }
+      }
+
+      // If changes were made, update the subscription record
+      if (changed) {
+        Json::StreamWriterBuilder writerBuilder;
+        writerBuilder["indentation"] = "";
+        userSub.setNewspaperEntitlements(Json::writeString(writerBuilder, entitlements));
+        co_await subMapper.update(userSub);
+        updatedCount++;
+      }
+    }
+
+    dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Entitlements regenerated successfully.";
+    response.result["updatedUsersCount"] = updatedCount;
+    response.result["newspapersProcessedCount"] = (Json::UInt64)newspapers.size();
+    
+    co_return response;
+
+  } catch (const drogon::orm::DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Database error during entitlement regeneration.";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  } catch (const std::exception &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "An error occurred: " + std::string(e.what());
+    co_return errorResponse;
+  }
+}
+
 
 void NewspaperService::incrementViewCount(
     const std::string &id,
