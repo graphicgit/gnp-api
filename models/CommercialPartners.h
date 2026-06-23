@@ -66,6 +66,7 @@ class CommercialPartners
         static const std::string _subscription_end_date;
         static const std::string _total_amount_due;
         static const std::string _current_invoice_no;
+        static const std::string _cost_per_head;
     };
 
     static const int primaryKeyNumber;
@@ -325,8 +326,17 @@ class CommercialPartners
     void setCurrentInvoiceNo(std::string &&pCurrentInvoiceNo) noexcept;
     void setCurrentInvoiceNoToNull() noexcept;
 
+    /**  For column cost_per_head  */
+    ///Get the value of the column cost_per_head, returns the default value if the column is null
+    const std::string &getValueOfCostPerHead() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getCostPerHead() const noexcept;
+    ///Set the value of the column cost_per_head
+    void setCostPerHead(const std::string &pCostPerHead) noexcept;
+    void setCostPerHead(std::string &&pCostPerHead) noexcept;
 
-    static size_t getColumnNumber() noexcept {  return 22;  }
+
+    static size_t getColumnNumber() noexcept {  return 23;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -370,6 +380,7 @@ class CommercialPartners
     std::shared_ptr<::trantor::Date> subscriptionEndDate_;
     std::shared_ptr<std::string> totalAmountDue_;
     std::shared_ptr<std::string> currentInvoiceNo_;
+    std::shared_ptr<std::string> costPerHead_;
     struct MetaData
     {
         const std::string colName_;
@@ -381,7 +392,7 @@ class CommercialPartners
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[22]={ false };
+    bool dirtyFlag_[23]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -518,6 +529,12 @@ class CommercialPartners
         {
             sql += "current_invoice_no,";
             ++parametersCount;
+        }
+        sql += "cost_per_head,";
+        ++parametersCount;
+        if(!dirtyFlag_[22])
+        {
+            needSelection=true;
         }
         if(parametersCount > 0)
         {
@@ -679,6 +696,15 @@ class CommercialPartners
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[22])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
         }
         if(parametersCount > 0)
         {

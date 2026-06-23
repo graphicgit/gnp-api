@@ -91,8 +91,6 @@ add_executable(${PROJECT_NAME} main.cc
         filters/PartnerJwtAuthFilter.h
         services/enms/EnmsApi.h
         dto/UpdatePartnerSubscriberDto.h
-        services/partner_activity_logs/PartnerActivityLogService.h
-        services/partner_activity_logs/PartnerActivityLogService.cc
         services/roles/RoleService.h
         services/roles/RoleService.h
         services/roles/RoleService.h
@@ -131,6 +129,15 @@ add_executable(${PROJECT_NAME} main.cc
         dto/OcrIngestionDto.h
         utils/codecvt_helper.h
         dto/MtnBroadBandCallbackResponseDto.h
+        services/partner_user_logs/PartnerUserLogService.h
+        services/partner_api_request_logs/PartnerApiLogService.h
+        services/partner_api_request_logs/PartnerApiLogService.cc
+        services/partner_user_logs/PartnerUserLogService.cc
+        services/redis/RedisCacheManager.h
+        services/redis/RedisCacheManager.cc
+        services/google_drive/GoogleDriveService.h
+        services/google_drive/GoogleDriveService.cc
+        services/reports/ReportingService.h
 )
 
 # ##############################################################################

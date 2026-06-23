@@ -54,6 +54,26 @@ drogon::Task<HttpResponsePtr> UsersController::getUserDetails(HttpRequestPtr req
   co_return resp;
 }
 
+drogon::Task<HttpResponsePtr> UsersController::getUserMetaData(HttpRequestPtr req)
+{
+  auto userId = req->attributes()->get<std::string>("userId");
+
+  if (userId.empty()) {
+    dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Authorization token required";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto plugin = drogon::app().getPlugin<plugins::GnpServicePlugin>();
+  auto &userService = plugin->getUserService();
+
+  auto result = co_await userService.getUserMetaData(userId);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+}
 
 
 drogon::Task<HttpResponsePtr> UsersController::createUser(HttpRequestPtr req) {

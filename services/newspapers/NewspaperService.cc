@@ -9,6 +9,8 @@
 #include <jwt-cpp/jwt.h>
 
 #include "NewspaperDetail.h"
+#include "UserSubscriptions.h"
+#include "utils/IdGeneratorUtils.h"
 
 using namespace drogon::orm;
 using drogon_model::Gnp::Newspapers;
@@ -530,8 +532,7 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::getFreeNewsPaperDetail
 }
 
 // for admin use only
-drogon::Task<dto::BaseApiResponse> NewspaperService::listAllAsync(
-    int pageNo, int pageSize, const std::string &publicationId,
+drogon::Task<dto::BaseApiResponse> NewspaperService::listAllAsync(int pageNo, int pageSize, const std::string &publicationId,
     const std::string &startDate, const std::string &endDate,
     const std::string &query, const std::string &status) {
 
@@ -544,13 +545,15 @@ drogon::Task<dto::BaseApiResponse> NewspaperService::listAllAsync(
   // text search
   if (!query.empty()) {
     std::string likeQuery = "%" + query + "%";
+
     searchCriteria =
         Criteria(Newspapers::Cols::_title, CompareOperator::Like, likeQuery) ||
         Criteria(Newspapers::Cols::_full_description, CompareOperator::Like, likeQuery) ||
-          Criteria(Newspapers::Cols::_slug, CompareOperator::Like, likeQuery);
-  } else {
-    searchCriteria = Criteria(); // empty criteria
+        Criteria(Newspapers::Cols::_slug, CompareOperator::Like, likeQuery);
+
+
   }
+
 
   // filter by publicationId
   if (!publicationId.empty()) {
@@ -647,6 +650,127 @@ drogon::Task<dto::BaseApiResponse> NewspaperService::listAllAsync(
   }
 }
 
+
+
+drogon::Task<dto::BaseApiResponse> NewspaperService::listAllArchivedAsync(int pageNo, int pageSize, const std::string &publicationId,
+    const std::string &startDate, const std::string &endDate,
+    const std::string &query, const std::string &status) {
+
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<Newspapers> mp(dbClient);
+
+  // 1. Build the search criteria
+  Criteria searchCriteria = Criteria(Newspapers::Cols::_is_archived, CompareOperator::EQ, true);
+
+  // text search
+  if (!query.empty()) {
+    std::string likeQuery = "%" + query + "%";
+
+    searchCriteria = searchCriteria &&
+        Criteria(Newspapers::Cols::_title, CompareOperator::Like, likeQuery) ||
+        Criteria(Newspapers::Cols::_full_description, CompareOperator::Like, likeQuery) ||
+        Criteria(Newspapers::Cols::_slug, CompareOperator::Like, likeQuery);
+
+
+  }
+
+
+  // filter by publicationId
+  if (!publicationId.empty()) {
+    searchCriteria =
+        searchCriteria && Criteria(Newspapers::Cols::_publication_id,
+                                   CompareOperator::EQ, publicationId);
+  }
+
+  // filter by startDate (created_at >= startDate)
+  if (!startDate.empty()) {
+    searchCriteria =
+        searchCriteria && Criteria(Newspapers::Cols::_publication_date,
+                                   CompareOperator::GE, startDate);
+  }
+
+  // filter by endDate (created_at <= endDate)
+  if (!endDate.empty()) {
+    searchCriteria =
+        searchCriteria && Criteria(Newspapers::Cols::_publication_date,
+                                   CompareOperator::LE, endDate);
+  }
+
+  // status
+  if (!status.empty()) {
+    bool isPublished = (status == "published");
+    searchCriteria = searchCriteria &&
+        Criteria(Newspapers::Cols::_is_published, CompareOperator::EQ, isPublished);
+  }
+
+  try {
+    size_t totalCount = co_await mp.count(searchCriteria);
+
+    if (totalCount == 0) {
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.result["data"] = Json::arrayValue;
+      response.result["totalCount"] = 0;
+      co_return response;
+    }
+
+    int offset = (pageNo - 1) * pageSize;
+    auto publications =
+        co_await mp.limit(pageSize)
+            .offset(offset)
+            .orderBy(Newspapers::Cols::_publication_date, SortOrder::DESC)
+            .findBy(searchCriteria);
+
+    dto::BaseApiResponse response;
+    response.success = true;
+    response.result["totalCount"] = (Json::UInt64)totalCount;
+    response.result["pageNo"] = pageNo;
+    response.result["pageSize"] = pageSize;
+    response.result["totalPages"] =
+        (int)((totalCount + pageSize - 1) / pageSize);
+
+    Json::Value data = Json::arrayValue;
+    for (const auto &role : publications) {
+      Json::Value roleJson = role.toJson();
+
+      // Convert snake_case to camelCase
+      Json::Value camelCaseRole;
+      camelCaseRole["id"] = roleJson["id"];
+      camelCaseRole["title"] = roleJson["title"];
+      camelCaseRole["slug"] = roleJson["slug"];
+      camelCaseRole["price"] = roleJson["price"];
+      camelCaseRole["editionNumber"] = roleJson["edition_number"];
+      camelCaseRole["views"] = roleJson["views"];
+      camelCaseRole["sales"] = roleJson["sales"];
+      camelCaseRole["fullDescription"] = roleJson["full_description"];
+      camelCaseRole["thumbnailId"] = roleJson["thumbnail_id"];
+      camelCaseRole["documentId"] = roleJson["document_id"];
+      camelCaseRole["isPublished"] = roleJson["is_published"];
+      camelCaseRole["publicationId"] = roleJson["publication_id"];
+      camelCaseRole["publicationName"] = roleJson["publication_name"];
+      camelCaseRole["publicationDate"] = roleJson["publication_date"];
+      camelCaseRole["isFree"] = roleJson["is_free"];
+      camelCaseRole["createdAt"] = roleJson["created_at"];
+      camelCaseRole["updatedAt"] = roleJson["updated_at"];
+
+      data.append(camelCaseRole);
+    }
+
+    response.result["data"] = data;
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["message"] =
+        "Database error while fetching newspapers.";
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+
 drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::ingestAsync(const dto::IngestNewsPaperDto &dto) {
   auto dbClient = drogon::app().getDbClient();
   drogon::orm::CoroMapper<drogon_model::Gnp::Newspapers> mp(dbClient);
@@ -695,8 +819,7 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::ingestAsync(const dto:
   }
 }
 
-drogon::Task<gnp::dto::BaseApiResponse>
-NewspaperService::publishAsync(const std::string &id) {
+drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::publishAsync(const std::string &id) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Newspapers> mp(dbClient);
 
@@ -776,8 +899,7 @@ NewspaperService::unPublishAsync(const std::string &id) {
   }
 }
 
-drogon::Task<gnp::dto::BaseApiResponse>
-NewspaperService::deleteNewspaperAsync(const std::string &id) {
+drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::deleteNewspaperAsync(const std::string &id) {
   auto dbClient = drogon::app().getDbClient();
   auto mp = drogon::orm::CoroMapper<drogon_model::Gnp::Newspapers>(dbClient);
 
@@ -816,6 +938,106 @@ NewspaperService::deleteNewspaperAsync(const std::string &id) {
     co_return errorResponse;
   }
 }
+
+
+drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::regenerateNewspaperEntitlement(const std::string &startDate) {
+  auto dbClient = drogon::app().getDbClient();
+  drogon::orm::CoroMapper<drogon_model::Gnp::Newspapers> newsMapper(dbClient);
+  drogon::orm::CoroMapper<drogon_model::Gnp::UserSubscriptions> subMapper(dbClient);
+
+  try {
+    // 1. Get all newspapers from startDate onwards
+    Criteria newsCriteria(Newspapers::Cols::_publication_date, CompareOperator::GE, startDate);
+    auto newspapers = co_await newsMapper.findBy(newsCriteria);
+
+    if (newspapers.empty()) {
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.message = "No newspapers found from the given start date.";
+      co_return response;
+    }
+
+    // 2. Get all user subscriptions
+    auto subscriptions = co_await subMapper.findAll();
+
+    int updatedCount = 0;
+
+    // 3. For each user, update their entitlements
+    for (auto &userSub : subscriptions) {
+      std::string currentEntitlementsStr = userSub.getValueOfNewspaperEntitlements();
+      Json::Value entitlements;
+
+      if (!currentEntitlementsStr.empty()) {
+        Json::CharReaderBuilder readerBuilder;
+        std::string errs;
+        std::istringstream s(currentEntitlementsStr);
+        if (!Json::parseFromStream(readerBuilder, s, &entitlements, &errs)) {
+          entitlements = Json::arrayValue;
+        }
+      } else {
+        entitlements = Json::arrayValue;
+      }
+
+      bool changed = false;
+
+      // Check against all fetched newspapers
+      for (const auto &newspaper : newspapers) {
+        std::string newPaperId = newspaper.getValueOfId();
+        bool alreadyExists = false;
+
+        for (const auto &ent : entitlements) {
+          if (ent.isObject() && ent.isMember("id") && ent["id"].isString() &&
+              ent["id"].asString() == newPaperId) {
+            alreadyExists = true;
+            break;
+          } else if (ent.isString() && ent.asString() == newPaperId) {
+            alreadyExists = true;
+            break;
+          }
+        }
+
+        if (!alreadyExists) {
+          Json::Value newEnt;
+          newEnt["id"] = newPaperId;
+          newEnt["uniqueId"] = gnp::utils::IdGeneratorUtils::generateAlphanumericId();
+          entitlements.append(newEnt);
+          changed = true;
+        }
+      }
+
+      // If changes were made, update the subscription record
+      if (changed) {
+        Json::StreamWriterBuilder writerBuilder;
+        writerBuilder["indentation"] = "";
+        userSub.setNewspaperEntitlements(Json::writeString(writerBuilder, entitlements));
+        co_await subMapper.update(userSub);
+        updatedCount++;
+      }
+    }
+
+    dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Entitlements regenerated successfully.";
+    response.result["updatedUsersCount"] = updatedCount;
+    response.result["newspapersProcessedCount"] = (Json::UInt64)newspapers.size();
+    
+    co_return response;
+
+  } catch (const drogon::orm::DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Database error during entitlement regeneration.";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  } catch (const std::exception &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "An error occurred: " + std::string(e.what());
+    co_return errorResponse;
+  }
+}
+
 
 void NewspaperService::incrementViewCount(
     const std::string &id,

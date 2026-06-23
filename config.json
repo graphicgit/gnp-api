@@ -443,23 +443,13 @@
         ],
         "AdminPermissions":  [
             {
-                "systemName": "api.manage",
-                "friendlyName": "Manage API Keys",
+                "systemName": "dashboard",
+                "friendlyName": "Dashboard",
                 "subPermissions": [
                     {
                         "id": 1,
-                        "systemName": "api.keys.create",
-                        "friendlyName": "Create API Keys"
-                    },
-                    {
-                        "id": 2,
-                        "systemName": "api.keys.revoke",
-                        "friendlyName": "Revoke API Key"
-                    },
-                    {
-                        "id": 3,
-                        "systemName": "api.keys.delete",
-                        "friendlyName": "Delete API Key"
+                        "systemName": "dashboard.view",
+                        "friendlyName": "View Dashboard"
                     }
                 ]
             },
@@ -468,72 +458,589 @@
                 "friendlyName": "Manage Subscribers",
                 "subPermissions": [
                     {
-                        "id": 4,
+                        "id": 2,
+                        "systemName": "subscribers.view",
+                        "friendlyName": "View Subscribers"
+                    },
+                    {
+                        "id": 3,
                         "systemName": "subscribers.create",
                         "friendlyName": "Create Subscriber"
                     },
                     {
-                        "id": 5,
-                        "systemName": "subscribers.bulk_upload",
-                        "friendlyName": "Upload Bulk Subscribers via Excel/CSV"
-                    },
-                    {
-                        "id": 6,
+                        "id": 4,
                         "systemName": "subscribers.update",
                         "friendlyName": "Update Subscriber"
                     },
                     {
-                        "id": 7,
+                        "id": 5,
                         "systemName": "subscribers.delete",
                         "friendlyName": "Delete Subscriber"
+                    },
+                    {
+                        "id": 6,
+                        "systemName": "subscribers.assign_subscription",
+                        "friendlyName": "Assign Subscription"
+                    },
+                    {
+                        "id": 7,
+                        "systemName": "subscribers.view_subscriptions",
+                        "friendlyName": "View Subscriptions"
                     }
                 ]
             },
             {
-                "systemName": "settings.manage",
-                "friendlyName": "Manage Settings",
+                "systemName": "content.manage",
+                "friendlyName": "Manage Content",
                 "subPermissions": [
                     {
                         "id": 8,
-                        "systemName": "settings.update",
-                        "friendlyName": "Update Settings"
+                        "systemName": "content.newspapers.view",
+                        "friendlyName": "View Newspapers"
+                    },
+                    {
+                        "id": 9,
+                        "systemName": "content.newspapers.ingest",
+                        "friendlyName": "Ingest Newspapers"
+                    },
+                    {
+                        "id": 10,
+                        "systemName": "content.newspapers.edit",
+                        "friendlyName": "Edit Newspapers"
+                    },
+                    {
+                        "id": 11,
+                        "systemName": "content.newspapers.publish",
+                        "friendlyName": "Publish Newspapers"
+                    },
+                    {
+                        "id": 12,
+                        "systemName": "content.newspapers.make_free",
+                        "friendlyName": "Waive Newspapers Fees"
+                    },
+                    {
+                        "id": 13,
+                        "systemName": "content.newspapers.delete",
+                        "friendlyName": "Delete Newspapers"
+                    },
+                    {
+                        "id": 14,
+                        "systemName": "content.ingestion_jobs.view",
+                        "friendlyName": "View Ingestion Jobs"
+                    },
+                    {
+                        "id": 15,
+                        "systemName": "content.ingestion_jobs.delete",
+                        "friendlyName": "Delete Ingestion Jobs"
                     }
                 ]
             },
             {
-                "systemName": "users.manage",
+                "systemName": "archived_content.manage",
+                "friendlyName": "Manage Archived Content",
+                "subPermissions": [
+                    {
+                        "id": 16,
+                        "systemName": "archived_content.dashboard.view",
+                        "friendlyName": "View Archived Content Dashboard"
+                    },
+                    {
+                        "id": 17,
+                        "systemName": "archived_content.newspapers.view",
+                        "friendlyName": "View Archived Newspapers"
+                    },
+                    {
+                        "id": 18,
+                        "systemName": "archived_content.newspapers.ingest",
+                        "friendlyName": "Ingest Archived Newspapers"
+                    },
+                    {
+                        "id": 19,
+                        "systemName": "archived_content.newspapers.edit",
+                        "friendlyName": "Edit Archived Newspapers"
+                    },
+                    {
+                        "id": 20,
+                        "systemName": "archived_content.newspapers.delete",
+                        "friendlyName": "Delete Archived Newspapers"
+                    },
+                    {
+                        "id": 21,
+                        "systemName": "archived_content.institutions.create",
+                        "friendlyName": "Create Institution"
+                    },
+                    {
+                        "id": 22,
+                        "systemName": "archived_content.institutions.delete",
+                        "friendlyName": "Delete Institution"
+                    },
+                    {
+                        "id": 23,
+                        "systemName": "archived_content.access_credits.configure",
+                        "friendlyName": "Configure Access Credits"
+                    }
+                ]
+            },
+            {
+                "systemName": "partners.manage",
+                "friendlyName": "Manage Partners",
+                "subPermissions": [
+                    {
+                        "id": 24,
+                        "systemName": "partners.view",
+                        "friendlyName": "View Partners"
+                    },
+                    {
+                        "id": 25,
+                        "systemName": "partners.create",
+                        "friendlyName": "Create Partner"
+                    },
+                    {
+                        "id": 26,
+                        "systemName": "partners.edit",
+                        "friendlyName": "Edit Partner"
+                    },
+                    {
+                        "id": 27,
+                        "systemName": "partners.delete",
+                        "friendlyName": "Delete Partner"
+                    },
+                    {
+                        "id": 28,
+                        "systemName": "partners.assign_subscription",
+                        "friendlyName": "Assign Partner Subscription"
+                    },
+                    {
+                        "id": 29,
+                        "systemName": "partners.view_admin_users",
+                        "friendlyName": "View Partner Admin Users"
+                    },
+                    {
+                        "id": 30,
+                        "systemName": "partners.view_subscribers",
+                        "friendlyName": "View Partner Subscribers"
+                    },
+                    {
+                        "id": 31,
+                        "systemName": "partners.enable_or_disable_subaccount",
+                        "friendlyName": "Enable/Disable Partner Subaccount"
+                    },
+                    {
+                        "id": 32,
+                        "systemName": "partners.update_status",
+                        "friendlyName": "Update Partner Status"
+                    },
+                    {
+                        "id": 33,
+                        "systemName": "partners.update_status",
+                        "friendlyName": "Update Partner Status"
+                    },
+                    {
+                        "id": 34,
+                        "systemName": "partners.create_api_key",
+                        "friendlyName": "Create Partner API Key"
+                    },
+                    {
+                        "id": 35,
+                        "systemName": "partners.create_api_key",
+                        "friendlyName": "Create Partner API Key"
+                    },
+                    {
+                        "id": 36,
+                        "systemName": "partners.create_api_key",
+                        "friendlyName": "Create Partner API Key"
+                    },
+                    {
+                        "id": 37,
+                        "systemName": "partners.update_api_key",
+                        "friendlyName": "Update Partner API Key"
+                    },
+                    {
+                        "id": 38,
+                        "systemName": "partners.revoke_api_key",
+                        "friendlyName": "Revoke Partner API Key"
+                    },
+                    {
+                        "id": 39,
+                        "systemName": "partners.api_logs",
+                        "friendlyName": "View Partner API Logs"
+                    }
+
+                ]
+            },
+            {
+                "systemName": "partners.invoices.manage",
+                "friendlyName": "Manage Partner Invoices",
+                "subPermissions": [
+                    {
+                        "id": 40,
+                        "systemName": "partners.invoices.view",
+                        "friendlyName": "View Partner Invoices"
+                    },
+                    {
+                        "id": 41,
+                        "systemName": "partners.invoices.mark_as_paid",
+                        "friendlyName": "Manually Settle Partner Invoices"
+                    },
+                    {
+                        "id": 42,
+                        "systemName": "partners.invoices.make_part_payment",
+                        "friendlyName": "Apply Partial Payment To Partner Invoices"
+                    },
+                    {
+                        "id": 42,
+                        "systemName": "partners.invoices.make_full_payment",
+                        "friendlyName": "Apply Full Payment To Partner Invoices"
+                    },
+                    {
+                        "id": 43,
+                        "systemName": "partners.invoices.delete",
+                        "friendlyName": "Delete Partner Invoices"
+                    }
+                ]
+            },
+            {
+                "systemName": "affiliates.manage",
+                "friendlyName": "Manage Affiliates",
+                "subPermissions": [
+                    {
+                        "id": 44,
+                        "systemName": "affiliates.view",
+                        "friendlyName": "View Affiliates"
+                    },
+                    {
+                        "id": 45,
+                        "systemName": "affiliates.create",
+                        "friendlyName": "Create Affiliates"
+                    },
+                    {
+                        "id": 46,
+                        "systemName": "affiliates.update",
+                        "friendlyName": "Update Affiliates"
+                    },
+                    {
+                        "id": 47,
+                        "systemName": "affiliates.delete",
+                        "friendlyName": "Delete Affiliates"
+                    },
+                    {
+                        "id": 48,
+                        "systemName": "affiliates.suspend_account",
+                        "friendlyName": "Suspend Affiliate Account"
+                    },
+                    {
+                        "id": 49,
+                        "systemName": "affiliates.applications.view",
+                        "friendlyName": "View Affiliate Applications"
+                    },
+                    {
+                        "id": 50,
+                        "systemName": "affiliates.applications.approve",
+                        "friendlyName": "Approve Affiliate Application"
+                    },
+                    {
+                        "id": 51,
+                        "systemName": "affiliates.applications.reject",
+                        "friendlyName": "Reject Affiliate Application"
+                    },
+                    {
+                        "id": 52,
+                        "systemName": "affiliates.commssions.view",
+                        "friendlyName": "View Affiliate Commissions"
+                    },
+                    {
+                        "id": 53,
+                        "systemName": "affiliates.payouts.view",
+                        "friendlyName": "View Affiliate Payments"
+                    },
+                    {
+                        "id": 54,
+                        "systemName": "affiliates.settings.view",
+                        "friendlyName": "View Affiliate Settings"
+                    },
+                    {
+                        "id": 55,
+                        "systemName": "affiliates.settings.update",
+                        "friendlyName": "Edit Affiliate Settings"
+                    }
+                ]
+            },
+            {
+                "systemName": "subscription_plans.manage",
+                "friendlyName": "Manage Subscription Plans",
+                "subPermissions": [
+                    {
+                        "id": 56,
+                        "systemName": "subscription_plans.view",
+                        "friendlyName": "View Subscription Plans"
+                    },
+                    {
+                        "id": 57,
+                        "systemName": "subscription_plans.create",
+                        "friendlyName": "Create Subscription Plans"
+                    },
+                    {
+                        "id": 58,
+                        "systemName": "subscription_plans.update",
+                        "friendlyName": "Edit Subscription Plans"
+                    },
+                    {
+                        "id": 59,
+                        "systemName": "subscription_plans.delete",
+                        "friendlyName": "Delete Subscription Plans"
+                    }
+                ]
+            },
+            {
+                "systemName": "payments.manage",
+                "friendlyName": "Manage Payments",
+                "subPermissions": [
+                    {
+                        "id": 60,
+                        "systemName": "payments.view",
+                        "friendlyName": "View Payments"
+                    }
+                ]
+            },
+            {
+                "systemName": "campaigns.manage",
+                "friendlyName": "Manage Campaigns",
+                "subPermissions": [
+                    {
+                        "id": 61,
+                        "systemName": "campaigns.view",
+                        "friendlyName": "View Campaigns"
+                    },
+                    {
+                        "id": 62,
+                        "systemName": "campaigns.create",
+                        "friendlyName": "Create Campaigns"
+                    },
+                    {
+                        "id": 63,
+                        "systemName": "campaigns.publish",
+                        "friendlyName": "Publish Campaigns"
+                    },
+                    {
+                        "id": 64,
+                        "systemName": "campaigns.delete",
+                        "friendlyName": "Delete Campaigns"
+                    }
+                ]
+            },
+            {
+                "systemName": "coupons.manage",
+                "friendlyName": "Manage Coupons",
+                "subPermissions": [
+                    {
+                        "id": 65,
+                        "systemName": "coupons.view",
+                        "friendlyName": "View Coupons"
+                    },
+                    {
+                        "id": 66,
+                        "systemName": "coupons.create",
+                        "friendlyName": "Create Coupons"
+                    },
+                    {
+                        "id": 67,
+                        "systemName": "coupons.update",
+                        "friendlyName": "Update Coupons"
+                    },
+                    {
+                        "id": 68,
+                        "systemName": "coupons.delete",
+                        "friendlyName": "Delete Coupons"
+                    }
+                ]
+            },
+            {
+                "systemName": "adverts.manage",
+                "friendlyName": "Manage Advertisement",
+                "subPermissions": [
+                    {
+                        "id": 69,
+                        "systemName": "adverts.categories.view",
+                        "friendlyName": "View Advertisement Categories"
+                    },
+                    {
+                        "id": 70,
+                        "systemName": "adverts.categories.create",
+                        "friendlyName": "Create Advertisement Categories"
+                    },
+                    {
+                        "id": 71,
+                        "systemName": "adverts.categories.update",
+                        "friendlyName": "Update Advertisement Categories"
+                    },
+                    {
+                        "id": 72,
+                        "systemName": "adverts.categories.delete",
+                        "friendlyName": "Delete Advertisement Categories"
+                    },
+                    {
+                        "id": 73,
+                        "systemName": "adverts.sizes.view",
+                        "friendlyName": "View Advert Sizes"
+                    },
+                    {
+                        "id": 74,
+                        "systemName": "adverts.sizes.create",
+                        "friendlyName": "Create Advert Sizes"
+                    },
+                    {
+                        "id": 75,
+                        "systemName": "adverts.sizes.update",
+                        "friendlyName": "Update Advert Sizes"
+                    },
+                    {
+                        "id": 76,
+                        "systemName": "adverts.sizes.delete",
+                        "friendlyName": "Delete Advert Sizes"
+                    },
+                    {
+                        "id": 77,
+                        "systemName": "adverts.publication_slots.view",
+                        "friendlyName": "View Publication Slots"
+                    },
+                    {
+                        "id": 78,
+                        "systemName": "adverts.publication_slots.create",
+                        "friendlyName": "Create Publication Slots"
+                    },
+                    {
+                        "id": 79,
+                        "systemName": "adverts.publication_slots.update",
+                        "friendlyName": "Update Publication Slots"
+                    },
+                    {
+                        "id": 80,
+                        "systemName": "adverts.publication_slots.delete",
+                        "friendlyName": "Delete Publication Slots"
+                    },
+                    {
+                        "id": 81,
+                        "systemName": "adverts.ad_request.view",
+                        "friendlyName": "View Ad Requests"
+                    },
+                    {
+                        "id": 82,
+                        "systemName": "adverts.ad_request.change_state",
+                        "friendlyName": "Update Ad Request"
+                    }
+                ]
+            },
+            {
+                "systemName": "user_management.manage",
                 "friendlyName": "Manage Users",
                 "subPermissions": [
                     {
-                        "id": 9,
-                        "systemName": "users.create",
-                        "friendlyName": "Create/Invite User"
+                        "id": 83,
+                        "systemName": "user_management.roles.view",
+                        "friendlyName": "View Roles"
                     },
                     {
-                        "id": 10,
-                        "systemName": "users.edit",
-                        "friendlyName": "Edit User"
+                        "id": 84,
+                        "systemName": "user_management.roles.create",
+                        "friendlyName": "Create Roles"
                     },
                     {
-                        "id": 11,
-                        "systemName": "users.delete",
-                        "friendlyName": "Delete User"
+                        "id": 85,
+                        "systemName": "user_management.roles.update",
+                        "friendlyName": "Update Roles"
+                    },
+                    {
+                        "id": 86,
+                        "systemName": "user_management.roles.delete",
+                        "friendlyName": "Delete Roles"
+                    },
+                    {
+                        "id": 87,
+                        "systemName": "user_management.users.view",
+                        "friendlyName": "View Users"
+                    },
+                    {
+                        "id": 88,
+                        "systemName": "user_management.users.create",
+                        "friendlyName": "Create Users"
+                    },
+                    {
+                        "id": 89,
+                        "systemName": "user_management.users.update",
+                        "friendlyName": "Update Users"
+                    },
+                    {
+                        "id": 90,
+                        "systemName": "user_management.users.delete",
+                        "friendlyName": "Delete Users"
+                    },
+                    {
+                        "id": 91,
+                        "systemName": "user_management.users.invitations.view",
+                        "friendlyName": "View User Invitations"
+                    }
+                ]
+            },
+            {
+                "systemName": "support_ticket.manage",
+                "friendlyName": "Manage Support Tickets",
+                "subPermissions": [
+                    {
+                        "id": 92,
+                        "systemName": "support_ticket.view",
+                        "friendlyName": "View Support Tickets"
+                    },
+                    {
+                        "id": 93,
+                        "systemName": "support_ticket.change_state",
+                        "friendlyName": "Update Support Ticket Status"
                     }
                 ]
             },
             {
                 "systemName": "reports.manage",
-                "friendlyName": "Manage Reports",
+                "friendlyName": "Run Reports",
                 "subPermissions": [
                     {
-                        "id": 12,
-                        "systemName": "reports.view",
-                        "friendlyName": "View Reports"
+                        "id": 94,
+                        "systemName": "reports.revenue_and_financial.run",
+                        "friendlyName": "Run Revenue & Financial Reports"
                     },
                     {
-                        "id": 13,
-                        "systemName": "reports.export",
-                        "friendlyName": "Export Report Data"
+                        "id": 95,
+                        "systemName": "reports.user_and_subscriber.run",
+                        "friendlyName": "Run User & Subscriber Reports"
+                    },
+                    {
+                        "id": 96,
+                        "systemName": "reports.content_and_newspaper.run",
+                        "friendlyName": "Run Content & Newspaper Reports"
+                    },
+                    {
+                        "id": 97,
+                        "systemName": "reports.commercial_partners.run",
+                        "friendlyName": "Run Commercial Partner Reports"
+                    },
+                    {
+                        "id": 98,
+                        "systemName": "reports.marketing_and_campaigns.run",
+                        "friendlyName": "Run Marketing & Campaigns Reports"
+                    },
+                    {
+                        "id": 99,
+                        "systemName": "reports.admin_and_security.run",
+                        "friendlyName": "Run Admin & Security Reports"
+                    }
+                ]
+            },
+            {
+                "systemName": "settings.manage",
+                "friendlyName": "Manage System Settings",
+                "subPermissions": [
+                    {
+                        "id": 100,
+                        "systemName": "settings.update",
+                        "friendlyName": "Update System Settings"
                     }
                 ]
             }

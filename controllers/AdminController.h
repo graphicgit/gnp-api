@@ -11,6 +11,7 @@ public:
   METHOD_LIST_BEGIN
   // newspaper
   ADD_METHOD_TO(AdminController::getAllNewsPapers,std::string(PREFIX) + "get-all-newspapers", Get, Options, "JwtAuthFilter");
+  ADD_METHOD_TO(AdminController::getAllArchivedNewsPapers,std::string(PREFIX) + "get-all-archived-newspapers", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::getNewsPaperFullDetails, std::string(PREFIX) + "get-full-details", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::publishNewsPaper, std::string(PREFIX) + "publish-newspaper", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::unPublishNewsPaper, std::string(PREFIX) + "unpublish-newspaper", Get, Options, "JwtAuthFilter");
@@ -92,6 +93,7 @@ public:
 
     //admin roles
     ADD_METHOD_TO(AdminController::getAllRoles, std::string(PREFIX) + "get-all-roles", Get, Options, "JwtAuthFilter");
+    ADD_METHOD_TO(AdminController::getAllPermissions, std::string(PREFIX) + "get-all-permissions", Get, Options, "JwtAuthFilter");
     ADD_METHOD_TO(AdminController::createRole, std::string(PREFIX) + "create-role", Post, Options, "JwtAuthFilter");
     ADD_METHOD_TO(AdminController::updateRole, std::string(PREFIX) + "update-role/{1}", Post, Options, "JwtAuthFilter");
     ADD_METHOD_TO(AdminController::deleteRole, std::string(PREFIX) + "delete-role/{1}", Delete, Options, "JwtAuthFilter");
@@ -106,10 +108,14 @@ public:
 
   // affiliates
 
+    //utils
+   ADD_METHOD_TO(AdminController::regenerateNewspaperEntitlements, std::string(PREFIX) + "regenerate-newspaper-entitlements", Get, Options, "JwtAuthFilter");
+
   METHOD_LIST_END
 
   // Newspapers
   drogon::Task<HttpResponsePtr> getAllNewsPapers(HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> getAllArchivedNewsPapers(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> getNewsPaperFullDetails(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> publishNewsPaper(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> unPublishNewsPaper(HttpRequestPtr req);
@@ -157,8 +163,7 @@ public:
   drogon::Task<HttpResponsePtr> assignPartnerSubscribersPlan(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> updatePartner(const HttpRequestPtr req);
   void getPartnerDetails(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
-  void
-  updatePartnerStatus(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+  void updatePartnerStatus(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   drogon::Task<HttpResponsePtr> deletePartner(HttpRequestPtr req);
 
   drogon::Task<HttpResponsePtr> deletePartnerSubscriber(HttpRequestPtr req);
@@ -174,8 +179,7 @@ public:
   Task<HttpResponsePtr> updatePartnerApiKey(HttpRequestPtr req);
 
   // payments
-  void getAllPayments(const HttpRequestPtr &req,
-                      std::function<void(const HttpResponsePtr &)> &&callback);
+  void getAllPayments(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
 
   // ingestion Jobs
   void
@@ -202,8 +206,13 @@ public:
    drogon::Task<HttpResponsePtr> deletePartnerInvoice(HttpRequestPtr req);
 
     // admin roles
+    Task<HttpResponsePtr> getAllPermissions(HttpRequestPtr req);
     Task<HttpResponsePtr> getAllRoles(HttpRequestPtr req);
     Task<HttpResponsePtr> createRole(HttpRequestPtr req);
     Task<HttpResponsePtr> updateRole(HttpRequestPtr req, const std::string &roleId);
     Task<HttpResponsePtr> deleteRole(HttpRequestPtr req, const std::string &roleId);
+
+    //utils
+    Task<HttpResponsePtr> regenerateNewspaperEntitlements(HttpRequestPtr req);
+
 };

@@ -21,6 +21,9 @@ public:
   ADD_METHOD_TO(UsersController::updateUser, std::string(PREFIX) + "update", Post);
   ADD_METHOD_TO(UsersController::updateUserProfileImage, std::string(PREFIX) + "update-profile-image", Post);
   ADD_METHOD_TO(UsersController::deleteUser, std::string(PREFIX) + "delete", Delete);
+  //user account
+  ADD_METHOD_TO(UsersController::getUserMetaData,std::string(PREFIX) + "get-meta-data", Get, Options, "JwtAuthFilter");
+
   METHOD_LIST_END
 
 
@@ -40,5 +43,7 @@ public:
   drogon::Task<HttpResponsePtr> deactivate(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> deleteUser(HttpRequestPtr req);
 
+  //user account..
+  drogon::Task<HttpResponsePtr> getUserMetaData(HttpRequestPtr req);
 
 };

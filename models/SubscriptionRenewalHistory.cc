@@ -28,6 +28,7 @@ const std::string SubscriptionRenewalHistory::Cols::_amount_paid = "\"amount_pai
 const std::string SubscriptionRenewalHistory::Cols::_paid_by = "\"paid_by\"";
 const std::string SubscriptionRenewalHistory::Cols::_created_at = "\"created_at\"";
 const std::string SubscriptionRenewalHistory::Cols::_updated_at = "\"updated_at\"";
+const std::string SubscriptionRenewalHistory::Cols::_partner_id = "\"partner_id\"";
 const std::string SubscriptionRenewalHistory::primaryKeyName = "id";
 const bool SubscriptionRenewalHistory::hasPrimaryKey = true;
 const std::string SubscriptionRenewalHistory::tableName = "\"subscription_renewal_history\"";
@@ -47,7 +48,8 @@ const std::vector<typename SubscriptionRenewalHistory::MetaData> SubscriptionRen
 {"amount_paid","std::string","numeric",0,0,0,1},
 {"paid_by","std::string","character varying",150,0,0,1},
 {"created_at","::trantor::Date","timestamp without time zone",0,0,0,1},
-{"updated_at","::trantor::Date","timestamp without time zone",0,0,0,0}
+{"updated_at","::trantor::Date","timestamp without time zone",0,0,0,0},
+{"partner_id","std::string","uuid",0,0,0,0}
 };
 const std::string &SubscriptionRenewalHistory::getColumnName(size_t index) noexcept(false)
 {
@@ -154,11 +156,15 @@ SubscriptionRenewalHistory::SubscriptionRenewalHistory(const Row &r, const ssize
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
+        if(!r["partner_id"].isNull())
+        {
+            partnerId_=std::make_shared<std::string>(r["partner_id"].as<std::string>());
+        }
     }
     else
     {
         size_t offset = (size_t)indexOffset;
-        if(offset + 15 > r.size())
+        if(offset + 16 > r.size())
         {
             LOG_FATAL << "Invalid SQL result for this model";
             return;
@@ -275,13 +281,18 @@ SubscriptionRenewalHistory::SubscriptionRenewalHistory(const Row &r, const ssize
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
+        index = offset + 15;
+        if(!r[index].isNull())
+        {
+            partnerId_=std::make_shared<std::string>(r[index].as<std::string>());
+        }
     }
 
 }
 
 SubscriptionRenewalHistory::SubscriptionRenewalHistory(const Json::Value &pJson, const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 15)
+    if(pMasqueradingVector.size() != 16)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -440,6 +451,14 @@ SubscriptionRenewalHistory::SubscriptionRenewalHistory(const Json::Value &pJson,
                 }
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
+        }
+    }
+    if(!pMasqueradingVector[15].empty() && pJson.isMember(pMasqueradingVector[15]))
+    {
+        dirtyFlag_[15] = true;
+        if(!pJson[pMasqueradingVector[15]].isNull())
+        {
+            partnerId_=std::make_shared<std::string>(pJson[pMasqueradingVector[15]].asString());
         }
     }
 }
@@ -602,12 +621,20 @@ SubscriptionRenewalHistory::SubscriptionRenewalHistory(const Json::Value &pJson)
             }
         }
     }
+    if(pJson.isMember("partner_id"))
+    {
+        dirtyFlag_[15]=true;
+        if(!pJson["partner_id"].isNull())
+        {
+            partnerId_=std::make_shared<std::string>(pJson["partner_id"].asString());
+        }
+    }
 }
 
 void SubscriptionRenewalHistory::updateByMasqueradedJson(const Json::Value &pJson,
                                             const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 15)
+    if(pMasqueradingVector.size() != 16)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -767,6 +794,14 @@ void SubscriptionRenewalHistory::updateByMasqueradedJson(const Json::Value &pJso
             }
         }
     }
+    if(!pMasqueradingVector[15].empty() && pJson.isMember(pMasqueradingVector[15]))
+    {
+        dirtyFlag_[15] = true;
+        if(!pJson[pMasqueradingVector[15]].isNull())
+        {
+            partnerId_=std::make_shared<std::string>(pJson[pMasqueradingVector[15]].asString());
+        }
+    }
 }
 
 void SubscriptionRenewalHistory::updateByJson(const Json::Value &pJson) noexcept(false)
@@ -924,6 +959,14 @@ void SubscriptionRenewalHistory::updateByJson(const Json::Value &pJson) noexcept
                 }
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
+        }
+    }
+    if(pJson.isMember("partner_id"))
+    {
+        dirtyFlag_[15] = true;
+        if(!pJson["partner_id"].isNull())
+        {
+            partnerId_=std::make_shared<std::string>(pJson["partner_id"].asString());
         }
     }
 }
@@ -1278,6 +1321,33 @@ void SubscriptionRenewalHistory::setUpdatedAtToNull() noexcept
     dirtyFlag_[14] = true;
 }
 
+const std::string &SubscriptionRenewalHistory::getValueOfPartnerId() const noexcept
+{
+    static const std::string defaultValue = std::string();
+    if(partnerId_)
+        return *partnerId_;
+    return defaultValue;
+}
+const std::shared_ptr<std::string> &SubscriptionRenewalHistory::getPartnerId() const noexcept
+{
+    return partnerId_;
+}
+void SubscriptionRenewalHistory::setPartnerId(const std::string &pPartnerId) noexcept
+{
+    partnerId_ = std::make_shared<std::string>(pPartnerId);
+    dirtyFlag_[15] = true;
+}
+void SubscriptionRenewalHistory::setPartnerId(std::string &&pPartnerId) noexcept
+{
+    partnerId_ = std::make_shared<std::string>(std::move(pPartnerId));
+    dirtyFlag_[15] = true;
+}
+void SubscriptionRenewalHistory::setPartnerIdToNull() noexcept
+{
+    partnerId_.reset();
+    dirtyFlag_[15] = true;
+}
+
 void SubscriptionRenewalHistory::updateId(const uint64_t id)
 {
 }
@@ -1299,7 +1369,8 @@ const std::vector<std::string> &SubscriptionRenewalHistory::insertColumns() noex
         "amount_paid",
         "paid_by",
         "created_at",
-        "updated_at"
+        "updated_at",
+        "partner_id"
     };
     return inCols;
 }
@@ -1471,6 +1542,17 @@ void SubscriptionRenewalHistory::outputArgs(drogon::orm::internal::SqlBinder &bi
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[15])
+    {
+        if(getPartnerId())
+        {
+            binder << getValueOfPartnerId();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 
 const std::vector<std::string> SubscriptionRenewalHistory::updateColumns() const
@@ -1535,6 +1617,10 @@ const std::vector<std::string> SubscriptionRenewalHistory::updateColumns() const
     if(dirtyFlag_[14])
     {
         ret.push_back(getColumnName(14));
+    }
+    if(dirtyFlag_[15])
+    {
+        ret.push_back(getColumnName(15));
     }
     return ret;
 }
@@ -1706,6 +1792,17 @@ void SubscriptionRenewalHistory::updateArgs(drogon::orm::internal::SqlBinder &bi
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[15])
+    {
+        if(getPartnerId())
+        {
+            binder << getValueOfPartnerId();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 Json::Value SubscriptionRenewalHistory::toJson() const
 {
@@ -1830,6 +1927,14 @@ Json::Value SubscriptionRenewalHistory::toJson() const
     {
         ret["updated_at"]=Json::Value();
     }
+    if(getPartnerId())
+    {
+        ret["partner_id"]=getValueOfPartnerId();
+    }
+    else
+    {
+        ret["partner_id"]=Json::Value();
+    }
     return ret;
 }
 
@@ -1842,7 +1947,7 @@ Json::Value SubscriptionRenewalHistory::toMasqueradedJson(
     const std::vector<std::string> &pMasqueradingVector) const
 {
     Json::Value ret;
-    if(pMasqueradingVector.size() == 15)
+    if(pMasqueradingVector.size() == 16)
     {
         if(!pMasqueradingVector[0].empty())
         {
@@ -2009,6 +2114,17 @@ Json::Value SubscriptionRenewalHistory::toMasqueradedJson(
                 ret[pMasqueradingVector[14]]=Json::Value();
             }
         }
+        if(!pMasqueradingVector[15].empty())
+        {
+            if(getPartnerId())
+            {
+                ret[pMasqueradingVector[15]]=getValueOfPartnerId();
+            }
+            else
+            {
+                ret[pMasqueradingVector[15]]=Json::Value();
+            }
+        }
         return ret;
     }
     LOG_ERROR << "Masquerade failed";
@@ -2131,6 +2247,14 @@ Json::Value SubscriptionRenewalHistory::toMasqueradedJson(
     else
     {
         ret["updated_at"]=Json::Value();
+    }
+    if(getPartnerId())
+    {
+        ret["partner_id"]=getValueOfPartnerId();
+    }
+    else
+    {
+        ret["partner_id"]=Json::Value();
     }
     return ret;
 }
@@ -2257,13 +2381,18 @@ bool SubscriptionRenewalHistory::validateJsonForCreation(const Json::Value &pJso
         if(!validJsonOfField(14, "updated_at", pJson["updated_at"], err, true))
             return false;
     }
+    if(pJson.isMember("partner_id"))
+    {
+        if(!validJsonOfField(15, "partner_id", pJson["partner_id"], err, true))
+            return false;
+    }
     return true;
 }
 bool SubscriptionRenewalHistory::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                                                                     const std::vector<std::string> &pMasqueradingVector,
                                                                     std::string &err)
 {
-    if(pMasqueradingVector.size() != 15)
+    if(pMasqueradingVector.size() != 16)
     {
         err = "Bad masquerading vector";
         return false;
@@ -2434,6 +2563,14 @@ bool SubscriptionRenewalHistory::validateMasqueradedJsonForCreation(const Json::
                   return false;
           }
       }
+      if(!pMasqueradingVector[15].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[15]))
+          {
+              if(!validJsonOfField(15, pMasqueradingVector[15], pJson[pMasqueradingVector[15]], err, true))
+                  return false;
+          }
+      }
     }
     catch(const Json::LogicError &e)
     {
@@ -2524,13 +2661,18 @@ bool SubscriptionRenewalHistory::validateJsonForUpdate(const Json::Value &pJson,
         if(!validJsonOfField(14, "updated_at", pJson["updated_at"], err, false))
             return false;
     }
+    if(pJson.isMember("partner_id"))
+    {
+        if(!validJsonOfField(15, "partner_id", pJson["partner_id"], err, false))
+            return false;
+    }
     return true;
 }
 bool SubscriptionRenewalHistory::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
                                                                   const std::vector<std::string> &pMasqueradingVector,
                                                                   std::string &err)
 {
-    if(pMasqueradingVector.size() != 15)
+    if(pMasqueradingVector.size() != 16)
     {
         err = "Bad masquerading vector";
         return false;
@@ -2614,6 +2756,11 @@ bool SubscriptionRenewalHistory::validateMasqueradedJsonForUpdate(const Json::Va
       if(!pMasqueradingVector[14].empty() && pJson.isMember(pMasqueradingVector[14]))
       {
           if(!validJsonOfField(14, pMasqueradingVector[14], pJson[pMasqueradingVector[14]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[15].empty() && pJson.isMember(pMasqueradingVector[15]))
+      {
+          if(!validJsonOfField(15, pMasqueradingVector[15], pJson[pMasqueradingVector[15]], err, false))
               return false;
       }
     }
@@ -2869,6 +3016,17 @@ bool SubscriptionRenewalHistory::validJsonOfField(size_t index,
             }
             break;
         case 14:
+            if(pJson.isNull())
+            {
+                return true;
+            }
+            if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 15:
             if(pJson.isNull())
             {
                 return true;
