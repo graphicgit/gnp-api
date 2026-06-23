@@ -2190,6 +2190,14 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getSubscribe
     summary["billingCycle"] = subscription.getValueOfBillingCycle();
     summary["subscriptionId"] = subscription.getValueOfId();
 
+    const auto& startDateObj = subscription.getValueOfStartDate();
+    const auto& endDateObj = subscription.getValueOfEndDate();
+    summary["activatedOn"] = startDateObj.toCustomFormattedString("%Y-%m-%d");
+    summary["validUntil"] = endDateObj.toCustomFormattedString("%Y-%m-%d");
+    
+    int64_t diffDays = (endDateObj.microSecondsSinceEpoch() - startDateObj.microSecondsSinceEpoch()) / (1000000LL * 3600 * 24);
+    summary["daysRemaining"] = (Json::Int64)diffDays;
+
     result["subscriptionSummary"] = summary;
 
     Json::Value historyArray = Json::arrayValue;
