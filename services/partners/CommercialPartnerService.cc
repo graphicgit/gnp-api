@@ -2194,9 +2194,11 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getSubscribe
     const auto& endDateObj = subscription.getValueOfEndDate();
     summary["activatedOn"] = startDateObj.toCustomFormattedString("%Y-%m-%d");
     summary["validUntil"] = endDateObj.toCustomFormattedString("%Y-%m-%d");
-    
-    int64_t diffDays = (endDateObj.microSecondsSinceEpoch() - startDateObj.microSecondsSinceEpoch()) / (1000000LL * 3600 * 24);
-    summary["daysRemaining"] = (Json::Int64)diffDays;
+
+    auto now = trantor::Date::now();
+
+    int64_t diffDays = (endDateObj.microSecondsSinceEpoch() - now.microSecondsSinceEpoch()) / (1000000LL * 3600 * 24);
+    summary["daysRemaining"] = (Json::Int64)std::max((int64_t)0, diffDays);
 
     result["subscriptionSummary"] = summary;
 

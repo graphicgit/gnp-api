@@ -135,9 +135,9 @@ add_executable(${PROJECT_NAME} main.cc
         services/partner_user_logs/PartnerUserLogService.cc
         services/redis/RedisCacheManager.h
         services/redis/RedisCacheManager.cc
-        services/google_drive/GoogleDriveService.h
-        services/google_drive/GoogleDriveService.cc
         services/reports/ReportingService.h
+        services/g3_storage/G3StorageService.h
+        services/g3_storage/G3StorageService.cc
 )
 
 # ##############################################################################

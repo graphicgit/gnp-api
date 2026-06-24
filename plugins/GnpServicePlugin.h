@@ -15,7 +15,7 @@
 #include "services/categories/CategoryService.h"
 #include "services/coupons/CouponService.h"
 #include "services/email/EmailService.h"
-#include "services/google_drive/GoogleDriveService.h"
+#include "services/g3_storage/G3StorageService.h"
 #include "services/hubtel_sms/HubtelSmsApi.h"
 #include "services/ingestion_jobs/IngestionJobService.h"
 #include "services/media/MediaService.h"
@@ -74,6 +74,7 @@ public:
   ::gnp::services::TagService &getTagService() { return tagService_; }
   ::gnp::services::CategoryService &getCategoryService() { return categoryService_; }
   ::gnp::services::ReportingService &getReportingService() { return reportingService_; }
+  ::gnp::services::G3StorageService &getG3StorageService() { return g3StorageService_; }
 
 private:
   services::RedisCacheManager redisCacheService_;
@@ -103,6 +104,7 @@ private:
   ::gnp::services::PartnerUserLogService partnerUserActivityLogService_;
   ::gnp::services::PartnerApiLogService partnerApiLogService_;
   ::gnp::services::ReportingService reportingService_;
+  ::gnp::services::G3StorageService g3StorageService_;
 };
 
 } // namespace gnp::plugins
