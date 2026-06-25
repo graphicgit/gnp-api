@@ -58,8 +58,7 @@ drogon::Task<HttpResponsePtr> SubscriptionPlansController::create(const HttpRequ
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr>
-SubscriptionPlansController::update(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> SubscriptionPlansController::update(const HttpRequestPtr req) {
   auto jsonBody = req->getJsonObject();
 
   if (!jsonBody) {
@@ -82,8 +81,7 @@ SubscriptionPlansController::update(const HttpRequestPtr req) {
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr>
-SubscriptionPlansController::deletePlan(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> SubscriptionPlansController::deletePlan(const HttpRequestPtr req) {
   auto id = req->getParameter("id");
 
   if (id.empty()) {
