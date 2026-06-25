@@ -11,13 +11,14 @@
 namespace gnp::services {
 
 G3StorageService::G3StorageService() {
+
   // You can customize the base storage path via config or use a default
   auto customConfig = drogon::app().getCustomConfig();
   if (customConfig.isMember("G3Bucket") &&
       customConfig["G3Bucket"].isMember("BaseStoragePath")) {
     baseStoragePath_ = customConfig["G3Bucket"]["BaseStoragePath"].asString();
   } else {
-    baseStoragePath_ = "/var/g3-storage";
+    baseStoragePath_ = "./g3-storage";
   }
 
   // Ensure base directory exists
@@ -34,8 +35,7 @@ void G3StorageService::ensureBucketExists(const std::string &bucketName) const {
   }
 }
 
-std::string G3StorageService::buildFilePath(const std::string &bucketName,
-                                           const std::string &fileName) const {
+std::string G3StorageService::buildFilePath(const std::string &bucketName, const std::string &fileName) const {
   return (std::filesystem::path(baseStoragePath_) / bucketName / fileName)
       .string();
 }
@@ -49,8 +49,7 @@ bool G3StorageService::saveFile(const std::string &bucketName,
 
     std::ofstream outFile(filePath, std::ios::binary);
     if (!outFile.is_open()) {
-      LOG_ERROR << "G3BucketService: Failed to open file for writing: "
-                << filePath;
+      LOG_ERROR << "G3BucketService: Failed to open file for writing: " << filePath;
       return false;
     }
     outFile.write(fileData.data(), fileData.size());

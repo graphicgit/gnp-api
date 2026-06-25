@@ -957,8 +957,9 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::regenerateNewspaperEnt
       co_return response;
     }
 
-    // 2. Get all user subscriptions
-    auto subscriptions = co_await subMapper.findAll();
+    // 2. Get user subscriptions whose start date matches the given start date
+    drogon::orm::Criteria subCriteria(drogon_model::Gnp::UserSubscriptions::Cols::_start_date, drogon::orm::CompareOperator::EQ, startDate);
+    auto subscriptions = co_await subMapper.findBy(subCriteria);
 
     int updatedCount = 0;
 

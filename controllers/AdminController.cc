@@ -1481,3 +1481,17 @@ Task<HttpResponsePtr> AdminController::regenerateNewspaperEntitlements(HttpReque
   co_return resp;
 
 }
+
+
+Task<HttpResponsePtr> AdminController::generatePartnerInvoices(HttpRequestPtr req) {
+
+  auto date = req->getParameter("date");
+
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &partnerInvoiceService = plugin->getPartnerInvoiceService();
+
+  auto result = co_await partnerInvoiceService.generatePartnerInvoices(date);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+
+}

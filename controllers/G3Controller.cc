@@ -30,9 +30,8 @@ Task<HttpResponsePtr> G3Controller::uploadFile(HttpRequestPtr req)
     std::string fileName = file.getFileName();
     std::string fileData(file.fileData(), file.fileLength());
 
-    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
     auto &g3StorageService = plugin->getG3StorageService();
-
 
     bool success = g3StorageService.saveFile(bucketName, fileName, fileData);
 

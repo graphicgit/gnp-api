@@ -110,6 +110,7 @@ public:
 
     //utils
    ADD_METHOD_TO(AdminController::regenerateNewspaperEntitlements, std::string(PREFIX) + "regenerate-newspaper-entitlements", Get, Options, "JwtAuthFilter");
+   ADD_METHOD_TO(AdminController::generatePartnerInvoices, std::string(PREFIX) + "generate-partner-invoices", Get, Options, "JwtAuthFilter");
 
   METHOD_LIST_END
 
@@ -214,5 +215,6 @@ public:
 
     //utils
     Task<HttpResponsePtr> regenerateNewspaperEntitlements(HttpRequestPtr req);
+    Task<HttpResponsePtr> generatePartnerInvoices(HttpRequestPtr req);
 
 };
