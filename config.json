@@ -79,7 +79,7 @@
         "session_timeout": 0,
         //string value of SameSite attribute of the Set-Cookie HTTP response header
         //valid value is either 'Null' (default), 'Lax', 'Strict' or 'None'
-        "session_same_site" : "Null",
+        "session_same_site": "Null",
         //session_cookie_key: The cookie key of the session, "JSESSIONID" by default
         "session_cookie_key": "JSESSIONID",
         //session_max_age: The max age of the session cookie, -1 by default
@@ -265,7 +265,7 @@
         "br_static": true,
         //client_max_body_size: Set the maximum body size of HTTP requests received by drogon. The default value is "1M".
         //One can set it to "1024", "1k", "10M", "1G", etc. Setting it to "" means no limit.
-        "client_max_body_size": "1M",
+        "client_max_body_size": "100M",
         //max_memory_body_size: Set the maximum body size in memory of HTTP requests received by drogon. The default value is "64K" bytes.
         //If the body size of a HTTP request exceeds this limit, the body is stored to a temporary file for processing.
         //Setting it to "" means no limit.
@@ -317,15 +317,15 @@
     //custom_config: custom configuration for users. This object can be get by the app().getCustomConfig() method.
     "custom_config": {
         "JwtBearer": {
-            "JwtSecurityKey" : "Gnp_ca01ca76-4866-4d54-9882-d9e365b81473",
-            "JwtIssuer" : "Gnp",
-            "JwtAudience" : "Gnp_Users",
-            "JwtExpirationTime" : 3600
+            "JwtSecurityKey": "Gnp_ca01ca76-4866-4d54-9882-d9e365b81473",
+            "JwtIssuer": "Gnp",
+            "JwtAudience": "Gnp_Users",
+            "JwtExpirationTime": 3600
         },
         "PrivateKey": "ca11ca76-3876-4d45-9882-b9e365b81474",
         "PayStackApi": {
-            "BaseUrl" : "https://api.paystack.co",
-            "SecretKey" : "sk_live_844f99e0b5acfff9b8b52bde395bb6fd39e4e346"
+            "BaseUrl": "https://api.paystack.co",
+            "SecretKey": "sk_live_844f99e0b5acfff9b8b52bde395bb6fd39e4e346"
         },
         "MailConfiguration": {
             "Host": "mail.graphicnewsplus.com",
@@ -344,7 +344,13 @@
             "CollectionsSubscriptionKey": "4f87849cbaf74ef0ba52e7b425897e78",
             "DisbursementSubscriptionKey": "b544de9587de4fe0805ecfdcb7fcdfb3"
         },
-        "PartnerPermissions":  [
+        "G3Bucket": {
+            "BaseStoragePath": "./g3-storage",
+            "ThumbnailBucketName": "gnp-production-thumb",
+            "SplitDocumentBucketName": "gnp-production-split",
+            "OriginalDocumentBucketName": "gnp-production-original"
+        },
+        "PartnerPermissions": [
             {
                 "systemName": "api.manage",
                 "friendlyName": "Manage API Keys",
@@ -441,7 +447,7 @@
                 ]
             }
         ],
-        "AdminPermissions":  [
+        "AdminPermissions": [
             {
                 "systemName": "dashboard",
                 "friendlyName": "Dashboard",
@@ -665,7 +671,6 @@
                         "systemName": "partners.api_logs",
                         "friendlyName": "View Partner API Logs"
                     }
-
                 ]
             },
             {

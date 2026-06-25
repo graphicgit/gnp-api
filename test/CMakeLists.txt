@@ -26,6 +26,7 @@ file(GLOB COUPON_SVC "../services/coupons/*.cc")
 file(GLOB PARTNER_API_REQUEST_LOGS_SVC "../services/partner_api_request_logs/*.cc")
 file(GLOB ADMIN_USER_INVITATION_SVC "../services/user_invitations/*.cc")
 file(GLOB ROLE_SVC "../services/roles/*.cc")
+file(GLOB G3_STORAGE_SVC "../services/g3_storage/*.cc")
 file(GLOB MEDIA_SVC "../services/media/*.cc")
 file(GLOB UTILS_SVC "../utils/*.cc")
 
@@ -54,6 +55,7 @@ add_executable(${PROJECT_NAME} test_main.cc
     ${ROLE_SVC}
     ${PARTNER_SVC}
     ${PARTNER_INVOICE_SVC}
+    ${G3_STORAGE_SVC}
     ${PARTNER_USER_LOGS_SVC}
     ${PARTNER_API_REQUEST_LOGS_SVC}
     ${ADMIN_USER_INVITATION_SVC}

@@ -9,6 +9,10 @@
 
 using namespace drogon::orm;
 using drogon_model::Gnp::PartnerInvoices;
+#include "models/UserSubscriptions.h"
+#include "models/CommercialPartners.h"
+#include <map>
+#include <cmath>
 
 namespace gnp::services {
 
@@ -352,4 +356,107 @@ namespace gnp::services {
     }
   }
 
+  drogon::Task<dto::BaseApiResponse> PartnerInvoiceService::generatePartnerInvoices(const std::string &invoiceDate) {
+    auto dbClient = drogon::app().getDbClient();
+    CoroMapper<drogon_model::Gnp::UserSubscriptions> subMp(dbClient);
+    CoroMapper<drogon_model::Gnp::CommercialPartners> partnerMp(dbClient);
+
+    try {
+      // 1. Get all subscribers onboarded on invoiceDate
+      Criteria criteria(drogon_model::Gnp::UserSubscriptions::Cols::_start_date, CompareOperator::EQ, invoiceDate);
+      auto subscriptions = co_await subMp.findBy(criteria);
+
+      if (subscriptions.empty()) {
+        dto::BaseApiResponse response;
+        response.success = true;
+        response.message = "No subscribers onboarded for the given invoice date.";
+        co_return response;
+      }
+
+      // 2. Group subscriptions by partner_id
+      std::map<std::string, std::vector<drogon_model::Gnp::UserSubscriptions>> partnerSubs;
+      for (const auto &sub : subscriptions) {
+        partnerSubs[sub.getValueOfPartnerId()].push_back(sub);
+      }
+
+      int invoicesGenerated = 0;
+
+      // 3. Process each partner to compute the invoice
+      for (const auto &[partnerId, subs] : partnerSubs) {
+        // Retrieve partner to get cost_per_head, name, etc.
+        auto partner = co_await partnerMp.findByPrimaryKey(partnerId);
+
+        double costPerHead = 3.0;
+        if (!partner.getValueOfCostPerHead().empty()) {
+          costPerHead = std::stod(partner.getValueOfCostPerHead());
+        }
+
+        double totalInvoiceAmount = 0.0;
+
+        for (const auto &sub : subs) {
+          // Compute duration multiplier
+          auto startEpoch = sub.getValueOfStartDate().microSecondsSinceEpoch();
+          auto endEpoch = sub.getValueOfEndDate().microSecondsSinceEpoch();
+          long long diffMicros = endEpoch - startEpoch;
+          
+          if (diffMicros < 0) diffMicros = 0;
+          long long diffDays = diffMicros / (1000000LL * 3600 * 24);
+
+          int multiplier = 1;
+          if (diffDays <= 31) {
+            multiplier = 1;
+          } else if (diffDays <= 60) {
+            multiplier = 2;
+          } else if (diffDays <= 90) {
+            multiplier = 3;
+          } else {
+            multiplier = (diffDays + 29) / 30;
+          }
+
+          totalInvoiceAmount += (costPerHead * multiplier);
+        }
+
+        // Prepare the invoice dto
+        dto::PartnerInvoiceDto invDto;
+        invDto.setPartnerId(partnerId);
+        invDto.setPartnerName(partner.getValueOfName());
+
+        std::string partnerEmail = partner.getValueOfBillingEmail();
+
+        if (partnerEmail.empty()) {
+          partnerEmail = partner.getValueOfContactEmail();
+        }
+
+        invDto.setPartnerEmail(partnerEmail);
+
+        invDto.setBillingCycle("Daily"); // Or derive from subscriptions
+        invDto.setInvoiceNumber("INV-" + utils::IdGeneratorUtils::generateAlphanumericId());
+        invDto.setDescription("Invoice for subscribers onboarded on " + invoiceDate);
+        invDto.setUnitPrice(costPerHead);
+        invDto.setInvoiceAmount(totalInvoiceAmount);
+        invDto.setBalance(totalInvoiceAmount);
+        invDto.setCurrency("GHS"); 
+        invDto.setStatus("Pending");
+        invDto.setDueDate(trantor::Date::now().after(30.0 * 24.0 * 3600.0)); // 30 days due
+
+        auto createRes = co_await createInvoice(invDto);
+        if (createRes.success) {
+          invoicesGenerated++;
+        }
+      }
+
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.message = "Successfully generated " + std::to_string(invoicesGenerated) + " invoices for partner subscribers.";
+      co_return response;
+
+    } catch (const std::exception &e) {
+      dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.message = "Failed to generate partner invoices";
+      errorResponse.error["code"] = constants::ERR_INTERNAL;
+      errorResponse.error["detail"] = e.what();
+      co_return errorResponse;
+    }
+  }
 }
