@@ -110,7 +110,7 @@ public:
 
    //utils
    ADD_METHOD_TO(AdminController::regenerateNewspaperEntitlements, std::string(PREFIX) + "regenerate-newspaper-entitlements", Get, Options, "JwtAuthFilter");
-   ADD_METHOD_TO(AdminController::generatePartnerInvoices, std::string(PREFIX) + "generate-partner-invoices", Get, Options);
+   ADD_METHOD_TO(AdminController::generatePartnerInvoices, std::string(PREFIX) + "generate-partner-invoices", Get);
 
   METHOD_LIST_END
 
