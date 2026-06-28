@@ -287,6 +287,11 @@
     //plugins: Define all plugins running in the application
     "plugins": [
         {
+            "name": "gnp::plugins::GnpServicePlugin",
+            "dependencies": [],
+            "config": {}
+        },
+        {
             //name: The class name of the plugin
             "name": "drogon::plugin::PromExporter",
             //dependencies: Plugins that the plugin depends on. It can be commented out
@@ -346,9 +351,10 @@
         },
         "G3Bucket": {
             "BaseStoragePath": "./g3-storage",
-            "ThumbnailBucketName": "gnp-production-thumb",
-            "SplitDocumentBucketName": "gnp-production-split",
-            "OriginalDocumentBucketName": "gnp-production-original"
+            "ThumbnailBucketName": "gnp-thumbnails",
+            "SplitDocumentBucketName": "gnp-split-documents",
+            "MasterDocumentBucketName": "gnp-master-documents",
+            "VideoBucketName": "gnp-videos"
         },
         "PartnerPermissions": [
             {

@@ -138,6 +138,7 @@ add_executable(${PROJECT_NAME} main.cc
         services/reports/ReportingService.h
         services/g3_storage/G3StorageService.h
         services/g3_storage/G3StorageService.cc
+        constants/StatusTypes.h
 )
 
 # ##############################################################################
