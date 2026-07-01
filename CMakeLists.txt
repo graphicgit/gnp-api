@@ -151,15 +151,21 @@ add_executable(${PROJECT_NAME} main.cc
 find_package(Drogon CONFIG REQUIRED)
 find_package(OpenSSL REQUIRED)
 
-find_path(MUPDF_INCLUDE_DIR mupdf/fitz.h PATHS /opt/homebrew/include /usr/local/include)
-find_library(MUPDF_LIBRARY NAMES mupdf PATHS /opt/homebrew/lib /usr/local/lib)
-find_library(MUPDF_THIRD_LIBRARY NAMES mupdf-third PATHS /opt/homebrew/lib /usr/local/lib)
+find_path(MUPDF_INCLUDE_DIR mupdf/fitz.h PATHS /opt/homebrew/include /usr/local/include /usr/include)
+find_library(MUPDF_LIBRARY NAMES mupdf PATHS /opt/homebrew/lib /usr/local/lib /usr/lib /usr/lib/x86_64-linux-gnu /usr/lib/aarch64-linux-gnu)
+find_library(MUPDF_THIRD_LIBRARY NAMES mupdf-third PATHS /opt/homebrew/lib /usr/local/lib /usr/lib /usr/lib/x86_64-linux-gnu /usr/lib/aarch64-linux-gnu)
 
 if(MUPDF_INCLUDE_DIR AND MUPDF_LIBRARY)
     set(MUPDF_LIBRARIES ${MUPDF_LIBRARY})
     if(MUPDF_THIRD_LIBRARY)
         list(APPEND MUPDF_LIBRARIES ${MUPDF_THIRD_LIBRARY})
     endif()
+    
+    if (UNIX AND NOT APPLE)
+        # On Linux (like Ubuntu), libmupdf.a relies on system libraries instead of bundled mupdf-third
+        list(APPEND MUPDF_LIBRARIES freetype harfbuzz openjp2 jpeg jbig2dec gumbo mujs)
+    endif()
+
     set(MUPDF_INCLUDE_DIRS ${MUPDF_INCLUDE_DIR})
     message(STATUS "Found MuPDF: ${MUPDF_LIBRARIES}")
 else()
