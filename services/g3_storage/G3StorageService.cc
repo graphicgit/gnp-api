@@ -14,7 +14,8 @@ G3StorageService::G3StorageService() {
 
   // You can customize the base storage path via config or use a default
   auto customConfig = drogon::app().getCustomConfig();
-  if (customConfig.isMember("G3Bucket") && customConfig["G3Bucket"].isMember("BaseStoragePath")) {
+  if (customConfig.isMember("G3Bucket") &&
+      customConfig["G3Bucket"].isMember("BaseStoragePath")) {
     baseStoragePath_ = customConfig["G3Bucket"]["BaseStoragePath"].asString();
   } else {
     baseStoragePath_ = "./g3-storage";
@@ -34,17 +35,18 @@ void G3StorageService::ensureBucketExists(const std::string &bucketName) const {
   }
 }
 
-std::string G3StorageService::buildFilePath(const std::string &bucketName, const std::string &fileName) const {
+std::string G3StorageService::buildFilePath(const std::string &bucketName,
+                                            const std::string &fileName) const {
   return (std::filesystem::path(baseStoragePath_) / bucketName / fileName)
       .string();
 }
 
 bool G3StorageService::saveFile(const std::string &bucketName,
-                               const std::string &fileName,
-                               const std::string &fileData) const {
+                                const std::string &fileName,
+                                const std::string &fileData) const {
   try {
-    LOG_DEBUG << "[saveFile] Starting — bucket: '" << bucketName
-              << "', file: '" << fileName << "', size: " << fileData.size() << " bytes";
+    LOG_DEBUG << "[saveFile] Starting — bucket: '" << bucketName << "', file: '"
+              << fileName << "', size: " << fileData.size() << " bytes";
 
     ensureBucketExists(bucketName);
     LOG_DEBUG << "[saveFile] Bucket ensured: '" << bucketName << "'";
@@ -58,33 +60,38 @@ bool G3StorageService::saveFile(const std::string &bucketName,
                 << "' — check permissions or path validity";
       return false;
     }
-    LOG_DEBUG << "[saveFile] File opened successfully, writing " << fileData.size() << " bytes";
+    LOG_DEBUG << "[saveFile] File opened successfully, writing "
+              << fileData.size() << " bytes";
 
-    outFile.write(fileData.data(), static_cast<std::streamsize>(fileData.size()));
+    outFile.write(fileData.data(),
+                  static_cast<std::streamsize>(fileData.size()));
 
     if (!outFile.good()) {
       LOG_ERROR << "[saveFile] Stream error after write to '" << filePath
-                << "' — badbit=" << outFile.bad() << ", failbit=" << outFile.fail();
+                << "' — badbit=" << outFile.bad()
+                << ", failbit=" << outFile.fail();
       return false;
     }
 
     outFile.close();
-    LOG_DEBUG << "[saveFile] File written and closed successfully: '" << filePath << "'";
+    LOG_DEBUG << "[saveFile] File written and closed successfully: '"
+              << filePath << "'";
     return true;
   } catch (const std::filesystem::filesystem_error &e) {
     LOG_ERROR << "[saveFile] Filesystem error saving '" << fileName
               << "' to bucket '" << bucketName << "': " << e.what()
-              << " (path1: '" << e.path1() << "', path2: '" << e.path2() << "')";
+              << " (path1: '" << e.path1() << "', path2: '" << e.path2()
+              << "')";
     return false;
   } catch (const std::exception &e) {
-    LOG_ERROR << "[saveFile] Exception saving '" << fileName
-              << "' to bucket '" << bucketName << "': " << e.what();
+    LOG_ERROR << "[saveFile] Exception saving '" << fileName << "' to bucket '"
+              << bucketName << "': " << e.what();
     return false;
   }
 }
 
 bool G3StorageService::deleteFile(const std::string &bucketName,
-                                 const std::string &fileName) const {
+                                  const std::string &fileName) const {
   try {
     std::string filePath = buildFilePath(bucketName, fileName);
     if (std::filesystem::exists(filePath)) {
@@ -98,8 +105,9 @@ bool G3StorageService::deleteFile(const std::string &bucketName,
   }
 }
 
-std::optional<std::string> G3StorageService::getFilePath(const std::string &bucketName,
-                             const std::string &fileName) const {
+std::optional<std::string>
+G3StorageService::getFilePath(const std::string &bucketName,
+                              const std::string &fileName) const {
   std::string filePath = buildFilePath(bucketName, fileName);
   if (std::filesystem::exists(filePath) &&
       std::filesystem::is_regular_file(filePath)) {
@@ -108,13 +116,16 @@ std::optional<std::string> G3StorageService::getFilePath(const std::string &buck
   return std::nullopt;
 }
 
-std::optional<std::string> G3StorageService::getFileContent(const std::string &bucketName, const std::string &fileName) const {
+std::optional<std::string>
+G3StorageService::getFileContent(const std::string &bucketName,
+                                 const std::string &fileName) const {
 
   try {
 
     std::string filePath = buildFilePath(bucketName, fileName);
 
-    if (!std::filesystem::exists(filePath) || !std::filesystem::is_regular_file(filePath)) {
+    if (!std::filesystem::exists(filePath) ||
+        !std::filesystem::is_regular_file(filePath)) {
       return std::nullopt;
     }
 

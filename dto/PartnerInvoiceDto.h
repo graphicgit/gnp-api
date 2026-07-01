@@ -48,6 +48,17 @@ public:
             currency_ = json["currency"].asString();
         }
 
+        if (json.isMember("invoiceDate") && !json["invoiceDate"].isNull()) {
+            std::string dateStr = json["invoiceDate"].asString();
+            if (dateStr.find('T') != std::string::npos) {
+                std::replace(dateStr.begin(), dateStr.end(), 'T', ' ');
+                if (dateStr.length() == 16) dateStr += ":00";
+            } else if (dateStr.length() == 10) {
+                dateStr += " 00:00:00";
+            }
+            invoice_date_ = trantor::Date::fromDbString(dateStr);
+        }
+
         if (json.isMember("dueDate") && !json["dueDate"].isNull()) {
             std::string dateStr = json["dueDate"].asString();
             if (dateStr.find('T') != std::string::npos) {
@@ -86,6 +97,7 @@ public:
     [[nodiscard]] double getBalance() const { return balance_; }
     [[nodiscard]] const std::string& getCurrency() const { return currency_; }
     [[nodiscard]] const trantor::Date& getDueDate() const { return due_date_; }
+    [[nodiscard]] const trantor::Date& getInvoiceDate() const { return invoice_date_; }
     [[nodiscard]] const std::string& getStatus() const { return status_; }
 
     // Setters
@@ -100,6 +112,7 @@ public:
     void setBalance(double value) { balance_ = value; }
     void setCurrency(const std::string& value) { currency_ = value; }
     void setDueDate(const trantor::Date& value) { due_date_ = value; }
+    void setInvoiceDate(const trantor::Date& value) { invoice_date_ = value; }
     void setStatus(const std::string& value) { status_ = value; }
 
 private:
@@ -114,6 +127,7 @@ private:
     double balance_ = 0.0;
     std::string currency_;
     trantor::Date due_date_;
+    trantor::Date invoice_date_;
     std::string status_;
 };
 

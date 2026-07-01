@@ -7,7 +7,7 @@
 
 using namespace drogon;
 
-Task<HttpResponsePtr> G3Controller::uploadFile(HttpRequestPtr req)
+Task<HttpResponsePtr> G3Controller::uploadFile(HttpRequestPtr req, const std::string &resourceId)
 {
     MultiPartParser fileUpload;
     if (fileUpload.parse(req) != 0 || fileUpload.getFiles().empty()) {
@@ -27,7 +27,13 @@ Task<HttpResponsePtr> G3Controller::uploadFile(HttpRequestPtr req)
 
     std::string bucketName = params["bucketName"];
     auto& file = fileUpload.getFiles()[0];
-    std::string fileName = file.getFileName();
+    std::string originalFileName = file.getFileName();
+    std::string fileExtension = "";
+    auto extPos = originalFileName.find_last_of('.');
+    if (extPos != std::string::npos) {
+        fileExtension = originalFileName.substr(extPos);
+    }
+    std::string fileName = resourceId + fileExtension;
     std::string fileData(file.fileData(), file.fileLength());
 
     // Basic security check to prevent directory traversal and hidden files
