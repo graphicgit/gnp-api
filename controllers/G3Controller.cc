@@ -65,6 +65,18 @@ Task<HttpResponsePtr> G3Controller::uploadFile(HttpRequestPtr req, const std::st
         Json::Value ret;
         ret["status"] = "success";
         ret["fileName"] = fileName;
+        
+        // Extract a thumbnail if the file is a PDF
+        if (fileExtension == ".pdf" || fileExtension == ".PDF") {
+            std::string thumbnailFileName = resourceId + ".png";
+            LOG_DEBUG << "[uploadFile] Extracting thumbnail for PDF file: " << thumbnailFileName;
+
+            bool thumbSuccess = g3StorageService.extractThumbnail(bucketName, fileName, thumbnailFileName);
+            if (thumbSuccess) {
+                ret["thumbnailFileName"] = thumbnailFileName;
+            }
+        }
+        
         co_return HttpResponse::newHttpJsonResponse(ret);
     } else {
         auto resp = HttpResponse::newHttpResponse();

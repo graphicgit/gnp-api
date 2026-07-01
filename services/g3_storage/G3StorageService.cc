@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <mupdf/fitz.h>
 
 namespace gnp::services {
 
@@ -90,8 +91,7 @@ bool G3StorageService::saveFile(const std::string &bucketName,
   }
 }
 
-bool G3StorageService::deleteFile(const std::string &bucketName,
-                                  const std::string &fileName) const {
+bool G3StorageService::deleteFile(const std::string &bucketName, const std::string &fileName) const {
   try {
     std::string filePath = buildFilePath(bucketName, fileName);
     if (std::filesystem::exists(filePath)) {
@@ -144,6 +144,60 @@ G3StorageService::getFileContent(const std::string &bucketName,
               << " from bucket " << bucketName << ": " << e.what();
     return std::nullopt;
   }
+}
+
+bool G3StorageService::extractThumbnail(const std::string &bucketName,
+                                        const std::string &fileName,
+                                        const std::string &thumbnailFileName) const {
+  std::string pdfFilePath = buildFilePath(bucketName, fileName);
+
+  auto customConfig = drogon::app().getCustomConfig();
+  std::string thumbnailBucketName = customConfig["G3Bucket"]["ThumbnailBucketName"].asString();
+
+  std::string thumbnailFilePath = buildFilePath(thumbnailBucketName, thumbnailFileName);
+
+  if (!std::filesystem::exists(pdfFilePath)) {
+    LOG_ERROR << "[extractThumbnail] PDF file not found: " << pdfFilePath;
+    return false;
+  }
+
+  fz_context *ctx = fz_new_context(NULL, NULL, FZ_STORE_UNLIMITED);
+  if (!ctx) {
+    LOG_ERROR << "[extractThumbnail] Failed to create mupdf context";
+    return false;
+  }
+
+  // Register document handlers to be able to open PDFs
+  fz_register_document_handlers(ctx);
+
+  fz_document *doc = NULL;
+  fz_pixmap *pix = NULL;
+  bool success = false;
+
+  fz_try(ctx) {
+    // Open the PDF document
+    doc = fz_open_document(ctx, pdfFilePath.c_str());
+    
+    // Calculate a transform to render the page at 72 dpi (scale 1.0)
+    fz_matrix ctm = fz_scale(1.0f, 1.0f);
+    
+    // Render the page to a pixmap
+    pix = fz_new_pixmap_from_page_number(ctx, doc, 0, ctm, fz_device_rgb(ctx), 0);
+    
+    // Save the pixmap as a PNG image
+    fz_save_pixmap_as_png(ctx, pix, thumbnailFilePath.c_str());
+    success = true;
+  }
+  fz_always(ctx) {
+    fz_drop_pixmap(ctx, pix);
+    fz_drop_document(ctx, doc);
+  }
+  fz_catch(ctx) {
+    LOG_ERROR << "[extractThumbnail] mupdf error: " << fz_caught_message(ctx);
+  }
+
+  fz_drop_context(ctx);
+  return success;
 }
 
 } // namespace gnp::services
