@@ -24,8 +24,7 @@ jobs:
           sudo apt update
           sudo apt install -y cmake g++ libjsoncpp-dev uuid-dev openssl libssl-dev zlib1g-dev
           sudo apt install postgresql libhiredis-dev  doxygen graphviz dia
-          
-          sudo apt install -y librabbitmq-dev
+          sudo apt-get install -y libmupdf-dev libfreetype-dev libharfbuzz-dev libjbig2dec0-dev libgumbo-dev libmujs-dev libopenjp2-7-dev libjpeg-dev
           
 
       # Step 3: Download and install Drogon

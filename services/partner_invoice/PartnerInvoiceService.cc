@@ -112,6 +112,11 @@ namespace gnp::services {
       invoice.setInvoiceNumber(dto.getInvoiceNumber());
       invoice.setDescription(dto.getDescription());
 
+      if (dto.getInvoiceDate().microSecondsSinceEpoch() != 0) {
+        invoice.setCreatedAt(dto.getInvoiceDate());
+
+      }
+
       char unitPriceBuf[64];
       snprintf(unitPriceBuf, sizeof(unitPriceBuf), "%.2f", dto.getUnitPrice());
       invoice.setUnitPrice(unitPriceBuf);
@@ -437,7 +442,15 @@ namespace gnp::services {
         invDto.setBalance(totalInvoiceAmount);
         invDto.setCurrency("GHS"); 
         invDto.setStatus("Pending");
-        invDto.setDueDate(trantor::Date::now().after(30.0 * 24.0 * 3600.0)); // 30 days due
+        trantor::Date invoiceDateObj;
+        if (!invoiceDate.empty()) {
+          invoiceDateObj = trantor::Date::fromDbStringLocal(invoiceDate + " 00:00:00");
+        } else {
+          invoiceDateObj = trantor::Date::now();
+        }
+        invDto.setInvoiceDate(invoiceDateObj);
+
+        invDto.setDueDate(invoiceDateObj.after(30.0 * 24.0 * 3600.0)); // 30 days due
 
         auto createRes = co_await createInvoice(invDto);
         if (createRes.success) {

@@ -9,6 +9,8 @@
 #include <drogon/orm/Mapper.h>
 #include <algorithm>
 
+#include "constants/StatusTypes.h"
+
 using namespace drogon::orm;
 using drogon_model::Gnp::Coupons;
 
@@ -147,7 +149,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CouponService::createAsync(const ::gnp
 
     coupon.setUsageQuota(dto.getUsageQuota());
     coupon.setUsageCount(0);
-    coupon.setStatus("Active");
+    coupon.setStatus(constants::StatusTypes::Draft);
     coupon.setCreatedAt(trantor::Date::now());
 
     auto inserted = co_await mapper.insert(coupon);
@@ -220,7 +222,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CouponService::updateAsync(const ::gnp
     }
 
     coupon.setDiscountAsPercentage(dto.getDiscountAsPercentage());
-    coupon.setUpdatedAt(trantor::Date::now());
+    coupon.setModifiedAt(trantor::Date::now());
 
     // 3. Persist
     co_await mapper.update(coupon);

@@ -7,7 +7,7 @@
 
 using namespace drogon;
 
-Task<HttpResponsePtr> G3Controller::uploadFile(HttpRequestPtr req)
+Task<HttpResponsePtr> G3Controller::uploadFile(HttpRequestPtr req, const std::string &resourceId)
 {
     MultiPartParser fileUpload;
     if (fileUpload.parse(req) != 0 || fileUpload.getFiles().empty()) {
@@ -27,18 +27,56 @@ Task<HttpResponsePtr> G3Controller::uploadFile(HttpRequestPtr req)
 
     std::string bucketName = params["bucketName"];
     auto& file = fileUpload.getFiles()[0];
-    std::string fileName = file.getFileName();
+    std::string originalFileName = file.getFileName();
+    std::string fileExtension = "";
+    auto extPos = originalFileName.find_last_of('.');
+    if (extPos != std::string::npos) {
+        fileExtension = originalFileName.substr(extPos);
+    }
+    std::string fileName = resourceId + fileExtension;
     std::string fileData(file.fileData(), file.fileLength());
 
-    auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
-    auto &g3StorageService = plugin->getG3StorageService();
+    // Basic security check to prevent directory traversal and hidden files
+    if (bucketName.empty() || bucketName.front() == '.' || bucketName.find("..") != std::string::npos || bucketName.find('/') != std::string::npos ||
+        fileName.empty() || fileName.front() == '.' || fileName.find("..") != std::string::npos || fileName.find('/') != std::string::npos) {
+        auto resp = HttpResponse::newHttpResponse();
+        resp->setStatusCode(k400BadRequest);
+        resp->setBody("Invalid bucket or file name.");
+        co_return resp;
+    }
 
+
+    LOG_DEBUG << "[uploadFile] fileName: '" << fileName << "'";
+    LOG_DEBUG << "[uploadFile] fileData ptr valid: " << (file.fileData() != nullptr);
+    LOG_DEBUG << "[uploadFile] fileData length: " << file.fileLength();
+
+    auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    if (!plugin) {
+        LOG_ERROR << "[uploadFile] GnpServicePlugin is null — plugin not registered or failed to initialise";
+        auto resp = HttpResponse::newHttpResponse();
+        resp->setStatusCode(k500InternalServerError);
+        resp->setBody("Internal error: storage service unavailable.");
+        co_return resp;
+    }
+    auto &g3StorageService = plugin->getG3StorageService();
     bool success = g3StorageService.saveFile(bucketName, fileName, fileData);
 
     if (success) {
         Json::Value ret;
         ret["status"] = "success";
         ret["fileName"] = fileName;
+        
+        // Extract a thumbnail if the file is a PDF
+        if (fileExtension == ".pdf" || fileExtension == ".PDF") {
+            std::string thumbnailFileName = resourceId + ".png";
+            LOG_DEBUG << "[uploadFile] Extracting thumbnail for PDF file: " << thumbnailFileName;
+
+            bool thumbSuccess = g3StorageService.extractThumbnail(bucketName, fileName, thumbnailFileName);
+            if (thumbSuccess) {
+                ret["thumbnailFileName"] = thumbnailFileName;
+            }
+        }
+        
         co_return HttpResponse::newHttpJsonResponse(ret);
     } else {
         auto resp = HttpResponse::newHttpResponse();
@@ -69,7 +107,22 @@ Task<HttpResponsePtr> G3Controller::deleteFile(HttpRequestPtr req)
     std::string bucketName = json["bucketName"].asString();
     std::string fileName = json["fileName"].asString();
 
+    // Basic security check to prevent directory traversal and hidden files
+    if (bucketName.empty() || bucketName.front() == '.' || bucketName.find("..") != std::string::npos || bucketName.find('/') != std::string::npos ||
+        fileName.empty() || fileName.front() == '.' || fileName.find("..") != std::string::npos || fileName.find('/') != std::string::npos) {
+        auto resp = HttpResponse::newHttpResponse();
+        resp->setStatusCode(k400BadRequest);
+        resp->setBody("Invalid bucket or file name.");
+        co_return resp;
+    }
+
     auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    if (!plugin) {
+        auto resp = HttpResponse::newHttpResponse();
+        resp->setStatusCode(k500InternalServerError);
+        resp->setBody("Internal error: storage service unavailable.");
+        co_return resp;
+    }
     auto &g3StorageService = plugin->getG3StorageService();
 
     bool success = g3StorageService.deleteFile(bucketName, fileName);
@@ -88,7 +141,15 @@ Task<HttpResponsePtr> G3Controller::deleteFile(HttpRequestPtr req)
 
 Task<HttpResponsePtr> G3Controller::getFileAsset(HttpRequestPtr req, const std::string &bucketName, const std::string &fileName)
 {
-    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    // Basic security check to prevent directory traversal and hidden files
+    if (bucketName.empty() || bucketName.front() == '.' || bucketName.find("..") != std::string::npos || bucketName.find('/') != std::string::npos ||  fileName.empty() || fileName.front() == '.' || fileName.find("..") != std::string::npos || fileName.find('/') != std::string::npos) {
+        auto resp = HttpResponse::newHttpResponse();
+        resp->setStatusCode(k400BadRequest);
+        resp->setBody("Invalid bucket or file name.");
+        co_return resp;
+    }
+
+    auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
     auto &g3StorageService = plugin->getG3StorageService();
 
     auto filePathOpt = g3StorageService.getFilePath(bucketName, fileName);

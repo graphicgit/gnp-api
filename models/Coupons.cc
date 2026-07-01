@@ -24,8 +24,10 @@ const std::string Coupons::Cols::_valid_till = "\"valid_till\"";
 const std::string Coupons::Cols::_usage_quota = "\"usage_quota\"";
 const std::string Coupons::Cols::_usage_count = "\"usage_count\"";
 const std::string Coupons::Cols::_status = "\"status\"";
+const std::string Coupons::Cols::_created_by = "\"created_by\"";
 const std::string Coupons::Cols::_created_at = "\"created_at\"";
-const std::string Coupons::Cols::_updated_at = "\"updated_at\"";
+const std::string Coupons::Cols::_modified_by = "\"modified_by\"";
+const std::string Coupons::Cols::_modified_at = "\"modified_at\"";
 const std::string Coupons::primaryKeyName = "id";
 const bool Coupons::hasPrimaryKey = true;
 const std::string Coupons::tableName = "\"coupons\"";
@@ -41,9 +43,11 @@ const std::vector<typename Coupons::MetaData> Coupons::metaData_={
 {"valid_till","::trantor::Date","timestamp without time zone",0,0,0,0},
 {"usage_quota","int32_t","integer",4,0,0,1},
 {"usage_count","int32_t","integer",4,0,0,1},
-{"status","std::string","character varying",50,0,0,0},
-{"created_at","::trantor::Date","timestamp with time zone",0,0,0,1},
-{"updated_at","::trantor::Date","timestamp without time zone",0,0,0,0}
+{"status","int32_t","integer",4,0,0,1},
+{"created_by","std::string","uuid",0,0,0,0},
+{"created_at","::trantor::Date","timestamp with time zone",0,0,0,0},
+{"modified_by","std::string","uuid",0,0,0,0},
+{"modified_at","::trantor::Date","timestamp with time zone",0,0,0,0}
 };
 const std::string &Coupons::getColumnName(size_t index) noexcept(false)
 {
@@ -114,7 +118,11 @@ Coupons::Coupons(const Row &r, const ssize_t indexOffset) noexcept
         }
         if(!r["status"].isNull())
         {
-            status_=std::make_shared<std::string>(r["status"].as<std::string>());
+            status_=std::make_shared<int32_t>(r["status"].as<int32_t>());
+        }
+        if(!r["created_by"].isNull())
+        {
+            createdBy_=std::make_shared<std::string>(r["created_by"].as<std::string>());
         }
         if(!r["created_at"].isNull())
         {
@@ -138,9 +146,13 @@ Coupons::Coupons(const Row &r, const ssize_t indexOffset) noexcept
                 createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
-        if(!r["updated_at"].isNull())
+        if(!r["modified_by"].isNull())
         {
-            auto timeStr = r["updated_at"].as<std::string>();
+            modifiedBy_=std::make_shared<std::string>(r["modified_by"].as<std::string>());
+        }
+        if(!r["modified_at"].isNull())
+        {
+            auto timeStr = r["modified_at"].as<std::string>();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -157,14 +169,14 @@ Coupons::Coupons(const Row &r, const ssize_t indexOffset) noexcept
                     }
                     decimalNum = (size_t)atol(decimals.c_str());
                 }
-                updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+                modifiedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
     }
     else
     {
         size_t offset = (size_t)indexOffset;
-        if(offset + 13 > r.size())
+        if(offset + 15 > r.size())
         {
             LOG_FATAL << "Invalid SQL result for this model";
             return;
@@ -241,9 +253,14 @@ Coupons::Coupons(const Row &r, const ssize_t indexOffset) noexcept
         index = offset + 10;
         if(!r[index].isNull())
         {
-            status_=std::make_shared<std::string>(r[index].as<std::string>());
+            status_=std::make_shared<int32_t>(r[index].as<int32_t>());
         }
         index = offset + 11;
+        if(!r[index].isNull())
+        {
+            createdBy_=std::make_shared<std::string>(r[index].as<std::string>());
+        }
+        index = offset + 12;
         if(!r[index].isNull())
         {
             auto timeStr = r[index].as<std::string>();
@@ -266,7 +283,12 @@ Coupons::Coupons(const Row &r, const ssize_t indexOffset) noexcept
                 createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
-        index = offset + 12;
+        index = offset + 13;
+        if(!r[index].isNull())
+        {
+            modifiedBy_=std::make_shared<std::string>(r[index].as<std::string>());
+        }
+        index = offset + 14;
         if(!r[index].isNull())
         {
             auto timeStr = r[index].as<std::string>();
@@ -286,7 +308,7 @@ Coupons::Coupons(const Row &r, const ssize_t indexOffset) noexcept
                     }
                     decimalNum = (size_t)atol(decimals.c_str());
                 }
-                updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+                modifiedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
     }
@@ -295,7 +317,7 @@ Coupons::Coupons(const Row &r, const ssize_t indexOffset) noexcept
 
 Coupons::Coupons(const Json::Value &pJson, const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 13)
+    if(pMasqueradingVector.size() != 15)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -403,7 +425,7 @@ Coupons::Coupons(const Json::Value &pJson, const std::vector<std::string> &pMasq
         dirtyFlag_[10] = true;
         if(!pJson[pMasqueradingVector[10]].isNull())
         {
-            status_=std::make_shared<std::string>(pJson[pMasqueradingVector[10]].asString());
+            status_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[10]].asInt64());
         }
     }
     if(!pMasqueradingVector[11].empty() && pJson.isMember(pMasqueradingVector[11]))
@@ -411,25 +433,7 @@ Coupons::Coupons(const Json::Value &pJson, const std::vector<std::string> &pMasq
         dirtyFlag_[11] = true;
         if(!pJson[pMasqueradingVector[11]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[11]].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
+            createdBy_=std::make_shared<std::string>(pJson[pMasqueradingVector[11]].asString());
         }
     }
     if(!pMasqueradingVector[12].empty() && pJson.isMember(pMasqueradingVector[12]))
@@ -454,7 +458,41 @@ Coupons::Coupons(const Json::Value &pJson, const std::vector<std::string> &pMasq
                     }
                     decimalNum = (size_t)atol(decimals.c_str());
                 }
-                updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+    }
+    if(!pMasqueradingVector[13].empty() && pJson.isMember(pMasqueradingVector[13]))
+    {
+        dirtyFlag_[13] = true;
+        if(!pJson[pMasqueradingVector[13]].isNull())
+        {
+            modifiedBy_=std::make_shared<std::string>(pJson[pMasqueradingVector[13]].asString());
+        }
+    }
+    if(!pMasqueradingVector[14].empty() && pJson.isMember(pMasqueradingVector[14]))
+    {
+        dirtyFlag_[14] = true;
+        if(!pJson[pMasqueradingVector[14]].isNull())
+        {
+            auto timeStr = pJson[pMasqueradingVector[14]].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                modifiedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
     }
@@ -565,12 +603,20 @@ Coupons::Coupons(const Json::Value &pJson) noexcept(false)
         dirtyFlag_[10]=true;
         if(!pJson["status"].isNull())
         {
-            status_=std::make_shared<std::string>(pJson["status"].asString());
+            status_=std::make_shared<int32_t>((int32_t)pJson["status"].asInt64());
+        }
+    }
+    if(pJson.isMember("created_by"))
+    {
+        dirtyFlag_[11]=true;
+        if(!pJson["created_by"].isNull())
+        {
+            createdBy_=std::make_shared<std::string>(pJson["created_by"].asString());
         }
     }
     if(pJson.isMember("created_at"))
     {
-        dirtyFlag_[11]=true;
+        dirtyFlag_[12]=true;
         if(!pJson["created_at"].isNull())
         {
             auto timeStr = pJson["created_at"].asString();
@@ -594,12 +640,20 @@ Coupons::Coupons(const Json::Value &pJson) noexcept(false)
             }
         }
     }
-    if(pJson.isMember("updated_at"))
+    if(pJson.isMember("modified_by"))
     {
-        dirtyFlag_[12]=true;
-        if(!pJson["updated_at"].isNull())
+        dirtyFlag_[13]=true;
+        if(!pJson["modified_by"].isNull())
         {
-            auto timeStr = pJson["updated_at"].asString();
+            modifiedBy_=std::make_shared<std::string>(pJson["modified_by"].asString());
+        }
+    }
+    if(pJson.isMember("modified_at"))
+    {
+        dirtyFlag_[14]=true;
+        if(!pJson["modified_at"].isNull())
+        {
+            auto timeStr = pJson["modified_at"].asString();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -616,7 +670,7 @@ Coupons::Coupons(const Json::Value &pJson) noexcept(false)
                     }
                     decimalNum = (size_t)atol(decimals.c_str());
                 }
-                updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+                modifiedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
     }
@@ -625,7 +679,7 @@ Coupons::Coupons(const Json::Value &pJson) noexcept(false)
 void Coupons::updateByMasqueradedJson(const Json::Value &pJson,
                                             const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 13)
+    if(pMasqueradingVector.size() != 15)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -732,7 +786,7 @@ void Coupons::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[10] = true;
         if(!pJson[pMasqueradingVector[10]].isNull())
         {
-            status_=std::make_shared<std::string>(pJson[pMasqueradingVector[10]].asString());
+            status_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[10]].asInt64());
         }
     }
     if(!pMasqueradingVector[11].empty() && pJson.isMember(pMasqueradingVector[11]))
@@ -740,25 +794,7 @@ void Coupons::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[11] = true;
         if(!pJson[pMasqueradingVector[11]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[11]].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
+            createdBy_=std::make_shared<std::string>(pJson[pMasqueradingVector[11]].asString());
         }
     }
     if(!pMasqueradingVector[12].empty() && pJson.isMember(pMasqueradingVector[12]))
@@ -783,7 +819,41 @@ void Coupons::updateByMasqueradedJson(const Json::Value &pJson,
                     }
                     decimalNum = (size_t)atol(decimals.c_str());
                 }
-                updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+    }
+    if(!pMasqueradingVector[13].empty() && pJson.isMember(pMasqueradingVector[13]))
+    {
+        dirtyFlag_[13] = true;
+        if(!pJson[pMasqueradingVector[13]].isNull())
+        {
+            modifiedBy_=std::make_shared<std::string>(pJson[pMasqueradingVector[13]].asString());
+        }
+    }
+    if(!pMasqueradingVector[14].empty() && pJson.isMember(pMasqueradingVector[14]))
+    {
+        dirtyFlag_[14] = true;
+        if(!pJson[pMasqueradingVector[14]].isNull())
+        {
+            auto timeStr = pJson[pMasqueradingVector[14]].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                modifiedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
     }
@@ -893,12 +963,20 @@ void Coupons::updateByJson(const Json::Value &pJson) noexcept(false)
         dirtyFlag_[10] = true;
         if(!pJson["status"].isNull())
         {
-            status_=std::make_shared<std::string>(pJson["status"].asString());
+            status_=std::make_shared<int32_t>((int32_t)pJson["status"].asInt64());
+        }
+    }
+    if(pJson.isMember("created_by"))
+    {
+        dirtyFlag_[11] = true;
+        if(!pJson["created_by"].isNull())
+        {
+            createdBy_=std::make_shared<std::string>(pJson["created_by"].asString());
         }
     }
     if(pJson.isMember("created_at"))
     {
-        dirtyFlag_[11] = true;
+        dirtyFlag_[12] = true;
         if(!pJson["created_at"].isNull())
         {
             auto timeStr = pJson["created_at"].asString();
@@ -922,12 +1000,20 @@ void Coupons::updateByJson(const Json::Value &pJson) noexcept(false)
             }
         }
     }
-    if(pJson.isMember("updated_at"))
+    if(pJson.isMember("modified_by"))
     {
-        dirtyFlag_[12] = true;
-        if(!pJson["updated_at"].isNull())
+        dirtyFlag_[13] = true;
+        if(!pJson["modified_by"].isNull())
         {
-            auto timeStr = pJson["updated_at"].asString();
+            modifiedBy_=std::make_shared<std::string>(pJson["modified_by"].asString());
+        }
+    }
+    if(pJson.isMember("modified_at"))
+    {
+        dirtyFlag_[14] = true;
+        if(!pJson["modified_at"].isNull())
+        {
+            auto timeStr = pJson["modified_at"].asString();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -944,7 +1030,7 @@ void Coupons::updateByJson(const Json::Value &pJson) noexcept(false)
                     }
                     decimalNum = (size_t)atol(decimals.c_str());
                 }
-                updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+                modifiedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
     }
@@ -1175,31 +1261,48 @@ void Coupons::setUsageCount(const int32_t &pUsageCount) noexcept
     dirtyFlag_[9] = true;
 }
 
-const std::string &Coupons::getValueOfStatus() const noexcept
+const int32_t &Coupons::getValueOfStatus() const noexcept
 {
-    static const std::string defaultValue = std::string();
+    static const int32_t defaultValue = int32_t();
     if(status_)
         return *status_;
     return defaultValue;
 }
-const std::shared_ptr<std::string> &Coupons::getStatus() const noexcept
+const std::shared_ptr<int32_t> &Coupons::getStatus() const noexcept
 {
     return status_;
 }
-void Coupons::setStatus(const std::string &pStatus) noexcept
+void Coupons::setStatus(const int32_t &pStatus) noexcept
 {
-    status_ = std::make_shared<std::string>(pStatus);
+    status_ = std::make_shared<int32_t>(pStatus);
     dirtyFlag_[10] = true;
 }
-void Coupons::setStatus(std::string &&pStatus) noexcept
+
+const std::string &Coupons::getValueOfCreatedBy() const noexcept
 {
-    status_ = std::make_shared<std::string>(std::move(pStatus));
-    dirtyFlag_[10] = true;
+    static const std::string defaultValue = std::string();
+    if(createdBy_)
+        return *createdBy_;
+    return defaultValue;
 }
-void Coupons::setStatusToNull() noexcept
+const std::shared_ptr<std::string> &Coupons::getCreatedBy() const noexcept
 {
-    status_.reset();
-    dirtyFlag_[10] = true;
+    return createdBy_;
+}
+void Coupons::setCreatedBy(const std::string &pCreatedBy) noexcept
+{
+    createdBy_ = std::make_shared<std::string>(pCreatedBy);
+    dirtyFlag_[11] = true;
+}
+void Coupons::setCreatedBy(std::string &&pCreatedBy) noexcept
+{
+    createdBy_ = std::make_shared<std::string>(std::move(pCreatedBy));
+    dirtyFlag_[11] = true;
+}
+void Coupons::setCreatedByToNull() noexcept
+{
+    createdBy_.reset();
+    dirtyFlag_[11] = true;
 }
 
 const ::trantor::Date &Coupons::getValueOfCreatedAt() const noexcept
@@ -1216,29 +1319,61 @@ const std::shared_ptr<::trantor::Date> &Coupons::getCreatedAt() const noexcept
 void Coupons::setCreatedAt(const ::trantor::Date &pCreatedAt) noexcept
 {
     createdAt_ = std::make_shared<::trantor::Date>(pCreatedAt);
-    dirtyFlag_[11] = true;
+    dirtyFlag_[12] = true;
+}
+void Coupons::setCreatedAtToNull() noexcept
+{
+    createdAt_.reset();
+    dirtyFlag_[12] = true;
 }
 
-const ::trantor::Date &Coupons::getValueOfUpdatedAt() const noexcept
+const std::string &Coupons::getValueOfModifiedBy() const noexcept
 {
-    static const ::trantor::Date defaultValue = ::trantor::Date();
-    if(updatedAt_)
-        return *updatedAt_;
+    static const std::string defaultValue = std::string();
+    if(modifiedBy_)
+        return *modifiedBy_;
     return defaultValue;
 }
-const std::shared_ptr<::trantor::Date> &Coupons::getUpdatedAt() const noexcept
+const std::shared_ptr<std::string> &Coupons::getModifiedBy() const noexcept
 {
-    return updatedAt_;
+    return modifiedBy_;
 }
-void Coupons::setUpdatedAt(const ::trantor::Date &pUpdatedAt) noexcept
+void Coupons::setModifiedBy(const std::string &pModifiedBy) noexcept
 {
-    updatedAt_ = std::make_shared<::trantor::Date>(pUpdatedAt);
-    dirtyFlag_[12] = true;
+    modifiedBy_ = std::make_shared<std::string>(pModifiedBy);
+    dirtyFlag_[13] = true;
 }
-void Coupons::setUpdatedAtToNull() noexcept
+void Coupons::setModifiedBy(std::string &&pModifiedBy) noexcept
 {
-    updatedAt_.reset();
-    dirtyFlag_[12] = true;
+    modifiedBy_ = std::make_shared<std::string>(std::move(pModifiedBy));
+    dirtyFlag_[13] = true;
+}
+void Coupons::setModifiedByToNull() noexcept
+{
+    modifiedBy_.reset();
+    dirtyFlag_[13] = true;
+}
+
+const ::trantor::Date &Coupons::getValueOfModifiedAt() const noexcept
+{
+    static const ::trantor::Date defaultValue = ::trantor::Date();
+    if(modifiedAt_)
+        return *modifiedAt_;
+    return defaultValue;
+}
+const std::shared_ptr<::trantor::Date> &Coupons::getModifiedAt() const noexcept
+{
+    return modifiedAt_;
+}
+void Coupons::setModifiedAt(const ::trantor::Date &pModifiedAt) noexcept
+{
+    modifiedAt_ = std::make_shared<::trantor::Date>(pModifiedAt);
+    dirtyFlag_[14] = true;
+}
+void Coupons::setModifiedAtToNull() noexcept
+{
+    modifiedAt_.reset();
+    dirtyFlag_[14] = true;
 }
 
 void Coupons::updateId(const uint64_t id)
@@ -1259,8 +1394,10 @@ const std::vector<std::string> &Coupons::insertColumns() noexcept
         "usage_quota",
         "usage_count",
         "status",
+        "created_by",
         "created_at",
-        "updated_at"
+        "modified_by",
+        "modified_at"
     };
     return inCols;
 }
@@ -1390,6 +1527,17 @@ void Coupons::outputArgs(drogon::orm::internal::SqlBinder &binder) const
     }
     if(dirtyFlag_[11])
     {
+        if(getCreatedBy())
+        {
+            binder << getValueOfCreatedBy();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[12])
+    {
         if(getCreatedAt())
         {
             binder << getValueOfCreatedAt();
@@ -1399,11 +1547,22 @@ void Coupons::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[12])
+    if(dirtyFlag_[13])
     {
-        if(getUpdatedAt())
+        if(getModifiedBy())
         {
-            binder << getValueOfUpdatedAt();
+            binder << getValueOfModifiedBy();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[14])
+    {
+        if(getModifiedAt())
+        {
+            binder << getValueOfModifiedAt();
         }
         else
         {
@@ -1466,6 +1625,14 @@ const std::vector<std::string> Coupons::updateColumns() const
     if(dirtyFlag_[12])
     {
         ret.push_back(getColumnName(12));
+    }
+    if(dirtyFlag_[13])
+    {
+        ret.push_back(getColumnName(13));
+    }
+    if(dirtyFlag_[14])
+    {
+        ret.push_back(getColumnName(14));
     }
     return ret;
 }
@@ -1595,6 +1762,17 @@ void Coupons::updateArgs(drogon::orm::internal::SqlBinder &binder) const
     }
     if(dirtyFlag_[11])
     {
+        if(getCreatedBy())
+        {
+            binder << getValueOfCreatedBy();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[12])
+    {
         if(getCreatedAt())
         {
             binder << getValueOfCreatedAt();
@@ -1604,11 +1782,22 @@ void Coupons::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[12])
+    if(dirtyFlag_[13])
     {
-        if(getUpdatedAt())
+        if(getModifiedBy())
         {
-            binder << getValueOfUpdatedAt();
+            binder << getValueOfModifiedBy();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[14])
+    {
+        if(getModifiedAt())
+        {
+            binder << getValueOfModifiedAt();
         }
         else
         {
@@ -1707,6 +1896,14 @@ Json::Value Coupons::toJson() const
     {
         ret["status"]=Json::Value();
     }
+    if(getCreatedBy())
+    {
+        ret["created_by"]=getValueOfCreatedBy();
+    }
+    else
+    {
+        ret["created_by"]=Json::Value();
+    }
     if(getCreatedAt())
     {
         ret["created_at"]=getCreatedAt()->toDbStringLocal();
@@ -1715,13 +1912,21 @@ Json::Value Coupons::toJson() const
     {
         ret["created_at"]=Json::Value();
     }
-    if(getUpdatedAt())
+    if(getModifiedBy())
     {
-        ret["updated_at"]=getUpdatedAt()->toDbStringLocal();
+        ret["modified_by"]=getValueOfModifiedBy();
     }
     else
     {
-        ret["updated_at"]=Json::Value();
+        ret["modified_by"]=Json::Value();
+    }
+    if(getModifiedAt())
+    {
+        ret["modified_at"]=getModifiedAt()->toDbStringLocal();
+    }
+    else
+    {
+        ret["modified_at"]=Json::Value();
     }
     return ret;
 }
@@ -1735,7 +1940,7 @@ Json::Value Coupons::toMasqueradedJson(
     const std::vector<std::string> &pMasqueradingVector) const
 {
     Json::Value ret;
-    if(pMasqueradingVector.size() == 13)
+    if(pMasqueradingVector.size() == 15)
     {
         if(!pMasqueradingVector[0].empty())
         {
@@ -1860,9 +2065,9 @@ Json::Value Coupons::toMasqueradedJson(
         }
         if(!pMasqueradingVector[11].empty())
         {
-            if(getCreatedAt())
+            if(getCreatedBy())
             {
-                ret[pMasqueradingVector[11]]=getCreatedAt()->toDbStringLocal();
+                ret[pMasqueradingVector[11]]=getValueOfCreatedBy();
             }
             else
             {
@@ -1871,13 +2076,35 @@ Json::Value Coupons::toMasqueradedJson(
         }
         if(!pMasqueradingVector[12].empty())
         {
-            if(getUpdatedAt())
+            if(getCreatedAt())
             {
-                ret[pMasqueradingVector[12]]=getUpdatedAt()->toDbStringLocal();
+                ret[pMasqueradingVector[12]]=getCreatedAt()->toDbStringLocal();
             }
             else
             {
                 ret[pMasqueradingVector[12]]=Json::Value();
+            }
+        }
+        if(!pMasqueradingVector[13].empty())
+        {
+            if(getModifiedBy())
+            {
+                ret[pMasqueradingVector[13]]=getValueOfModifiedBy();
+            }
+            else
+            {
+                ret[pMasqueradingVector[13]]=Json::Value();
+            }
+        }
+        if(!pMasqueradingVector[14].empty())
+        {
+            if(getModifiedAt())
+            {
+                ret[pMasqueradingVector[14]]=getModifiedAt()->toDbStringLocal();
+            }
+            else
+            {
+                ret[pMasqueradingVector[14]]=Json::Value();
             }
         }
         return ret;
@@ -1971,6 +2198,14 @@ Json::Value Coupons::toMasqueradedJson(
     {
         ret["status"]=Json::Value();
     }
+    if(getCreatedBy())
+    {
+        ret["created_by"]=getValueOfCreatedBy();
+    }
+    else
+    {
+        ret["created_by"]=Json::Value();
+    }
     if(getCreatedAt())
     {
         ret["created_at"]=getCreatedAt()->toDbStringLocal();
@@ -1979,13 +2214,21 @@ Json::Value Coupons::toMasqueradedJson(
     {
         ret["created_at"]=Json::Value();
     }
-    if(getUpdatedAt())
+    if(getModifiedBy())
     {
-        ret["updated_at"]=getUpdatedAt()->toDbStringLocal();
+        ret["modified_by"]=getValueOfModifiedBy();
     }
     else
     {
-        ret["updated_at"]=Json::Value();
+        ret["modified_by"]=Json::Value();
+    }
+    if(getModifiedAt())
+    {
+        ret["modified_at"]=getModifiedAt()->toDbStringLocal();
+    }
+    else
+    {
+        ret["modified_at"]=Json::Value();
     }
     return ret;
 }
@@ -2052,14 +2295,24 @@ bool Coupons::validateJsonForCreation(const Json::Value &pJson, std::string &err
         if(!validJsonOfField(10, "status", pJson["status"], err, true))
             return false;
     }
-    if(pJson.isMember("created_at"))
+    if(pJson.isMember("created_by"))
     {
-        if(!validJsonOfField(11, "created_at", pJson["created_at"], err, true))
+        if(!validJsonOfField(11, "created_by", pJson["created_by"], err, true))
             return false;
     }
-    if(pJson.isMember("updated_at"))
+    if(pJson.isMember("created_at"))
     {
-        if(!validJsonOfField(12, "updated_at", pJson["updated_at"], err, true))
+        if(!validJsonOfField(12, "created_at", pJson["created_at"], err, true))
+            return false;
+    }
+    if(pJson.isMember("modified_by"))
+    {
+        if(!validJsonOfField(13, "modified_by", pJson["modified_by"], err, true))
+            return false;
+    }
+    if(pJson.isMember("modified_at"))
+    {
+        if(!validJsonOfField(14, "modified_at", pJson["modified_at"], err, true))
             return false;
     }
     return true;
@@ -2068,7 +2321,7 @@ bool Coupons::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                                                  const std::vector<std::string> &pMasqueradingVector,
                                                  std::string &err)
 {
-    if(pMasqueradingVector.size() != 13)
+    if(pMasqueradingVector.size() != 15)
     {
         err = "Bad masquerading vector";
         return false;
@@ -2183,6 +2436,22 @@ bool Coupons::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                   return false;
           }
       }
+      if(!pMasqueradingVector[13].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[13]))
+          {
+              if(!validJsonOfField(13, pMasqueradingVector[13], pJson[pMasqueradingVector[13]], err, true))
+                  return false;
+          }
+      }
+      if(!pMasqueradingVector[14].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[14]))
+          {
+              if(!validJsonOfField(14, pMasqueradingVector[14], pJson[pMasqueradingVector[14]], err, true))
+                  return false;
+          }
+      }
     }
     catch(const Json::LogicError &e)
     {
@@ -2253,14 +2522,24 @@ bool Coupons::validateJsonForUpdate(const Json::Value &pJson, std::string &err)
         if(!validJsonOfField(10, "status", pJson["status"], err, false))
             return false;
     }
-    if(pJson.isMember("created_at"))
+    if(pJson.isMember("created_by"))
     {
-        if(!validJsonOfField(11, "created_at", pJson["created_at"], err, false))
+        if(!validJsonOfField(11, "created_by", pJson["created_by"], err, false))
             return false;
     }
-    if(pJson.isMember("updated_at"))
+    if(pJson.isMember("created_at"))
     {
-        if(!validJsonOfField(12, "updated_at", pJson["updated_at"], err, false))
+        if(!validJsonOfField(12, "created_at", pJson["created_at"], err, false))
+            return false;
+    }
+    if(pJson.isMember("modified_by"))
+    {
+        if(!validJsonOfField(13, "modified_by", pJson["modified_by"], err, false))
+            return false;
+    }
+    if(pJson.isMember("modified_at"))
+    {
+        if(!validJsonOfField(14, "modified_at", pJson["modified_at"], err, false))
             return false;
     }
     return true;
@@ -2269,7 +2548,7 @@ bool Coupons::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
                                                const std::vector<std::string> &pMasqueradingVector,
                                                std::string &err)
 {
-    if(pMasqueradingVector.size() != 13)
+    if(pMasqueradingVector.size() != 15)
     {
         err = "Bad masquerading vector";
         return false;
@@ -2343,6 +2622,16 @@ bool Coupons::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
       if(!pMasqueradingVector[12].empty() && pJson.isMember(pMasqueradingVector[12]))
       {
           if(!validJsonOfField(12, pMasqueradingVector[12], pJson[pMasqueradingVector[12]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[13].empty() && pJson.isMember(pMasqueradingVector[13]))
+      {
+          if(!validJsonOfField(13, pMasqueradingVector[13], pJson[pMasqueradingVector[13]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[14].empty() && pJson.isMember(pMasqueradingVector[14]))
+      {
+          if(!validJsonOfField(14, pMasqueradingVector[14], pJson[pMasqueradingVector[14]], err, false))
               return false;
       }
     }
@@ -2504,27 +2793,19 @@ bool Coupons::validJsonOfField(size_t index,
         case 10:
             if(pJson.isNull())
             {
-                return true;
-            }
-            if(!pJson.isString())
-            {
-                err="Type error in the "+fieldName+" field";
+                err="The " + fieldName + " column cannot be null";
                 return false;
             }
-            if(pJson.isString() && std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>{}
-                .from_bytes(pJson.asCString()).size() > 50)
+            if(!pJson.isInt())
             {
-                err="String length exceeds limit for the " +
-                    fieldName +
-                    " field (the maximum value is 50)";
+                err="Type error in the "+fieldName+" field";
                 return false;
             }
             break;
         case 11:
             if(pJson.isNull())
             {
-                err="The " + fieldName + " column cannot be null";
-                return false;
+                return true;
             }
             if(!pJson.isString())
             {
@@ -2533,6 +2814,28 @@ bool Coupons::validJsonOfField(size_t index,
             }
             break;
         case 12:
+            if(pJson.isNull())
+            {
+                return true;
+            }
+            if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 13:
+            if(pJson.isNull())
+            {
+                return true;
+            }
+            if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 14:
             if(pJson.isNull())
             {
                 return true;

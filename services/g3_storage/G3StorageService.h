@@ -47,6 +47,15 @@ namespace gnp::services {
          */
         std::optional<std::string> getFileContent(const std::string& bucketName, const std::string& fileName) const;
 
+        /**
+         * @brief Extracts the first page of a PDF file as a PNG thumbnail.
+         * @param bucketName The name of the bucket
+         * @param fileName The name of the PDF file
+         * @param thumbnailFileName The name to save the generated PNG thumbnail
+         * @return true if successful, false otherwise
+         */
+        bool extractThumbnail(const std::string& bucketName, const std::string& fileName, const std::string& thumbnailFileName) const;
+
     private:
         void ensureBucketExists(const std::string& bucketName) const;
         std::string buildFilePath(const std::string& bucketName, const std::string& fileName) const;

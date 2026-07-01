@@ -66,6 +66,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../
     ${CMAKE_CURRENT_SOURCE_DIR}/../external_deps/jwt-cpp/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../models
+    ${MUPDF_INCLUDE_DIRS}
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -74,6 +75,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     jwt-cpp
     OpenSSL::SSL
     OpenSSL::Crypto
+    ${MUPDF_LIBRARIES}
 )
 
 # ##############################################################################

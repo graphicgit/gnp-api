@@ -64,9 +64,7 @@ void AuthController::sendOtp(
       });
 }
 
-void AuthController::verifyOtp(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
+void AuthController::verifyOtp(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback) {
 
   auto jsonPtr = req->getJsonObject();
   if (!jsonPtr) {

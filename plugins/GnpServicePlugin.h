@@ -78,7 +78,6 @@ public:
 
 private:
   services::RedisCacheManager redisCacheService_;
-  //services::GoogleDriveService googleDriveService_;
   ::gnp::services::AffiliateService affiliate_service_;
   ::gnp::services::UserService userService_;
   ::gnp::services::EmailService emailService_;
