@@ -323,16 +323,17 @@ CommercialPartnerService::createPartner(const dto::CreatePartnerDto &dto) {
     newPartner.setContactPhone(dto.getContactPhone());
     newPartner.setBillingEmail(dto.getBillingEmail());
     newPartner.setDefaultSubscriptionPlanId(dto.getDefaultSubscriptionPlanId());
-    newPartner.setDefaultSubscriptionPlanDescription(
-        dto.getDefaultSubscriptionPlanName());
+    newPartner.setDefaultSubscriptionPlanDescription(dto.getDefaultSubscriptionPlanName());
     newPartner.setCurrency(dto.getCurrency());
+    char unitPriceBuf[64];
+    snprintf(unitPriceBuf, sizeof(unitPriceBuf), "%.2f", dto.getUnitPrice());
+    newPartner.setCostPerHead(unitPriceBuf);
     newPartner.setSubscriberQuota(dto.getSubscriberQuota());
     newPartner.setRemainingQuota(dto.getSubscriberQuota());
     newPartner.setStatus("Active");
     newPartner.setCurrentInvoiceNo(dto.getPartnerInvoice().getInvoiceNumber());
     char totalAmountDueBuf[64];
-    snprintf(totalAmountDueBuf, sizeof(totalAmountDueBuf), "%.2f",
-             dto.getPartnerInvoice().getInvoiceAmount());
+    snprintf(totalAmountDueBuf, sizeof(totalAmountDueBuf), "%.2f", dto.getPartnerInvoice().getInvoiceAmount());
     newPartner.setTotalAmountDue(totalAmountDueBuf);
     newPartner.setSubAccountEnabled(dto.getSubAccountEnabled());
     newPartner.setSubscriptionStartDate(dto.getSubscriptionStartDate());
