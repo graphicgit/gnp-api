@@ -71,7 +71,7 @@ namespace gnp::dto {
         trantor::Date subscription_end_date_;
         std::string currency_;
         bool sub_account_enabled_ = false;
-        double unit_price_ = 0.0;
+        double unit_price_ {0};
         std::string total_amount_;
         PartnerInvoiceDto partner_invoice_;
 
@@ -143,10 +143,6 @@ namespace gnp::dto {
                 dateStr += " 00:00:00";
             }
             subscription_end_date_ = trantor::Date::fromDbString(dateStr);
-        }
-
-        if (json.isMember("unitPrice") && !json["unitPrice"].isNull()) {
-            unit_price_ = json["unitPrice"].asDouble();
         }
 
         if (json.isMember("totalAmount") && !json["totalAmount"].isNull()) {
