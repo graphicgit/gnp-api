@@ -82,7 +82,6 @@ public:
             status_ = json["currentInvoiceNo"].asString();
         }
 
-
     }
 
     // Getters
@@ -122,8 +121,8 @@ private:
     std::string billing_cycle_;
     std::string invoice_number_;
     std::string description_;
-    double invoice_amount_ = 0.0;
-    double unit_price_ = 0.0;
+    double invoice_amount_ {0};
+    double unit_price_ {0};
     double balance_ = 0.0;
     std::string currency_;
     trantor::Date due_date_;

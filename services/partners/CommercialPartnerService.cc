@@ -326,7 +326,7 @@ CommercialPartnerService::createPartner(const dto::CreatePartnerDto &dto) {
     newPartner.setDefaultSubscriptionPlanDescription(dto.getDefaultSubscriptionPlanName());
     newPartner.setCurrency(dto.getCurrency());
     char unitPriceBuf[64];
-    snprintf(unitPriceBuf, sizeof(unitPriceBuf), "%.2f", dto.getUnitPrice());
+    snprintf(unitPriceBuf, sizeof(unitPriceBuf), "%.2f", dto.getPartnerInvoice().getUnitPrice());
     newPartner.setCostPerHead(unitPriceBuf);
     newPartner.setSubscriberQuota(dto.getSubscriberQuota());
     newPartner.setRemainingQuota(dto.getSubscriberQuota());
