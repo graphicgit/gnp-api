@@ -621,10 +621,31 @@ void AdminController::renewUserSubscription(
   // write your application logic here
 }
 
+Task<HttpResponsePtr> AdminController::getSubscriberSubscriptionDetails(HttpRequestPtr req, const std::string &partnerId, const std::string &userId) {
+
+  // auto userId = req->attributes()->get<std::string>("userId");
+  //
+  // if (userId.empty()) {
+  //   gnp::dto::BaseApiResponse response;
+  //   response.success = false;
+  //   response.error["message"] = "Authorization token required";
+  //   auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+  //   resp->setStatusCode(k400BadRequest);
+  //   co_return resp;
+  // }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &commercialPartnerService = plugin->getCommercialPartnerService();
+
+  auto result = co_await commercialPartnerService.getSubscriberSubscriptionSummary(partnerId, userId);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+
+}
+
 // campaigns
 
-drogon::Task<HttpResponsePtr>
-AdminController::getAllCampaigns(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::getAllCampaigns(const HttpRequestPtr req) {
 
   int pageSize = 10; // Default page size
   int pageNo = 1;    //  Default page number
@@ -666,8 +687,7 @@ AdminController::getAllCampaigns(const HttpRequestPtr req) {
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr>
-AdminController::createCampaign(HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::createCampaign(HttpRequestPtr req) {
 
   auto jsonPtr = req->getJsonObject();
   if (!jsonPtr) {
@@ -687,8 +707,7 @@ AdminController::createCampaign(HttpRequestPtr req) {
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
-Task<HttpResponsePtr>
-AdminController::publishCampaign(const HttpRequestPtr req) {
+Task<HttpResponsePtr> AdminController::publishCampaign(const HttpRequestPtr req) {
 
   auto campaignId = req->getParameter("campaignId");
   if (campaignId.empty()) {
@@ -705,8 +724,7 @@ AdminController::publishCampaign(const HttpRequestPtr req) {
   co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
-drogon::Task<HttpResponsePtr>
-AdminController::deleteCampaign(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::deleteCampaign(const HttpRequestPtr req) {
 
   auto campaignId = req->getParameter("campaignId");
 
@@ -759,8 +777,7 @@ void AdminController::getPartnerDetails(
       });
 }
 
-drogon::Task<HttpResponsePtr>
-AdminController::getAllPartners(HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::getAllPartners(HttpRequestPtr req) {
 
   int pageSize = 10; // Default page size
   int pageNo = 1;    //  Default page number
@@ -797,8 +814,7 @@ AdminController::getAllPartners(HttpRequestPtr req) {
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr>
-AdminController::getPartnerSubscribers(const HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::getPartnerSubscribers(const HttpRequestPtr req) {
 
   int pageSize = 10; // Default page size
   int pageNo = 1;    //  Default page number

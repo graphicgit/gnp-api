@@ -42,6 +42,7 @@ public:
   ADD_METHOD_TO(AdminController::getAllUserSubscriptions, std::string(PREFIX) + "get-all-subscriptions", Get, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::getUserSubscriptionDetails, std::string(PREFIX) + "get-user-subscription-details", Get, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::renewUserSubscription, std::string(PREFIX) + "renew-user-subscription", Post, "JwtAuthFilter");
+  ADD_METHOD_TO(AdminController::getSubscriberSubscriptionDetails, std::string(PREFIX) + "subscriber-subscription-details/{1}/{2}", Get, Options, "JwtAuthFilter");
 
   // campaigns
   ADD_METHOD_TO(AdminController::getAllCampaigns, std::string(PREFIX) + "get-all-campaigns", Get, Options, "JwtAuthFilter");
@@ -184,10 +185,10 @@ public:
   Task<HttpResponsePtr> revokePartnerApiKey(HttpRequestPtr req);
   Task<HttpResponsePtr> updatePartnerApiKey(HttpRequestPtr req);
 
-  // payments
+  //payments
   void getAllPayments(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
 
-  // ingestion Jobs
+  //ingestion Jobs
   void
   getAllIngestionJobs(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   void
@@ -214,6 +215,8 @@ public:
     Task<HttpResponsePtr> createRole(HttpRequestPtr req);
     Task<HttpResponsePtr> updateRole(HttpRequestPtr req, const std::string &roleId);
     Task<HttpResponsePtr> deleteRole(HttpRequestPtr req, const std::string &roleId);
+
+    Task<HttpResponsePtr> getSubscriberSubscriptionDetails(HttpRequestPtr req, const std::string &partnerId, const std::string &userId);
 
     //utils
     Task<HttpResponsePtr> regenerateNewspaperEntitlements(HttpRequestPtr req);

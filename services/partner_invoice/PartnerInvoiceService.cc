@@ -520,8 +520,14 @@ PartnerInvoiceService::generatePartnerInvoices(const std::string &invoiceDate) {
     auto endTime = startTime.after(5 * 60);
 
     raffleClosureQuartzJobDto.schedule = utils::CronUtils::buildCronExpression(startTime);
-    raffleClosureQuartzJobDto.startDate = startTime.after(-5 * 60).toDbStringLocal();
-    raffleClosureQuartzJobDto.endDate = endTime.toDbStringLocal();
+    
+    std::string startDateStr = startTime.after(-5 * 60).toDbStringLocal();
+    std::replace(startDateStr.begin(), startDateStr.end(), ' ', 'T');
+    raffleClosureQuartzJobDto.startDate = startDateStr;
+
+    std::string endDateStr = endTime.toDbStringLocal();
+    std::replace(endDateStr.begin(), endDateStr.end(), ' ', 'T');
+    raffleClosureQuartzJobDto.endDate = endDateStr;
 
     co_await quartzApi.scheduleJob(raffleClosureQuartzJobDto);
 
