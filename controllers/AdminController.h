@@ -12,12 +12,12 @@ public:
   // newspaper
   ADD_METHOD_TO(AdminController::getAllNewsPapers,std::string(PREFIX) + "get-all-newspapers", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::getAllArchivedNewsPapers,std::string(PREFIX) + "get-all-archived-newspapers", Get, Options, "JwtAuthFilter");
-  ADD_METHOD_TO(AdminController::getNewsPaperFullDetails, std::string(PREFIX) + "get-full-details", Get, Options, "JwtAuthFilter");
+  ADD_METHOD_TO(AdminController::getNewsPaperDetails, std::string(PREFIX) + "get-newspaper-details/{1}", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::publishNewsPaper, std::string(PREFIX) + "publish-newspaper", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::unPublishNewsPaper, std::string(PREFIX) + "unpublish-newspaper", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::IngestNewsPaper, std::string(PREFIX) + "ingest-newspaper", Post, Options, "JwtAuthFilter");
 
-  ADD_METHOD_TO(AdminController::updateNewsPaper, std::string(PREFIX) + "update-newspaper", Post, Options, "JwtAuthFilter");
+  ADD_METHOD_TO(AdminController::updateNewsPaper, std::string(PREFIX) + "update-newspaper/{1}", Put, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::deleteNewsPaper, std::string(PREFIX) + "delete-newspaper", Delete, Options, "JwtAuthFilter");
   // users
   ADD_METHOD_TO(AdminController::getAllUsers, std::string(PREFIX) + "get-all-users", Get, Options, "JwtAuthFilter");
@@ -59,11 +59,16 @@ public:
   ADD_METHOD_TO(AdminController::createPartner, std::string(PREFIX) + "create-partner", Post, Options, "JwtAuthFilter");
 
   ADD_METHOD_TO(AdminController::createPartnerSubscriber, std::string(PREFIX) + "create-partner-subscriber", Post, Options, "JwtAuthFilter");
-  ADD_METHOD_TO(AdminController::assignPartnerSubscribersPlan, std::string(PREFIX) + "assign-partner-subscribers-plan", Post, Options, "JwtAuthFilter");
-  ADD_METHOD_TO(AdminController::updatePartner, std::string(PREFIX) + "update-partner", Post, Options, "JwtAuthFilter");
-  ADD_METHOD_TO(AdminController::updatePartnerStatus, std::string(PREFIX) + "update-partner-status", Get, Options, "JwtAuthFilter");
-  ADD_METHOD_TO(AdminController::deletePartner, std::string(PREFIX) + "delete-partner", Delete, Options, "JwtAuthFilter");
-  ADD_METHOD_TO(AdminController::deletePartnerSubscriber, std::string(PREFIX) + "delete-partner-subscriber", Delete, Options, "JwtAuthFilter");
+
+    ADD_METHOD_TO(AdminController::assignPartnerSubscribersPlan, std::string(PREFIX) + "assign-partner-subscribers-plan", Post, Options, "JwtAuthFilter");
+
+    ADD_METHOD_TO(AdminController::updatePartner, std::string(PREFIX) + "update-partner", Post, Options, "JwtAuthFilter");
+
+    ADD_METHOD_TO(AdminController::updatePartnerStatus, std::string(PREFIX) + "update-partner-status", Get, Options, "JwtAuthFilter");
+
+    ADD_METHOD_TO(AdminController::deletePartner, std::string(PREFIX) + "delete-partner", Delete, Options, "JwtAuthFilter");
+
+    ADD_METHOD_TO(AdminController::deletePartnerSubscriber, std::string(PREFIX) + "delete-partner-subscriber", Delete, Options, "JwtAuthFilter");
 
   ADD_METHOD_TO(AdminController::enablePartnerSubaccount, std::string(PREFIX) + "enable-partner-subaccount", Get, Options, "JwtAuthFilter");
 
@@ -117,11 +122,11 @@ public:
   // Newspapers
   drogon::Task<HttpResponsePtr> getAllNewsPapers(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> getAllArchivedNewsPapers(HttpRequestPtr req);
-  drogon::Task<HttpResponsePtr> getNewsPaperFullDetails(HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> getNewsPaperDetails(HttpRequestPtr req, const std::string &newspaperId);
   drogon::Task<HttpResponsePtr> publishNewsPaper(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> unPublishNewsPaper(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> IngestNewsPaper(HttpRequestPtr req);
-  void updateNewsPaper(const HttpRequestPtr &req,std::function<void(const HttpResponsePtr &)> &&callback);
+  drogon::Task<HttpResponsePtr> updateNewsPaper(HttpRequestPtr req, const std::string &newspaperId);
   drogon::Task<HttpResponsePtr> deleteNewsPaper(HttpRequestPtr req);
 
   // users...

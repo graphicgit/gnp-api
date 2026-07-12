@@ -129,25 +129,21 @@ drogon::Task<HttpResponsePtr> AdminController::getAllArchivedNewsPapers(const Ht
 }
 
 
+Task<HttpResponsePtr> AdminController::getNewsPaperDetails(const HttpRequestPtr req,  const std::string &newspaperId) {
 
-
-
-drogon::Task<HttpResponsePtr> AdminController::getNewsPaperFullDetails(const HttpRequestPtr req) {
-  if (req->getParameter("id").empty()) {
+  if (newspaperId.empty()) {
     gnp::dto::BaseApiResponse response;
     response.success = false;
-    response.error["message"] = "Missing required parameter: id";
+    response.error["message"] = "Missing required parameter: Newspaper Id";
     auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
     resp->setStatusCode(k400BadRequest);
     co_return resp;
   }
 
-  std::string id = req->getParameter("id");
-
-  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
-  auto result = co_await newsPaperService.getFullDetailsAsync(id);
+  auto result = co_await newsPaperService.getDetails(newspaperId);
   co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
@@ -213,13 +209,32 @@ drogon::Task<HttpResponsePtr> AdminController::IngestNewsPaper(const HttpRequest
   co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
-void AdminController::updateNewsPaper(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) {
-  // write your application logic here
+drogon::Task<HttpResponsePtr> AdminController::updateNewsPaper(HttpRequestPtr req, const std::string &newspaperId) {
+
+  auto jsonBody = req->getJsonObject();
+
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  gnp::dto::NewsPaperDto dto;
+  dto.fromJson(*jsonBody);
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &newsPaperService = plugin->getNewsPaperService();
+
+  auto result = co_await newsPaperService.update(dto, newspaperId);
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+
 }
 
 drogon::Task<HttpResponsePtr> AdminController::deleteNewsPaper(const HttpRequestPtr req) {
+
   if (req->getParameter("id").empty()) {
     gnp::dto::BaseApiResponse response;
     response.success = false;

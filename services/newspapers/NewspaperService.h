@@ -9,6 +9,7 @@
 #include "dto/IngestNewsPaperDto.h"
 #include <drogon/drogon.h>
 
+#include "dto/NewsPaperDto.h"
 #include "dto/OcrIngestionDto.h"
 
 namespace gnp::services {
@@ -35,13 +36,15 @@ public:
 
   drogon::Task<gnp::dto::BaseApiResponse> getRedactedDetailsAsync(const std::string &id);
 
-  drogon::Task<gnp::dto::BaseApiResponse> getFullDetailsAsync(const std::string &id);
+  drogon::Task<gnp::dto::BaseApiResponse> getDetails(const std::string &id);
 
   drogon::Task<gnp::dto::BaseApiResponse> getFreeNewsPaperDetailsByPublicationAsync(const std::string &publicationId, const std::string &date);
 
   drogon::Task<gnp::dto::BaseApiResponse> getPaidNewsPaperDetailsByPublicationAsync(const std::string &publicationId, const std::string &date);
 
   drogon::Task<gnp::dto::BaseApiResponse> ingestAsync(const dto::IngestNewsPaperDto &dto);
+
+  drogon::Task<gnp::dto::BaseApiResponse> update(const dto::NewsPaperDto &dto, const std::string &id);
 
   drogon::Task<gnp::dto::BaseApiResponse> publishAsync(const std::string &id);
 

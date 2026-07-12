@@ -271,17 +271,13 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::getRedactedDetailsAsyn
   }
 }
 
-drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::getFullDetailsAsync(const std::string &id) {
+drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::getDetails(const std::string &id) {
   auto dbClient = drogon::app().getDbClient();
-  auto mp = drogon::orm::CoroMapper<drogon_model::Gnp::Newspapers>(dbClient);
+  auto mp = drogon::orm::CoroMapper<Newspapers>(dbClient);
 
   try {
-    // Only published newspapers are visible here
-    Criteria criteria =
-        Criteria(Newspapers::Cols::_id, CompareOperator::EQ, id) &&
-        Criteria(Newspapers::Cols::_is_published, CompareOperator::EQ, true);
 
-    auto newspaper = co_await mp.findOne(criteria);
+    auto newspaper = co_await mp.findByPrimaryKey(id);
 
     dto::BaseApiResponse response;
     response.success = true;
@@ -299,16 +295,19 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::getFullDetailsAsync(co
     data["fullDescription"] = src["full_description"];
     data["thumbnailId"] = src["thumbnail_id"];
     data["fileType"] = src["file_type"];
-    data["storageType"] = src["storage_type"];
+    data["storageService"] = src["storage_service"];
     data["documentId"] = src["document_id"];
     data["isFree"] = src["is_free"];
     data["isPopular"] = src["is_popular"];
     data["publishedDate"] = src["published_date"];
+    data["publicationDate"] = src["publication_date"];
     data["isPublished"] = src["is_published"];
+    data["isArchived"] = src["is_archived"];
+    data["sales"] = src["sales"];
+    data["views"] = src["views"];
+    data["fileType"] = src["file_type"];
 
     // Category / publication info
-    data["categoryId"] = src["category_id"];
-    data["categoryName"] = src["category_name"];
     data["publicationId"] = src["publication_id"];
     data["publicationName"] = src["publication_name"];
 
@@ -324,6 +323,23 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::getFullDetailsAsync(co
       data["featuredStories"] = featuredStoriesJson;
     } else {
       data["featuredStories"] = Json::arrayValue;
+    }
+
+
+    std::string tagsStr = newspaper.getValueOfTags();
+    Json::Value tagsJson;
+    if (!tagsStr.empty() &&  reader.parse(tagsStr, tagsJson)) {
+      data["tags"] = tagsJson;
+    } else {
+          data["tags"] = Json::arrayValue;
+    }
+
+    std::string categoriesStr = newspaper.getValueOfCategories();
+    Json::Value categoriesJson;
+    if (!tagsStr.empty() &&  reader.parse(categoriesStr, categoriesJson)) {
+      data["categories"] = categoriesJson;
+    } else {
+      data["categories"] = Json::arrayValue;
     }
 
     response.result = data;
@@ -819,7 +835,61 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::ingestAsync(const dto:
   }
 }
 
+
+
+drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::update(const dto::NewsPaperDto &dto, const std::string &id) {
+  auto dbClient = drogon::app().getDbClient();
+  drogon::orm::CoroMapper<drogon_model::Gnp::Newspapers> mp(dbClient);
+
+  try {
+    auto newspaper = co_await mp.findByPrimaryKey(id);
+
+    if (!dto.getTitle().empty()) newspaper.setTitle(dto.getTitle());
+    if (!dto.getSlug().empty()) newspaper.setSlug(dto.getSlug());
+    if (dto.getPrice() >= 0) newspaper.setPrice(std::to_string(dto.getPrice()));
+    newspaper.setIsFree(dto.isFree());
+    newspaper.setIsPublished(dto.isPublished());
+    if (!dto.getPublicationId().empty()) newspaper.setPublicationId(dto.getPublicationId());
+    if (!dto.getPublicationName().empty()) newspaper.setPublicationName(dto.getPublicationName());
+    if (!dto.getEditionNumber().empty()) newspaper.setEditionNumber(dto.getEditionNumber());
+    newspaper.setIsPopular(dto.getIsPopular());
+    if (!dto.getFullDescription().empty()) newspaper.setFullDescription(dto.getFullDescription());
+    if (!dto.getThumbnailId().empty()) newspaper.setThumbnailId(dto.getThumbnailId());
+    if (!dto.getFileType().empty()) newspaper.setFileType(dto.getFileType());
+    if (!dto.getStorageService().empty()) newspaper.setStorageService(dto.getStorageService());
+    if (!dto.getDocumentId().empty()) newspaper.setDocumentId(dto.getDocumentId());
+    if (!dto.getFeaturedStories().empty()) newspaper.setFeaturedStories(dto.getFeaturedStories());
+    
+    if (dto.getPublicationDate().microSecondsSinceEpoch() > 0) {
+      newspaper.setPublicationDate(dto.getPublicationDate());
+    }
+
+    co_await mp.update(newspaper);
+
+    dto::BaseApiResponse successResponse;
+    successResponse.success = true;
+    successResponse.message = "Newspaper updated successfully";
+    successResponse.result["id"] = newspaper.getValueOfId();
+
+    co_return successResponse;
+  } catch (const drogon::orm::DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Database error while updating Newspaper";
+    if (e.base().what() == std::string("Record Not Found")) {
+      errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+      errorResponse.error["message"] = "Newspaper not found.";
+    } else {
+      errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    }
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+
 drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::publishAsync(const std::string &id) {
+
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Newspapers> mp(dbClient);
 
@@ -858,8 +928,8 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::publishAsync(const std
   }
 }
 
-drogon::Task<gnp::dto::BaseApiResponse>
-NewspaperService::unPublishAsync(const std::string &id) {
+
+drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::unPublishAsync(const std::string &id) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Newspapers> mp(dbClient);
