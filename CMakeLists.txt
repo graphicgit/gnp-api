@@ -140,6 +140,8 @@ add_executable(${PROJECT_NAME} main.cc
         services/g3_storage/G3StorageService.cc
         constants/StatusTypes.h
         dto/NewsPaperDto.h
+        utils/CronUtils.h
+        utils/CronUtils.cc
 )
 
 # ##############################################################################

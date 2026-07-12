@@ -115,7 +115,7 @@ public:
 
    //utils
    ADD_METHOD_TO(AdminController::regenerateNewspaperEntitlements, std::string(PREFIX) + "regenerate-newspaper-entitlements", Get, Options, "JwtAuthFilter");
-   ADD_METHOD_TO(AdminController::generatePartnerInvoices, std::string(PREFIX) + "generate-partner-invoices", Get);
+   ADD_METHOD_TO(AdminController::generatePartnerInvoices, std::string(PREFIX) + "generate-partner-invoices/{1}", Post);
 
   METHOD_LIST_END
 
@@ -189,14 +189,11 @@ public:
 
   // ingestion Jobs
   void
-  getAllIngestionJobs(const HttpRequestPtr &req,
-                      std::function<void(const HttpResponsePtr &)> &&callback);
+  getAllIngestionJobs(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   void
-  createIngestionJob(const HttpRequestPtr &req,
-                     std::function<void(const HttpResponsePtr &)> &&callback);
+  createIngestionJob(const HttpRequestPtr &req,  std::function<void(const HttpResponsePtr &)> &&callback);
   void
-  deleteIngestionJob(const HttpRequestPtr &req,
-                     std::function<void(const HttpResponsePtr &)> &&callback);
+  deleteIngestionJob(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
 
   // coupons
   drogon::Task<HttpResponsePtr> getAllCoupons(HttpRequestPtr req);
@@ -220,6 +217,6 @@ public:
 
     //utils
     Task<HttpResponsePtr> regenerateNewspaperEntitlements(HttpRequestPtr req);
-    Task<HttpResponsePtr> generatePartnerInvoices(HttpRequestPtr req);
+    Task<HttpResponsePtr> generatePartnerInvoices(HttpRequestPtr req, const std::string &date);
 
 };

@@ -1498,9 +1498,7 @@ Task<HttpResponsePtr> AdminController::regenerateNewspaperEntitlements(HttpReque
 }
 
 
-Task<HttpResponsePtr> AdminController::generatePartnerInvoices(HttpRequestPtr req) {
-
-  auto date = req->getParameter("date");
+Task<HttpResponsePtr> AdminController::generatePartnerInvoices(HttpRequestPtr req, const std::string &date) {
 
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &partnerInvoiceService = plugin->getPartnerInvoiceService();
