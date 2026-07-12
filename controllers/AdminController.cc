@@ -621,9 +621,9 @@ void AdminController::renewUserSubscription(
   // write your application logic here
 }
 
-Task<HttpResponsePtr> AdminController::getSubscriberSubscriptionDetails(HttpRequestPtr req, const std::string &partnerId, const std::string &userId) {
+Task<HttpResponsePtr> AdminController::getPartnerSubscriberInfo(HttpRequestPtr req, const std::string &partnerId, const std::string &userId) {
 
-  // auto userId = req->attributes()->get<std::string>("userId");
+  // auto userId = req->attributes()->get<std::string>("userId"); //admin user id from token
   //
   // if (userId.empty()) {
   //   gnp::dto::BaseApiResponse response;
