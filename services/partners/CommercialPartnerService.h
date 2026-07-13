@@ -94,9 +94,7 @@ public:
 
     drogon::Task<::gnp::dto::BaseApiResponse> getPartnerAnalyticsCharts(const std::string &partnerId, const std::string &period);
 
-    drogon::Task<::gnp::dto::BaseApiResponse> bulkUploadSubscribersFile(const std::string &partnerId, const std::string &fileContent, const std::string &fileName);
-
-    drogon::Task<::gnp::dto::BaseApiResponse> bulkUploadSubscribersJson(const std::string &partnerId, const Json::Value &jsonArray);
+    drogon::Task<::gnp::dto::BaseApiResponse> bulkUploadSubscribersJson(const std::string partnerId, const Json::Value &jsonArray);
 
 };
 

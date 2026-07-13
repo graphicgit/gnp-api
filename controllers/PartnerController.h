@@ -25,7 +25,7 @@ class PartnerController : public drogon::HttpController<PartnerController>
   ADD_METHOD_TO(PartnerController::activateApiKey, std::string(PREFIX) + "activate-partner-api-key", Get, Options, "PartnerJwtAuthFilter");
   ADD_METHOD_TO(PartnerController::deleteApiKey, std::string(PREFIX) + "delete-partner-api-key", Delete, Options, "PartnerJwtAuthFilter");
   ADD_METHOD_TO(PartnerController::deleteSubscriber, std::string(PREFIX) + "delete-subscriber", Delete, Options, "PartnerJwtAuthFilter");
-  ADD_METHOD_TO(PartnerController::bulkUploadSubscribers, std::string(PREFIX) + "bulk-upload-subscribers", Post, Options, "PartnerJwtAuthFilter");
+  //ADD_METHOD_TO(PartnerController::bulkUploadSubscribers, std::string(PREFIX) + "bulk-upload-subscribers", Post, Options, "PartnerJwtAuthFilter");
 
     //partner roles
     ADD_METHOD_TO(PartnerController::getAllRoles, std::string(PREFIX) + "get-all-roles", Get, Options, "PartnerJwtAuthFilter");
@@ -60,7 +60,7 @@ class PartnerController : public drogon::HttpController<PartnerController>
     Task<HttpResponsePtr> deleteApiKey(HttpRequestPtr req);
     Task<HttpResponsePtr> updatePartnerApiKey(HttpRequestPtr req);
     Task<HttpResponsePtr> deleteSubscriber(HttpRequestPtr req);
-    Task<HttpResponsePtr> bulkUploadSubscribers(HttpRequestPtr req);
+    //Task<HttpResponsePtr> bulkUploadSubscribers(HttpRequestPtr req);
     // partner roles
     Task<HttpResponsePtr> getAllRoles(HttpRequestPtr req);
     Task<HttpResponsePtr> createRole(HttpRequestPtr req);

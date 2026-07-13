@@ -906,6 +906,26 @@ drogon::Task<HttpResponsePtr> AdminController::createPartnerSubscriber(const Htt
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
+drogon::Task<HttpResponsePtr> AdminController::uploadPartnerSubscribers(const HttpRequestPtr req, const std::string &partnerId) {
+
+  auto jsonPtr = req->getJsonObject();
+
+  if (!jsonPtr || !jsonPtr->isArray()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body or not an array";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &commercialPartnerService = plugin->getCommercialPartnerService();
+
+  auto apiResp = co_await commercialPartnerService.bulkUploadSubscribersJson(partnerId, *jsonPtr);
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+}
+
 drogon::Task<HttpResponsePtr> AdminController::assignPartnerSubscribersPlan(HttpRequestPtr req) {
 
   auto jsonPtr = req->getJsonObject();

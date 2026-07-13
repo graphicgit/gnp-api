@@ -341,10 +341,11 @@
         },
         "QuartzSchedulerApi": {
             "BaseUrl": "https://scheduler.richcreationsdevelopment.com",
-            "CampaignCallBackUrl": "https://dev-api.graphicnewsplus.com/api/v1/campaigns/run-scheduled-campaign",
-            "SubscriptionReminderCallBackUrl": "https://dev-api.graphicnewsplus.com/api/v1/subscription/send-reminders",
-            "PartnerInvoiceGenerationCallBackUrl": "https://dev-api.graphicnewsplus.com/api/v1/admin/generate-partner-invoices",
-            "NewspaperEntitlementCallBackUrl": "https://dev-api.graphicnewsplus.com/api/v1/admin/regenerate-newspaper-entitlements"
+            "CampaignCallBackUrl": "https://dev-api.graphicnewsplus.com/api/v1/campaigns/run-scheduled-campaign/",
+            "DailyNewsUpdateCallBackUrl": "https://dev-api.graphicnewsplus.com/api/v1/news-papers/send-daily-update/",
+            "SubscriptionReminderCallBackUrl": "https://dev-api.graphicnewsplus.com/api/v1/subscription/send-reminders/",
+            "PartnerInvoiceGenerationCallBackUrl": "https://dev-api.graphicnewsplus.com/api/v1/admin/generate-partner-invoices/",
+            "NewspaperEntitlementCallBackUrl": "https://dev-api.graphicnewsplus.com/api/v1/admin/regenerate-newspaper-entitlements/"
         },
         "MtnMomoApi": {
             "BaseUrl": "https://sandbox.mtnmomo.com/collection/v1_0",

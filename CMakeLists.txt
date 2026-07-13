@@ -142,6 +142,7 @@ add_executable(${PROJECT_NAME} main.cc
         dto/NewsPaperDto.h
         utils/CronUtils.h
         utils/CronUtils.cc
+        services/telegram/TelegramService.h
 )
 
 # ##############################################################################

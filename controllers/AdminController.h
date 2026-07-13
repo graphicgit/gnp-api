@@ -61,15 +61,17 @@ public:
 
   ADD_METHOD_TO(AdminController::createPartnerSubscriber, std::string(PREFIX) + "create-partner-subscriber", Post, Options, "JwtAuthFilter");
 
-    ADD_METHOD_TO(AdminController::assignPartnerSubscribersPlan, std::string(PREFIX) + "assign-partner-subscribers-plan", Post, Options, "JwtAuthFilter");
+  ADD_METHOD_TO(AdminController::uploadPartnerSubscribers, std::string(PREFIX) + "upload-partner-subscribers/{1}", Post, Options, "JwtAuthFilter");
 
-    ADD_METHOD_TO(AdminController::updatePartner, std::string(PREFIX) + "update-partner", Post, Options, "JwtAuthFilter");
+  ADD_METHOD_TO(AdminController::assignPartnerSubscribersPlan, std::string(PREFIX) + "assign-partner-subscribers-plan", Post, Options, "JwtAuthFilter");
 
-    ADD_METHOD_TO(AdminController::updatePartnerStatus, std::string(PREFIX) + "update-partner-status", Get, Options, "JwtAuthFilter");
+  ADD_METHOD_TO(AdminController::updatePartner, std::string(PREFIX) + "update-partner", Post, Options, "JwtAuthFilter");
 
-    ADD_METHOD_TO(AdminController::deletePartner, std::string(PREFIX) + "delete-partner", Delete, Options, "JwtAuthFilter");
+  ADD_METHOD_TO(AdminController::updatePartnerStatus, std::string(PREFIX) + "update-partner-status", Get, Options, "JwtAuthFilter");
 
-    ADD_METHOD_TO(AdminController::deletePartnerSubscriber, std::string(PREFIX) + "delete-partner-subscriber", Delete, Options, "JwtAuthFilter");
+  ADD_METHOD_TO(AdminController::deletePartner, std::string(PREFIX) + "delete-partner", Delete, Options, "JwtAuthFilter");
+
+  ADD_METHOD_TO(AdminController::deletePartnerSubscriber, std::string(PREFIX) + "delete-partner-subscriber", Delete, Options, "JwtAuthFilter");
 
   ADD_METHOD_TO(AdminController::enablePartnerSubaccount, std::string(PREFIX) + "enable-partner-subaccount", Get, Options, "JwtAuthFilter");
 
@@ -163,12 +165,14 @@ public:
   // commercial partners ...
   drogon::Task<HttpResponsePtr> getAllPartners(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> getPartnerSubscribers(HttpRequestPtr req);
-  drogon::Task<HttpResponsePtr> getPartnerSubscriptionSummary(const HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> getPartnerSubscriptionSummary(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> getPartnerStats(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> createPartner(HttpRequestPtr req);
-  drogon::Task<HttpResponsePtr> createPartnerSubscriber(const HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> createPartnerSubscriber(HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> uploadPartnerSubscribers(HttpRequestPtr req, const std::string &partnerId);
+
   drogon::Task<HttpResponsePtr> assignPartnerSubscribersPlan(HttpRequestPtr req);
-  drogon::Task<HttpResponsePtr> updatePartner(const HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> updatePartner(HttpRequestPtr req);
   void getPartnerDetails(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   void updatePartnerStatus(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   drogon::Task<HttpResponsePtr> deletePartner(HttpRequestPtr req);

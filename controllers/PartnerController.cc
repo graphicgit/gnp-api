@@ -393,48 +393,6 @@ Task<HttpResponsePtr> PartnerController::deleteSubscriber(HttpRequestPtr req) {
   co_return resp;
 }
 
-Task<HttpResponsePtr> PartnerController::bulkUploadSubscribers(HttpRequestPtr req) {
-  auto partnerId = req->attributes()->get<std::string>("partnerId");
-  if (partnerId.empty()) {
-    gnp::dto::BaseApiResponse response;
-    response.success = false;
-    response.error["message"] = "Authorization token required";
-    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
-    resp->setStatusCode(k400BadRequest);
-    co_return resp;
-  }
-
-  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
-  auto &commercialPartnerService = plugin->getCommercialPartnerService();
-
-  // Try parsing as JSON array first (Frontend Excel/CSV to JSON parsing fallback)
-  auto jsonBody = req->getJsonObject();
-  if (jsonBody && jsonBody->isArray()) {
-    auto result = co_await commercialPartnerService.bulkUploadSubscribersJson(partnerId, *jsonBody);
-    auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-    co_return resp;
-  }
-
-  // Fallback to multipart file upload for CSV
-  drogon::MultiPartParser fileUpload;
-  if (fileUpload.parse(req) != 0 || fileUpload.getFiles().empty()) {
-    gnp::dto::BaseApiResponse response;
-    response.success = false;
-    response.error["message"] = "No file uploaded or invalid JSON array";
-    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
-    resp->setStatusCode(k400BadRequest);
-    co_return resp;
-  }
-
-  auto& file = fileUpload.getFiles()[0];
-  std::string fileContent(file.fileData(), file.fileLength());
-  std::string fileName = file.getFileName();
-
-  auto result = co_await commercialPartnerService.bulkUploadSubscribersFile(partnerId, fileContent, fileName);
-  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-  co_return resp;
-}
-
 Task<HttpResponsePtr> PartnerController::updateLogo(HttpRequestPtr req) {
 
   auto partnerId = req->attributes()->get<std::string>("partnerId");
