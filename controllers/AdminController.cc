@@ -1204,8 +1204,7 @@ drogon::Task<HttpResponsePtr> AdminController::deletePartnerSubscriber(HttpReque
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &partnerService = plugin->getCommercialPartnerService();
 
-  auto apiResp = co_await partnerService.deletePartnerSubscriberAsync(
-      partnerId, subscriberId);
+  auto apiResp = co_await partnerService.deletePartnerSubscriberAsync(partnerId, subscriberId);
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
