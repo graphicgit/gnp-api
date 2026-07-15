@@ -644,7 +644,13 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartnerSubscr
   newUser.setLastName(dto.getLastName());
   newUser.setEmail(dto.getEmail());
   newUser.setUsername(dto.getEmail());
-  newUser.setPhoneNumber(dto.getPhoneNumber());
+  std::string phoneNumber = dto.getPhoneNumber();
+  if (phoneNumber.length() >= 3 && phoneNumber.substr(0, 3) == "233") {
+    phoneNumber = "0" + phoneNumber.substr(3);
+  } else if (phoneNumber.length() >= 4 && phoneNumber.substr(0, 4) == "+233") {
+    phoneNumber = "0" + phoneNumber.substr(4);
+  }
+  newUser.setPhoneNumber(phoneNumber);
   newUser.setPartnerId(dto.getPartnerId());
   newUser.setCountry("GH");
   newUser.setPasswordHash(bcrypt::generateHash(password));
@@ -899,7 +905,7 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartnerSubscr
           <p>You can now access the platform here:</p>
 
           <p>
-            <a href="https://new.graphicnewsplus.com?attemptLogin=true" class="link">
+            <a href="https://new.graphicnewsplus.com?al=t" class="link">
               https://new.graphicnewsplus.com?al=t
             </a>
           </p>
@@ -3287,8 +3293,7 @@ CommercialPartnerService::getPartnerAnalyticsCharts(
   }
 }
 
-drogon::Task<dto::BaseApiResponse>
-CommercialPartnerService::bulkUploadSubscribersJson(
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::bulkUploadSubscribersJson(
     const std::string partnerId, const Json::Value &jsonArray) {
 
   dto::BaseApiResponse response;
