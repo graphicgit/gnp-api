@@ -465,7 +465,7 @@ PartnerInvoiceService::generatePartnerInvoices(const std::string &invoiceDate) {
 
       invDto.setBillingCycle("Daily"); // Or derive from subscriptions
       invDto.setInvoiceNumber(
-          "INV-" + utils::IdGeneratorUtils::generateAlphanumericId());
+          "GNP-INV-" + utils::IdGeneratorUtils::generateAlphanumericId());
       invDto.setDescription("Invoice for new and renewed subscriptions as of " +
                             invoiceDate);
       invDto.setUnitPrice(costPerHead);

@@ -1143,7 +1143,7 @@ drogon::Task<dto::BaseApiResponse> UserService::validatePartnerUserCredentials(c
       Criteria(Users::Cols::_is_partner_admin_user, CompareOperator::EQ, true) &&
       Criteria(Users::Cols::_is_locked_out, CompareOperator::EQ, false);
 
-  gnp::dto::BaseApiResponse response;
+  dto::BaseApiResponse response;
 
   try {
 

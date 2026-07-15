@@ -55,15 +55,15 @@ public:
 
 
   // auth
-  drogon::Task<gnp::dto::BaseApiResponse> validateUserCredentials(const dto::SigninDto &signin_dto);
+  drogon::Task<dto::BaseApiResponse> validateUserCredentials(const dto::SigninDto &signin_dto);
 
-  drogon::Task<gnp::dto::BaseApiResponse> validateUserPasskeys(const dto::LoginUserPasskeyDto &passkeyDto);
+  drogon::Task<dto::BaseApiResponse> validateUserPasskeys(const dto::LoginUserPasskeyDto &passkeyDto);
 
-  drogon::Task<gnp::dto::BaseApiResponse> validateAdminUserCredentials(const dto::SigninDto &signin_dto);
+  drogon::Task<dto::BaseApiResponse> validateAdminUserCredentials(const dto::SigninDto &signin_dto);
 
-  drogon::Task<gnp::dto::BaseApiResponse> validatePartnerUserCredentials(const dto::SigninDto &signin_dto);
+  drogon::Task<dto::BaseApiResponse> validatePartnerUserCredentials(const dto::SigninDto &signin_dto);
 
-  drogon::Task<gnp::dto::BaseApiResponse> validatePartnerUserOtp(const dto::VerifyPartnerUserOtpDto &dto);
+  drogon::Task<dto::BaseApiResponse> validatePartnerUserOtp(const dto::VerifyPartnerUserOtpDto &dto);
 
   // user profile
     drogon::Task<dto::BaseApiResponse> getUserMetaData(const std::string &userId);

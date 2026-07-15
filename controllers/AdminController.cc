@@ -12,6 +12,7 @@
 #include "services/users/UserService.h"
 #include "services/partner_invoice/PartnerInvoiceService.h"
 #include "dto/PartnerInvoiceDto.h"
+#include "dto/PartnerQuotaDto.h"
 
 
 drogon::Task<HttpResponsePtr> AdminController::getAllNewsPapers(const HttpRequestPtr req) {
@@ -925,6 +926,32 @@ drogon::Task<HttpResponsePtr> AdminController::uploadPartnerSubscribers(const Ht
   auto apiResp = co_await commercialPartnerService.bulkUploadSubscribersJson(partnerId, *jsonPtr);
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
+
+
+drogon::Task<HttpResponsePtr> AdminController::updatePartnerQuota(const HttpRequestPtr req, const std::string &partnerId) {
+
+  auto jsonBody = req->getJsonObject();
+
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  gnp::dto::PartnerQuotaDto dto;
+  dto.fromJson(*jsonBody);
+
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &commercialPartnerService = plugin->getCommercialPartnerService();
+
+  auto apiResp = co_await commercialPartnerService.updatePartnerQuota(partnerId, dto);
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+}
+
+
 
 drogon::Task<HttpResponsePtr> AdminController::assignPartnerSubscribersPlan(HttpRequestPtr req) {
 
