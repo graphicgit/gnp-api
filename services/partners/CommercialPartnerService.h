@@ -99,6 +99,7 @@ public:
 
     drogon::Task<::gnp::dto::BaseApiResponse> updatePartnerQuota(std::string partnerId, const dto::PartnerQuotaDto &dto);
 
+
 };
 
 }

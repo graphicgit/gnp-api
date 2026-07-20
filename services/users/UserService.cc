@@ -317,13 +317,16 @@ drogon::Task<dto::BaseApiResponse> UserService::getPartnerSubscribers(const std:
     int offset = (pageNo - 1) * pageSize;
     auto users = co_await mp.limit(pageSize).offset(offset).findBy(criteria);
 
+    auto totalPages = (totalCount + pageSize - 1) / pageSize;
+
     // 4. Build the final response
     response.success = true;
     response.result["totalCount"] = (Json::UInt64)totalCount;
     response.result["pageNo"] = pageNo;
     response.result["pageSize"] = pageSize;
-    response.result["totalPages"] =
-        (int)((totalCount + pageSize - 1) / pageSize);
+    response.result["totalPages"] = (int)((totalCount + pageSize - 1) / pageSize);
+    response.result["lowerBound"] = pageSize * (pageNo - 1) + 1;
+    response.result["upperBound"] = (int)totalPages == pageNo ? (Json::UInt64)totalCount  : (Json::UInt64)(pageNo * pageSize);
 
     if (users.empty()) {
       response.result["data"] = Json::arrayValue;
@@ -1679,6 +1682,53 @@ drogon::Task<dto::BaseApiResponse> UserService::getUserMetaData(const std::strin
   co_return response;
 }
 
+
+drogon::Task<dto::BaseApiResponse> UserService::changeUserPassword(const std::string userId, std::string accountType, const dto::ChangePasswordDto &dto) {
+
+  //accountTypes : public-user, admin-user, partner-admin-user
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<Users> mapper(dbClient);
+
+  dto::BaseApiResponse response;
+
+  Criteria criteria(Users::Cols::_id, CompareOperator::EQ, userId);
+
+  if (accountType == "admin-user") {
+    criteria = criteria && Criteria(Users::Cols::_is_admin_user, CompareOperator::EQ, true);
+  } else if (accountType == "partner-admin-user") {
+    criteria = criteria && Criteria(Users::Cols::_is_partner_admin_user, CompareOperator::EQ, true);
+  }
+
+  try {
+    Users user = co_await mapper.findOne(criteria);
+
+    std::string storedHash = gnp::utils::PasswordUtils::normalizeBcryptHash(user.getValueOfPasswordHash());
+    bool passwordMatches = bcrypt::validatePassword(dto.getOldPassword(), storedHash);
+
+    if (!passwordMatches) {
+      response.success = false;
+      response.message = "Incorrect current password";
+      response.error["code"] = constants::ERR_AUTH_INVALID_CREDENTIALS;
+      co_return response;
+    }
+
+    std::string newHash = bcrypt::generateHash(dto.getNewPassword());
+    user.setPasswordHash(newHash);
+    user.setUpdatedAt(trantor::Date::now());
+
+    co_await mapper.update(user);
+
+    response.success = true;
+    response.message = "Password changed successfully";
+
+  } catch (const DrogonDbException &e) {
+    response.success = false;
+    response.message = "User not found";
+    response.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+  }
+
+  co_return response;
+}
 void UserService::checkAccountStatus(
     const std::string &identifier, const std::string &identifierType,
     const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {

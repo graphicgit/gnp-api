@@ -9,6 +9,7 @@
 #include <drogon/drogon.h>
 
 #include "dto/AdminUserDto.h"
+#include "dto/ChangePasswordDto.h"
 #include "dto/LoginUserPasskeyDto.h"
 #include "dto/RegisterUserPasskeysDto.h"
 #include "dto/VerifyPartnerUserOtpDto.h"
@@ -65,8 +66,11 @@ public:
 
   drogon::Task<dto::BaseApiResponse> validatePartnerUserOtp(const dto::VerifyPartnerUserOtpDto &dto);
 
-  // user profile
+    // user profile
     drogon::Task<dto::BaseApiResponse> getUserMetaData(const std::string &userId);
+
+    drogon::Task<dto::BaseApiResponse> changeUserPassword(std::string userId, std::string accountType, const dto::ChangePasswordDto &dto);
+
 
   void checkAccountStatus(
       const std::string &identifier, const std::string &identifierType,

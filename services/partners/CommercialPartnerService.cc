@@ -3299,6 +3299,7 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::bulkUploadSubscribe
   dto::BaseApiResponse response;
   int successCount = 0;
   int failureCount = 0;
+  Json::Value duplicateRows(Json::arrayValue);
 
   for (const auto &item : jsonArray) {
     if (!item.isObject())
@@ -3321,6 +3322,7 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::bulkUploadSubscribe
       successCount++;
     } else {
       failureCount++;
+      duplicateRows.append(item);
     }
   }
 
@@ -3329,6 +3331,7 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::bulkUploadSubscribe
   response.result["successCount"] = successCount;
   response.result["failureCount"] = failureCount;
   response.result["totalProcessed"] = successCount + failureCount;
+  response.result["duplicates"] = duplicateRows;
 
   co_return response;
 }

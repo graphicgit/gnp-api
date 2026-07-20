@@ -265,7 +265,7 @@ drogon::Task<HttpResponsePtr> AuthController::loginViaPasskeys(HttpRequestPtr re
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr> AuthController::adminSignIn(HttpRequestPtr req) {
+Task<HttpResponsePtr> AuthController::adminSignIn(HttpRequestPtr req) {
   auto jsonBody = req->getJsonObject();
 
   if (!jsonBody) {
@@ -304,7 +304,7 @@ drogon::Task<HttpResponsePtr> AuthController::adminSignIn(HttpRequestPtr req) {
 }
 
 
-drogon::Task<HttpResponsePtr> AuthController::partnerSignIn(HttpRequestPtr req) {
+Task<HttpResponsePtr> AuthController::partnerSignIn(HttpRequestPtr req) {
   auto jsonBody = req->getJsonObject();
 
   if (!jsonBody) {
@@ -366,7 +366,8 @@ Task<HttpResponsePtr> AuthController::verifyPartnerOtp(HttpRequestPtr req) {
 
 }
 
-drogon::Task<HttpResponsePtr> AuthController::affiliateSignIn(HttpRequestPtr req) {
+
+Task<HttpResponsePtr> AuthController::affiliateSignIn(HttpRequestPtr req) {
   auto jsonBody = req->getJsonObject();
 
   if (!jsonBody) {
@@ -403,6 +404,92 @@ drogon::Task<HttpResponsePtr> AuthController::affiliateSignIn(HttpRequestPtr req
 
   co_return resp;
 }
+
+
+Task<HttpResponsePtr> AuthController::changePartnerAdminUserPassword(HttpRequestPtr req) {
+
+  auto userId = req->attributes()->get<std::string>("partnerUserId");
+
+
+  auto jsonBody = req->getJsonObject();
+
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+
+  gnp::dto::ChangePasswordDto dto;
+  dto.fromJson(*jsonBody);
+
+  auto userService = std::make_shared<gnp::services::UserService>();
+  auto apiResp = co_await userService->changeUserPassword(userId, "partner-admin-user", dto);
+
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+
+}
+
+
+Task<HttpResponsePtr> AuthController::changePublicUserPassword(HttpRequestPtr req) {
+
+  auto userId = req->attributes()->get<std::string>("userId");
+
+
+  auto jsonBody = req->getJsonObject();
+
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+
+  gnp::dto::ChangePasswordDto dto;
+  dto.fromJson(*jsonBody);
+
+  auto userService = std::make_shared<gnp::services::UserService>();
+  auto apiResp = co_await userService->changeUserPassword(userId, "public-user", dto);
+
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+
+}
+
+
+Task<HttpResponsePtr> AuthController::changeAdminUserPassword(HttpRequestPtr req) {
+
+  auto userId = req->attributes()->get<std::string>("adminUserId");
+
+  auto jsonBody = req->getJsonObject();
+
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+
+  gnp::dto::ChangePasswordDto dto;
+  dto.fromJson(*jsonBody);
+
+  auto userService = std::make_shared<gnp::services::UserService>();
+  auto apiResp = co_await userService->changeUserPassword(userId, "admin-user", dto);
+
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+
+}
+
+
+
 
 void AuthController::setAuthCookie(const HttpResponsePtr &resp, const std::string &token) {
   drogon::Cookie cookie("auth_token", token);

@@ -144,6 +144,7 @@ add_executable(${PROJECT_NAME} main.cc
         utils/CronUtils.cc
         services/telegram/TelegramService.h
         dto/PartnerQuotaDto.h
+        dto/ChangePasswordDto.h
 )
 
 # ##############################################################################
