@@ -3334,81 +3334,85 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::resetSubscri
     
     auto users = co_await mp.findBy(searchCriteria);
     
-    auto plugin = drogon::app().getPlugin<plugins::GnpServicePlugin>();
-    auto &emailService = plugin->getEmailService();
-
-    int successCount = 0;
-
-    for (auto &user : users) {
-      std::string newPassword = utils::PasswordUtils::generateRandomPassword(8);
-      user.setPasswordHash(bcrypt::generateHash(newPassword));
-      
-      co_await mp.update(user);
-      
-      // send email
-      dto::SendEmailDto emailDto;
-      emailDto.setTo(user.getValueOfEmail());
-      emailDto.setSubject("Graphic News Plus - Password Reset");
-      
-      std::string emailBody = R"html(
-        <!DOCTYPE html>
-        <html>
-        <head>
-        <meta charset="UTF-8">
-        <style>
-          body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-          .header { background-color: #D32F2F; color: #ffffff; padding: 20px; text-align: center; }
-          .content { padding: 30px; color: #333333; }
-          .credentials { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; }
-          .credential-item { margin: 10px 0; }
-          .credential-label { font-weight: bold; color: #666; }
-          .credential-value { font-size: 18px; color: #D32F2F; font-family: monospace; }
-          .footer { background-color: #f4f4f4; color: #666666; padding: 10px; text-align: center; font-size: 12px; }
-        </style>
-        </head>
-        <body>
-        <div class="container">
-          <div class="header">
-            <h1>Graphic News Plus</h1>
-          </div>
-          <div class="content">
-            <p>Hello )html" + user.getValueOfFirstName() + R"html(,</p>
-            <p>Your password for Graphic News Plus has been reset by your organization.</p>
-            <p>Below are your new login credentials:</p>
-            <div class="credentials">
-              <div class="credential-item">
-                <div class="credential-label">Username (Email):</div>
-                <div class="credential-value">)html" + user.getValueOfEmail() + R"html(</div>
-              </div>
-              <div class="credential-item">
-                <div class="credential-label">New Password:</div>
-                <div class="credential-value">)html" + newPassword + R"html(</div>
-              </div>
-            </div>
-            <p>Please keep these credentials secure and change your password after your next login.</p>
-          </div>
-          <div class="footer">
-            &copy; )html" + trantor::Date::now().toCustomFormattedString("%Y") + R"html( Graphic News Plus. All rights reserved.
-          </div>
-        </div>
-        </body>
-        </html>
-      )html";
-      
-      emailDto.setBody(emailBody);
+    drogon::async_run([users]() -> drogon::Task<void> {
       try {
-        co_await emailService.sendEmailAsync(emailDto);
+        auto dbClient = drogon::app().getDbClient();
+        CoroMapper<Users> bg_mp(dbClient);
+        auto plugin = drogon::app().getPlugin<plugins::GnpServicePlugin>();
+        auto &emailService = plugin->getEmailService();
+
+        for (auto user : users) {
+          try {
+            std::string newPassword = utils::PasswordUtils::generateRandomPassword(8);
+            user.setPasswordHash(bcrypt::generateHash(newPassword));
+            
+            co_await bg_mp.update(user);
+            
+            // send email
+            dto::SendEmailDto emailDto;
+            emailDto.setTo(user.getValueOfEmail());
+            emailDto.setSubject("Graphic News Plus - Password Reset");
+            
+            std::string emailBody = R"html(
+              <!DOCTYPE html>
+              <html>
+              <head>
+              <meta charset="UTF-8">
+              <style>
+                body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+                .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+                .header { background-color: #D32F2F; color: #ffffff; padding: 20px; text-align: center; }
+                .content { padding: 30px; color: #333333; }
+                .credentials { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; }
+                .credential-item { margin: 10px 0; }
+                .credential-label { font-weight: bold; color: #666; }
+                .credential-value { font-size: 18px; color: #D32F2F; font-family: monospace; }
+                .footer { background-color: #f4f4f4; color: #666666; padding: 10px; text-align: center; font-size: 12px; }
+              </style>
+              </head>
+              <body>
+              <div class="container">
+                <div class="header">
+                  <h1>Graphic News Plus</h1>
+                </div>
+                <div class="content">
+                  <p>Hello )html" + user.getValueOfFirstName() + R"html(,</p>
+                  <p>Your password for Graphic News Plus has been reset by your organization.</p>
+                  <p>Below are your new login credentials:</p>
+                  <div class="credentials">
+                    <div class="credential-item">
+                      <div class="credential-label">Username (Email):</div>
+                      <div class="credential-value">)html" + user.getValueOfEmail() + R"html(</div>
+                    </div>
+                    <div class="credential-item">
+                      <div class="credential-label">New Password:</div>
+                      <div class="credential-value">)html" + newPassword + R"html(</div>
+                    </div>
+                  </div>
+                  <p>Please keep these credentials secure and change your password after your next login.</p>
+                </div>
+                <div class="footer">
+                  &copy; )html" + trantor::Date::now().toCustomFormattedString("%Y") + R"html( Graphic News Plus. All rights reserved.
+                </div>
+              </div>
+              </body>
+              </html>
+            )html";
+            
+            emailDto.setBody(emailBody);
+            co_await emailService.sendEmailAsync(emailDto);
+          } catch (const std::exception& e) {
+            LOG_ERROR << "Failed to process password reset for " << user.getValueOfEmail() << ": " << e.what();
+          }
+        }
       } catch (const std::exception& e) {
-        LOG_ERROR << "Failed to send password reset email to " << user.getValueOfEmail() << ": " << e.what();
+        LOG_ERROR << "Background task for password reset failed: " << e.what();
       }
-      
-      successCount++;
-    }
+    });
 
     ::gnp::dto::BaseApiResponse response;
     response.success = true;
-    response.message = "Passwords reset successfully for " + std::to_string(successCount) + " subscribers.";
+    response.message = "Password reset has been initiated for " + std::to_string(users.size()) + " subscribers.";
     co_return response;
 
   } catch (const drogon::orm::DrogonDbException &e) {
