@@ -26,4 +26,6 @@ namespace gnp::services {
     };
 
 }
+
+
 #endif //GNPAPI_REDISCACHEMANAGER_H

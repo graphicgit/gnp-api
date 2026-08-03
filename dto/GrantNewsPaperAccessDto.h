@@ -4,6 +4,9 @@
 
 #ifndef GRANTNEWSPAPERACCESSDTO_H
 #define GRANTNEWSPAPERACCESSDTO_H
+#include <json/json.h>
+#include <string>
+
 namespace gnp::dto {
 
     class GrantNewsPaperAccessDto {

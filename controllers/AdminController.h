@@ -12,12 +12,12 @@ public:
   // newspaper
   ADD_METHOD_TO(AdminController::getAllNewsPapers,std::string(PREFIX) + "get-all-newspapers", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::getAllArchivedNewsPapers,std::string(PREFIX) + "get-all-archived-newspapers", Get, Options, "JwtAuthFilter");
-  ADD_METHOD_TO(AdminController::getNewsPaperFullDetails, std::string(PREFIX) + "get-full-details", Get, Options, "JwtAuthFilter");
+  ADD_METHOD_TO(AdminController::getNewsPaperDetails, std::string(PREFIX) + "get-newspaper-details/{1}", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::publishNewsPaper, std::string(PREFIX) + "publish-newspaper", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::unPublishNewsPaper, std::string(PREFIX) + "unpublish-newspaper", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::IngestNewsPaper, std::string(PREFIX) + "ingest-newspaper", Post, Options, "JwtAuthFilter");
 
-  ADD_METHOD_TO(AdminController::updateNewsPaper, std::string(PREFIX) + "update-newspaper", Post, Options, "JwtAuthFilter");
+  ADD_METHOD_TO(AdminController::updateNewsPaper, std::string(PREFIX) + "update-newspaper/{1}", Put, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::deleteNewsPaper, std::string(PREFIX) + "delete-newspaper", Delete, Options, "JwtAuthFilter");
   // users
   ADD_METHOD_TO(AdminController::getAllUsers, std::string(PREFIX) + "get-all-users", Get, Options, "JwtAuthFilter");
@@ -42,6 +42,7 @@ public:
   ADD_METHOD_TO(AdminController::getAllUserSubscriptions, std::string(PREFIX) + "get-all-subscriptions", Get, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::getUserSubscriptionDetails, std::string(PREFIX) + "get-user-subscription-details", Get, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::renewUserSubscription, std::string(PREFIX) + "renew-user-subscription", Post, "JwtAuthFilter");
+  ADD_METHOD_TO(AdminController::getPartnerSubscriberInfo, std::string(PREFIX) + "get-partner-subscriber-info/{1}/{2}", Get, Options, "JwtAuthFilter");
 
   // campaigns
   ADD_METHOD_TO(AdminController::getAllCampaigns, std::string(PREFIX) + "get-all-campaigns", Get, Options, "JwtAuthFilter");
@@ -59,10 +60,21 @@ public:
   ADD_METHOD_TO(AdminController::createPartner, std::string(PREFIX) + "create-partner", Post, Options, "JwtAuthFilter");
 
   ADD_METHOD_TO(AdminController::createPartnerSubscriber, std::string(PREFIX) + "create-partner-subscriber", Post, Options, "JwtAuthFilter");
+
+  ADD_METHOD_TO(AdminController::uploadPartnerSubscribers, std::string(PREFIX) + "upload-partner-subscribers/{1}", Post, Options, "JwtAuthFilter");
+
+  ADD_METHOD_TO(AdminController::updatePartnerQuota, std::string(PREFIX) + "update-partner-quota/{1}", Post, Options, "JwtAuthFilter");
+
+ ADD_METHOD_TO(AdminController::resetPartnerSubscriberPasswords, std::string(PREFIX) + "reset-partner-subscriber-passwords/{1}", Post, Options, "JwtAuthFilter");
+
   ADD_METHOD_TO(AdminController::assignPartnerSubscribersPlan, std::string(PREFIX) + "assign-partner-subscribers-plan", Post, Options, "JwtAuthFilter");
+
   ADD_METHOD_TO(AdminController::updatePartner, std::string(PREFIX) + "update-partner", Post, Options, "JwtAuthFilter");
+
   ADD_METHOD_TO(AdminController::updatePartnerStatus, std::string(PREFIX) + "update-partner-status", Get, Options, "JwtAuthFilter");
+
   ADD_METHOD_TO(AdminController::deletePartner, std::string(PREFIX) + "delete-partner", Delete, Options, "JwtAuthFilter");
+
   ADD_METHOD_TO(AdminController::deletePartnerSubscriber, std::string(PREFIX) + "delete-partner-subscriber", Delete, Options, "JwtAuthFilter");
 
   ADD_METHOD_TO(AdminController::enablePartnerSubaccount, std::string(PREFIX) + "enable-partner-subaccount", Get, Options, "JwtAuthFilter");
@@ -110,18 +122,18 @@ public:
 
    //utils
    ADD_METHOD_TO(AdminController::regenerateNewspaperEntitlements, std::string(PREFIX) + "regenerate-newspaper-entitlements", Get, Options, "JwtAuthFilter");
-   ADD_METHOD_TO(AdminController::generatePartnerInvoices, std::string(PREFIX) + "generate-partner-invoices", Get);
+   ADD_METHOD_TO(AdminController::generatePartnerInvoices, std::string(PREFIX) + "generate-partner-invoices/{1}", Post);
 
   METHOD_LIST_END
 
   // Newspapers
   drogon::Task<HttpResponsePtr> getAllNewsPapers(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> getAllArchivedNewsPapers(HttpRequestPtr req);
-  drogon::Task<HttpResponsePtr> getNewsPaperFullDetails(HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> getNewsPaperDetails(HttpRequestPtr req, const std::string &newspaperId);
   drogon::Task<HttpResponsePtr> publishNewsPaper(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> unPublishNewsPaper(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> IngestNewsPaper(HttpRequestPtr req);
-  void updateNewsPaper(const HttpRequestPtr &req,std::function<void(const HttpResponsePtr &)> &&callback);
+  drogon::Task<HttpResponsePtr> updateNewsPaper(HttpRequestPtr req, const std::string &newspaperId);
   drogon::Task<HttpResponsePtr> deleteNewsPaper(HttpRequestPtr req);
 
   // users...
@@ -157,12 +169,17 @@ public:
   // commercial partners ...
   drogon::Task<HttpResponsePtr> getAllPartners(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> getPartnerSubscribers(HttpRequestPtr req);
-  drogon::Task<HttpResponsePtr> getPartnerSubscriptionSummary(const HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> getPartnerSubscriptionSummary(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> getPartnerStats(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> createPartner(HttpRequestPtr req);
-  drogon::Task<HttpResponsePtr> createPartnerSubscriber(const HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> createPartnerSubscriber(HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> uploadPartnerSubscribers(HttpRequestPtr req, const std::string &partnerId);
+  drogon::Task<HttpResponsePtr> updatePartnerQuota(HttpRequestPtr req, const std::string &partnerId);
+  drogon::Task<HttpResponsePtr> resetPartnerSubscriberPasswords(HttpRequestPtr req, const std::string &partnerId);
+
+
   drogon::Task<HttpResponsePtr> assignPartnerSubscribersPlan(HttpRequestPtr req);
-  drogon::Task<HttpResponsePtr> updatePartner(const HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> updatePartner(HttpRequestPtr req);
   void getPartnerDetails(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   void updatePartnerStatus(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   drogon::Task<HttpResponsePtr> deletePartner(HttpRequestPtr req);
@@ -179,19 +196,16 @@ public:
   Task<HttpResponsePtr> revokePartnerApiKey(HttpRequestPtr req);
   Task<HttpResponsePtr> updatePartnerApiKey(HttpRequestPtr req);
 
-  // payments
+  //payments
   void getAllPayments(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
 
-  // ingestion Jobs
+  //ingestion Jobs
   void
-  getAllIngestionJobs(const HttpRequestPtr &req,
-                      std::function<void(const HttpResponsePtr &)> &&callback);
+  getAllIngestionJobs(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   void
-  createIngestionJob(const HttpRequestPtr &req,
-                     std::function<void(const HttpResponsePtr &)> &&callback);
+  createIngestionJob(const HttpRequestPtr &req,  std::function<void(const HttpResponsePtr &)> &&callback);
   void
-  deleteIngestionJob(const HttpRequestPtr &req,
-                     std::function<void(const HttpResponsePtr &)> &&callback);
+  deleteIngestionJob(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
 
   // coupons
   drogon::Task<HttpResponsePtr> getAllCoupons(HttpRequestPtr req);
@@ -213,8 +227,10 @@ public:
     Task<HttpResponsePtr> updateRole(HttpRequestPtr req, const std::string &roleId);
     Task<HttpResponsePtr> deleteRole(HttpRequestPtr req, const std::string &roleId);
 
+    Task<HttpResponsePtr> getPartnerSubscriberInfo(HttpRequestPtr req, const std::string &partnerId, const std::string &userId);
+
     //utils
     Task<HttpResponsePtr> regenerateNewspaperEntitlements(HttpRequestPtr req);
-    Task<HttpResponsePtr> generatePartnerInvoices(HttpRequestPtr req);
+    Task<HttpResponsePtr> generatePartnerInvoices(HttpRequestPtr req, const std::string &date);
 
 };

@@ -16,6 +16,7 @@
 
 #include "dto/GeneratePartnerApiKeyDto.h"
 #include "dto/PartnerOnboardingDto.h"
+#include "dto/PartnerQuotaDto.h"
 #include "dto/UpdatePartnerApiKeyDto.h"
 #include "dto/UpdatePartnerSubscriberDto.h"
 
@@ -24,11 +25,11 @@ namespace gnp::services {
 class CommercialPartnerService {
 
 public:
-  drogon::Task< ::gnp::dto::BaseApiResponse> getAll(int pageNo, int pageSize, const std::string &query);
+  drogon::Task<dto::BaseApiResponse> getAll(int pageNo, int pageSize, const std::string &query);
 
-  drogon::Task< ::gnp::dto::BaseApiResponse> getAllSubscribers(int pageNo, int pageSize, const std::string &query, const std::string &partnerId);
+  drogon::Task<dto::BaseApiResponse> getAllSubscribers(int pageNo, int pageSize, const std::string &query, const std::string &partnerId);
 
-  drogon::Task< ::gnp::dto::BaseApiResponse> createPartner(const dto::CreatePartnerDto &dto);
+  drogon::Task<dto::BaseApiResponse> createPartner(const dto::CreatePartnerDto &dto);
 
   drogon::Task<dto::BaseApiResponse> updatePartner(const dto::UpdatePartnerDto &dto);
 
@@ -46,8 +47,7 @@ public:
 
   drogon::Task<dto::BaseApiResponse> deletePartner(const std::string &id);
 
-  void enableSubaccount(
-      const std::string &id,
+  void enableSubaccount(const std::string &id,
       const std::function<void(const dto::BaseApiResponse &)> &callback);
 
   void getPartnerDetails(
@@ -94,9 +94,11 @@ public:
 
     drogon::Task<::gnp::dto::BaseApiResponse> getPartnerAnalyticsCharts(const std::string &partnerId, const std::string &period);
 
-    drogon::Task<::gnp::dto::BaseApiResponse> bulkUploadSubscribersFile(const std::string &partnerId, const std::string &fileContent, const std::string &fileName);
+    drogon::Task<::gnp::dto::BaseApiResponse> bulkUploadSubscribersJson(std::string partnerId, const Json::Value &jsonArray);
 
-    drogon::Task<::gnp::dto::BaseApiResponse> bulkUploadSubscribersJson(const std::string &partnerId, const Json::Value &jsonArray);
+    drogon::Task<::gnp::dto::BaseApiResponse> updatePartnerQuota(std::string partnerId, const dto::PartnerQuotaDto &dto);
+
+    drogon::Task<::gnp::dto::BaseApiResponse> resetSubscriberPasswords(const std::string &partnerId, const std::vector<std::string> &exemptedEmails);
 
 };
 

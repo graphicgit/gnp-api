@@ -155,7 +155,7 @@ drogon::Task<HttpResponsePtr> NewsPapersController::getFullDetails(const HttpReq
   auto &newsPaperService = plugin->getNewsPaperService();
 
   // Call service method
-  auto result = co_await newsPaperService.getFullDetailsAsync(id);
+  auto result = co_await newsPaperService.getDetails(id);
   co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 

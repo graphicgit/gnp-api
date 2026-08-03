@@ -36,11 +36,9 @@ drogon::Task<bool> QuartzApi::scheduleJob(const gnp::dto::QuartzJobDto &dto) {
       LOG_ERROR << "Failed to schedule job. Status: " << resp->getStatusCode()
                 << " Body: " << resp->getBody();
       co_return false;
-    } else {
-      LOG_INFO << "Job scheduled successfully. Response: " << resp->getBody();
-      co_return true;
     }
-
+    LOG_INFO << "Job scheduled successfully. Response: " << resp->getBody();
+    co_return true;
   } catch (const std::exception &e) {
     LOG_ERROR << "Exception scheduling job: " << e.what();
     co_return false;

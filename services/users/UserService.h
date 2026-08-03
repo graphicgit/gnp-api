@@ -9,6 +9,7 @@
 #include <drogon/drogon.h>
 
 #include "dto/AdminUserDto.h"
+#include "dto/ChangePasswordDto.h"
 #include "dto/LoginUserPasskeyDto.h"
 #include "dto/RegisterUserPasskeysDto.h"
 #include "dto/VerifyPartnerUserOtpDto.h"
@@ -55,18 +56,21 @@ public:
 
 
   // auth
-  drogon::Task<gnp::dto::BaseApiResponse> validateUserCredentials(const dto::SigninDto &signin_dto);
+  drogon::Task<dto::BaseApiResponse> validateUserCredentials(const dto::SigninDto &signin_dto);
 
-  drogon::Task<gnp::dto::BaseApiResponse> validateUserPasskeys(const dto::LoginUserPasskeyDto &passkeyDto);
+  drogon::Task<dto::BaseApiResponse> validateUserPasskeys(const dto::LoginUserPasskeyDto &passkeyDto);
 
-  drogon::Task<gnp::dto::BaseApiResponse> validateAdminUserCredentials(const dto::SigninDto &signin_dto);
+  drogon::Task<dto::BaseApiResponse> validateAdminUserCredentials(const dto::SigninDto &signin_dto);
 
-  drogon::Task<gnp::dto::BaseApiResponse> validatePartnerUserCredentials(const dto::SigninDto &signin_dto);
+  drogon::Task<dto::BaseApiResponse> validatePartnerUserCredentials(const dto::SigninDto &signin_dto);
 
-  drogon::Task<gnp::dto::BaseApiResponse> validatePartnerUserOtp(const dto::VerifyPartnerUserOtpDto &dto);
+  drogon::Task<dto::BaseApiResponse> validatePartnerUserOtp(const dto::VerifyPartnerUserOtpDto &dto);
 
-  // user profile
+    // user profile
     drogon::Task<dto::BaseApiResponse> getUserMetaData(const std::string &userId);
+
+    drogon::Task<dto::BaseApiResponse> changeUserPassword(std::string userId, std::string accountType, const dto::ChangePasswordDto &dto);
+
 
   void checkAccountStatus(
       const std::string &identifier, const std::string &identifierType,

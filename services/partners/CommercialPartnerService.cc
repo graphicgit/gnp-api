@@ -42,9 +42,7 @@ using ::drogon_model::Gnp::UserSubscriptions;
 
 namespace gnp::services {
 
-drogon::Task<gnp::dto::BaseApiResponse>
-CommercialPartnerService::getAll(int pageNo, int pageSize,
-                                 const std::string &query) {
+drogon::Task<gnp::dto::BaseApiResponse> CommercialPartnerService::getAll(int pageNo, int pageSize, const std::string &query) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<CommercialPartners> mp(dbClient);
@@ -140,8 +138,7 @@ CommercialPartnerService::getAll(int pageNo, int pageSize,
   }
 }
 
-drogon::Task<dto::BaseApiResponse>
-CommercialPartnerService::getAllSubscribers(int pageNo, int pageSize,
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::getAllSubscribers(int pageNo, int pageSize,
                                             const std::string &query,
                                             const std::string &partnerId) {
 
@@ -257,8 +254,7 @@ CommercialPartnerService::getAllSubscribers(int pageNo, int pageSize,
   }
 }
 
-drogon::Task<dto::BaseApiResponse>
-CommercialPartnerService::getPartnerDetails(const std::string &partnerId) {
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::getPartnerDetails(const std::string &partnerId) {
 
   auto dbClient = drogon::app().getDbClient();
 
@@ -308,8 +304,7 @@ CommercialPartnerService::getPartnerDetails(const std::string &partnerId) {
   }
 }
 
-drogon::Task<dto::BaseApiResponse>
-CommercialPartnerService::createPartner(const dto::CreatePartnerDto &dto) {
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartner(const dto::CreatePartnerDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<CommercialPartners> mp(dbClient);
@@ -323,17 +318,20 @@ CommercialPartnerService::createPartner(const dto::CreatePartnerDto &dto) {
     newPartner.setContactPhone(dto.getContactPhone());
     newPartner.setBillingEmail(dto.getBillingEmail());
     newPartner.setDefaultSubscriptionPlanId(dto.getDefaultSubscriptionPlanId());
-    newPartner.setDefaultSubscriptionPlanDescription(dto.getDefaultSubscriptionPlanName());
+    newPartner.setDefaultSubscriptionPlanDescription(
+        dto.getDefaultSubscriptionPlanName());
     newPartner.setCurrency(dto.getCurrency());
     char unitPriceBuf[64];
-    snprintf(unitPriceBuf, sizeof(unitPriceBuf), "%.2f", dto.getPartnerInvoice().getUnitPrice());
+    snprintf(unitPriceBuf, sizeof(unitPriceBuf), "%.2f",
+             dto.getPartnerInvoice().getUnitPrice());
     newPartner.setCostPerHead(unitPriceBuf);
     newPartner.setSubscriberQuota(dto.getSubscriberQuota());
     newPartner.setRemainingQuota(dto.getSubscriberQuota());
     newPartner.setStatus("Active");
     newPartner.setCurrentInvoiceNo(dto.getPartnerInvoice().getInvoiceNumber());
     char totalAmountDueBuf[64];
-    snprintf(totalAmountDueBuf, sizeof(totalAmountDueBuf), "%.2f", dto.getPartnerInvoice().getInvoiceAmount());
+    snprintf(totalAmountDueBuf, sizeof(totalAmountDueBuf), "%.2f",
+             dto.getPartnerInvoice().getInvoiceAmount());
     newPartner.setTotalAmountDue(totalAmountDueBuf);
     newPartner.setSubAccountEnabled(dto.getSubAccountEnabled());
     newPartner.setSubscriptionStartDate(dto.getSubscriptionStartDate());
@@ -352,8 +350,11 @@ CommercialPartnerService::createPartner(const dto::CreatePartnerDto &dto) {
     Users newUser;
     newUser.setEmail(dto.getContactEmail());
     newUser.setUsername(dto.getContactEmail());
+    // split contact name into first name and lastname by the first space
+
     newUser.setFirstName(dto.getContactName());
-    newUser.setLastNameToNull();
+    newUser.setLastName("");
+    newUser.setPhoneNumber(dto.getContactPhone());
     newUser.setPasswordHash(bcrypt::generateHash(password));
     newUser.setIsPartnerAdminUser(true);
     newUser.setPartnerId(commercialPartner.getValueOfId());
@@ -365,7 +366,7 @@ CommercialPartnerService::createPartner(const dto::CreatePartnerDto &dto) {
     auto user = co_await userMapper.insert(newUser);
 
     // Send email with credentials
-    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto plugin = drogon::app().getPlugin<plugins::GnpServicePlugin>();
     auto &emailService = plugin->getEmailService();
 
     dto::SendEmailDto emailDto;
@@ -588,8 +589,7 @@ CommercialPartnerService::createPartner(const dto::CreatePartnerDto &dto) {
   }
 }
 
-drogon::Task<dto::BaseApiResponse>
-CommercialPartnerService::updatePartner(const dto::UpdatePartnerDto &dto) {
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::updatePartner(const dto::UpdatePartnerDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<CommercialPartners> mp(dbClient);
@@ -625,14 +625,12 @@ CommercialPartnerService::updatePartner(const dto::UpdatePartnerDto &dto) {
   }
 }
 
-drogon::Task<dto::BaseApiResponse>
-CommercialPartnerService::createPartnerSubscriber(
-    const dto::CreatePartnerSubscriberDto &dto) {
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartnerSubscriber(const dto::CreatePartnerSubscriberDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mp(dbClient);
 
-  std::string password = gnp::utils::PasswordUtils::generateRandomPassword(8);
+  std::string password = utils::PasswordUtils::generateRandomPassword(8);
 
   Users newUser;
 
@@ -640,7 +638,13 @@ CommercialPartnerService::createPartnerSubscriber(
   newUser.setLastName(dto.getLastName());
   newUser.setEmail(dto.getEmail());
   newUser.setUsername(dto.getEmail());
-  newUser.setPhoneNumber(dto.getPhoneNumber());
+  std::string phoneNumber = dto.getPhoneNumber();
+  if (phoneNumber.length() >= 3 && phoneNumber.substr(0, 3) == "233") {
+    phoneNumber = "0" + phoneNumber.substr(3);
+  } else if (phoneNumber.length() >= 4 && phoneNumber.substr(0, 4) == "+233") {
+    phoneNumber = "0" + phoneNumber.substr(4);
+  }
+  newUser.setPhoneNumber(phoneNumber);
   newUser.setPartnerId(dto.getPartnerId());
   newUser.setCountry("GH");
   newUser.setPasswordHash(bcrypt::generateHash(password));
@@ -651,7 +655,112 @@ CommercialPartnerService::createPartnerSubscriber(
   try {
     auto user = co_await mp.insert(newUser);
 
-    // Send email with credentials
+    // 1. Fetch partner to get quota and subscription dates
+    CoroMapper<CommercialPartners> partnerMapper(dbClient);
+    auto partner = co_await partnerMapper.findOne(
+        Criteria(CommercialPartners::Cols::_id, CompareOperator::EQ,
+                 dto.getPartnerId()));
+
+    // 2. Fetch plan and newspapers for entitlements
+    CoroMapper<SubscriptionPlans> planMapper(dbClient);
+
+    auto plan = co_await planMapper.findOne(
+        Criteria(SubscriptionPlans::Cols::_id, CompareOperator::EQ,
+                 partner.getValueOfDefaultSubscriptionPlanId()));
+
+    auto startDateObj = partner.getValueOfSubscriptionStartDate();
+    auto endDateObj = partner.getValueOfSubscriptionEndDate();
+
+    std::vector<std::string> pubIdsList;
+    try {
+      Json::Reader reader;
+      Json::Value pubIdsJson;
+      if (reader.parse(plan.getValueOfTargetPublications(), pubIdsJson) &&
+          pubIdsJson.isArray()) {
+        for (const auto &id : pubIdsJson) {
+          pubIdsList.push_back(id.asString());
+        }
+      }
+    } catch (...) {
+    }
+
+    CoroMapper<drogon_model::Gnp::Newspapers> newsMapper(dbClient);
+    std::vector<drogon_model::Gnp::Newspapers> newspapers;
+    if (!pubIdsList.empty()) {
+      newspapers = co_await newsMapper.findBy(
+          Criteria(drogon_model::Gnp::Newspapers::Cols::_publication_id,
+                   CompareOperator::In, pubIdsList) &&
+          Criteria(drogon_model::Gnp::Newspapers::Cols::_publication_date,
+                   CompareOperator::GE, startDateObj) &&
+          Criteria(drogon_model::Gnp::Newspapers::Cols::_publication_date,
+                   CompareOperator::LE, endDateObj));
+    }
+
+    // 3. Create subscription record in user subscription table
+    CoroMapper<UserSubscriptions> subMapper(dbClient);
+    UserSubscriptions newSub;
+    newSub.setUserId(user.getValueOfId());
+    newSub.setPartnerId(partner.getValueOfId());
+    newSub.setSubscriptionPlanId(plan.getValueOfId());
+    newSub.setSubscriptionPlanDescription(plan.getValueOfName());
+    newSub.setEmail(user.getValueOfEmail());
+    newSub.setStartDate(startDateObj);
+    newSub.setEndDate(endDateObj);
+    newSub.setIsActive(true);
+
+    Json::Value newEntArray = Json::arrayValue;
+    for (const auto &news : newspapers) {
+      Json::Value ent;
+      ent["id"] = news.getValueOfId();
+      ent["uniqueId"] = utils::IdGeneratorUtils::generateAlphanumericId();
+      newEntArray.append(ent);
+    }
+    Json::StreamWriterBuilder writerBuilder;
+    newSub.setNewspaperEntitlements(
+        Json::writeString(writerBuilder, newEntArray));
+    newSub.setCreatedAt(trantor::Date::now());
+    newSub.setSubscriptionIdentifier(
+        utils::IdGeneratorUtils::generateRandomSixDigit());
+    co_await subMapper.insert(newSub);
+
+    auto determineBillingCycle = [](const trantor::Date &start,
+                                    const trantor::Date &end) -> std::string {
+      int64_t diffDays =
+          (end.microSecondsSinceEpoch() - start.microSecondsSinceEpoch()) /
+          (1000000LL * 3600 * 24);
+      if (diffDays <= 7)
+        return "Weekly";
+      if (diffDays <= 31)
+        return "Monthly";
+      if (diffDays <= 92)
+        return "Quarterly";
+      if (diffDays <= 184)
+        return "Half-Yearly";
+      return "Annual";
+    };
+
+    // 4. Create renewal record in subscription renewal history table
+    CoroMapper<drogon_model::Gnp::SubscriptionRenewalHistory> renewalMapper(
+        dbClient);
+    drogon_model::Gnp::SubscriptionRenewalHistory renewal;
+    renewal.setSubscriptionIdentifier(
+        newSub.getValueOfSubscriptionIdentifier());
+    renewal.setUserId(user.getValueOfId());
+    renewal.setUserName(user.getValueOfFirstName() + " " +
+                        user.getValueOfLastName());
+    renewal.setEmail(user.getValueOfEmail());
+    renewal.setSubscriptionPlanId(plan.getValueOfId());
+    renewal.setSubscriptionPlanName(plan.getValueOfName());
+    renewal.setPastBillingCycle("N/A");
+    renewal.setCurrentBillingCycle(
+        determineBillingCycle(startDateObj, endDateObj));
+    renewal.setTransactionStatus("Successful");
+    renewal.setPaidBy(partner.getValueOfName());
+    renewal.setAmountPaid(partner.getValueOfCostPerHead());
+    renewal.setCreatedAt(trantor::Date::now());
+    co_await renewalMapper.insert(renewal);
+
+    // 5. Send email with credentials
     auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
     auto &emailService = plugin->getEmailService();
 
@@ -659,79 +768,223 @@ CommercialPartnerService::createPartnerSubscriber(
     emailDto.setTo(dto.getEmail());
     emailDto.setSubject("Graphic News Plus Account Details");
 
-    std::string emailBody =
-        R"(
-                <!DOCTYPE html>
-                <html>
-                <head>
-                <style>
-                  body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
-                  .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-                  .header { background-color: #D32F2F; color: #ffffff; padding: 20px; text-align: center; }
-                  .content { padding: 30px; color: #333333; }
-                  .credentials { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; }
-                  .credential-item { margin: 10px 0; }
-                  .credential-label { font-weight: bold; color: #666; }
-                  .credential-value { font-size: 18px; color: #D32F2F; font-family: monospace; }
-                  .footer { background-color: #f4f4f4; color: #666666; padding: 10px; text-align: center; font-size: 12px; }
-                </style>
-                </head>
-                <body>
-                <div class="container">
-                  <div class="header">
-                    <h1>Graphic News Plus</h1>
-                  </div>
-                  <div class="content">
-                    <p>Hello )" +
-        dto.getFirstName() + R"(,</p>
-                    <p>Welcome to Graphic News Plus! Your corporate account has been created successfully.</p>
-                    <p>Below are your login credentials:</p>
-                    <div class="credentials">
-                      <div class="credential-item">
-                        <div class="credential-label">Username (Email):</div>
-                        <div class="credential-value">)" +
-        dto.getEmail() + R"(</div>
-                      </div>
-                      <div class="credential-item">
-                        <div class="credential-label">Password:</div>
-                        <div class="credential-value">)" +
-        password + R"(</div>
-                      </div>
-                    </div>
-                    <p>Please keep these credentials secure and change your password after your first login.</p>
-                    <p>You’re all set! Log in now to explore more engaging content made just for you.</p>
-                  </div>
-                  <div class="footer">
-                    &copy; )" +
-        trantor::Date::now().toCustomFormattedString("%Y") +
-        R"( Graphic News Plus. All rights reserved.
-                  </div>
-                </div>
-                </body>
-                </html>
-              )";
+    std::string emailBody = R"(
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #f4f6f8;
+        font-family: 'Segoe UI', Arial, sans-serif;
+      }
+
+      .wrapper {
+        width: 100%;
+        padding: 30px 0;
+      }
+
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+      }
+
+      .header {
+        background: linear-gradient(135deg, #D32F2F, #9A0007);
+        color: #ffffff;
+        padding: 30px 20px;
+        text-align: center;
+      }
+
+      .header h1 {
+        margin: 0;
+        font-size: 24px;
+      }
+
+      .content {
+        padding: 30px;
+        color: #333;
+        line-height: 1.6;
+      }
+
+      .credentials {
+        background: #f9fafb;
+        border: 1px solid #eee;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 25px 0;
+      }
+
+      .credential-item {
+        margin-bottom: 15px;
+      }
+
+      .credential-label {
+        font-size: 13px;
+        color: #888;
+        margin-bottom: 5px;
+      }
+
+      .credential-value {
+        font-size: 16px;
+        font-weight: bold;
+        color: #D32F2F;
+        font-family: monospace;
+        background: #fff;
+        padding: 8px 10px;
+        border-radius: 5px;
+        border: 1px dashed #ddd;
+      }
+
+      .cta {
+        text-align: center;
+        margin: 30px 0 15px;
+      }
+
+      .btn {
+        display: inline-block;
+        padding: 12px 25px;
+        background-color: #D32F2F;
+        color: #ffffff;
+        text-decoration: none;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      .btn:hover {
+        background-color: #b71c1c;
+      }
+
+      .link {
+        word-break: break-all;
+        color: #D32F2F;
+      }
+
+      .footer {
+        background: #f4f6f8;
+        color: #888;
+        text-align: center;
+        padding: 20px;
+        font-size: 12px;
+      }
+
+    </style>
+    </head>
+
+    <body>
+    <div class="wrapper">
+      <div class="container">
+
+        <div class="header">
+          <h1>Graphic News Plus</h1>
+          <p>Your Premium News Experience</p>
+        </div>
+
+        <div class="content">
+          <p>Hello )" + dto.getFirstName() +
+                            R"(,</p>
+
+          <p>
+            Welcome to <strong>Graphic News Plus</strong>! Your corporate account has been successfully created.
+          </p>
+
+          <p>You can now access the platform here:</p>
+
+          <p>
+            <a href="https://new.graphicnewsplus.com?al=t" class="link">
+              https://new.graphicnewsplus.com?al=t
+            </a>
+          </p>
+
+          <p>Here are your login credentials:</p>
+
+          <div class="credentials">
+            <div class="credential-item">
+              <div class="credential-label">Username (Email)</div>
+              <div class="credential-value">)" +
+                            dto.getEmail() + R"(</div>
+            </div>
+
+            <div class="credential-item">
+              <div class="credential-label">Password</div>
+              <div class="credential-value">)" +
+                            password + R"(</div>
+            </div>
+          </div>
+
+          <p>Your subscription details:</p>
+
+          <div class="credentials">
+            <div class="credential-item">
+              <div class="credential-label">Package</div>
+              <div style="font-size: 16px; font-weight: bold; color: #333; background: #fff; padding: 8px 10px; border-radius: 5px; border: 1px solid #ddd;">)" +
+                            plan.getValueOfName() + R"(</div>
+            </div>
+
+            <div class="credential-item">
+              <div class="credential-label">Validity Period</div>
+              <div style="font-size: 16px; font-weight: bold; color: #333; background: #fff; padding: 8px 10px; border-radius: 5px; border: 1px solid #ddd;">)" +
+                            startDateObj.toCustomFormattedString("%d %b %Y") +
+                            " to " +
+                            endDateObj.toCustomFormattedString("%d %b %Y") +
+                            R"(</div>
+            </div>
+          </div>
+
+          <p>
+            For security reasons, please change your password immediately after your first login.
+          </p>
+
+          <div class="cta">
+            <a href="https://new.graphicnewsplus.com?al=t" style="color:#ffffff !important; text-decoration:none;" class="btn">
+              Login to Your Account
+            </a>
+          </div>
+
+          <p style="font-size:13px; color:#777;">
+            If the button above doesn’t work, copy and paste this link into your browser:
+            <br>
+            <a href="https://new.graphicnewsplus.com?al=t" class="link">
+              https://new.graphicnewsplus.com?al=t
+            </a>
+          </p>
+
+          <p>
+            Enjoy unlimited access to curated, high-quality news content tailored for you.
+          </p>
+        </div>
+
+        <div class="footer">
+          <p>&copy; )" + trantor::Date::now().toCustomFormattedString("%Y") +
+                            R"( Graphic News Plus</p>
+          <p>All rights reserved.</p>
+        </div>
+
+      </div>
+    </div>
+    </body>
+    </html>
+    )";
 
     emailDto.setBody(emailBody);
-
     co_await emailService.sendEmailAsync(emailDto);
 
     // 6. Reduce subscriber slots for commercial partner
-    CoroMapper<CommercialPartners> partnerMapper(dbClient);
-    try {
-      auto partner = co_await partnerMapper.findOne(
-          Criteria(CommercialPartners::Cols::_id, CompareOperator::EQ,
-                   dto.getPartnerId()));
-
-      auto remainingQuota = partner.getValueOfRemainingQuota();
-      if (remainingQuota > 0) {
-        partner.setRemainingQuota(remainingQuota - 1);
-        co_await partnerMapper.update(partner);
-      }
-    } catch (const DrogonDbException &e) {
-      LOG_ERROR << "Failed to update partner quota: " << e.base().what();
+    auto remainingQuota = partner.getValueOfRemainingQuota();
+    if (remainingQuota > 0) {
+      partner.setRemainingQuota(remainingQuota - 1);
+      co_await partnerMapper.update(partner);
     }
 
-    // 5. Prepare success response
+    // 7. Prepare success response
     dto::BaseApiResponse successResponse;
     successResponse.success = true;
     successResponse.message = "Subscriber created successfully";
@@ -749,9 +1002,7 @@ CommercialPartnerService::createPartnerSubscriber(
   }
 }
 
-drogon::Task<dto::BaseApiResponse>
-CommercialPartnerService::updatePartnerSubscriber(
-    const dto::UpdatePartnerSubscriberDto &dto) {
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::updatePartnerSubscriber(const dto::UpdatePartnerSubscriberDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mp(dbClient);
@@ -790,8 +1041,7 @@ CommercialPartnerService::updatePartnerSubscriber(
   }
 }
 
-drogon::Task<dto::BaseApiResponse>
-CommercialPartnerService::assignPartnerSubscribersToPlan(
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::assignPartnerSubscribersToPlan(
     const dto::AssignPartnerSubscriberPlanDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -887,9 +1137,98 @@ CommercialPartnerService::assignPartnerSubscribersToPlan(
   }
 }
 
-drogon::Task<dto::BaseApiResponse>
-CommercialPartnerService::getPartnerSubscriptionSummary(
-    const std::string &partnerId) {
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::updatePartnerQuota(std::string partnerId,
+                                             const dto::PartnerQuotaDto &dto) {
+
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<CommercialPartners> mp(dbClient);
+
+  try {
+    // 1. Validate that the partner exists
+    auto partner = co_await mp.findOne(Criteria(
+        CommercialPartners::Cols::_id, CompareOperator::EQ, partnerId));
+
+    // 2. Calculate new quota delta and adjust remaining quota
+    int currentTotalQuota = partner.getValueOfSubscriberQuota();
+    int currentRemainingQuota = partner.getValueOfRemainingQuota();
+    int newTotalQuota = dto.getQuota();
+
+    int usedQuota = currentTotalQuota - currentRemainingQuota;
+
+    if (newTotalQuota < usedQuota) {
+      dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.message =
+          "New quota cannot be less than the already used quota";
+      errorResponse.error["code"] = constants::ERR_UNSUPPORTED_OPERATION;
+      co_return errorResponse;
+    }
+
+    int newRemainingQuota = newTotalQuota - usedQuota;
+
+    // 3. Update partner record
+    partner.setSubscriberQuota(newTotalQuota);
+    partner.setRemainingQuota(newRemainingQuota);
+
+    co_await mp.update(partner);
+
+    // create a new invoice of the remaining deficit only if the quota was
+    // increased
+    int quotaDeficit = newTotalQuota - currentTotalQuota;
+    if (quotaDeficit > 0) {
+      double unitPrice = 0.0;
+      try {
+        unitPrice = std::stod(partner.getValueOfCostPerHead());
+      } catch (...) {
+      }
+
+      if (unitPrice > 0.0) {
+        double deficitAmount = quotaDeficit * unitPrice;
+
+        dto::PartnerInvoiceDto partnerInvoiceDto;
+        partnerInvoiceDto.setInvoiceNumber(
+            "GNP-INV-" + utils::IdGeneratorUtils::generateAlphanumericId(8));
+        partnerInvoiceDto.setPartnerId(partner.getValueOfId());
+        partnerInvoiceDto.setPartnerName(partner.getValueOfName());
+        partnerInvoiceDto.setPartnerEmail(partner.getValueOfBillingEmail());
+        partnerInvoiceDto.setBalance(deficitAmount);
+        partnerInvoiceDto.setBillingCycle("On-Demand");
+        partnerInvoiceDto.setInvoiceAmount(deficitAmount);
+        partnerInvoiceDto.setCurrency(partner.getValueOfCurrency());
+        partnerInvoiceDto.setDescription("Additional subscriber quota invoice");
+        partnerInvoiceDto.setDueDate(partner.getValueOfSubscriptionEndDate());
+        partnerInvoiceDto.setStatus("Pending");
+        partnerInvoiceDto.setUnitPrice(unitPrice);
+        partnerInvoiceDto.setBillingCycle("N/A");
+
+        auto plugin = drogon::app().getPlugin<plugins::GnpServicePlugin>();
+        auto &partnerInvoiceService = plugin->getPartnerInvoiceService();
+
+        co_await partnerInvoiceService.createInvoice(partnerInvoiceDto);
+      }
+    }
+
+    dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Partner quota updated successfully";
+
+    // Add updated quota info to response
+    response.result["subscriberQuota"] = newTotalQuota;
+    response.result["remainingQuota"] = newRemainingQuota;
+
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to update partner quota";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::getPartnerSubscriptionSummary(const std::string &partnerId) {
 
   auto dbClient = drogon::app().getDbClient();
 
@@ -930,8 +1269,7 @@ CommercialPartnerService::getPartnerSubscriptionSummary(
   }
 }
 
-drogon::Task<dto::BaseApiResponse> CommercialPartnerService::updatePartnerLogo(
-    const std::string &partnerId, const std::string &logoContent,
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::updatePartnerLogo(const std::string &partnerId, const std::string &logoContent,
     std::optional<bool> requireTwoFactorAuth) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -966,8 +1304,7 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::updatePartnerLogo(
   }
 }
 
-drogon::Task<dto::BaseApiResponse>
-CommercialPartnerService::deletePartner(const std::string &partnerId) {
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::deletePartner(const std::string &partnerId) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<CommercialPartners> mp(dbClient);
@@ -1126,8 +1463,7 @@ void CommercialPartnerService::getPartnerDetails(
   Mapper<CommercialPartners> mp(dbClient);
 
   // Create criteria to find the partner with specified ID
-  Criteria criteria =
-      Criteria(CommercialPartners::Cols::_id, CompareOperator::EQ, id);
+  Criteria criteria = Criteria(CommercialPartners::Cols::_id, CompareOperator::EQ, id);
 
   mp.findOne(
       criteria,
@@ -1364,8 +1700,9 @@ CommercialPartnerService::deletePartnerSubscriberAsync(
   try {
     // 1. Fetch user to verify ownership
     auto user = co_await userMapper.findByPrimaryKey(subscriberId);
+
     if (user.getValueOfPartnerId() != partnerId) {
-      ::gnp::dto::BaseApiResponse errorResponse;
+      dto::BaseApiResponse errorResponse;
       errorResponse.success = false;
       errorResponse.message = "User does not belong to this partner";
       errorResponse.error["code"] = constants::ERR_UNAUTHORIZED;
@@ -1380,7 +1717,20 @@ CommercialPartnerService::deletePartnerSubscriberAsync(
     partner.setRemainingQuota(partner.getValueOfRemainingQuota() + 1);
     co_await partnerMapper.update(partner);
 
-    ::gnp::dto::BaseApiResponse successResponse;
+    // 4. Delete related subscription records
+    CoroMapper<::drogon_model::Gnp::UserSubscriptions> subMapper(dbClient);
+    co_await subMapper.deleteBy(
+        Criteria(::drogon_model::Gnp::UserSubscriptions::Cols::_user_id,
+                 CompareOperator::EQ, subscriberId));
+
+    // 5. Delete related renewal records
+    CoroMapper<::drogon_model::Gnp::SubscriptionRenewalHistory> renewalMapper(
+        dbClient);
+    co_await renewalMapper.deleteBy(Criteria(
+        ::drogon_model::Gnp::SubscriptionRenewalHistory::Cols::_user_id,
+        CompareOperator::EQ, subscriberId));
+
+    dto::BaseApiResponse successResponse;
     successResponse.success = true;
     successResponse.message =
         "Subscriber deleted successfully, quota recovered";
@@ -1475,8 +1825,7 @@ CommercialPartnerService::getPartnerApiKeys(const std::string &partnerId) {
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-CommercialPartnerService::generatePartnerApiKey(
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::generatePartnerApiKey(
     const ::gnp::dto::GeneratePartnerApiKeyDto &dto) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> mp(dbClient);
@@ -1698,7 +2047,8 @@ CommercialPartnerService::updatePartnerApiKey(
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubscriberAsync(
+drogon::Task<::gnp::dto::BaseApiResponse>
+CommercialPartnerService::onboardSubscriberAsync(
     const std::string &clientId, const std::string &clientSecret,
     const ::gnp::dto::PartnerOnboardingDto &dto) {
 
@@ -1919,7 +2269,8 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
     CoroMapper<drogon_model::Gnp::SubscriptionRenewalHistory> renewalMapper(
         dbClient);
 
-    auto determineBillingCycle = [](const trantor::Date &start, const trantor::Date &end) -> std::string {
+    auto determineBillingCycle = [](const trantor::Date &start,
+                                    const trantor::Date &end) -> std::string {
       int64_t diffDays =
           (end.microSecondsSinceEpoch() - start.microSecondsSinceEpoch()) /
           (1000000LL * 3600 * 24);
@@ -2037,7 +2388,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
             determineBillingCycle(startDateObj, endDateObj));
         renewal.setTransactionStatus("Successful");
         renewal.setPaidBy(partner.getValueOfName());
-        renewal.setAmountPaid("0.00");
+        renewal.setAmountPaid(partner.getValueOfCostPerHead());
         renewal.setCreatedAt(trantor::Date::now());
         LOG_INFO << "[onboardSubscriberAsync] STEP 8 — Inserting renewal "
                     "history record";
@@ -2291,7 +2642,8 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getSubscriberSubscriptionSummary(
+drogon::Task<::gnp::dto::BaseApiResponse>
+CommercialPartnerService::getSubscriberSubscriptionSummary(
     std::string partnerId, std::string userId) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<UserSubscriptions> subMapper(dbClient);
@@ -2401,7 +2753,8 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getSubscribe
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::checkSubscriberStatus(
+drogon::Task<::gnp::dto::BaseApiResponse>
+CommercialPartnerService::checkSubscriberStatus(
     const std::string &clientId, const std::string &clientSecret,
     const std::string &phoneNumber) {
   auto dbClient = drogon::app().getDbClient();
@@ -2500,7 +2853,8 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::checkSubscri
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::retrieveSubscriberDetails(
+drogon::Task<::gnp::dto::BaseApiResponse>
+CommercialPartnerService::retrieveSubscriberDetails(
     const std::string &clientId, const std::string &clientSecret,
     const std::string &phoneNumber) {
 
@@ -2573,7 +2927,8 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::retrieveSubs
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerOverviewStats(
+drogon::Task<::gnp::dto::BaseApiResponse>
+CommercialPartnerService::getPartnerOverviewStats(
     const std::string &partnerId) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -2731,7 +3086,8 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerOv
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerEngagementReport(
+drogon::Task<::gnp::dto::BaseApiResponse>
+CommercialPartnerService::getPartnerEngagementReport(
     const std::string &partnerId, const std::string &period) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -2849,7 +3205,8 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerEn
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerAnalyticsCharts(
+drogon::Task<::gnp::dto::BaseApiResponse>
+CommercialPartnerService::getPartnerAnalyticsCharts(
     const std::string &partnerId, const std::string &period) {
   auto dbClient = drogon::app().getDbClient();
   try {
@@ -2920,17 +3277,19 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerAn
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::bulkUploadSubscribersJson(
-    const std::string &partnerId, const Json::Value &jsonArray) {
-  gnp::dto::BaseApiResponse response;
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::bulkUploadSubscribersJson(
+    const std::string partnerId, const Json::Value &jsonArray) {
+
+  dto::BaseApiResponse response;
   int successCount = 0;
   int failureCount = 0;
+  Json::Value duplicateRows(Json::arrayValue);
 
   for (const auto &item : jsonArray) {
     if (!item.isObject())
       continue;
 
-    gnp::dto::CreatePartnerSubscriberDto dto;
+    dto::CreatePartnerSubscriberDto dto;
     dto.setPartnerId(partnerId);
     dto.setFirstName(item.get("FirstName", "").asString());
     dto.setLastName(item.get("LastName", "").asString());
@@ -2947,6 +3306,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::bulkUploadSu
       successCount++;
     } else {
       failureCount++;
+      duplicateRows.append(item);
     }
   }
 
@@ -2955,83 +3315,110 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::bulkUploadSu
   response.result["successCount"] = successCount;
   response.result["failureCount"] = failureCount;
   response.result["totalProcessed"] = successCount + failureCount;
+  response.result["duplicates"] = duplicateRows;
 
   co_return response;
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::bulkUploadSubscribersFile(
-    const std::string &partnerId, const std::string &fileContent,
-    const std::string &fileName) {
-  gnp::dto::BaseApiResponse response;
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::resetSubscriberPasswords(const std::string &partnerId, const std::vector<std::string> &exemptedEmails) {
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<Users> mp(dbClient);
 
-  bool isCsv = fileName.find(".csv") != std::string::npos;
-  bool isExcel = fileName.find(".xlsx") != std::string::npos ||
-                 fileName.find(".xls") != std::string::npos;
-
-  if (isExcel) {
-    response.success = false;
-    response.error["message"] =
-        "Excel file upload is not supported directly. Please convert to CSV or "
-        "use the web interface to automatically upload as JSON.";
-    co_return response;
-  }
-
-  if (!isCsv) {
-    response.success = false;
-    response.error["message"] =
-        "Unsupported file format. Please upload a .csv file.";
-    co_return response;
-  }
-
-  std::vector<gnp::dto::CreatePartnerSubscriberDto> dtos;
-
-  auto rows = utils::CsvParser::parse(fileContent);
-  size_t startIdx = 0;
-  if (!rows.empty() && rows[0].columns.size() > 0) {
-    std::string firstCol = rows[0].get(0);
-    std::transform(firstCol.begin(), firstCol.end(), firstCol.begin(),
-                   ::tolower);
-    if (firstCol.find("first") != std::string::npos) {
-      startIdx = 1;
+  try {
+    Criteria searchCriteria = Criteria(Users::Cols::_partner_id, CompareOperator::EQ, partnerId) &&
+                              Criteria(Users::Cols::_is_partner_admin_user, CompareOperator::EQ, false);
+    
+    if (!exemptedEmails.empty()) {
+      searchCriteria = searchCriteria && Criteria(Users::Cols::_email, CompareOperator::NotIn, exemptedEmails);
     }
-  }
+    
+    auto users = co_await mp.findBy(searchCriteria);
+    
+    auto plugin = drogon::app().getPlugin<plugins::GnpServicePlugin>();
+    auto &emailService = plugin->getEmailService();
 
-  for (size_t i = startIdx; i < rows.size(); ++i) {
-    if (rows[i].columns.empty() ||
-        (rows[i].columns.size() == 1 && rows[i].columns[0].empty()))
-      continue;
-    gnp::dto::CreatePartnerSubscriberDto dto;
-    dto.setPartnerId(partnerId);
-    dto.setFirstName(rows[i].get(0));
-    dto.setLastName(rows[i].get(1));
-    dto.setEmail(rows[i].get(2));
-    dto.setPhoneNumber(rows[i].get(3));
-    dtos.push_back(dto);
-  }
+    int successCount = 0;
 
-  int successCount = 0;
-  int failureCount = 0;
-
-  for (const auto &dto : dtos) {
-    if (dto.getEmail().empty() || dto.getFirstName().empty()) {
-      failureCount++;
-      continue;
-    }
-    auto res = co_await createPartnerSubscriber(dto);
-    if (res.success) {
+    for (auto &user : users) {
+      std::string newPassword = utils::PasswordUtils::generateRandomPassword(8);
+      user.setPasswordHash(bcrypt::generateHash(newPassword));
+      
+      co_await mp.update(user);
+      
+      // send email
+      dto::SendEmailDto emailDto;
+      emailDto.setTo(user.getValueOfEmail());
+      emailDto.setSubject("Graphic News Plus - Password Reset");
+      
+      std::string emailBody = R"html(
+        <!DOCTYPE html>
+        <html>
+        <head>
+        <meta charset="UTF-8">
+        <style>
+          body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+          .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+          .header { background-color: #D32F2F; color: #ffffff; padding: 20px; text-align: center; }
+          .content { padding: 30px; color: #333333; }
+          .credentials { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; }
+          .credential-item { margin: 10px 0; }
+          .credential-label { font-weight: bold; color: #666; }
+          .credential-value { font-size: 18px; color: #D32F2F; font-family: monospace; }
+          .footer { background-color: #f4f4f4; color: #666666; padding: 10px; text-align: center; font-size: 12px; }
+        </style>
+        </head>
+        <body>
+        <div class="container">
+          <div class="header">
+            <h1>Graphic News Plus</h1>
+          </div>
+          <div class="content">
+            <p>Hello )html" + user.getValueOfFirstName() + R"html(,</p>
+            <p>Your password for Graphic News Plus has been reset by your organization.</p>
+            <p>Below are your new login credentials:</p>
+            <div class="credentials">
+              <div class="credential-item">
+                <div class="credential-label">Username (Email):</div>
+                <div class="credential-value">)html" + user.getValueOfEmail() + R"html(</div>
+              </div>
+              <div class="credential-item">
+                <div class="credential-label">New Password:</div>
+                <div class="credential-value">)html" + newPassword + R"html(</div>
+              </div>
+            </div>
+            <p>Please keep these credentials secure and change your password after your next login.</p>
+          </div>
+          <div class="footer">
+            &copy; )html" + trantor::Date::now().toCustomFormattedString("%Y") + R"html( Graphic News Plus. All rights reserved.
+          </div>
+        </div>
+        </body>
+        </html>
+      )html";
+      
+      emailDto.setBody(emailBody);
+      try {
+        co_await emailService.sendEmailAsync(emailDto);
+      } catch (const std::exception& e) {
+        LOG_ERROR << "Failed to send password reset email to " << user.getValueOfEmail() << ": " << e.what();
+      }
+      
       successCount++;
-    } else {
-      failureCount++;
     }
+
+    ::gnp::dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Passwords reset successfully for " + std::to_string(successCount) + " subscribers.";
+    co_return response;
+
+  } catch (const drogon::orm::DrogonDbException &e) {
+    ::gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Database error while resetting passwords.";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
   }
-
-  response.success = true;
-  response.message = "Bulk upload completed.";
-  response.result["successCount"] = successCount;
-  response.result["failureCount"] = failureCount;
-  response.result["totalProcessed"] = (int)dtos.size();
-
-  co_return response;
 }
 
 } // namespace gnp::services

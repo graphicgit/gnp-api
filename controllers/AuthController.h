@@ -19,6 +19,9 @@ public:
   ADD_METHOD_TO(AuthController::partnerSignIn, std::string(PREFIX) + "partner-login", Post, Options);
   ADD_METHOD_TO(AuthController::verifyPartnerOtp, std::string(PREFIX) + "verify-otp", Post, Options);
   ADD_METHOD_TO(AuthController::affiliateSignIn, std::string(PREFIX) + "affiliate-login", Post, Options);
+  ADD_METHOD_TO(AuthController::changePartnerAdminUserPassword, std::string(PREFIX) + "change-partner-admin-user-password", Post, Options, "PartnerJwtAuthFilter");
+  ADD_METHOD_TO(AuthController::changePublicUserPassword, std::string(PREFIX) + "change-public-user-password", Post, Options, "JwtAuthFilter");
+  ADD_METHOD_TO(AuthController::changeAdminUserPassword, std::string(PREFIX) + "change-admin-user-password", Post, Options, "AdminJwtAuthFilter");
   METHOD_LIST_END
 
   void checkAccountStatus(const HttpRequestPtr &req,std::function<void(const HttpResponsePtr &)> &&callback);
@@ -32,6 +35,9 @@ public:
   Task<HttpResponsePtr> partnerSignIn(HttpRequestPtr req);
   Task<HttpResponsePtr> verifyPartnerOtp(HttpRequestPtr req);
   Task<HttpResponsePtr> affiliateSignIn(HttpRequestPtr req);
+  Task<HttpResponsePtr> changePartnerAdminUserPassword(HttpRequestPtr req);
+  Task<HttpResponsePtr> changePublicUserPassword(HttpRequestPtr req);
+  Task<HttpResponsePtr> changeAdminUserPassword(HttpRequestPtr req);
 
 private:
   void setAuthCookie(const HttpResponsePtr &resp, const std::string &token);

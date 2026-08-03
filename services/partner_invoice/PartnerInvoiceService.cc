@@ -1,23 +1,27 @@
 #include "PartnerInvoiceService.h"
-#include <drogon/orm/Mapper.h>
-#include "PartnerInvoices.h"
 #include "PartnerInvoicePayments.h"
+#include "PartnerInvoices.h"
 #include "constants/ErrorCodes.h"
 #include "utils/IdGeneratorUtils.h"
-#include <trantor/utils/Date.h>
 #include <algorithm>
+#include <drogon/orm/Mapper.h>
+#include <trantor/utils/Date.h>
+
+#include "plugins/GnpServicePlugin.h"
+#include "utils/CronUtils.h"
 
 using namespace drogon::orm;
 using drogon_model::Gnp::PartnerInvoices;
-#include "models/UserSubscriptions.h"
 #include "models/CommercialPartners.h"
-#include <map>
+#include "models/UserSubscriptions.h"
 #include <cmath>
+#include <map>
 
 namespace gnp::services {
 
-
-  drogon::Task<dto::BaseApiResponse> PartnerInvoiceService::getAll(int pageNo, int pageSize, const std::string &query) {
+drogon::Task<dto::BaseApiResponse>
+PartnerInvoiceService::getAll(int pageNo, int pageSize,
+                              const std::string &query) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<PartnerInvoices> mp(dbClient);
@@ -27,8 +31,10 @@ namespace gnp::services {
   if (!query.empty()) {
     std::string likeQuery = "%" + query + "%";
 
-    searchCriteria = Criteria(PartnerInvoices::Cols::_invoice_number,CompareOperator::Like, likeQuery) ||
-                     Criteria(PartnerInvoices::Cols::_description, CompareOperator::Like, likeQuery);
+    searchCriteria = Criteria(PartnerInvoices::Cols::_invoice_number,
+                              CompareOperator::Like, likeQuery) ||
+                     Criteria(PartnerInvoices::Cols::_description,
+                              CompareOperator::Like, likeQuery);
   }
 
   try {
@@ -43,7 +49,11 @@ namespace gnp::services {
 
     // 3. Find the paginated data
     int offset = (pageNo - 1) * pageSize;
-    auto partnerInvoices = co_await mp.limit(pageSize).offset(offset).orderBy(PartnerInvoices::Cols::_created_at, SortOrder::DESC).findBy(searchCriteria);
+    auto partnerInvoices =
+        co_await mp.limit(pageSize)
+            .offset(offset)
+            .orderBy(PartnerInvoices::Cols::_created_at, SortOrder::DESC)
+            .findBy(searchCriteria);
 
     // 4. Build the final response
     gnp::dto::BaseApiResponse response;
@@ -54,7 +64,9 @@ namespace gnp::services {
     response.result["pageNo"] = pageNo;
     response.result["pageSize"] = pageSize;
     response.result["lowerBound"] = pageSize * (pageNo - 1) + 1;
-    response.result["upperBound"] = Json::Value((int)totalPages == pageNo ? (Json::UInt64)totalCount : (Json::UInt64)(pageNo * pageSize));
+    response.result["upperBound"] = Json::Value(
+        (int)totalPages == pageNo ? (Json::UInt64)totalCount
+                                  : (Json::UInt64)(pageNo * pageSize));
     response.result["totalPages"] = (int)totalPages;
 
     Json::Value data = Json::arrayValue;
@@ -67,13 +79,19 @@ namespace gnp::services {
 
       camelCasePartnerInvoice["id"] = partnerInvoiceJson["id"];
       camelCasePartnerInvoice["partnerId"] = partnerInvoiceJson["partner_id"];
-      camelCasePartnerInvoice["partnerName"] = partnerInvoiceJson["partner_name"];
-      camelCasePartnerInvoice["partnerEmail"] = partnerInvoiceJson["partner_email"];
-      camelCasePartnerInvoice["invoiceNumber"] = partnerInvoiceJson["invoice_number"];
-      camelCasePartnerInvoice["description"] = partnerInvoiceJson["description"];
-      camelCasePartnerInvoice["invoiceAmount"] = partnerInvoiceJson["invoice_amount"];
+      camelCasePartnerInvoice["partnerName"] =
+          partnerInvoiceJson["partner_name"];
+      camelCasePartnerInvoice["partnerEmail"] =
+          partnerInvoiceJson["partner_email"];
+      camelCasePartnerInvoice["invoiceNumber"] =
+          partnerInvoiceJson["invoice_number"];
+      camelCasePartnerInvoice["description"] =
+          partnerInvoiceJson["description"];
+      camelCasePartnerInvoice["invoiceAmount"] =
+          partnerInvoiceJson["invoice_amount"];
       camelCasePartnerInvoice["balance"] = partnerInvoiceJson["balance"];
-      camelCasePartnerInvoice["billingCycle"] = partnerInvoiceJson["billing_cycle"];
+      camelCasePartnerInvoice["billingCycle"] =
+          partnerInvoiceJson["billing_cycle"];
       camelCasePartnerInvoice["currency"] = partnerInvoiceJson["currency"];
       camelCasePartnerInvoice["status"] = partnerInvoiceJson["status"];
       camelCasePartnerInvoice["createdAt"] = partnerInvoiceJson["created_at"];
@@ -90,75 +108,74 @@ namespace gnp::services {
     gnp::dto::BaseApiResponse errorResponse;
     errorResponse.success = false;
     errorResponse.error["code"] = constants::ERR_DB_QUERY;
-    errorResponse.error["message"] = "Database error while fetching partner invoices.";
+    errorResponse.error["message"] =
+        "Database error while fetching partner invoices.";
     errorResponse.error["detail"] = e.base().what();
     co_return errorResponse;
   }
 }
 
+drogon::Task<dto::BaseApiResponse>
+PartnerInvoiceService::createInvoice(const dto::PartnerInvoiceDto &dto) {
 
-  drogon::Task<dto::BaseApiResponse> PartnerInvoiceService::createInvoice(const dto::PartnerInvoiceDto &dto) {
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<PartnerInvoices> mp(dbClient);
 
-    auto dbClient = drogon::app().getDbClient();
-    CoroMapper<PartnerInvoices> mp(dbClient);
+  try {
+    PartnerInvoices invoice;
+    invoice.setId(gnp::utils::IdGeneratorUtils::generateGuid());
+    invoice.setPartnerId(dto.getPartnerId());
+    invoice.setPartnerName(dto.getPartnerName());
+    invoice.setPartnerEmail(dto.getPartnerEmail());
+    invoice.setBillingCycle(dto.getBillingCycle());
+    invoice.setInvoiceNumber(dto.getInvoiceNumber());
+    invoice.setDescription(dto.getDescription());
 
-    try {
-      PartnerInvoices invoice;
-      invoice.setId(gnp::utils::IdGeneratorUtils::generateGuid());
-      invoice.setPartnerId(dto.getPartnerId());
-      invoice.setPartnerName(dto.getPartnerName());
-      invoice.setPartnerEmail(dto.getPartnerEmail());
-      invoice.setBillingCycle(dto.getBillingCycle());
-      invoice.setInvoiceNumber(dto.getInvoiceNumber());
-      invoice.setDescription(dto.getDescription());
-
-      if (dto.getInvoiceDate().microSecondsSinceEpoch() != 0) {
-        invoice.setCreatedAt(dto.getInvoiceDate());
-
-      }
-
-      char unitPriceBuf[64];
-      snprintf(unitPriceBuf, sizeof(unitPriceBuf), "%.2f", dto.getUnitPrice());
-      invoice.setUnitPrice(unitPriceBuf);
-
-      // Convert double to string for numeric fields
-      char buf[64];
-      snprintf(buf, sizeof(buf), "%.2f", dto.getInvoiceAmount());
-      invoice.setInvoiceAmount(buf);
-      
-      snprintf(buf, sizeof(buf), "%.2f", dto.getBalance());
-      invoice.setBalance(buf);
-
-      invoice.setCurrency(dto.getCurrency());
-      invoice.setStatus(dto.getStatus().empty() ? "Pending" : dto.getStatus());
-
-      invoice.setDueDate(dto.getDueDate());
-      invoice.setCreatedAt(trantor::Date::now());
-
-      auto result = co_await mp.insert(invoice);
-
-      dto::BaseApiResponse response;
-      response.success = true;
-      response.message = "Invoice created successfully";
-      response.result["id"] = result.getValueOfId();
-      co_return response;
-
-    } catch (const DrogonDbException &e) {
-      dto::BaseApiResponse errorResponse;
-      errorResponse.success = false;
-      errorResponse.error["code"] = constants::ERR_DB_QUERY;
-      errorResponse.message = "Failed to create invoice";
-      errorResponse.error["detail"] = e.base().what();
-      co_return errorResponse;
+    if (dto.getInvoiceDate().microSecondsSinceEpoch() != 0) {
+      invoice.setCreatedAt(dto.getInvoiceDate());
     }
+
+    char unitPriceBuf[64];
+    snprintf(unitPriceBuf, sizeof(unitPriceBuf), "%.2f", dto.getUnitPrice());
+    invoice.setUnitPrice(unitPriceBuf);
+
+    // Convert double to string for numeric fields
+    char buf[64];
+    snprintf(buf, sizeof(buf), "%.2f", dto.getInvoiceAmount());
+    invoice.setInvoiceAmount(buf);
+
+    snprintf(buf, sizeof(buf), "%.2f", dto.getBalance());
+    invoice.setBalance(buf);
+
+    invoice.setCurrency(dto.getCurrency());
+    invoice.setStatus(dto.getStatus().empty() ? "Pending" : dto.getStatus());
+
+    invoice.setDueDate(dto.getDueDate());
+    invoice.setCreatedAt(trantor::Date::now());
+
+    auto result = co_await mp.insert(invoice);
+
+    dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Invoice created successfully";
+    response.result["id"] = result.getValueOfId();
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.message = "Failed to create invoice";
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
   }
+}
 
+drogon::Task<dto::BaseApiResponse> PartnerInvoiceService::getInvoiceStats() {
 
-  drogon::Task<dto::BaseApiResponse> PartnerInvoiceService::getInvoiceStats() {
+  auto dbClient = drogon::app().getDbClient();
 
-    auto dbClient = drogon::app().getDbClient();
-    
-    std::string sql = R"sql(
+  std::string sql = R"sql(
         SELECT 
             COALESCE(SUM(CAST(invoice_amount AS NUMERIC)), 0) as total_invoiced,
             COALESCE(SUM(CAST(invoice_amount AS NUMERIC) - CAST(balance AS NUMERIC)), 0) as total_paid,
@@ -167,309 +184,362 @@ namespace gnp::services {
         FROM partner_invoices
     )sql";
 
-    try {
-        auto result = co_await dbClient->execSqlCoro(sql);
-        
-        dto::BaseApiResponse response;
-        response.success = true;
-        
-        Json::Value stats;
-        if (!result.empty()) {
-            stats["totalInvoiced"] = result[0]["total_invoiced"].as<double>();
-            stats["totalPaid"] = result[0]["total_paid"].as<double>();
-            stats["pendingInvoices"] = result[0]["pending_invoices"].as<double>();
-            stats["overdueAmount"] = result[0]["overdue_amount"].as<double>();
-        } else {
-            stats["totalInvoiced"] = 0.0;
-            stats["totalPaid"] = 0.0;
-            stats["pendingInvoices"] = 0.0;
-            stats["overdueAmount"] = 0.0;
-        }
-        
-        response.result = stats;
-        co_return response;
+  try {
+    auto result = co_await dbClient->execSqlCoro(sql);
 
-    } catch (const DrogonDbException &e) {
-        dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.message = "Failed to fetch invoice stats";
-        errorResponse.error["code"] = constants::ERR_DB_QUERY;
-        errorResponse.error["detail"] = e.base().what();
-        co_return errorResponse;
+    dto::BaseApiResponse response;
+    response.success = true;
+
+    Json::Value stats;
+    if (!result.empty()) {
+      stats["totalInvoiced"] = result[0]["total_invoiced"].as<double>();
+      stats["totalPaid"] = result[0]["total_paid"].as<double>();
+      stats["pendingInvoices"] = result[0]["pending_invoices"].as<double>();
+      stats["overdueAmount"] = result[0]["overdue_amount"].as<double>();
+    } else {
+      stats["totalInvoiced"] = 0.0;
+      stats["totalPaid"] = 0.0;
+      stats["pendingInvoices"] = 0.0;
+      stats["overdueAmount"] = 0.0;
     }
-  }
 
+    response.result = stats;
+    co_return response;
 
-  drogon::Task<dto::BaseApiResponse> PartnerInvoiceService::markAsPaid(const std::string &id) {
-    auto dbClient = drogon::app().getDbClient();
-    CoroMapper<PartnerInvoices> mp(dbClient);
-
-    try {
-      auto invoice = co_await mp.findByPrimaryKey(id);
-      invoice.setStatus("Paid");
-      invoice.setBalance("0.00");
-      invoice.setPaidAt(trantor::Date::now());
-      invoice.setUpdatedAt(trantor::Date::now());
-
-      co_await mp.update(invoice);
-
-      dto::BaseApiResponse response;
-      response.success = true;
-      response.message = "Invoice marked as paid";
-      co_return response;
-
-    } catch (const DrogonDbException &e) {
-      dto::BaseApiResponse errorResponse;
-      errorResponse.success = false;
-      errorResponse.message = "Failed to mark invoice as paid";
-      errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
-      errorResponse.error["detail"] = e.base().what();
-      co_return errorResponse;
-    }
-  }
-
-  drogon::Task<dto::BaseApiResponse> PartnerInvoiceService::makePartPayment(const dto::PartnerInvoicePaymentDto &dto) {
-    auto dbClient = drogon::app().getDbClient();
-    CoroMapper<drogon_model::Gnp::PartnerInvoicePayments> mp(dbClient);
-
-    try {
-      drogon_model::Gnp::PartnerInvoicePayments payment;
-      payment.setId(gnp::utils::IdGeneratorUtils::generateGuid());
-      payment.setInvoiceId(dto.getInvoiceId());
-      payment.setPartnerId(dto.getPartnerId());
-      payment.setPaymentDate(trantor::Date::now());
-      
-      char buf[64];
-      snprintf(buf, sizeof(buf), "%.2f", dto.getAmountPaid());
-      payment.setAmountPaid(buf);
-      
-      payment.setPaymentMethod(dto.getPaymentMethod());
-      payment.setPaymentReference(dto.getPaymentReference());
-      payment.setTransactionId(dto.getTransactionId());
-      payment.setCurrency(dto.getCurrency().empty() ? "GHS" : dto.getCurrency());
-      payment.setPaymentStatus("Completed");
-      payment.setNotes(dto.getNotes());
-      payment.setCreatedAt(trantor::Date::now());
-
-      co_await mp.insert(payment);
-
-      dto::BaseApiResponse response;
-      response.success = true;
-      response.message = "Payment recorded successfully. Invoice balance updated.";
-      co_return response;
-
-    } catch (const DrogonDbException &e) {
-      dto::BaseApiResponse errorResponse;
-      errorResponse.success = false;
-      errorResponse.message = "Failed to record payment";
-      errorResponse.error["code"] = constants::ERR_DB_QUERY;
-      errorResponse.error["detail"] = e.base().what();
-      co_return errorResponse;
-    }
-  }
-
-  drogon::Task<dto::BaseApiResponse> PartnerInvoiceService::makeFullPayment(const dto::PartnerInvoicePaymentDto &dto) {
-    auto dbClient = drogon::app().getDbClient();
-    CoroMapper<drogon_model::Gnp::PartnerInvoices> invMp(dbClient);
-
-    try {
-      // Fetch the current balance of the invoice
-      auto invoice = co_await invMp.findByPrimaryKey(dto.getInvoiceId());
-      double balance = std::stod(invoice.getValueOfBalance());
-
-      if (balance <= 0) {
-        dto::BaseApiResponse response;
-        response.success = true;
-        response.message = "Invoice is already fully paid";
-        co_return response;
-      }
-
-      // Create a full payment
-      dto::PartnerInvoicePaymentDto fullPaymentDto = dto;
-      fullPaymentDto.setAmountPaid(balance);
-
-      co_return co_await makePartPayment(fullPaymentDto);
-
-    } catch (const DrogonDbException &e) {
-      dto::BaseApiResponse errorResponse;
-      errorResponse.success = false;
-      errorResponse.message = "Failed to fetch invoice for full payment";
-      errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
-      errorResponse.error["detail"] = e.base().what();
-      co_return errorResponse;
-    }
-  }
-
-  drogon::Task<dto::BaseApiResponse> PartnerInvoiceService::getById(const std::string &id) {
-    auto dbClient = drogon::app().getDbClient();
-    CoroMapper<PartnerInvoices> mp(dbClient);
-
-    try {
-      auto partnerInvoice = co_await mp.findByPrimaryKey(id);
-
-      dto::BaseApiResponse response;
-      response.success = true;
-
-      Json::Value partnerInvoiceJson = partnerInvoice.toJson();
-      Json::Value camelCasePartnerInvoice;
-
-      camelCasePartnerInvoice["id"] = partnerInvoiceJson["id"];
-      camelCasePartnerInvoice["partnerId"] = partnerInvoiceJson["partner_id"];
-      camelCasePartnerInvoice["invoiceNumber"] = partnerInvoiceJson["invoice_number"];
-      camelCasePartnerInvoice["description"] = partnerInvoiceJson["description"];
-      camelCasePartnerInvoice["invoiceAmount"] = partnerInvoiceJson["invoice_amount"];
-      camelCasePartnerInvoice["balance"] = partnerInvoiceJson["balance"];
-      camelCasePartnerInvoice["billingCycle"] = partnerInvoiceJson["billing_cycle"];
-      camelCasePartnerInvoice["currency"] = partnerInvoiceJson["currency"];
-      camelCasePartnerInvoice["status"] = partnerInvoiceJson["status"];
-      camelCasePartnerInvoice["createdAt"] = partnerInvoiceJson["created_at"];
-      camelCasePartnerInvoice["dueDate"] = partnerInvoiceJson["due_date"];
-      camelCasePartnerInvoice["paidAt"] = partnerInvoiceJson["paid_at"];
-
-      response.result = camelCasePartnerInvoice;
-      co_return response;
-
-    } catch (const DrogonDbException &e) {
-      dto::BaseApiResponse errorResponse;
-      errorResponse.success = false;
-      errorResponse.message = "Invoice not found";
-      errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
-      errorResponse.error["detail"] = e.base().what();
-      co_return errorResponse;
-    }
-  }
-
-  drogon::Task<dto::BaseApiResponse> PartnerInvoiceService::deleteInvoice(const std::string &id) {
-    auto dbClient = drogon::app().getDbClient();
-    CoroMapper<PartnerInvoices> mp(dbClient);
-
-    try {
-      co_await mp.deleteByPrimaryKey(id);
-
-      dto::BaseApiResponse response;
-      response.success = true;
-      response.message = "Invoice deleted successfully";
-      co_return response;
-
-    } catch (const DrogonDbException &e) {
-      dto::BaseApiResponse errorResponse;
-      errorResponse.success = false;
-      errorResponse.message = "Failed to delete invoice";
-      errorResponse.error["code"] = constants::ERR_DB_QUERY;
-      errorResponse.error["detail"] = e.base().what();
-      co_return errorResponse;
-    }
-  }
-
-  drogon::Task<dto::BaseApiResponse> PartnerInvoiceService::generatePartnerInvoices(const std::string &invoiceDate) {
-    auto dbClient = drogon::app().getDbClient();
-    CoroMapper<drogon_model::Gnp::UserSubscriptions> subMp(dbClient);
-    CoroMapper<drogon_model::Gnp::CommercialPartners> partnerMp(dbClient);
-
-    try {
-      // 1. Get all subscribers onboarded on invoiceDate
-      Criteria criteria(drogon_model::Gnp::UserSubscriptions::Cols::_start_date, CompareOperator::EQ, invoiceDate);
-      auto subscriptions = co_await subMp.findBy(criteria);
-
-      if (subscriptions.empty()) {
-        dto::BaseApiResponse response;
-        response.success = true;
-        response.message = "No subscribers onboarded for the given invoice date.";
-        co_return response;
-      }
-
-      // 2. Group subscriptions by partner_id
-      std::map<std::string, std::vector<drogon_model::Gnp::UserSubscriptions>> partnerSubs;
-      for (const auto &sub : subscriptions) {
-        partnerSubs[sub.getValueOfPartnerId()].push_back(sub);
-      }
-
-      int invoicesGenerated = 0;
-
-      // 3. Process each partner to compute the invoice
-      for (const auto &[partnerId, subs] : partnerSubs) {
-        // Retrieve partner to get cost_per_head, name, etc.
-        auto partner = co_await partnerMp.findByPrimaryKey(partnerId);
-
-        double costPerHead = 3.0;
-        if (!partner.getValueOfCostPerHead().empty()) {
-          costPerHead = std::stod(partner.getValueOfCostPerHead());
-        }
-
-        double totalInvoiceAmount = 0.0;
-
-        for (const auto &sub : subs) {
-          // Compute duration multiplier
-          auto startEpoch = sub.getValueOfStartDate().microSecondsSinceEpoch();
-          auto endEpoch = sub.getValueOfEndDate().microSecondsSinceEpoch();
-          long long diffMicros = endEpoch - startEpoch;
-          
-          if (diffMicros < 0) diffMicros = 0;
-          long long diffDays = diffMicros / (1000000LL * 3600 * 24);
-
-          int multiplier = 1;
-          if (diffDays <= 31) {
-            multiplier = 1;
-          } else if (diffDays <= 60) {
-            multiplier = 2;
-          } else if (diffDays <= 90) {
-            multiplier = 3;
-          } else {
-            multiplier = (diffDays + 29) / 30;
-          }
-
-          totalInvoiceAmount += (costPerHead * multiplier);
-        }
-
-        // Prepare the invoice dto
-        dto::PartnerInvoiceDto invDto;
-        invDto.setPartnerId(partnerId);
-        invDto.setPartnerName(partner.getValueOfName());
-
-        std::string partnerEmail = partner.getValueOfBillingEmail();
-
-        if (partnerEmail.empty()) {
-          partnerEmail = partner.getValueOfContactEmail();
-        }
-
-        invDto.setPartnerEmail(partnerEmail);
-
-        invDto.setBillingCycle("Daily"); // Or derive from subscriptions
-        invDto.setInvoiceNumber("INV-" + utils::IdGeneratorUtils::generateAlphanumericId());
-        invDto.setDescription("Invoice for subscribers onboarded on " + invoiceDate);
-        invDto.setUnitPrice(costPerHead);
-        invDto.setInvoiceAmount(totalInvoiceAmount);
-        invDto.setBalance(totalInvoiceAmount);
-        invDto.setCurrency("GHS"); 
-        invDto.setStatus("Pending");
-        trantor::Date invoiceDateObj;
-        if (!invoiceDate.empty()) {
-          invoiceDateObj = trantor::Date::fromDbStringLocal(invoiceDate + " 00:00:00");
-        } else {
-          invoiceDateObj = trantor::Date::now();
-        }
-        invDto.setInvoiceDate(invoiceDateObj);
-
-        invDto.setDueDate(invoiceDateObj.after(30.0 * 24.0 * 3600.0)); // 30 days due
-
-        auto createRes = co_await createInvoice(invDto);
-        if (createRes.success) {
-          invoicesGenerated++;
-        }
-      }
-
-      dto::BaseApiResponse response;
-      response.success = true;
-      response.message = "Successfully generated " + std::to_string(invoicesGenerated) + " invoices for partner subscribers.";
-      co_return response;
-
-    } catch (const std::exception &e) {
-      dto::BaseApiResponse errorResponse;
-      errorResponse.success = false;
-      errorResponse.message = "Failed to generate partner invoices";
-      errorResponse.error["code"] = constants::ERR_INTERNAL;
-      errorResponse.error["detail"] = e.what();
-      co_return errorResponse;
-    }
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to fetch invoice stats";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
   }
 }
+
+drogon::Task<dto::BaseApiResponse>
+PartnerInvoiceService::markAsPaid(const std::string &id) {
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<PartnerInvoices> mp(dbClient);
+
+  try {
+    auto invoice = co_await mp.findByPrimaryKey(id);
+    invoice.setStatus("Paid");
+    invoice.setBalance("0.00");
+    invoice.setPaidAt(trantor::Date::now());
+    invoice.setUpdatedAt(trantor::Date::now());
+
+    co_await mp.update(invoice);
+
+    dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Invoice marked as paid";
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to mark invoice as paid";
+    errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+drogon::Task<dto::BaseApiResponse> PartnerInvoiceService::makePartPayment(
+    const dto::PartnerInvoicePaymentDto &dto) {
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<drogon_model::Gnp::PartnerInvoicePayments> mp(dbClient);
+
+  try {
+    drogon_model::Gnp::PartnerInvoicePayments payment;
+    payment.setId(gnp::utils::IdGeneratorUtils::generateGuid());
+    payment.setInvoiceId(dto.getInvoiceId());
+    payment.setPartnerId(dto.getPartnerId());
+    payment.setPaymentDate(trantor::Date::now());
+
+    char buf[64];
+    snprintf(buf, sizeof(buf), "%.2f", dto.getAmountPaid());
+    payment.setAmountPaid(buf);
+
+    payment.setPaymentMethod(dto.getPaymentMethod());
+    payment.setPaymentReference(dto.getPaymentReference());
+    payment.setTransactionId(dto.getTransactionId());
+    payment.setCurrency(dto.getCurrency().empty() ? "GHS" : dto.getCurrency());
+    payment.setPaymentStatus("Completed");
+    payment.setNotes(dto.getNotes());
+    payment.setCreatedAt(trantor::Date::now());
+
+    co_await mp.insert(payment);
+
+    dto::BaseApiResponse response;
+    response.success = true;
+    response.message =
+        "Payment recorded successfully. Invoice balance updated.";
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to record payment";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+drogon::Task<dto::BaseApiResponse> PartnerInvoiceService::makeFullPayment(
+    const dto::PartnerInvoicePaymentDto &dto) {
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<drogon_model::Gnp::PartnerInvoices> invMp(dbClient);
+
+  try {
+    // Fetch the current balance of the invoice
+    auto invoice = co_await invMp.findByPrimaryKey(dto.getInvoiceId());
+    double balance = std::stod(invoice.getValueOfBalance());
+
+    if (balance <= 0) {
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.message = "Invoice is already fully paid";
+      co_return response;
+    }
+
+    // Create a full payment
+    dto::PartnerInvoicePaymentDto fullPaymentDto = dto;
+    fullPaymentDto.setAmountPaid(balance);
+
+    co_return co_await makePartPayment(fullPaymentDto);
+
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to fetch invoice for full payment";
+    errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+drogon::Task<dto::BaseApiResponse>
+PartnerInvoiceService::getById(const std::string &id) {
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<PartnerInvoices> mp(dbClient);
+
+  try {
+    auto partnerInvoice = co_await mp.findByPrimaryKey(id);
+
+    dto::BaseApiResponse response;
+    response.success = true;
+
+    Json::Value partnerInvoiceJson = partnerInvoice.toJson();
+    Json::Value camelCasePartnerInvoice;
+
+    camelCasePartnerInvoice["id"] = partnerInvoiceJson["id"];
+    camelCasePartnerInvoice["partnerId"] = partnerInvoiceJson["partner_id"];
+    camelCasePartnerInvoice["invoiceNumber"] =
+        partnerInvoiceJson["invoice_number"];
+    camelCasePartnerInvoice["description"] = partnerInvoiceJson["description"];
+    camelCasePartnerInvoice["invoiceAmount"] =
+        partnerInvoiceJson["invoice_amount"];
+    camelCasePartnerInvoice["balance"] = partnerInvoiceJson["balance"];
+    camelCasePartnerInvoice["billingCycle"] =
+        partnerInvoiceJson["billing_cycle"];
+    camelCasePartnerInvoice["currency"] = partnerInvoiceJson["currency"];
+    camelCasePartnerInvoice["status"] = partnerInvoiceJson["status"];
+    camelCasePartnerInvoice["createdAt"] = partnerInvoiceJson["created_at"];
+    camelCasePartnerInvoice["dueDate"] = partnerInvoiceJson["due_date"];
+    camelCasePartnerInvoice["paidAt"] = partnerInvoiceJson["paid_at"];
+
+    response.result = camelCasePartnerInvoice;
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Invoice not found";
+    errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+drogon::Task<dto::BaseApiResponse>
+PartnerInvoiceService::deleteInvoice(const std::string &id) {
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<PartnerInvoices> mp(dbClient);
+
+  try {
+    co_await mp.deleteByPrimaryKey(id);
+
+    dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Invoice deleted successfully";
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to delete invoice";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+drogon::Task<dto::BaseApiResponse>
+PartnerInvoiceService::generatePartnerInvoices(const std::string &invoiceDate) {
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<drogon_model::Gnp::UserSubscriptions> subMp(dbClient);
+  CoroMapper<drogon_model::Gnp::CommercialPartners> partnerMp(dbClient);
+
+  try {
+    // 1. Get all subscribers onboarded on invoiceDate
+    Criteria criteria(drogon_model::Gnp::UserSubscriptions::Cols::_start_date,
+                      CompareOperator::EQ, invoiceDate);
+    auto subscriptions = co_await subMp.findBy(criteria);
+
+    if (subscriptions.empty()) {
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.message = "No subscribers onboarded for the given invoice date.";
+      co_return response;
+    }
+
+    // 2. Group subscriptions by partner_id
+    std::map<std::string, std::vector<drogon_model::Gnp::UserSubscriptions>>
+        partnerSubs;
+    for (const auto &sub : subscriptions) {
+      partnerSubs[sub.getValueOfPartnerId()].push_back(sub);
+    }
+
+    int invoicesGenerated = 0;
+
+    // 3. Process each partner to compute the invoice
+    for (const auto &[partnerId, subs] : partnerSubs) {
+      // Retrieve partner to get cost_per_head, name, etc.
+      auto partner = co_await partnerMp.findByPrimaryKey(partnerId);
+
+      double costPerHead = 3.0;
+      if (!partner.getValueOfCostPerHead().empty()) {
+        costPerHead = std::stod(partner.getValueOfCostPerHead());
+      }
+
+      double totalInvoiceAmount = 0.0;
+
+      for (const auto &sub : subs) {
+        // Compute duration multiplier
+        auto startEpoch = sub.getValueOfStartDate().microSecondsSinceEpoch();
+        auto endEpoch = sub.getValueOfEndDate().microSecondsSinceEpoch();
+        long long diffMicros = endEpoch - startEpoch;
+
+        if (diffMicros < 0)
+          diffMicros = 0;
+        long long diffDays = diffMicros / (1000000LL * 3600 * 24);
+
+        int multiplier = 1;
+        if (diffDays <= 31) {
+          multiplier = 1;
+        } else if (diffDays <= 60) {
+          multiplier = 2;
+        } else if (diffDays <= 90) {
+          multiplier = 3;
+        } else {
+          multiplier = (diffDays + 29) / 30;
+        }
+
+        totalInvoiceAmount += (costPerHead * multiplier);
+      }
+
+      // Prepare the invoice dto
+      dto::PartnerInvoiceDto invDto;
+      invDto.setPartnerId(partnerId);
+      invDto.setPartnerName(partner.getValueOfName());
+
+      std::string partnerEmail = partner.getValueOfBillingEmail();
+
+      if (partnerEmail.empty()) {
+        partnerEmail = partner.getValueOfContactEmail();
+      }
+
+      invDto.setPartnerEmail(partnerEmail);
+
+      invDto.setBillingCycle("Daily"); // Or derive from subscriptions
+      invDto.setInvoiceNumber(
+          "GNP-INV-" + utils::IdGeneratorUtils::generateAlphanumericId());
+      invDto.setDescription("Invoice for new and renewed subscriptions as of " +
+                            invoiceDate);
+      invDto.setUnitPrice(costPerHead);
+      invDto.setInvoiceAmount(totalInvoiceAmount);
+      invDto.setBalance(totalInvoiceAmount);
+      invDto.setCurrency("GHS");
+      invDto.setStatus("Pending");
+      trantor::Date invoiceDateObj;
+      if (!invoiceDate.empty()) {
+        invoiceDateObj =
+            trantor::Date::fromDbStringLocal(invoiceDate + " 00:00:00");
+      } else {
+        invoiceDateObj = trantor::Date::now();
+      }
+      invDto.setInvoiceDate(invoiceDateObj);
+
+      invDto.setDueDate(
+          invoiceDateObj.after(30.0 * 24.0 * 3600.0)); // 30 days due
+
+      auto createRes = co_await createInvoice(invDto);
+      if (createRes.success) {
+        invoicesGenerated++;
+      }
+    }
+
+    dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Successfully generated " +
+                       std::to_string(invoicesGenerated) +
+                       " invoices for partner subscribers.";
+
+    //schedule periodic invoice generation for the next day at 23:59:59
+
+    auto plugin = drogon::app().getPlugin<plugins::GnpServicePlugin>();
+    auto &quartzApi = plugin->getQuartzApi();
+
+    auto &app = drogon::app();
+    auto customConfig = app.getCustomConfig();
+
+    std::string partnerInvoiceGenerationCallBackUrl = customConfig["QuartzSchedulerApi"]["PartnerInvoiceGenerationCallBackUrl"].asString();
+
+    std::string tomorrowStr = trantor::Date::now().after(24 * 3600).toDbStringLocal();
+    std::string nextDayEndTimeStr = tomorrowStr.substr(0, 10) + " 23:59:59";
+    auto startTime = trantor::Date::fromDbStringLocal(nextDayEndTimeStr);
+
+    dto::QuartzJobDto raffleClosureQuartzJobDto;
+    raffleClosureQuartzJobDto.name = "partner-invoice-" + startTime.toDbStringLocal();
+    raffleClosureQuartzJobDto.description = "Generates partner invoice at scheduled start time";
+    raffleClosureQuartzJobDto.customData.uniqueId = startTime.toDbStringLocal();
+    raffleClosureQuartzJobDto.customData.callbackUrl = partnerInvoiceGenerationCallBackUrl + startTime.toDbStringLocal();
+
+    auto endTime = startTime.after(5 * 60);
+
+    raffleClosureQuartzJobDto.schedule = utils::CronUtils::buildCronExpression(startTime);
+    
+    std::string startDateStr = startTime.after(-5 * 60).toDbStringLocal();
+    std::replace(startDateStr.begin(), startDateStr.end(), ' ', 'T');
+    raffleClosureQuartzJobDto.startDate = startDateStr;
+
+    std::string endDateStr = endTime.toDbStringLocal();
+    std::replace(endDateStr.begin(), endDateStr.end(), ' ', 'T');
+    raffleClosureQuartzJobDto.endDate = endDateStr;
+
+    co_await quartzApi.scheduleJob(raffleClosureQuartzJobDto);
+
+    co_return response;
+
+  } catch (const std::exception &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to generate partner invoices";
+    errorResponse.error["code"] = constants::ERR_INTERNAL;
+    errorResponse.error["detail"] = e.what();
+    co_return errorResponse;
+  }
+}
+} // namespace gnp::services
