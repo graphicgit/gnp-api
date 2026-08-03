@@ -100,6 +100,8 @@ public:
 
     drogon::Task<::gnp::dto::BaseApiResponse> resetSubscriberPasswords(const std::string &partnerId, const std::vector<std::string> &exemptedEmails);
 
+    drogon::Task<::gnp::dto::BaseApiResponse> resetSubscriberPasswordByUserId(const std::string &userId);
+
 };
 
 }

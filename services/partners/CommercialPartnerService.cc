@@ -3425,4 +3425,107 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::resetSubscri
   }
 }
 
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::resetSubscriberPasswordByUserId(const std::string &userId) {
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<Users> mp(dbClient);
+
+  try {
+    auto user = co_await mp.findByPrimaryKey(userId);
+    
+    drogon::async_run([user]() -> drogon::Task<void> {
+      try {
+        auto dbClient = drogon::app().getDbClient();
+        CoroMapper<Users> bg_mp(dbClient);
+        auto plugin = drogon::app().getPlugin<plugins::GnpServicePlugin>();
+        auto &emailService = plugin->getEmailService();
+
+        try {
+          std::string newPassword = utils::PasswordUtils::generateRandomPassword(8);
+          auto userToUpdate = user; // Copy to modify
+          userToUpdate.setPasswordHash(bcrypt::generateHash(newPassword));
+          
+          co_await bg_mp.update(userToUpdate);
+          
+          // send email
+          dto::SendEmailDto emailDto;
+          emailDto.setTo(userToUpdate.getValueOfEmail());
+          emailDto.setSubject("Graphic News Plus - Password Reset");
+          
+          std::string emailBody = R"html(
+            <!DOCTYPE html>
+            <html>
+            <head>
+            <meta charset="UTF-8">
+            <style>
+              body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+              .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+              .header { background-color: #D32F2F; color: #ffffff; padding: 20px; text-align: center; }
+              .content { padding: 30px; color: #333333; }
+              .credentials { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; }
+              .credential-item { margin: 10px 0; }
+              .credential-label { font-weight: bold; color: #666; }
+              .credential-value { font-size: 18px; color: #D32F2F; font-family: monospace; }
+              .footer { background-color: #f4f4f4; color: #666666; padding: 10px; text-align: center; font-size: 12px; }
+            </style>
+            </head>
+            <body>
+            <div class="container">
+              <div class="header">
+                <h1>Graphic News Plus</h1>
+              </div>
+              <div class="content">
+                <p>Hello )html" + userToUpdate.getValueOfFirstName() + R"html(,</p>
+                <p>Your password for Graphic News Plus has been reset by your organization.</p>
+                <p>Below are your new login credentials:</p>
+                <div class="credentials">
+                  <div class="credential-item">
+                    <div class="credential-label">Username (Email):</div>
+                    <div class="credential-value">)html" + userToUpdate.getValueOfEmail() + R"html(</div>
+                  </div>
+                  <div class="credential-item">
+                    <div class="credential-label">New Password:</div>
+                    <div class="credential-value">)html" + newPassword + R"html(</div>
+                  </div>
+                </div>
+                <p>Please keep these credentials secure and change your password after your next login.</p>
+              </div>
+              <div class="footer">
+                &copy; )html" + trantor::Date::now().toCustomFormattedString("%Y") + R"html( Graphic News Plus. All rights reserved.
+              </div>
+            </div>
+            </body>
+            </html>
+          )html";
+          
+          emailDto.setBody(emailBody);
+          co_await emailService.sendEmailAsync(emailDto);
+        } catch (const std::exception& e) {
+          LOG_ERROR << "Failed to process password reset for " << user.getValueOfEmail() << ": " << e.what();
+        }
+      } catch (const std::exception& e) {
+        LOG_ERROR << "Background task for password reset failed: " << e.what();
+      }
+    });
+
+    ::gnp::dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Password reset has been initiated for user.";
+    co_return response;
+
+  } catch (const drogon::orm::UnexpectedRows &e) {
+    ::gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "User not found.";
+    errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+    co_return errorResponse;
+  } catch (const drogon::orm::DrogonDbException &e) {
+    ::gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Database error while resetting password.";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
 } // namespace gnp::services

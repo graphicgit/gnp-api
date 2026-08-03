@@ -978,6 +978,24 @@ drogon::Task<HttpResponsePtr> AdminController::resetPartnerSubscriberPasswords(H
 }
 
 
+drogon::Task<HttpResponsePtr> AdminController::resetPartnerSubscriberPasswordByUserId(HttpRequestPtr req, const std::string &userId) {
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &commercialPartnerService = plugin->getCommercialPartnerService();
+
+  auto apiResp = co_await commercialPartnerService.resetSubscriberPasswordByUserId(userId);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  
+  if (!apiResp.success) {
+      if (apiResp.error.isMember("code") && apiResp.error["code"].asString() == constants::ERR_RESOURCE_NOT_FOUND) {
+          resp->setStatusCode(k404NotFound);
+      } else {
+          resp->setStatusCode(k500InternalServerError);
+      }
+  }
+  
+  co_return resp;
+}
+
 
 drogon::Task<HttpResponsePtr> AdminController::assignPartnerSubscribersPlan(HttpRequestPtr req) {
 
