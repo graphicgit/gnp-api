@@ -65,6 +65,8 @@ public:
 
   ADD_METHOD_TO(AdminController::updatePartnerQuota, std::string(PREFIX) + "update-partner-quota/{1}", Post, Options, "JwtAuthFilter");
 
+ ADD_METHOD_TO(AdminController::resetPartnerSubscriberPasswords, std::string(PREFIX) + "reset-partner-subscriber-passwords/{1}", Post, Options, "JwtAuthFilter");
+
   ADD_METHOD_TO(AdminController::assignPartnerSubscribersPlan, std::string(PREFIX) + "assign-partner-subscribers-plan", Post, Options, "JwtAuthFilter");
 
   ADD_METHOD_TO(AdminController::updatePartner, std::string(PREFIX) + "update-partner", Post, Options, "JwtAuthFilter");
@@ -173,6 +175,7 @@ public:
   drogon::Task<HttpResponsePtr> createPartnerSubscriber(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> uploadPartnerSubscribers(HttpRequestPtr req, const std::string &partnerId);
   drogon::Task<HttpResponsePtr> updatePartnerQuota(HttpRequestPtr req, const std::string &partnerId);
+  drogon::Task<HttpResponsePtr> resetPartnerSubscriberPasswords(HttpRequestPtr req, const std::string &partnerId);
 
 
   drogon::Task<HttpResponsePtr> assignPartnerSubscribersPlan(HttpRequestPtr req);

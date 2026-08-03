@@ -109,10 +109,9 @@ drogon::Task<dto::BaseApiResponse> UserService::getDetails(const std::string &us
   auto dbClient = drogon::app().getDbClient();
   auto mp = drogon::orm::CoroMapper<Users>(dbClient);
 
-  gnp::dto::BaseApiResponse response;
+  dto::BaseApiResponse response;
   try {
-    Users user = co_await mp.findOne(
-        Criteria(Users::Cols::_id, CompareOperator::EQ, userId));
+    Users user = co_await mp.findOne(Criteria(Users::Cols::_id, CompareOperator::EQ, userId));
 
     Json::Value userJson = user.toJson();
     Json::Value data;
@@ -1000,8 +999,7 @@ drogon::Task<dto::BaseApiResponse> UserService::validateUserCredentials(const dt
   try {
     Users user = co_await mapper.findOne(criteria);
 
-    std::string storedHash = gnp::utils::PasswordUtils::normalizeBcryptHash(
-        user.getValueOfPasswordHash());
+    std::string storedHash = gnp::utils::PasswordUtils::normalizeBcryptHash(user.getValueOfPasswordHash());
 
     bool passwordMatches =
         bcrypt::validatePassword(signin_dto.getPassword(), storedHash);

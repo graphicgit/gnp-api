@@ -1,8 +1,6 @@
 #include <drogon/WebSocketConnection.h>
 #include <drogon/drogon.h>
 
-#include "filters/CorsFilter.h"
-
 int main() {
   printf("Starting GnpApi...\n");
   // Load config file

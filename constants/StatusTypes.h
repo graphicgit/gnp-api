@@ -19,6 +19,8 @@ namespace gnp::constants {
         Completed = 8,
         Processing = 9,
         Scheduled = 10,
+        Active = 11,
+        InActive = 12,
 
     };
 

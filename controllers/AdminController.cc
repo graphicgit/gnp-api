@@ -951,6 +951,32 @@ drogon::Task<HttpResponsePtr> AdminController::updatePartnerQuota(const HttpRequ
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
+drogon::Task<HttpResponsePtr> AdminController::resetPartnerSubscriberPasswords(HttpRequestPtr req, const std::string &partnerId) {
+
+  auto jsonBody = req->getJsonObject();
+  std::vector<std::string> exemptedEmails;
+
+  if (jsonBody && jsonBody->isMember("exemptedEmails") && (*jsonBody)["exemptedEmails"].isArray()) {
+    for (const auto& email : (*jsonBody)["exemptedEmails"]) {
+      if (email.isString()) {
+        exemptedEmails.push_back(email.asString());
+      }
+    }
+  }
+
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &commercialPartnerService = plugin->getCommercialPartnerService();
+
+  auto apiResp = co_await commercialPartnerService.resetSubscriberPasswords(partnerId, exemptedEmails);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  
+  if (!apiResp.success) {
+      resp->setStatusCode(k500InternalServerError);
+  }
+  
+  co_return resp;
+}
+
 
 
 drogon::Task<HttpResponsePtr> AdminController::assignPartnerSubscribersPlan(HttpRequestPtr req) {

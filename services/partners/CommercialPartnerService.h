@@ -47,8 +47,7 @@ public:
 
   drogon::Task<dto::BaseApiResponse> deletePartner(const std::string &id);
 
-  void enableSubaccount(
-      const std::string &id,
+  void enableSubaccount(const std::string &id,
       const std::function<void(const dto::BaseApiResponse &)> &callback);
 
   void getPartnerDetails(
@@ -99,6 +98,7 @@ public:
 
     drogon::Task<::gnp::dto::BaseApiResponse> updatePartnerQuota(std::string partnerId, const dto::PartnerQuotaDto &dto);
 
+    drogon::Task<::gnp::dto::BaseApiResponse> resetSubscriberPasswords(const std::string &partnerId, const std::vector<std::string> &exemptedEmails);
 
 };
 
