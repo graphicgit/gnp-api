@@ -15,7 +15,7 @@
 #include "dto/PartnerQuotaDto.h"
 
 
-drogon::Task<HttpResponsePtr> AdminController::getAllNewsPapers(const HttpRequestPtr req) {
+Task<HttpResponsePtr> AdminController::getAllNewsPapers(const HttpRequestPtr req) {
   int pageSize = 10; // Default page size
   int pageNo = 1;    //  Default page number
 
@@ -73,7 +73,7 @@ drogon::Task<HttpResponsePtr> AdminController::getAllNewsPapers(const HttpReques
 }
 
 
-drogon::Task<HttpResponsePtr> AdminController::getAllArchivedNewsPapers(const HttpRequestPtr req) {
+Task<HttpResponsePtr> AdminController::getAllArchivedNewsPapers(const HttpRequestPtr req) {
   int pageSize = 10; // Default page size
   int pageNo = 1;    //  Default page number
 
@@ -148,7 +148,7 @@ Task<HttpResponsePtr> AdminController::getNewsPaperDetails(const HttpRequestPtr 
   co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
-drogon::Task<HttpResponsePtr> AdminController::publishNewsPaper(const HttpRequestPtr req) {
+Task<HttpResponsePtr> AdminController::publishNewsPaper(const HttpRequestPtr req) {
   if (req->getParameter("id").empty()) {
     gnp::dto::BaseApiResponse response;
     response.success = false;
@@ -168,7 +168,7 @@ drogon::Task<HttpResponsePtr> AdminController::publishNewsPaper(const HttpReques
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr> AdminController::unPublishNewsPaper(const HttpRequestPtr req) {
+Task<HttpResponsePtr> AdminController::unPublishNewsPaper(const HttpRequestPtr req) {
   if (req->getParameter("id").empty()) {
     gnp::dto::BaseApiResponse response;
     response.success = false;
@@ -188,7 +188,7 @@ drogon::Task<HttpResponsePtr> AdminController::unPublishNewsPaper(const HttpRequ
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr> AdminController::IngestNewsPaper(const HttpRequestPtr req) {
+Task<HttpResponsePtr> AdminController::IngestNewsPaper(const HttpRequestPtr req) {
   auto jsonBody = req->getJsonObject();
 
   if (!jsonBody) {
@@ -210,7 +210,7 @@ drogon::Task<HttpResponsePtr> AdminController::IngestNewsPaper(const HttpRequest
   co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
-drogon::Task<HttpResponsePtr> AdminController::updateNewsPaper(HttpRequestPtr req, const std::string &newspaperId) {
+Task<HttpResponsePtr> AdminController::updateNewsPaper(HttpRequestPtr req, const std::string &newspaperId) {
 
   auto jsonBody = req->getJsonObject();
 
@@ -234,7 +234,7 @@ drogon::Task<HttpResponsePtr> AdminController::updateNewsPaper(HttpRequestPtr re
 
 }
 
-drogon::Task<HttpResponsePtr> AdminController::deleteNewsPaper(const HttpRequestPtr req) {
+Task<HttpResponsePtr> AdminController::deleteNewsPaper(const HttpRequestPtr req) {
 
   if (req->getParameter("id").empty()) {
     gnp::dto::BaseApiResponse response;
@@ -970,10 +970,6 @@ drogon::Task<HttpResponsePtr> AdminController::resetPartnerSubscriberPasswords(H
   auto apiResp = co_await commercialPartnerService.resetSubscriberPasswords(partnerId, exemptedEmails);
   auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
   
-  if (!apiResp.success) {
-      resp->setStatusCode(k500InternalServerError);
-  }
-  
   co_return resp;
 }
 
@@ -984,14 +980,6 @@ drogon::Task<HttpResponsePtr> AdminController::resetPartnerSubscriberPasswordByU
 
   auto apiResp = co_await commercialPartnerService.resetSubscriberPasswordByUserId(userId);
   auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
-  
-  if (!apiResp.success) {
-      if (apiResp.error.isMember("code") && apiResp.error["code"].asString() == constants::ERR_RESOURCE_NOT_FOUND) {
-          resp->setStatusCode(k404NotFound);
-      } else {
-          resp->setStatusCode(k500InternalServerError);
-      }
-  }
   
   co_return resp;
 }
