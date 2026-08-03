@@ -974,11 +974,11 @@ drogon::Task<HttpResponsePtr> AdminController::resetPartnerSubscriberPasswords(H
 }
 
 
-drogon::Task<HttpResponsePtr> AdminController::resetPartnerSubscriberPasswordByUserId(HttpRequestPtr req, const std::string &userId) {
+drogon::Task<HttpResponsePtr> AdminController::resetPartnerSubscriberPasswordByUserId(HttpRequestPtr req, const std::string &partnerId, const std::string &userId) {
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &commercialPartnerService = plugin->getCommercialPartnerService();
 
-  auto apiResp = co_await commercialPartnerService.resetSubscriberPasswordByUserId(userId);
+  auto apiResp = co_await commercialPartnerService.resetSubscriberPasswordByUserId(partnerId, userId);
   auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
   
   co_return resp;

@@ -3425,12 +3425,12 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::resetSubscri
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::resetSubscriberPasswordByUserId(const std::string &userId) {
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::resetSubscriberPasswordByUserId(const std::string &partnerId, const std::string &userId) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mp(dbClient);
 
   try {
-    auto user = co_await mp.findByPrimaryKey(userId);
+    auto user = co_await mp.findOne(Criteria(Users::Cols::_id, CompareOperator::EQ, userId) && Criteria(Users::Cols::_partner_id, CompareOperator::EQ, partnerId));
     
     drogon::async_run([user]() -> drogon::Task<void> {
       try {
@@ -3507,7 +3507,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::resetSubscri
       }
     });
 
-    ::gnp::dto::BaseApiResponse response;
+    dto::BaseApiResponse response;
     response.success = true;
     response.message = "Password reset has been initiated for user.";
     co_return response;
