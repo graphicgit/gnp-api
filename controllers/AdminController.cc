@@ -1579,16 +1579,42 @@ Task<HttpResponsePtr> AdminController::deleteRole(HttpRequestPtr req, const std:
 
 Task<HttpResponsePtr> AdminController::regenerateNewspaperEntitlements(HttpRequestPtr req)
 {
-
-  auto date = req->getParameter("date");
-
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newspaperService = plugin->getNewsPaperService();
 
-  auto result = co_await newspaperService.regenerateNewspaperEntitlement(date);
-  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-  co_return resp;
+  std::vector<std::string> dates;
+  std::tm tm = {};
+  tm.tm_year = 2026 - 1900;
+  tm.tm_mon = 7 - 1; // July (0-based)
+  tm.tm_mday = 1;
+  tm.tm_hour = 12; // Noon to avoid DST issues
 
+  std::time_t currentDate = std::mktime(&tm);
+  std::time_t now = std::time(nullptr);
+
+  while (currentDate <= now) {
+      char buffer[16];
+      std::strftime(buffer, sizeof(buffer), "%Y-%m-%d", &tm);
+      dates.push_back(buffer);
+
+      // Increment by 1 calendar day and let mktime normalize (DST-safe, handles month/year rollovers)
+      tm.tm_mday++;
+      currentDate = std::mktime(&tm);
+  }
+
+  int successCount = 0;
+  for (const auto& dateStr : dates) {
+      auto result = co_await newspaperService.regenerateNewspaperEntitlement(dateStr);
+      if (result.success) {
+          successCount++;
+      }
+  }
+
+  gnp::dto::BaseApiResponse response;
+  response.success = true;
+  response.message = "Regenerated entitlements for " + std::to_string(dates.size()) + " dates (" + std::to_string(successCount) + " successful)";
+  
+  co_return HttpResponse::newHttpJsonResponse(response.toJson());
 }
 
 

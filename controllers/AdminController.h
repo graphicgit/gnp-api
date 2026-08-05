@@ -123,8 +123,8 @@ public:
     // affiliates
 
    //utils
-   ADD_METHOD_TO(AdminController::regenerateNewspaperEntitlements, std::string(PREFIX) + "regenerate-newspaper-entitlements", Get, Options, "JwtAuthFilter");
-   ADD_METHOD_TO(AdminController::generatePartnerInvoices, std::string(PREFIX) + "generate-partner-invoices/{1}", Post);
+   ADD_METHOD_TO(AdminController::regenerateNewspaperEntitlements, std::string(PREFIX) + "regenerate-newspaper-entitlements", Post, Options);
+   ADD_METHOD_TO(AdminController::generatePartnerInvoices, std::string(PREFIX) + "generate-partner-invoices/{1}", Post, Options);
 
   METHOD_LIST_END
 
