@@ -120,7 +120,7 @@ public:
    ADD_METHOD_TO(AdminController::markPartnerInvoicePaid, std::string(PREFIX) + "mark-partner-invoice-paid", Get, Options, "JwtAuthFilter");
    ADD_METHOD_TO(AdminController::deletePartnerInvoice, std::string(PREFIX) + "delete-partner-invoice", Delete, Options, "JwtAuthFilter");
 
-    // affiliates
+    //affiliates
 
    //utils
    ADD_METHOD_TO(AdminController::regenerateNewspaperEntitlements, std::string(PREFIX) + "regenerate-newspaper-entitlements", Post, Options);
