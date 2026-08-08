@@ -17,6 +17,7 @@
 #include "dto/BaseApiResponse.h"
 #include "dto/GeneratePartnerApiKeyDto.h"
 #include "dto/SendEmailDto.h"
+#include "utils/StringUtils.h"
 #include "plugins/GnpServicePlugin.h"
 #include "services/email/EmailService.h"
 #include "utils/CsvParser.h"
@@ -314,24 +315,25 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartner(const
 
     newPartner.setName(dto.getName());
     newPartner.setContactName(dto.getContactName());
-    newPartner.setContactEmail(dto.getContactEmail());
+
+    newPartner.setContactEmail(utils::StringUtils::trim(dto.getContactEmail()));
+
     newPartner.setContactPhone(dto.getContactPhone());
-    newPartner.setBillingEmail(dto.getBillingEmail());
+
+    newPartner.setBillingEmail(utils::StringUtils::trim(dto.getBillingEmail()));
+
     newPartner.setDefaultSubscriptionPlanId(dto.getDefaultSubscriptionPlanId());
-    newPartner.setDefaultSubscriptionPlanDescription(
-        dto.getDefaultSubscriptionPlanName());
+    newPartner.setDefaultSubscriptionPlanDescription(dto.getDefaultSubscriptionPlanName());
     newPartner.setCurrency(dto.getCurrency());
     char unitPriceBuf[64];
-    snprintf(unitPriceBuf, sizeof(unitPriceBuf), "%.2f",
-             dto.getPartnerInvoice().getUnitPrice());
+    snprintf(unitPriceBuf, sizeof(unitPriceBuf), "%.2f", dto.getPartnerInvoice().getUnitPrice());
     newPartner.setCostPerHead(unitPriceBuf);
     newPartner.setSubscriberQuota(dto.getSubscriberQuota());
     newPartner.setRemainingQuota(dto.getSubscriberQuota());
     newPartner.setStatus("Active");
     newPartner.setCurrentInvoiceNo(dto.getPartnerInvoice().getInvoiceNumber());
     char totalAmountDueBuf[64];
-    snprintf(totalAmountDueBuf, sizeof(totalAmountDueBuf), "%.2f",
-             dto.getPartnerInvoice().getInvoiceAmount());
+    snprintf(totalAmountDueBuf, sizeof(totalAmountDueBuf), "%.2f", dto.getPartnerInvoice().getInvoiceAmount());
     newPartner.setTotalAmountDue(totalAmountDueBuf);
     newPartner.setSubAccountEnabled(dto.getSubAccountEnabled());
     newPartner.setSubscriptionStartDate(dto.getSubscriptionStartDate());
@@ -431,16 +433,16 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartner(const
 
     // create invoice
     dto::PartnerInvoiceDto partnerInvoiceDto;
-    partnerInvoiceDto.setInvoiceNumber(
-        dto.getPartnerInvoice().getInvoiceNumber());
+    partnerInvoiceDto.setInvoiceNumber(dto.getPartnerInvoice().getInvoiceNumber());
     partnerInvoiceDto.setPartnerId(commercialPartner.getValueOfId());
     partnerInvoiceDto.setPartnerName(dto.getName());
     partnerInvoiceDto.setPartnerEmail(dto.getBillingEmail());
+
+    partnerInvoiceDto.setPartnerEmail(utils::StringUtils::trim(dto.getBillingEmail()));
+
     partnerInvoiceDto.setBalance(dto.getPartnerInvoice().getBalance());
-    partnerInvoiceDto.setInvoiceAmount(
-        dto.getPartnerInvoice().getInvoiceAmount());
-    partnerInvoiceDto.setBillingCycle(
-        dto.getPartnerInvoice().getBillingCycle());
+    partnerInvoiceDto.setInvoiceAmount(dto.getPartnerInvoice().getInvoiceAmount());
+    partnerInvoiceDto.setBillingCycle(dto.getPartnerInvoice().getBillingCycle());
     partnerInvoiceDto.setCurrency(dto.getPartnerInvoice().getCurrency());
     partnerInvoiceDto.setDescription(dto.getPartnerInvoice().getDescription());
     partnerInvoiceDto.setDueDate(dto.getSubscriptionEndDate());
@@ -453,9 +455,8 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartner(const
 
     // Send onboarding email to billing email
     dto::SendEmailDto onboardingEmailDto;
-    onboardingEmailDto.setTo(dto.getBillingEmail());
-    onboardingEmailDto.setSubject(
-        "Welcome to Graphic Partner Platform - Onboarding & Invoice");
+    onboardingEmailDto.setTo(utils::StringUtils::trim(dto.getBillingEmail()));
+    onboardingEmailDto.setSubject("Welcome to Graphic Partner Platform - Onboarding & Invoice");
 
     std::ostringstream amountStream;
     amountStream << std::fixed << std::setprecision(2)
@@ -470,8 +471,7 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartner(const
       formattedAmount.insert(i, ",");
     }
 
-    std::string dueDateStr =
-        dto.getSubscriptionEndDate().toCustomFormattedString("%d-%b-%Y");
+    std::string dueDateStr = dto.getSubscriptionEndDate().toCustomFormattedString("%d-%b-%Y");
 
     std::string onboardingEmailBody =
         R"html(
@@ -599,9 +599,9 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::updatePartner(const
 
     commercialPartner.setName(dto.getName());
     commercialPartner.setContactName(dto.getContactName());
-    commercialPartner.setContactEmail(dto.getContactEmail());
+    commercialPartner.setContactEmail(utils::StringUtils::trim(dto.getContactEmail()));
     commercialPartner.setContactPhone(dto.getContactPhone());
-    commercialPartner.setBillingEmail(dto.getBillingEmail());
+    commercialPartner.setBillingEmail(utils::StringUtils::trim(dto.getBillingEmail()));
     commercialPartner.setCurrency(dto.getCurrency());
     commercialPartner.setSubscriberQuota(dto.getSubscriberQuota());
     commercialPartner.setSubAccountEnabled(dto.getSubAccountEnabled());
@@ -636,7 +636,7 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartnerSubscr
 
   newUser.setFirstName(dto.getFirstName());
   newUser.setLastName(dto.getLastName());
-  newUser.setEmail(dto.getEmail());
+  newUser.setEmail(utils::StringUtils::trim(dto.getEmail()));
   newUser.setUsername(dto.getEmail());
   std::string phoneNumber = dto.getPhoneNumber();
   if (phoneNumber.length() >= 3 && phoneNumber.substr(0, 3) == "233") {
@@ -716,11 +716,9 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartnerSubscr
       newEntArray.append(ent);
     }
     Json::StreamWriterBuilder writerBuilder;
-    newSub.setNewspaperEntitlements(
-        Json::writeString(writerBuilder, newEntArray));
+    newSub.setNewspaperEntitlements(Json::writeString(writerBuilder, newEntArray));
     newSub.setCreatedAt(trantor::Date::now());
-    newSub.setSubscriptionIdentifier(
-        utils::IdGeneratorUtils::generateRandomSixDigit());
+    newSub.setSubscriptionIdentifier(utils::IdGeneratorUtils::generateRandomSixDigit());
     co_await subMapper.insert(newSub);
 
     auto determineBillingCycle = [](const trantor::Date &start,
@@ -740,20 +738,16 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartnerSubscr
     };
 
     // 4. Create renewal record in subscription renewal history table
-    CoroMapper<drogon_model::Gnp::SubscriptionRenewalHistory> renewalMapper(
-        dbClient);
+    CoroMapper<drogon_model::Gnp::SubscriptionRenewalHistory> renewalMapper(dbClient);
     drogon_model::Gnp::SubscriptionRenewalHistory renewal;
-    renewal.setSubscriptionIdentifier(
-        newSub.getValueOfSubscriptionIdentifier());
+    renewal.setSubscriptionIdentifier(newSub.getValueOfSubscriptionIdentifier());
     renewal.setUserId(user.getValueOfId());
-    renewal.setUserName(user.getValueOfFirstName() + " " +
-                        user.getValueOfLastName());
+    renewal.setUserName(user.getValueOfFirstName() + " " + user.getValueOfLastName());
     renewal.setEmail(user.getValueOfEmail());
     renewal.setSubscriptionPlanId(plan.getValueOfId());
     renewal.setSubscriptionPlanName(plan.getValueOfName());
     renewal.setPastBillingCycle("N/A");
-    renewal.setCurrentBillingCycle(
-        determineBillingCycle(startDateObj, endDateObj));
+    renewal.setCurrentBillingCycle(determineBillingCycle(startDateObj, endDateObj));
     renewal.setTransactionStatus("Successful");
     renewal.setPaidBy(partner.getValueOfName());
     renewal.setAmountPaid(partner.getValueOfCostPerHead());
@@ -761,11 +755,11 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartnerSubscr
     co_await renewalMapper.insert(renewal);
 
     // 5. Send email with credentials
-    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto plugin = drogon::app().getPlugin<plugins::GnpServicePlugin>();
     auto &emailService = plugin->getEmailService();
 
-    gnp::dto::SendEmailDto emailDto;
-    emailDto.setTo(dto.getEmail());
+    dto::SendEmailDto emailDto;
+    emailDto.setTo(utils::StringUtils::trim(dto.getEmail()));
     emailDto.setSubject("Graphic News Plus Account Details");
 
     std::string emailBody = R"(
@@ -1020,7 +1014,7 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::updatePartnerSubscr
 
     // If email changes, update both email and username
     if (!dto.getEmail().empty()) {
-      user.setEmail(dto.getEmail());
+      user.setEmail(utils::StringUtils::trim(dto.getEmail()));
       user.setUsername(dto.getEmail());
     }
 
@@ -1904,8 +1898,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::generatePart
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-CommercialPartnerService::revokePartnerApiKey(const std::string &partnerId,
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::revokePartnerApiKey(const std::string &partnerId,
                                               const std::string &id) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -1936,8 +1929,7 @@ CommercialPartnerService::revokePartnerApiKey(const std::string &partnerId,
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-CommercialPartnerService::activatePartnerApiKey(const std::string &partnerId,
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::activatePartnerApiKey(const std::string &partnerId,
                                                 const std::string &id) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -1976,8 +1968,7 @@ CommercialPartnerService::activatePartnerApiKey(const std::string &partnerId,
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-CommercialPartnerService::deletePartnerApiKey(const std::string &id) {
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::deletePartnerApiKey(const std::string &id) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> mp(dbClient);
@@ -2001,8 +1992,7 @@ CommercialPartnerService::deletePartnerApiKey(const std::string &id) {
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-CommercialPartnerService::updatePartnerApiKey(
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::updatePartnerApiKey(
     const ::gnp::dto::UpdatePartnerApiKeyDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -2047,8 +2037,7 @@ CommercialPartnerService::updatePartnerApiKey(
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-CommercialPartnerService::onboardSubscriberAsync(
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubscriberAsync(
     const std::string &clientId, const std::string &clientSecret,
     const ::gnp::dto::PartnerOnboardingDto &dto) {
 
@@ -2642,8 +2631,7 @@ CommercialPartnerService::onboardSubscriberAsync(
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-CommercialPartnerService::getSubscriberSubscriptionSummary(
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getSubscriberSubscriptionSummary(
     std::string partnerId, std::string userId) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<UserSubscriptions> subMapper(dbClient);
@@ -2753,8 +2741,7 @@ CommercialPartnerService::getSubscriberSubscriptionSummary(
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-CommercialPartnerService::checkSubscriberStatus(
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::checkSubscriberStatus(
     const std::string &clientId, const std::string &clientSecret,
     const std::string &phoneNumber) {
   auto dbClient = drogon::app().getDbClient();
@@ -2853,8 +2840,7 @@ CommercialPartnerService::checkSubscriberStatus(
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-CommercialPartnerService::retrieveSubscriberDetails(
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::retrieveSubscriberDetails(
     const std::string &clientId, const std::string &clientSecret,
     const std::string &phoneNumber) {
 
@@ -2927,8 +2913,7 @@ CommercialPartnerService::retrieveSubscriberDetails(
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-CommercialPartnerService::getPartnerOverviewStats(
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerOverviewStats(
     const std::string &partnerId) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -3086,8 +3071,7 @@ CommercialPartnerService::getPartnerOverviewStats(
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-CommercialPartnerService::getPartnerEngagementReport(
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerEngagementReport(
     const std::string &partnerId, const std::string &period) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -3205,8 +3189,7 @@ CommercialPartnerService::getPartnerEngagementReport(
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-CommercialPartnerService::getPartnerAnalyticsCharts(
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerAnalyticsCharts(
     const std::string &partnerId, const std::string &period) {
   auto dbClient = drogon::app().getDbClient();
   try {
@@ -3256,7 +3239,7 @@ CommercialPartnerService::getPartnerAnalyticsCharts(
       topPublications.append(item);
     }
 
-    gnp::dto::BaseApiResponse response;
+    dto::BaseApiResponse response;
     response.success = true;
     response.message = "Analytics charts retrieved successfully";
 
@@ -3334,87 +3317,194 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::resetSubscri
     
     auto users = co_await mp.findBy(searchCriteria);
     
-    auto plugin = drogon::app().getPlugin<plugins::GnpServicePlugin>();
-    auto &emailService = plugin->getEmailService();
-
-    int successCount = 0;
-
-    for (auto &user : users) {
-      std::string newPassword = utils::PasswordUtils::generateRandomPassword(8);
-      user.setPasswordHash(bcrypt::generateHash(newPassword));
-      
-      co_await mp.update(user);
-      
-      // send email
-      dto::SendEmailDto emailDto;
-      emailDto.setTo(user.getValueOfEmail());
-      emailDto.setSubject("Graphic News Plus - Password Reset");
-      
-      std::string emailBody = R"html(
-        <!DOCTYPE html>
-        <html>
-        <head>
-        <meta charset="UTF-8">
-        <style>
-          body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-          .header { background-color: #D32F2F; color: #ffffff; padding: 20px; text-align: center; }
-          .content { padding: 30px; color: #333333; }
-          .credentials { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; }
-          .credential-item { margin: 10px 0; }
-          .credential-label { font-weight: bold; color: #666; }
-          .credential-value { font-size: 18px; color: #D32F2F; font-family: monospace; }
-          .footer { background-color: #f4f4f4; color: #666666; padding: 10px; text-align: center; font-size: 12px; }
-        </style>
-        </head>
-        <body>
-        <div class="container">
-          <div class="header">
-            <h1>Graphic News Plus</h1>
-          </div>
-          <div class="content">
-            <p>Hello )html" + user.getValueOfFirstName() + R"html(,</p>
-            <p>Your password for Graphic News Plus has been reset by your organization.</p>
-            <p>Below are your new login credentials:</p>
-            <div class="credentials">
-              <div class="credential-item">
-                <div class="credential-label">Username (Email):</div>
-                <div class="credential-value">)html" + user.getValueOfEmail() + R"html(</div>
-              </div>
-              <div class="credential-item">
-                <div class="credential-label">New Password:</div>
-                <div class="credential-value">)html" + newPassword + R"html(</div>
-              </div>
-            </div>
-            <p>Please keep these credentials secure and change your password after your next login.</p>
-          </div>
-          <div class="footer">
-            &copy; )html" + trantor::Date::now().toCustomFormattedString("%Y") + R"html( Graphic News Plus. All rights reserved.
-          </div>
-        </div>
-        </body>
-        </html>
-      )html";
-      
-      emailDto.setBody(emailBody);
+    drogon::async_run([users]() -> drogon::Task<void> {
       try {
-        co_await emailService.sendEmailAsync(emailDto);
+        auto dbClient = drogon::app().getDbClient();
+        CoroMapper<Users> bg_mp(dbClient);
+        auto plugin = drogon::app().getPlugin<plugins::GnpServicePlugin>();
+        auto &emailService = plugin->getEmailService();
+
+        for (auto user : users) {
+          try {
+            std::string newPassword = utils::PasswordUtils::generateRandomPassword(8);
+            user.setPasswordHash(bcrypt::generateHash(newPassword));
+            
+            co_await bg_mp.update(user);
+            
+            // send email
+            dto::SendEmailDto emailDto;
+            emailDto.setTo(gnp::utils::StringUtils::trim(user.getValueOfEmail()));
+            emailDto.setSubject("Graphic News Plus - Password Reset");
+            
+            std::string emailBody = R"html(
+              <!DOCTYPE html>
+              <html>
+              <head>
+              <meta charset="UTF-8">
+              <style>
+                body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+                .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+                .header { background-color: #D32F2F; color: #ffffff; padding: 20px; text-align: center; }
+                .content { padding: 30px; color: #333333; }
+                .credentials { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; }
+                .credential-item { margin: 10px 0; }
+                .credential-label { font-weight: bold; color: #666; }
+                .credential-value { font-size: 18px; color: #D32F2F; font-family: monospace; }
+                .footer { background-color: #f4f4f4; color: #666666; padding: 10px; text-align: center; font-size: 12px; }
+              </style>
+              </head>
+              <body>
+              <div class="container">
+                <div class="header">
+                  <h1>Graphic News Plus</h1>
+                </div>
+                <div class="content">
+                  <p>Hello )html" + user.getValueOfFirstName() + R"html(,</p>
+                  <p>Your password for Graphic News Plus has been reset by your organization.</p>
+                  <p>Below are your new login credentials:</p>
+                  <div class="credentials">
+                    <div class="credential-item">
+                      <div class="credential-label">Username (Email):</div>
+                      <div class="credential-value">)html" + user.getValueOfEmail() + R"html(</div>
+                    </div>
+                    <div class="credential-item">
+                      <div class="credential-label">New Password:</div>
+                      <div class="credential-value">)html" + newPassword + R"html(</div>
+                    </div>
+                  </div>
+                  <p>Please keep these credentials secure and change your password after your next login.</p>
+                </div>
+                <div class="footer">
+                  &copy; )html" + trantor::Date::now().toCustomFormattedString("%Y") + R"html( Graphic News Plus. All rights reserved.
+                </div>
+              </div>
+              </body>
+              </html>
+            )html";
+            
+            emailDto.setBody(emailBody);
+            co_await emailService.sendEmailAsync(emailDto);
+          } catch (const std::exception& e) {
+            LOG_ERROR << "Failed to process password reset for " << user.getValueOfEmail() << ": " << e.what();
+          }
+        }
       } catch (const std::exception& e) {
-        LOG_ERROR << "Failed to send password reset email to " << user.getValueOfEmail() << ": " << e.what();
+        LOG_ERROR << "Background task for password reset failed: " << e.what();
       }
-      
-      successCount++;
-    }
+    });
 
     ::gnp::dto::BaseApiResponse response;
     response.success = true;
-    response.message = "Passwords reset successfully for " + std::to_string(successCount) + " subscribers.";
+    response.message = "Password reset has been initiated for " + std::to_string(users.size()) + " subscribers.";
     co_return response;
 
   } catch (const drogon::orm::DrogonDbException &e) {
     ::gnp::dto::BaseApiResponse errorResponse;
     errorResponse.success = false;
     errorResponse.message = "Database error while resetting passwords.";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::resetSubscriberPasswordByUserId(const std::string &partnerId, const std::string &userId) {
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<Users> mp(dbClient);
+
+  try {
+    auto user = co_await mp.findOne(Criteria(Users::Cols::_id, CompareOperator::EQ, userId) && Criteria(Users::Cols::_partner_id, CompareOperator::EQ, partnerId));
+    
+    drogon::async_run([user]() -> drogon::Task<void> {
+      try {
+        auto dbClient = drogon::app().getDbClient();
+        CoroMapper<Users> bg_mp(dbClient);
+        auto plugin = drogon::app().getPlugin<plugins::GnpServicePlugin>();
+        auto &emailService = plugin->getEmailService();
+
+        try {
+          std::string newPassword = utils::PasswordUtils::generateRandomPassword(8);
+          auto userToUpdate = user; // Copy to modify
+          userToUpdate.setPasswordHash(bcrypt::generateHash(newPassword));
+          
+          co_await bg_mp.update(userToUpdate);
+          
+          // send email
+          dto::SendEmailDto emailDto;
+          emailDto.setTo(gnp::utils::StringUtils::trim(userToUpdate.getValueOfEmail()));
+          emailDto.setSubject("Graphic News Plus - Password Reset");
+          
+          std::string emailBody = R"html(
+            <!DOCTYPE html>
+            <html>
+            <head>
+            <meta charset="UTF-8">
+            <style>
+              body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+              .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+              .header { background-color: #D32F2F; color: #ffffff; padding: 20px; text-align: center; }
+              .content { padding: 30px; color: #333333; }
+              .credentials { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; }
+              .credential-item { margin: 10px 0; }
+              .credential-label { font-weight: bold; color: #666; }
+              .credential-value { font-size: 18px; color: #D32F2F; font-family: monospace; }
+              .footer { background-color: #f4f4f4; color: #666666; padding: 10px; text-align: center; font-size: 12px; }
+            </style>
+            </head>
+            <body>
+            <div class="container">
+              <div class="header">
+                <h1>Graphic News Plus</h1>
+              </div>
+              <div class="content">
+                <p>Hello )html" + userToUpdate.getValueOfFirstName() + R"html(,</p>
+                <p>Your password for Graphic News Plus has been reset by your organization.</p>
+                <p>Below are your new login credentials:</p>
+                <div class="credentials">
+                  <div class="credential-item">
+                    <div class="credential-label">Username (Email):</div>
+                    <div class="credential-value">)html" + userToUpdate.getValueOfEmail() + R"html(</div>
+                  </div>
+                  <div class="credential-item">
+                    <div class="credential-label">New Password:</div>
+                    <div class="credential-value">)html" + newPassword + R"html(</div>
+                  </div>
+                </div>
+                <p>Please keep these credentials secure and change your password after your next login.</p>
+              </div>
+              <div class="footer">
+                &copy; )html" + trantor::Date::now().toCustomFormattedString("%Y") + R"html( Graphic News Plus. All rights reserved.
+              </div>
+            </div>
+            </body>
+            </html>
+          )html";
+          
+          emailDto.setBody(emailBody);
+          co_await emailService.sendEmailAsync(emailDto);
+        } catch (const std::exception& e) {
+          LOG_ERROR << "Failed to process password reset for " << user.getValueOfEmail() << ": " << e.what();
+        }
+      } catch (const std::exception& e) {
+        LOG_ERROR << "Background task for password reset failed: " << e.what();
+      }
+    });
+
+    dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Password reset has been initiated for user.";
+    co_return response;
+
+  } catch (const drogon::orm::UnexpectedRows &e) {
+    ::gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "User not found.";
+    errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+    co_return errorResponse;
+  } catch (const drogon::orm::DrogonDbException &e) {
+    ::gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Database error while resetting password.";
     errorResponse.error["code"] = constants::ERR_DB_QUERY;
     errorResponse.error["detail"] = e.base().what();
     co_return errorResponse;

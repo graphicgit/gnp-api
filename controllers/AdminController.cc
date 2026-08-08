@@ -15,7 +15,7 @@
 #include "dto/PartnerQuotaDto.h"
 
 
-drogon::Task<HttpResponsePtr> AdminController::getAllNewsPapers(const HttpRequestPtr req) {
+Task<HttpResponsePtr> AdminController::getAllNewsPapers(const HttpRequestPtr req) {
   int pageSize = 10; // Default page size
   int pageNo = 1;    //  Default page number
 
@@ -73,7 +73,7 @@ drogon::Task<HttpResponsePtr> AdminController::getAllNewsPapers(const HttpReques
 }
 
 
-drogon::Task<HttpResponsePtr> AdminController::getAllArchivedNewsPapers(const HttpRequestPtr req) {
+Task<HttpResponsePtr> AdminController::getAllArchivedNewsPapers(const HttpRequestPtr req) {
   int pageSize = 10; // Default page size
   int pageNo = 1;    //  Default page number
 
@@ -148,7 +148,7 @@ Task<HttpResponsePtr> AdminController::getNewsPaperDetails(const HttpRequestPtr 
   co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
-drogon::Task<HttpResponsePtr> AdminController::publishNewsPaper(const HttpRequestPtr req) {
+Task<HttpResponsePtr> AdminController::publishNewsPaper(const HttpRequestPtr req) {
   if (req->getParameter("id").empty()) {
     gnp::dto::BaseApiResponse response;
     response.success = false;
@@ -168,7 +168,7 @@ drogon::Task<HttpResponsePtr> AdminController::publishNewsPaper(const HttpReques
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr> AdminController::unPublishNewsPaper(const HttpRequestPtr req) {
+Task<HttpResponsePtr> AdminController::unPublishNewsPaper(const HttpRequestPtr req) {
   if (req->getParameter("id").empty()) {
     gnp::dto::BaseApiResponse response;
     response.success = false;
@@ -188,7 +188,7 @@ drogon::Task<HttpResponsePtr> AdminController::unPublishNewsPaper(const HttpRequ
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr> AdminController::IngestNewsPaper(const HttpRequestPtr req) {
+Task<HttpResponsePtr> AdminController::IngestNewsPaper(const HttpRequestPtr req) {
   auto jsonBody = req->getJsonObject();
 
   if (!jsonBody) {
@@ -210,7 +210,7 @@ drogon::Task<HttpResponsePtr> AdminController::IngestNewsPaper(const HttpRequest
   co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
-drogon::Task<HttpResponsePtr> AdminController::updateNewsPaper(HttpRequestPtr req, const std::string &newspaperId) {
+Task<HttpResponsePtr> AdminController::updateNewsPaper(HttpRequestPtr req, const std::string &newspaperId) {
 
   auto jsonBody = req->getJsonObject();
 
@@ -234,7 +234,7 @@ drogon::Task<HttpResponsePtr> AdminController::updateNewsPaper(HttpRequestPtr re
 
 }
 
-drogon::Task<HttpResponsePtr> AdminController::deleteNewsPaper(const HttpRequestPtr req) {
+Task<HttpResponsePtr> AdminController::deleteNewsPaper(const HttpRequestPtr req) {
 
   if (req->getParameter("id").empty()) {
     gnp::dto::BaseApiResponse response;
@@ -970,13 +970,19 @@ drogon::Task<HttpResponsePtr> AdminController::resetPartnerSubscriberPasswords(H
   auto apiResp = co_await commercialPartnerService.resetSubscriberPasswords(partnerId, exemptedEmails);
   auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
   
-  if (!apiResp.success) {
-      resp->setStatusCode(k500InternalServerError);
-  }
-  
   co_return resp;
 }
 
+
+drogon::Task<HttpResponsePtr> AdminController::resetPartnerSubscriberPasswordByUserId(HttpRequestPtr req, const std::string &partnerId, const std::string &userId) {
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &commercialPartnerService = plugin->getCommercialPartnerService();
+
+  auto apiResp = co_await commercialPartnerService.resetSubscriberPasswordByUserId(partnerId, userId);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  
+  co_return resp;
+}
 
 
 drogon::Task<HttpResponsePtr> AdminController::assignPartnerSubscribersPlan(HttpRequestPtr req) {
@@ -1573,16 +1579,42 @@ Task<HttpResponsePtr> AdminController::deleteRole(HttpRequestPtr req, const std:
 
 Task<HttpResponsePtr> AdminController::regenerateNewspaperEntitlements(HttpRequestPtr req)
 {
-
-  auto date = req->getParameter("date");
-
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newspaperService = plugin->getNewsPaperService();
 
-  auto result = co_await newspaperService.regenerateNewspaperEntitlement(date);
-  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-  co_return resp;
+  std::vector<std::string> dates;
+  std::tm tm = {};
+  tm.tm_year = 2026 - 1900;
+  tm.tm_mon = 7 - 1; // July (0-based)
+  tm.tm_mday = 1;
+  tm.tm_hour = 12; // Noon to avoid DST issues
 
+  std::time_t currentDate = std::mktime(&tm);
+  std::time_t now = std::time(nullptr);
+
+  while (currentDate <= now) {
+      char buffer[16];
+      std::strftime(buffer, sizeof(buffer), "%Y-%m-%d", &tm);
+      dates.push_back(buffer);
+
+      // Increment by 1 calendar day and let mktime normalize (DST-safe, handles month/year rollovers)
+      tm.tm_mday++;
+      currentDate = std::mktime(&tm);
+  }
+
+  int successCount = 0;
+  for (const auto& dateStr : dates) {
+      auto result = co_await newspaperService.regenerateNewspaperEntitlement(dateStr);
+      if (result.success) {
+          successCount++;
+      }
+  }
+
+  gnp::dto::BaseApiResponse response;
+  response.success = true;
+  response.message = "Regenerated entitlements for " + std::to_string(dates.size()) + " dates (" + std::to_string(successCount) + " successful)";
+  
+  co_return HttpResponse::newHttpJsonResponse(response.toJson());
 }
 
 

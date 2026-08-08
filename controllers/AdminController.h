@@ -67,6 +67,8 @@ public:
 
  ADD_METHOD_TO(AdminController::resetPartnerSubscriberPasswords, std::string(PREFIX) + "reset-partner-subscriber-passwords/{1}", Post, Options, "JwtAuthFilter");
 
+  ADD_METHOD_TO(AdminController::resetPartnerSubscriberPasswordByUserId, std::string(PREFIX) + "reset-partner-subscriber-password/{1}/{2}", Get, Options, "JwtAuthFilter");
+
   ADD_METHOD_TO(AdminController::assignPartnerSubscribersPlan, std::string(PREFIX) + "assign-partner-subscribers-plan", Post, Options, "JwtAuthFilter");
 
   ADD_METHOD_TO(AdminController::updatePartner, std::string(PREFIX) + "update-partner", Post, Options, "JwtAuthFilter");
@@ -118,11 +120,11 @@ public:
    ADD_METHOD_TO(AdminController::markPartnerInvoicePaid, std::string(PREFIX) + "mark-partner-invoice-paid", Get, Options, "JwtAuthFilter");
    ADD_METHOD_TO(AdminController::deletePartnerInvoice, std::string(PREFIX) + "delete-partner-invoice", Delete, Options, "JwtAuthFilter");
 
-    // affiliates
+    //affiliates
 
    //utils
-   ADD_METHOD_TO(AdminController::regenerateNewspaperEntitlements, std::string(PREFIX) + "regenerate-newspaper-entitlements", Get, Options, "JwtAuthFilter");
-   ADD_METHOD_TO(AdminController::generatePartnerInvoices, std::string(PREFIX) + "generate-partner-invoices/{1}", Post);
+   ADD_METHOD_TO(AdminController::regenerateNewspaperEntitlements, std::string(PREFIX) + "regenerate-newspaper-entitlements", Post, Options);
+   ADD_METHOD_TO(AdminController::generatePartnerInvoices, std::string(PREFIX) + "generate-partner-invoices/{1}", Post, Options);
 
   METHOD_LIST_END
 
@@ -176,6 +178,7 @@ public:
   drogon::Task<HttpResponsePtr> uploadPartnerSubscribers(HttpRequestPtr req, const std::string &partnerId);
   drogon::Task<HttpResponsePtr> updatePartnerQuota(HttpRequestPtr req, const std::string &partnerId);
   drogon::Task<HttpResponsePtr> resetPartnerSubscriberPasswords(HttpRequestPtr req, const std::string &partnerId);
+  drogon::Task<HttpResponsePtr> resetPartnerSubscriberPasswordByUserId(HttpRequestPtr req, const std::string &partnerId, const std::string &userId);
 
 
   drogon::Task<HttpResponsePtr> assignPartnerSubscribersPlan(HttpRequestPtr req);

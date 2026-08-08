@@ -64,6 +64,8 @@ add_executable(${PROJECT_NAME} main.cc
         utils/PasswordUtils.cc
         utils/IdGeneratorUtils.h
         utils/IdGeneratorUtils.cc
+        utils/StringUtils.h
+        utils/StringUtils.cc
         dto/AssignPartnerSubscriberPlanDto.h
         dto/GrantNewsPaperAccessDto.h
         filters/JwtAuthFilter.h
