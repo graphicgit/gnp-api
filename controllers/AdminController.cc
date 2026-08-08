@@ -1602,18 +1602,26 @@ Task<HttpResponsePtr> AdminController::regenerateNewspaperEntitlements(HttpReque
       currentDate = std::mktime(&tm);
   }
 
-  int successCount = 0;
-  for (const auto& dateStr : dates) {
-      auto result = co_await newspaperService.regenerateNewspaperEntitlement(dateStr);
-      if (result.success) {
-          successCount++;
+  // 2. Launch background coroutine
+
+  drogon::async_run([dates = std::move(dates)]() -> Task<void> {
+      auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+      auto &newspaperService = plugin->getNewsPaperService();
+
+      int successCount = 0;
+      for (const auto& dateStr : dates) {
+          auto result = co_await newspaperService.regenerateNewspaperEntitlement(dateStr);
+          if (result.success) {
+              successCount++;
+          }
       }
-  }
+      LOG_INFO << "Background regeneration completed: " << successCount << "/" << dates.size() << " successful.";
+  });
 
   gnp::dto::BaseApiResponse response;
   response.success = true;
-  response.message = "Regenerated entitlements for " + std::to_string(dates.size()) + " dates (" + std::to_string(successCount) + " successful)";
-  
+  response.message = "Entitlement regeneration job started in background for " + std::to_string(dates.size()) + " dates.";
+
   co_return HttpResponse::newHttpJsonResponse(response.toJson());
 }
 
