@@ -1252,7 +1252,7 @@ void AdminController::deleteIngestionJob(
 // subscribers
 drogon::Task<HttpResponsePtr> AdminController::getAllSubscribers(HttpRequestPtr req) {
 
-  int pageSize = 10;
+  int pageSize = 50;
   int pageNo = 1;
 
   if (!req->getParameter("pageSize").empty()) {
