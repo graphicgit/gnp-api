@@ -20,6 +20,8 @@ class UserService {
 public:
   drogon::Task<dto::BaseApiResponse> getAll(int pageNo, int pageSize, const std::string &query);
 
+  drogon::Task<dto::BaseApiResponse> getAllSubscribers(int pageNo, int pageSize, const std::string &query);
+
   drogon::Task<dto::BaseApiResponse> getDetails(const std::string &userId);
 
   drogon::Task<dto::BaseApiResponse> getAdminUsers(int pageNo, int pageSize, const std::string &query);

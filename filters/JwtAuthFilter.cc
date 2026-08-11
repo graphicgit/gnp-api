@@ -97,8 +97,7 @@ void JwtAuthFilter::doFilter(const HttpRequestPtr &req, FilterCallback &&fcb,
     LOG_ERROR << "Token validation failed: " << e.what();
     gnp::dto::BaseApiResponse response;
     response.success = false;
-    response.error["message"] =
-        std::string("Token validation failed: ") + e.what();
+    response.error["message"] = std::string("Token validation failed: ") + e.what();
     auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
     resp->setStatusCode(k401Unauthorized);
     fcb(resp);

@@ -1248,6 +1248,102 @@ void AdminController::deleteIngestionJob(
       });
 }
 
+
+// subscribers
+drogon::Task<HttpResponsePtr> AdminController::getAllSubscribers(HttpRequestPtr req) {
+
+  int pageSize = 10;
+  int pageNo = 1;
+
+  if (!req->getParameter("pageSize").empty()) {
+    try {
+      pageSize = std::stoi(req->getParameter("pageSize"));
+    } catch (...) {}
+  }
+
+  if (!req->getParameter("pageNo").empty()) {
+    try {
+      pageNo = std::stoi(req->getParameter("pageNo"));
+    } catch (...) {}
+  }
+
+  std::string query = req->getParameter("query");
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &userService = plugin->getUserService();
+
+  auto result = co_await userService.getAllSubscribers(pageNo, pageSize, query);
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+
+
+}
+
+
+
+drogon::Task<HttpResponsePtr> AdminController::createSubscriber(HttpRequestPtr req) {
+
+  auto json = req->getJsonObject();
+  if (!json) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    co_return HttpResponse::newHttpJsonResponse(response.toJson());
+  }
+
+  gnp::dto::UserDto dto;
+  dto.fromJson(*json);
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &userService = plugin->getUserService();
+
+  auto result = co_await userService.create(dto);
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+
+
+}
+
+
+drogon::Task<HttpResponsePtr> AdminController::updateSubscriber(HttpRequestPtr req, std::string subscriberId) {
+
+  auto json = req->getJsonObject();
+  if (!json) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    co_return HttpResponse::newHttpJsonResponse(response.toJson());
+  }
+
+  gnp::dto::UserDto dto;
+  dto.fromJson(*json);
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &userService = plugin->getUserService();
+
+  auto result = co_await userService.update(dto, subscriberId);
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+
+}
+
+
+drogon::Task<HttpResponsePtr> AdminController::deleteSubscriber(HttpRequestPtr req, std::string subscriberId) {
+
+  if (subscriberId.empty()) {
+    auto resp = HttpResponse::newHttpResponse();
+    resp->setStatusCode(k400BadRequest);
+    resp->setBody("Missing required parameters: partnerId or subscriberId");
+    co_return resp;
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &userService = plugin->getUserService();
+
+  auto apiResp = co_await userService.deleteUser(subscriberId);
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+
+}
+
+
+
 drogon::Task<HttpResponsePtr> AdminController::deletePartnerSubscriber(HttpRequestPtr req) {
 
   auto partnerId = req->getParameter("partnerId");
@@ -1315,6 +1411,7 @@ drogon::Task<HttpResponsePtr> AdminController::generatePartnerApiKey(HttpRequest
   auto apiResp = co_await partnerService.generatePartnerApiKey(dto);
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
+
 drogon::Task<HttpResponsePtr> AdminController::revokePartnerApiKey(HttpRequestPtr req) {
   auto partnerId = req->getParameter("partnerId");
   auto clientId = req->getParameter("clientId");
@@ -1603,7 +1700,6 @@ Task<HttpResponsePtr> AdminController::regenerateNewspaperEntitlements(HttpReque
   }
 
   // 2. Launch background coroutine
-
   drogon::async_run([dates = std::move(dates)]() -> Task<void> {
       auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
       auto &newspaperService = plugin->getNewsPaperService();

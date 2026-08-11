@@ -105,6 +105,80 @@ drogon::Task<dto::BaseApiResponse> UserService::getAll(int pageNo, int pageSize,
   co_return response;
 }
 
+
+drogon::Task<dto::BaseApiResponse> UserService::getAllSubscribers(int pageNo, int pageSize, const std::string &query) {
+  auto dbClient = drogon::app().getDbClient();
+  auto mp = CoroMapper<Users>(dbClient);
+
+  // 1. Build the search criteria
+  Criteria searchCriteria = Criteria(Users::Cols::_is_admin_user, CompareOperator::EQ, false) && Criteria(Users::Cols::_is_partner_admin_user, CompareOperator::EQ, false) && Criteria(Users::Cols::_partner_id, CompareOperator::IsNull);
+  if (!query.empty()) {
+    std::string likeQuery = "%" + query + "%";
+    searchCriteria = Criteria(Users::Cols::_first_name, CompareOperator::Like, likeQuery) || Criteria(Users::Cols::_email, CompareOperator::Like, likeQuery) || Criteria(Users::Cols::_last_name, CompareOperator::Like, likeQuery);
+  }
+
+  dto::BaseApiResponse response;
+  try {
+    // 2. Get the total count matching the criteria
+    size_t totalCount = co_await mp.count(searchCriteria);
+
+    if (totalCount == 0) {
+      response.success = true;
+      response.result["data"] = Json::arrayValue;
+      response.result["totalCount"] = 0;
+      response.result["pageNo"] = pageNo;
+      response.result["pageSize"] = pageSize;
+      response.result["totalPages"] = 0;
+      response.result["lowerBound"] = 0;
+      response.result["upperBound"] = 0;
+
+      co_return response;
+    }
+
+    // 3. Find the paginated data
+    int offset = (pageNo - 1) * pageSize;
+    auto users = co_await mp.limit(pageSize).offset(offset).findBy(searchCriteria);
+
+    auto totalPages = (totalCount + pageSize - 1) / pageSize;
+
+    // 4. Build the final response
+    response.success = true;
+    response.result["totalCount"] = (Json::UInt64)totalCount;
+    response.result["pageNo"] = pageNo;
+    response.result["pageSize"] = pageSize;
+    response.result["totalPages"] = (int)((totalCount + pageSize - 1) / pageSize);
+    response.result["lowerBound"] = pageSize * (pageNo - 1) + 1;
+    response.result["upperBound"] = (int)totalPages == pageNo ? (Json::UInt64)totalCount  : (Json::UInt64)(pageNo * pageSize);
+
+
+    Json::Value data = Json::arrayValue;
+
+    for (const auto &role : users) {
+      Json::Value roleJson = role.toJson();
+      Json::Value camelCaseRole;
+      camelCaseRole["id"] = roleJson["id"];
+      camelCaseRole["firstName"] = roleJson["first_name"];
+      camelCaseRole["lastName"] = roleJson["last_name"];
+      camelCaseRole["email"] = roleJson["email"];
+      camelCaseRole["phoneNumber"] = roleJson["phone_number"];
+      camelCaseRole["country"] = roleJson["country"];
+      camelCaseRole["profileImageUrl"] = roleJson["profile_image_url"];
+      camelCaseRole["isLockedOut"] = roleJson["is_locked_out"];
+      camelCaseRole["isActive"] = roleJson["is_active"];
+      camelCaseRole["createdAt"] = roleJson["created_at"];
+      camelCaseRole["updatedAt"] = roleJson["updated_at"];
+      data.append(camelCaseRole);
+    }
+    response.result["data"] = data;
+
+  } catch (const DrogonDbException &e) {
+    response.success = false;
+    response.error["message"] = "Database error while fetching users.";
+    response.error["detail"] = e.base().what();
+  }
+  co_return response;
+}
+
 drogon::Task<dto::BaseApiResponse> UserService::getDetails(const std::string &userId) {
   auto dbClient = drogon::app().getDbClient();
   auto mp = drogon::orm::CoroMapper<Users>(dbClient);

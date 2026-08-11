@@ -99,6 +99,12 @@ public:
   ADD_METHOD_TO(AdminController::createIngestionJob, std::string(PREFIX) + "create-ingestion-job", Post, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::deleteIngestionJob, std::string(PREFIX) + "delete-ingestion-job", Get, Options, "JwtAuthFilter");
 
+   // subscribers
+   ADD_METHOD_TO(AdminController::getAllSubscribers, std::string(PREFIX) + "get-subscribers", Get, Options, "JwtAuthFilter");
+   ADD_METHOD_TO(AdminController::createSubscriber, std::string(PREFIX) + "create-subscriber", Post, Options, "JwtAuthFilter");
+   ADD_METHOD_TO(AdminController::updateSubscriber, std::string(PREFIX) + "update-subscriber/{1}", Put, Options, "JwtAuthFilter");
+   ADD_METHOD_TO(AdminController::deleteSubscriber, std::string(PREFIX) + "delete-subscriber/{1}", Delete, Options, "JwtAuthFilter");
+
     // coupon
     ADD_METHOD_TO(AdminController::getAllCoupons, std::string(PREFIX) + "get-all-coupons", Get, Options, "JwtAuthFilter");
     ADD_METHOD_TO(AdminController::createCoupon, std::string(PREFIX) + "create-coupon", Post, Options, "JwtAuthFilter");
@@ -125,6 +131,8 @@ public:
    //utils
    ADD_METHOD_TO(AdminController::regenerateNewspaperEntitlements, std::string(PREFIX) + "regenerate-newspaper-entitlements", Post, Options);
    ADD_METHOD_TO(AdminController::generatePartnerInvoices, std::string(PREFIX) + "generate-partner-invoices/{1}", Post, Options);
+
+   //daily notifications for graphic newspapers
 
   METHOD_LIST_END
 
@@ -203,18 +211,22 @@ public:
   void getAllPayments(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
 
   //ingestion Jobs
-  void
-  getAllIngestionJobs(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
-  void
-  createIngestionJob(const HttpRequestPtr &req,  std::function<void(const HttpResponsePtr &)> &&callback);
-  void
-  deleteIngestionJob(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+  void getAllIngestionJobs(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
+  void createIngestionJob(const HttpRequestPtr &req,  std::function<void(const HttpResponsePtr &)> &&callback);
+  void deleteIngestionJob(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
 
   // coupons
   drogon::Task<HttpResponsePtr> getAllCoupons(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> createCoupon(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> updateCoupon(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> deleteCoupon(HttpRequestPtr req);
+
+  // subscribers
+ drogon::Task<HttpResponsePtr> getAllSubscribers(HttpRequestPtr req);
+ drogon::Task<HttpResponsePtr> createSubscriber(HttpRequestPtr req);
+ drogon::Task<HttpResponsePtr> updateSubscriber(HttpRequestPtr req, std::string subscriberId);
+ drogon::Task<HttpResponsePtr> deleteSubscriber(HttpRequestPtr req, std::string subscriberId);
+
 
    // partner invoices
    drogon::Task<HttpResponsePtr> getAllPartnerInvoices(HttpRequestPtr req);
