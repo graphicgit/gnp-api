@@ -12,6 +12,7 @@
 
 #include "Newspapers.h"
 #include "PurchaseAttempts.h"
+#include "SubscriptionRenewalHistory.h"
 #include "UserSubscriptions.h"
 #include "Users.h"
 #include "bcrypt.h"
@@ -27,6 +28,7 @@
 
 using namespace drogon::orm;
 using drogon_model::Gnp::PurchaseAttempts;
+using drogon_model::Gnp::SubscriptionRenewalHistory;
 using drogon_model::Gnp::Users;
 using drogon_model::Gnp::UserSubscriptions;
 
@@ -1447,6 +1449,139 @@ drogon::Task<gnp::dto::BaseApiResponse> SubscriptionService::fulFillBuyCopy(cons
   }
 
   co_return response;
+}
+
+drogon::Task<void> SubscriptionService::dispatchSubscriptionRenewalReminder() {
+
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<UserSubscriptions> mp(dbClient);
+
+  try {
+
+    auto now = trantor::Date::now();
+    auto sevenDaysLater = now.after(7 * 24 * 3600);
+
+    auto todayStr = now.toFormattedString("%Y-%m-%d");
+    auto sevenDaysLaterStr = sevenDaysLater.toFormattedString("%Y-%m-%d");
+
+    //auto subscriptions = co_await mp.findBy(drogon::orm::Criteria(drogon_model::Gnp::UserSubscriptions::Cols::_is_active, drogon::orm::CompareOperator::EQ, true));
+    auto subscriptions = co_await mp.findBy(Criteria(UserSubscriptions::Cols::_email, CompareOperator::EQ, "vavy712@gmail.com") &&  Criteria(UserSubscriptions::Cols::_end_date, CompareOperator::GE, todayStr) && Criteria(UserSubscriptions::Cols::_end_date, CompareOperator::LE, sevenDaysLaterStr));
+
+    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto &emailService = plugin->getEmailService();
+
+    for (const auto &sub : subscriptions) {
+      if (sub.getValueOfEmail().empty()) continue;
+
+      // Fetch user's first name for personalization
+      std::string userName = "Subscriber";
+      if (!sub.getValueOfUserId().empty()) {
+        try {
+          CoroMapper<Users> userMapper(dbClient);
+          auto user = co_await userMapper.findByPrimaryKey(sub.getValueOfUserId());
+          if (!user.getValueOfFirstName().empty()) {
+            userName = user.getValueOfFirstName();
+          }
+        } catch (...) {
+          // Fall back silently on db query error
+        }
+      }
+
+      // Fetch past renewal history for this user
+      std::string historyHtml = "";
+      if (!sub.getValueOfUserId().empty()) {
+        try {
+          CoroMapper<SubscriptionRenewalHistory> historyMapper(dbClient);
+          auto history = co_await historyMapper.findBy(
+              Criteria(SubscriptionRenewalHistory::Cols::_user_id, CompareOperator::EQ, sub.getValueOfUserId()));
+
+          if (!history.empty()) {
+            historyHtml += R"(
+              <div style="margin-top: 30px; text-align: left; border-top: 1px solid #eef2f6; padding-top: 20px;">
+                <h3 style="font-size: 16px; color: #1e293b; margin-bottom: 12px; font-weight: 600;">Your Renewal History</h3>
+                <div style="overflow-x: auto;">
+                  <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; color: #475569;">
+                    <thead>
+                      <tr style="border-bottom: 2px solid #e2e8f0; color: #64748b;">
+                        <th style="padding: 8px 4px; font-weight: 600;">Plan</th>
+                        <th style="padding: 8px 4px; font-weight: 600;">Billing Cycle</th>
+                        <th style="padding: 8px 4px; font-weight: 600;">Amount</th>
+                        <th style="padding: 8px 4px; font-weight: 600;">Date</th>
+                        <th style="padding: 8px 4px; font-weight: 600;">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+            )";
+            for (const auto& record : history) {
+              std::string dateStr = record.getValueOfCreatedAt().toCustomFormattedStringLocal("%d-%b-%Y %H:%M");
+
+              std::string statusColor = record.getValueOfTransactionStatus() == "Successful" ? "#10b981" : "#ef4444";
+              std::string amountStr = record.getValueOfAmountPaid().empty() ? "N/A" : record.getValueOfAmountPaid();
+
+              historyHtml += "                      <tr style=\"border-bottom: 1px solid #f1f5f9;\">\n";
+              historyHtml += "                        <td style=\"padding: 8px 4px;\">" + record.getValueOfSubscriptionPlanName() + "</td>\n";
+              historyHtml += "                        <td style=\"padding: 8px 4px;\">" + record.getValueOfCurrentBillingCycle() + "</td>\n";
+              historyHtml += "                        <td style=\"padding: 8px 4px;\">" + amountStr + "</td>\n";
+              historyHtml += "                        <td style=\"padding: 8px 4px;\">" + dateStr + "</td>\n";
+              historyHtml += "                        <td style=\"padding: 8px 4px; color: " + statusColor + "; font-weight: 600;\">" + record.getValueOfTransactionStatus() + "</td>\n";
+              historyHtml += "                      </tr>\n";
+            }
+            historyHtml += R"(
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )";
+          }
+        } catch (...) {
+          // Fall back silently on db query error
+        }
+      }
+
+      std::string emailBody =
+          R"(
+          <!DOCTYPE html>
+          <html>
+          <head>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; }
+            .header { background-color: #ffffff; padding: 32px 24px 20px; text-align: center; border-bottom: 1px solid #e2e8f0; }
+            .header h1 { margin: 0; font-size: 22px; font-weight: 700; color: #0f172a; }
+            .content { padding: 32px 24px; text-align: left; color: #334155; line-height: 1.6; }
+            .content p { margin: 0 0 16px; font-size: 15px; }
+            .footer { background-color: #f8fafc; color: #64748b; padding: 24px; text-align: center; font-size: 13px; border-top: 1px solid #e2e8f0; }
+          </style>
+          </head>
+          <body>
+          <div class="container">
+            <div class="header">
+              <h1>Subscription Renewal</h1>
+            </div>
+            <div class="content">
+              <p>Hi )" + userName + R"(,</p>
+              <p>We hope you are enjoying your Graphic NewsPlus experience! This is a friendly reminder that your subscription is coming up for renewal soon. To keep enjoying uninterrupted access to all your favorite newspapers, magazines, and features, please check that your payment details are up to date.</p>
+              )" + historyHtml + R"(
+            </div>
+            <div class="footer">
+              <p>Thank you for being a valued subscriber of Graphic NewsPlus.</p>
+            </div>
+          </div>
+          </body>
+          </html>
+          )";
+
+      gnp::dto::SendEmailDto emailDto;
+      emailDto.setTo(sub.getValueOfEmail());
+      emailDto.setSubject("Subscription Renewal Reminder");
+      emailDto.setBody(emailBody);
+
+      // dispatch email
+      co_await emailService.sendEmailAsync(emailDto);
+    }
+  } catch (const std::exception &e) {
+    LOG_ERROR << "Failed to dispatch subscription renewal reminder: " << e.what();
+  }
 }
 
 } // namespace gnp::services

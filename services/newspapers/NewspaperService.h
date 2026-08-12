@@ -57,6 +57,8 @@ public:
 
    //ocr ingestion ...
    drogon::Task<gnp::dto::BaseApiResponse> handleOcrIngestion(const dto::OcrIngestionDto &dto);
+
+   drogon::Task<void> dispatchDailyNewsUpdate();
 };
 
 } // namespace gnp::services

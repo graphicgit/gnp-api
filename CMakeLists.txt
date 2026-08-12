@@ -147,6 +147,9 @@ add_executable(${PROJECT_NAME} main.cc
         services/telegram/TelegramService.h
         dto/PartnerQuotaDto.h
         dto/ChangePasswordDto.h
+        services/settings/SettingService.h
+        dto/SettingsDto.h
+        services/settings/SettingService.cc
 )
 
 # ##############################################################################

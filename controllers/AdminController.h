@@ -125,14 +125,16 @@ public:
    ADD_METHOD_TO(AdminController::createPartnerInvoice, std::string(PREFIX) + "create-partner-invoice", Post, Options, "JwtAuthFilter");
    ADD_METHOD_TO(AdminController::markPartnerInvoicePaid, std::string(PREFIX) + "mark-partner-invoice-paid", Get, Options, "JwtAuthFilter");
    ADD_METHOD_TO(AdminController::deletePartnerInvoice, std::string(PREFIX) + "delete-partner-invoice", Delete, Options, "JwtAuthFilter");
+   //affiliates
 
-    //affiliates
+   // settings
+   ADD_METHOD_TO(AdminController::manageSettings, std::string(PREFIX) + "manage-settings", Post, Options, "JwtAuthFilter");
 
-   //utils
+   // scheduled actions
    ADD_METHOD_TO(AdminController::regenerateNewspaperEntitlements, std::string(PREFIX) + "regenerate-newspaper-entitlements", Post, Options);
    ADD_METHOD_TO(AdminController::generatePartnerInvoices, std::string(PREFIX) + "generate-partner-invoices/{1}", Post, Options);
-
-   //daily notifications for graphic newspapers
+   ADD_METHOD_TO(AdminController::dispatchDailyNewsUpdate, std::string(PREFIX) + "dispatch-daily-news-update", Post, Options);
+   ADD_METHOD_TO(AdminController::dispatchSubscriptionRenewalReminder, std::string(PREFIX) + "dispatch-subscription-renewal-reminder", Post, Options);
 
   METHOD_LIST_END
 
@@ -244,8 +246,15 @@ public:
 
     Task<HttpResponsePtr> getPartnerSubscriberInfo(HttpRequestPtr req, const std::string &partnerId, const std::string &userId);
 
-    //utils
+    // scheduled actions
     Task<HttpResponsePtr> regenerateNewspaperEntitlements(HttpRequestPtr req);
     Task<HttpResponsePtr> generatePartnerInvoices(HttpRequestPtr req, const std::string &date);
+    Task<HttpResponsePtr> dispatchDailyNewsUpdate(HttpRequestPtr req);
+    Task<HttpResponsePtr> dispatchSubscriptionRenewalReminder(HttpRequestPtr req);
+
+    // settings
+    Task<HttpResponsePtr> manageSettings(HttpRequestPtr req);
+
+
 
 };

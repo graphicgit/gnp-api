@@ -1279,7 +1279,6 @@ drogon::Task<HttpResponsePtr> AdminController::getAllSubscribers(HttpRequestPtr 
 }
 
 
-
 drogon::Task<HttpResponsePtr> AdminController::createSubscriber(HttpRequestPtr req) {
 
   auto json = req->getJsonObject();
@@ -1343,7 +1342,6 @@ drogon::Task<HttpResponsePtr> AdminController::deleteSubscriber(HttpRequestPtr r
 }
 
 
-
 drogon::Task<HttpResponsePtr> AdminController::deletePartnerSubscriber(HttpRequestPtr req) {
 
   auto partnerId = req->getParameter("partnerId");
@@ -1362,6 +1360,7 @@ drogon::Task<HttpResponsePtr> AdminController::deletePartnerSubscriber(HttpReque
   auto apiResp = co_await partnerService.deletePartnerSubscriberAsync(partnerId, subscriberId);
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
+
 
 drogon::Task<HttpResponsePtr> AdminController::getPartnerApiKeys(HttpRequestPtr req) {
   auto partnerId = req->getParameter("partnerId");
@@ -1730,5 +1729,62 @@ Task<HttpResponsePtr> AdminController::generatePartnerInvoices(HttpRequestPtr re
   auto result = co_await partnerInvoiceService.generatePartnerInvoices(date);
   auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
   co_return resp;
+
+}
+
+
+Task<HttpResponsePtr> AdminController::dispatchDailyNewsUpdate(HttpRequestPtr req) {
+  drogon::async_run([]() -> Task<void> {
+    auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto &newspaperService = plugin->getNewsPaperService();
+    co_await newspaperService.dispatchDailyNewsUpdate();
+  });
+
+  gnp::dto::BaseApiResponse response;
+  response.success = true;
+  response.message = "Daily news update job started in background.";
+  co_return HttpResponse::newHttpJsonResponse(response.toJson());
+}
+
+
+Task<HttpResponsePtr> AdminController::dispatchSubscriptionRenewalReminder(HttpRequestPtr req) {
+  drogon::async_run([]() -> Task<void> {
+    auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto &subscriptionService = plugin->getSubscriptionService();
+    co_await subscriptionService.dispatchSubscriptionRenewalReminder();
+  });
+
+  gnp::dto::BaseApiResponse response;
+  response.success = true;
+  response.message = "Subscription renewal reminder job started in background.";
+  co_return HttpResponse::newHttpJsonResponse(response.toJson());
+}
+
+
+Task<HttpResponsePtr> AdminController::manageSettings(HttpRequestPtr req) {
+
+  auto jsonBody = req->getJsonObject();
+
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  gnp::dto::SettingsDto dto;
+
+  dto.fromJson(*jsonBody);
+
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &settingService = plugin->getSettingService();
+
+  auto result = co_await settingService.createOrUpdate(dto);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+
+
 
 }

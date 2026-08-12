@@ -10,7 +10,10 @@
 
 #include "NewspaperDetail.h"
 #include "UserSubscriptions.h"
+#include "Users.h"
 #include "utils/IdGeneratorUtils.h"
+#include "plugins/GnpServicePlugin.h"
+#include <drogon/drogon.h>
 
 using namespace drogon::orm;
 using drogon_model::Gnp::Newspapers;
@@ -911,6 +914,10 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::publishAsync(const std
     dto::BaseApiResponse response;
     response.success = true;
     response.message = "Newspaper published successfully.";
+
+    // send daily news update reminder based in system settings
+    // better still it can be managed by plugins to prevent tight coupling. 
+
     co_return response;
 
   } catch (const DrogonDbException &e) {
@@ -1250,4 +1257,150 @@ void NewspaperService::incrementViewCount(
     co_return errorResponse;
   }
 }
+
+drogon::Task<void> NewspaperService::dispatchDailyNewsUpdate() {
+  auto dbClient = drogon::app().getDbClient();
+  drogon::orm::CoroMapper<drogon_model::Gnp::Users> mp(dbClient);
+
+  try {
+    //auto users = co_await mp.findBy(drogon::orm::Criteria(drogon_model::Gnp::Users::Cols::_is_active, drogon::orm::CompareOperator::EQ, true));
+    auto users = co_await mp.findBy(drogon::orm::Criteria(drogon_model::Gnp::Users::Cols::_email, drogon::orm::CompareOperator::EQ, "vavy712@gmail.com"));
+
+    // Fetch all newspapers for the current date (published, non-archived)
+    auto today = ::trantor::Date::now().toCustomedFormattedString("%Y-%m-%d");
+    CoroMapper<Newspapers> newsMapper(dbClient);
+
+    Criteria newsCriteria =
+        Criteria(Newspapers::Cols::_publication_date, CompareOperator::EQ, today) &&
+        Criteria(Newspapers::Cols::_is_published,     CompareOperator::EQ, true) &&
+        Criteria(Newspapers::Cols::_is_archived,      CompareOperator::EQ, false);
+
+    auto todaysNewspapers = co_await newsMapper.orderBy(Newspapers::Cols::_publication_date, SortOrder::DESC).findBy(newsCriteria);
+
+    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto &emailService = plugin->getEmailService();
+    auto &g3Service = plugin->getG3StorageService();
+
+    std::string thumbnailBucket = "gnp-thumbnails";
+    try {
+        thumbnailBucket = drogon::app().getCustomConfig()["G3Bucket"]["ThumbnailBucketName"].asString();
+    } catch (...) {}
+
+    // List the newspapers in the email with their thumbnails and a CTA button per newspaper
+    // Generate newspaperCards ONCE to optimize processing and memory overhead
+    std::string newspaperCards;
+    for (const auto &newspaper : todaysNewspapers) {
+
+      const std::string title       = newspaper.getValueOfTitle();
+      const std::string id          = newspaper.getValueOfId();
+      const std::string shortDesc   = newspaper.getValueOfFullDescription();
+
+      // get the thumbnail as a base 64 string from the g3 bucket
+      std::string imgSrc = "";
+
+      if (!id.empty()) {
+        auto fileContentOpt = g3Service.getFileContent(thumbnailBucket, id);
+        if (fileContentOpt && !fileContentOpt->empty()) {
+          // Optimize the payload: we use drogon's base64Encode which does not insert newlines
+          std::string base64Thumb = drogon::utils::base64Encode(
+              reinterpret_cast<const unsigned char*>(fileContentOpt->data()),
+              fileContentOpt->length()
+          );
+          imgSrc = "data:image/png;base64," + base64Thumb;
+        }
+      }
+
+      newspaperCards +=
+          "<div style=\"display:flex;align-items:flex-start;border:1px solid #eeeeee;"
+          "border-radius:10px;padding:16px;margin-bottom:20px;background:#ffffff;\">"
+
+          // Thumbnail
+          "<img src=\"" + imgSrc + "\" alt=\"" + title + "\""
+          " style=\"width:90px;height:90px;object-fit:cover;border-radius:8px;"
+          "margin-right:16px;flex-shrink:0;\" />"
+
+          // Text block
+          "<div style=\"flex:1;text-align:left;\">"
+          "<h3 style=\"margin:0 0 6px;font-size:16px;color:#1a1a1a;font-weight:600;\">"
+          + title + "</h3>"
+          "<p style=\"margin:0 0 12px;font-size:14px;color:#666666;line-height:1.5;\">"
+          + shortDesc + "</p>"
+
+          // CTA button – links to the newspaper detail page by ID
+          "<a href=\"https://new.graphicnewsplus.com/newspapers/" + id + "\""
+          " style=\"display:inline-block;padding:8px 18px;background-color:#1a73e8;"
+          "color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;"
+          "font-weight:600;\">Read Now &rarr;</a>"
+          "</div>"
+          "</div>";
+    }
+
+    // Fall-back message when no newspapers are available for today
+    if (newspaperCards.empty()) {
+      newspaperCards =
+          "<p style=\"color:#999999;font-size:14px;\">"
+          "No new editions are available for today. Check back tomorrow!</p>";
+    }
+
+    for (const auto &user : users) {
+      if (user.getValueOfEmail().empty()) continue;
+
+      std::string emailBody =
+          R"(<!DOCTYPE html>
+      <html lang="en">
+      <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>Graphic News Plus - Daily News Update</title>
+      <style>
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+               background-color: #f4f6f9; margin: 0; padding: 0; }
+        .container { max-width: 620px; margin: 40px auto; background-color: #f4f6f9; }
+        .header { background-color: #1a73e8; padding: 30px 20px; text-align: center;
+                  border-radius: 10px 10px 0 0; }
+        .header h1 { margin: 0; font-size: 26px; font-weight: 700; color: #ffffff; }
+        .header p  { margin: 6px 0 0; font-size: 14px; color: rgba(255,255,255,0.85); }
+        .body-content { background: #ffffff; padding: 30px; border-radius: 0 0 10px 10px;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+        .greeting { font-size: 16px; color: #333333; margin-bottom: 24px; line-height: 1.6; }
+        .footer { text-align: center; font-size: 12px; color: #aaaaaa; padding: 20px; }
+      </style>
+      </head>
+      <body>
+      <div class="container">
+        <div class="header">
+          <h1>Your Daily News is Ready 📰</h1>
+          <p>)" + today + R"(</p>
+        </div>
+        <div class="body-content">
+          <p class="greeting">Hello )" +
+              (user.getValueOfFirstName().empty() ? "there" : user.getValueOfFirstName()) +
+              R"( 👋,<br/><br/>
+          Here’s a quick look at today’s latest editions, picked just for you.<br/>
+          Sit back, explore, and stay informed.</p>
+      )" + newspaperCards + R"(
+        </div>
+        <div class="footer">
+          You're receiving this because you subscribed to Graphic News Plus updates.<br/>
+          If you ever need a break, you can manage your preferences anytime.<br/><br/>
+          &copy; GNP — All rights reserved.
+        </div>
+      </div>
+      </body>
+      </html>)";
+
+      gnp::dto::SendEmailDto emailDto;
+      emailDto.setTo(user.getValueOfEmail());
+      emailDto.setSubject("Your Daily News Update – " + today);
+      emailDto.setBody(emailBody);
+
+      // Dispatch email to the user
+      co_await emailService.sendEmailAsync(emailDto);
+    }
+  } catch (const std::exception &e) {
+    LOG_ERROR << "Failed to dispatch daily news update: " << e.what();
+  }
+}
+
+
 } // namespace gnp::services

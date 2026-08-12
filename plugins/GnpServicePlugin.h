@@ -31,6 +31,7 @@
 #include "services/redis/RedisCacheManager.h"
 #include "services/reports/ReportingService.h"
 #include "services/roles/RoleService.h"
+#include "services/settings/SettingService.h"
 #include "services/subscription_plans/SubscriptionPlanService.h"
 #include "services/subscriptions/SubscriptionService.h"
 #include "services/tags/TagService.h"
@@ -75,6 +76,7 @@ public:
   ::gnp::services::CategoryService &getCategoryService() { return categoryService_; }
   ::gnp::services::ReportingService &getReportingService() { return reportingService_; }
   ::gnp::services::G3StorageService &getG3StorageService() { return g3StorageService_; }
+  ::gnp::services::SettingService &getSettingService() { return settingService_; }
 
 private:
   services::RedisCacheManager redisCacheService_;
@@ -104,6 +106,7 @@ private:
   ::gnp::services::PartnerApiLogService partnerApiLogService_;
   ::gnp::services::ReportingService reportingService_;
   ::gnp::services::G3StorageService g3StorageService_;
+  ::gnp::services::SettingService settingService_;
 };
 
 } // namespace gnp::plugins

@@ -54,6 +54,7 @@ public:
 
   // renewal history
 
+  drogon::Task<void> dispatchSubscriptionRenewalReminder();
 
 };
 
