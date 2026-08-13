@@ -18,8 +18,7 @@ using namespace gnp::dto;
 
 namespace gnp::services {
 
-drogon::Task<gnp::dto::BaseApiResponse> PublicationService::getAllPublicationsAsync(int pageNo, int pageSize,
-                                            const std::string &query) {
+drogon::Task<gnp::dto::BaseApiResponse> PublicationService::getAllPublications(int pageNo, int pageSize, const std::string &query) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<drogon_model::Gnp::Publications> mp(dbClient);
@@ -85,265 +84,234 @@ drogon::Task<gnp::dto::BaseApiResponse> PublicationService::getAllPublicationsAs
   }
 } // namespace gnp::services
 
-void PublicationService::createPublication(
-    const gnp::dto::CreatePublicationDto &publicationData,
-    const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {
+drogon::Task<BaseApiResponse> PublicationService::create(const gnp::dto::PublicationDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
-
-  Mapper<drogon_model::Gnp::Publications> mp(dbClient);
+  CoroMapper<drogon_model::Gnp::Publications> mp(dbClient);
 
   drogon_model::Gnp::Publications newPublication;
 
-  newPublication.setName(publicationData.getName());
-  newPublication.setDescription(publicationData.getDescription());
-  newPublication.setType(publicationData.getType());
-  newPublication.setPrice(publicationData.getPrice());
+  newPublication.setName(dto.getName());
+  newPublication.setDescription(dto.getDescription());
+  newPublication.setType(dto.getType());
+  newPublication.setPrice(dto.getPrice());
   newPublication.setIsActive(true);
 
-  mp.insert(
-      newPublication,
-      [callback](const drogon_model::Gnp::Publications &publication) {
-        // 5. Prepare success response
-        dto::BaseApiResponse successResponse;
-        successResponse.success = true;
-        successResponse.message = "Publication created successfully";
-        successResponse.result["id"] = publication.getValueOfId();
+  try {
+    auto publication = co_await mp.insert(newPublication);
 
-        callback(successResponse);
-      },
-      [callback](const drogon::orm::DrogonDbException &e) {
+    // 5. Prepare success response
+    dto::BaseApiResponse successResponse;
+    successResponse.success = true;
+    successResponse.message = "Publication created successfully";
+    successResponse.result["id"] = publication.getValueOfId();
+
+    co_return successResponse;
+  } catch (const drogon::orm::DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Database error while creating Publication";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    co_return errorResponse;
+  }
+}
+
+drogon::Task<gnp::dto::BaseApiResponse> PublicationService::update(const dto::PublicationDto &dto, const std::string &publicationId) {
+
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<drogon_model::Gnp::Publications> mp(dbClient);
+
+  Criteria criteria = Criteria(drogon_model::Gnp::Publications::Cols::_id, CompareOperator::EQ, publicationId);
+
+  try {
+    auto publication = co_await mp.findOne(criteria);
+
+    if (!dto.getName().empty())
+      publication.setName(dto.getName());
+    if (!dto.getDescription().empty())
+      publication.setDescription(dto.getDescription());
+    if (!dto.getPrice().empty())
+      publication.setPrice(dto.getPrice());
+
+    try {
+      co_await mp.update(publication);
+
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.message = "Publication updated successfully";
+      co_return response;
+    } catch (const DrogonDbException &e) {
+      dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.message = "Failed to update publication";
+      errorResponse.error["code"] = constants::ERR_DB_QUERY;
+      errorResponse.error["detail"] = e.base().what();
+      co_return errorResponse;
+    }
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Publication not found";
+    errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+drogon::Task<gnp::dto::BaseApiResponse> PublicationService::deletePublication(const std::string &publicationId) {
+
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<drogon_model::Gnp::Publications> mp(dbClient);
+
+  Criteria criteria = Criteria(drogon_model::Gnp::Publications::Cols::_id, CompareOperator::EQ, publicationId);
+
+  try {
+    // First verify the user exists
+    auto publication = co_await mp.findOne(criteria);
+
+    try {
+      // User found, proceed with deletion
+      size_t count = co_await mp.deleteBy(criteria);
+
+      if (count > 0) {
+        // Successfully deleted
+        dto::BaseApiResponse response;
+        response.success = true;
+        response.message = "Publication deleted successfully";
+        co_return response;
+      } else {
+        // No rows were deleted (shouldn't happen if we found the user)
         dto::BaseApiResponse errorResponse;
         errorResponse.success = false;
-        errorResponse.message = "Database error while creating Publication";
+        errorResponse.message = "Failed to delete publication";
         errorResponse.error["code"] = constants::ERR_DB_QUERY;
-        callback(errorResponse);
-      });
+        co_return errorResponse;
+      }
+    } catch (const DrogonDbException &e) {
+      // Error during deletion
+      dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.message = "Failed to delete publication";
+      errorResponse.error["code"] = constants::ERR_DB_QUERY;
+      errorResponse.error["detail"] = e.base().what();
+      co_return errorResponse;
+    }
+  } catch (const DrogonDbException &e) {
+    // User not found
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Publication not found";
+    errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
 }
 
-void PublicationService::updatePublication(
-    const dto::UpdatePublicationDto &publicationData,
-    const std::function<void(const dto::BaseApiResponse &)> &callback) {
+drogon::Task<gnp::dto::BaseApiResponse> PublicationService::activate(const std::string &publicationId) {
 
   auto dbClient = drogon::app().getDbClient();
-
-  auto mp = std::make_shared<Mapper<drogon_model::Gnp::Publications>>(dbClient);
-
-  Criteria criteria = Criteria(drogon_model::Gnp::Publications::Cols::_id,
-                               CompareOperator::EQ, publicationData.getId());
-
-  mp->findOne(
-      criteria,
-      [mp, publicationData,
-       callback](drogon_model::Gnp::Publications publication) {
-        if (!publicationData.getName().empty())
-          publication.setName(publicationData.getName());
-        if (!publicationData.getDescription().empty())
-          publication.setDescription(publicationData.getDescription());
-        if (!publicationData.getPrice().empty())
-          publication.setPrice(publicationData.getPrice());
-
-        mp->update(
-            publication,
-            [callback](const size_t count) {
-              dto::BaseApiResponse response;
-              response.success = true;
-              response.message = "Publication updated successfully";
-              callback(response);
-            },
-            [callback](const DrogonDbException &e) {
-              dto::BaseApiResponse errorResponse;
-              errorResponse.success = false;
-              errorResponse.message = "Failed to update publication";
-              errorResponse.error["code"] = constants::ERR_DB_QUERY;
-              errorResponse.error["detail"] = e.base().what();
-              callback(errorResponse);
-            });
-      },
-      [callback](const DrogonDbException &e) {
-        dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.message = "Publication not found";
-        errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
-        errorResponse.error["detail"] = e.base().what();
-        callback(errorResponse);
-      });
-}
-
-void PublicationService::deletePublication(
-    const std::string &publicationId,
-    const std::function<void(const dto::BaseApiResponse &)> &callback) {
-
-  auto dbClient = drogon::app().getDbClient();
-
-  Mapper<drogon_model::Gnp::Publications> mp(dbClient);
+  CoroMapper<drogon_model::Gnp::Publications> mp(dbClient);
 
   // Create criteria to find the user with specified ID in the tenant
   Criteria criteria = Criteria(drogon_model::Gnp::Publications::Cols::_id,
                                CompareOperator::EQ, publicationId);
 
-  // First verify the user exists
-  mp.findOne(
-      criteria,
-      [=](const drogon_model::Gnp::Publications &publication) {
-        // User found, proceed with deletion
-        Mapper<drogon_model::Gnp::Publications> deleteMp(dbClient);
-        deleteMp.deleteBy(
-            criteria,
-            [=](const size_t count) {
-              if (count > 0) {
-                // Successfully deleted
-                dto::BaseApiResponse response;
-                response.success = true;
-                response.message = "Publication deleted successfully";
-                callback(response);
-              } else {
-                // No rows were deleted (shouldn't happen if we found the
-                // user)
-                dto::BaseApiResponse errorResponse;
-                errorResponse.success = false;
-                errorResponse.message = "Failed to delete publication";
-                errorResponse.error["code"] = constants::ERR_DB_QUERY;
-                callback(errorResponse);
-              }
-            },
-            [=](const DrogonDbException &e) {
-              // Error during deletion
-              dto::BaseApiResponse errorResponse;
-              errorResponse.success = false;
-              errorResponse.message = "Failed to delete publication";
-              errorResponse.error["code"] = constants::ERR_DB_QUERY;
-              errorResponse.error["detail"] = e.base().what();
-              callback(errorResponse);
-            });
-      },
-      [=](const DrogonDbException &e) {
-        // User not found
-        dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.message = "Publication not found";
-        errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
-        errorResponse.error["detail"] = e.base().what();
-        callback(errorResponse);
-      });
+  try {
+    // Find the user first
+    auto publication = co_await mp.findOne(criteria);
+
+    if (publication.getValueOfIsActive()) {
+      // Tenant is already inactive / active check
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.message = "Publication is already active.";
+      co_return response;
+    }
+
+    // Set the user as active
+    publication.setIsActive(true);
+
+    try {
+      // Update the user in the database
+      co_await mp.update(publication);
+
+      // Successfully updated
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.message = "Publication activated successfully";
+      co_return response;
+    } catch (const DrogonDbException &e) {
+      // Error during update
+      dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.message = "Failed to activate publication";
+      errorResponse.error["code"] = constants::ERR_DB_QUERY;
+      errorResponse.error["detail"] = e.base().what();
+      co_return errorResponse;
+    }
+  } catch (const DrogonDbException &e) {
+    // User not found
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Publication not found";
+    errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
 }
 
-void PublicationService::activatePublication(
-    const std::string &publicationId,
-    const std::function<void(const dto::BaseApiResponse &)> &callback) {
+drogon::Task<gnp::dto::BaseApiResponse> PublicationService::deactivate(const std::string &publicationId) {
 
   auto dbClient = drogon::app().getDbClient();
-  Mapper<drogon_model::Gnp::Publications> mp(dbClient);
-
-  // Create criteria to find the user with specified ID in the tenant
-  Criteria criteria = Criteria(drogon_model::Gnp::Publications::Cols::_id,
-                               CompareOperator::EQ, publicationId);
-
-  // Find the user first
-  mp.findOne(
-      criteria,
-      [=](drogon_model::Gnp::Publications publication) {
-        if (publication.getValueOfIsActive()) {
-          // Tenant is already inactive
-          dto::BaseApiResponse response;
-          response.success = true;
-          response.message = "Publication is already active.";
-          callback(response);
-          return;
-        }
-
-        // Set the user as active
-        publication.setIsActive(true);
-
-        // Update the user in the database
-        Mapper<drogon_model::Gnp::Publications> updateMp(dbClient);
-        updateMp.update(
-            publication,
-            [callback](const size_t count) {
-              // Successfully updated
-              dto::BaseApiResponse response;
-              response.success = true;
-              response.message = "Publication activated successfully";
-              callback(response);
-            },
-            [=](const DrogonDbException &e) {
-              // Error during update
-              dto::BaseApiResponse errorResponse;
-              errorResponse.success = false;
-              errorResponse.message = "Failed to activate publication";
-              errorResponse.error["code"] = constants::ERR_DB_QUERY;
-              errorResponse.error["detail"] = e.base().what();
-              callback(errorResponse);
-            });
-      },
-      [callback](const DrogonDbException &e) {
-        // User not found
-        dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.message = "Publication not found";
-        errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
-        errorResponse.error["detail"] = e.base().what();
-        callback(errorResponse);
-      });
-}
-
-void PublicationService::deactivatePublication(
-    const std::string &publicationId,
-    const std::function<void(const dto::BaseApiResponse &)> &callback) {
-
-  auto dbClient = drogon::app().getDbClient();
-
-  Mapper<drogon_model::Gnp::Publications> mp(dbClient);
+  CoroMapper<drogon_model::Gnp::Publications> mp(dbClient);
 
   // Create criteria to find the user with specified ID in the tenant
   Criteria criteria = Criteria(drogon_model::Gnp::Publications::Cols::_id, CompareOperator::EQ, publicationId);
 
-  // Find the user first
-  mp.findOne(
-      criteria,
-      [=](drogon_model::Gnp::Publications publication) {
-        // Publication found, check if it's already inactive
-        if (!publication.getValueOfIsActive()) {
-          // Tenant is already inactive
-          dto::BaseApiResponse response;
-          response.success = true;
-          response.message = "Publication is already inactive.";
-          callback(response);
-          return;
-        }
+  try {
+    // Find the user first
+    auto publication = co_await mp.findOne(criteria);
 
-        // Set the user as active
-        publication.setIsActive(false);
+    // Publication found, check if it's already inactive
+    if (!publication.getValueOfIsActive()) {
+      // Tenant is already inactive
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.message = "Publication is already inactive.";
+      co_return response;
+    }
 
-        // Update the user in the database
-        Mapper<drogon_model::Gnp::Publications> updateMp(dbClient);
-        updateMp.update(
-            publication,
-            [callback](const size_t count) {
-              // Successfully updated
-              dto::BaseApiResponse response;
-              response.success = true;
-              response.message = "Publication deactivated successfully";
-              callback(response);
-            },
-            [=](const DrogonDbException &e) {
-              // Error during update
-              dto::BaseApiResponse errorResponse;
-              errorResponse.success = false;
-              errorResponse.message = "Failed to deactivate publication";
-              errorResponse.error["code"] = constants::ERR_DB_QUERY;
-              errorResponse.error["detail"] = e.base().what();
-              callback(errorResponse);
-            });
-      },
-      [callback](const DrogonDbException &e) {
-        // User not found
-        dto::BaseApiResponse errorResponse;
-        errorResponse.success = false;
-        errorResponse.message = "Publication not found";
-        errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
-        errorResponse.error["detail"] = e.base().what();
-        callback(errorResponse);
-      });
+    // Set the user as inactive
+    publication.setIsActive(false);
+
+    try {
+      // Update the user in the database
+      co_await mp.update(publication);
+
+      // Successfully updated
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.message = "Publication deactivated successfully";
+      co_return response;
+    } catch (const DrogonDbException &e) {
+      // Error during update
+      dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.message = "Failed to deactivate publication";
+      errorResponse.error["code"] = constants::ERR_DB_QUERY;
+      errorResponse.error["detail"] = e.base().what();
+      co_return errorResponse;
+    }
+  } catch (const DrogonDbException &e) {
+    // User not found
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Publication not found";
+    errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
 }
+
+
 } // namespace gnp::services

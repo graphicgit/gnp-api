@@ -53,12 +53,13 @@ class Affiliates
         static const std::string _platforms;
         static const std::string _total_earnings;
         static const std::string _date_joined;
-        static const std::string _updated_at;
         static const std::string _account_type;
         static const std::string _account_name;
         static const std::string _account_provider;
         static const std::string _affiliate_id;
         static const std::string _user_id;
+        static const std::string _created_at;
+        static const std::string _updated_at;
     };
 
     static const int primaryKeyNumber;
@@ -192,15 +193,6 @@ class Affiliates
     ///Set the value of the column date_joined
     void setDateJoined(const ::trantor::Date &pDateJoined) noexcept;
 
-    /**  For column updated_at  */
-    ///Get the value of the column updated_at, returns the default value if the column is null
-    const ::trantor::Date &getValueOfUpdatedAt() const noexcept;
-    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<::trantor::Date> &getUpdatedAt() const noexcept;
-    ///Set the value of the column updated_at
-    void setUpdatedAt(const ::trantor::Date &pUpdatedAt) noexcept;
-    void setUpdatedAtToNull() noexcept;
-
     /**  For column account_type  */
     ///Get the value of the column account_type, returns the default value if the column is null
     const std::string &getValueOfAccountType() const noexcept;
@@ -247,10 +239,26 @@ class Affiliates
     ///Set the value of the column user_id
     void setUserId(const std::string &pUserId) noexcept;
     void setUserId(std::string &&pUserId) noexcept;
-    void setUserIdToNull() noexcept;
+
+    /**  For column created_at  */
+    ///Get the value of the column created_at, returns the default value if the column is null
+    const ::trantor::Date &getValueOfCreatedAt() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<::trantor::Date> &getCreatedAt() const noexcept;
+    ///Set the value of the column created_at
+    void setCreatedAt(const ::trantor::Date &pCreatedAt) noexcept;
+
+    /**  For column updated_at  */
+    ///Get the value of the column updated_at, returns the default value if the column is null
+    const ::trantor::Date &getValueOfUpdatedAt() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<::trantor::Date> &getUpdatedAt() const noexcept;
+    ///Set the value of the column updated_at
+    void setUpdatedAt(const ::trantor::Date &pUpdatedAt) noexcept;
+    void setUpdatedAtToNull() noexcept;
 
 
-    static size_t getColumnNumber() noexcept {  return 15;  }
+    static size_t getColumnNumber() noexcept {  return 16;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -281,12 +289,13 @@ class Affiliates
     std::shared_ptr<std::string> platforms_;
     std::shared_ptr<std::string> totalEarnings_;
     std::shared_ptr<::trantor::Date> dateJoined_;
-    std::shared_ptr<::trantor::Date> updatedAt_;
     std::shared_ptr<std::string> accountType_;
     std::shared_ptr<std::string> accountName_;
     std::shared_ptr<std::string> accountProvider_;
     std::shared_ptr<std::string> affiliateId_;
     std::shared_ptr<std::string> userId_;
+    std::shared_ptr<::trantor::Date> createdAt_;
+    std::shared_ptr<::trantor::Date> updatedAt_;
     struct MetaData
     {
         const std::string colName_;
@@ -298,7 +307,7 @@ class Affiliates
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[15]={ false };
+    bool dirtyFlag_[16]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -366,36 +375,41 @@ class Affiliates
         }
         if(dirtyFlag_[9])
         {
-            sql += "updated_at,";
-            ++parametersCount;
-        }
-        if(dirtyFlag_[10])
-        {
             sql += "account_type,";
             ++parametersCount;
         }
         sql += "account_name,";
         ++parametersCount;
-        if(!dirtyFlag_[11])
+        if(!dirtyFlag_[10])
         {
             needSelection=true;
         }
         sql += "account_provider,";
         ++parametersCount;
-        if(!dirtyFlag_[12])
+        if(!dirtyFlag_[11])
         {
             needSelection=true;
         }
-        if(dirtyFlag_[13])
+        if(dirtyFlag_[12])
         {
             sql += "affiliate_id,";
             ++parametersCount;
         }
-        sql += "user_id,";
+        if(dirtyFlag_[13])
+        {
+            sql += "user_id,";
+            ++parametersCount;
+        }
+        sql += "created_at,";
         ++parametersCount;
         if(!dirtyFlag_[14])
         {
             needSelection=true;
+        }
+        if(dirtyFlag_[15])
+        {
+            sql += "updated_at,";
+            ++parametersCount;
         }
         if(parametersCount > 0)
         {
@@ -475,6 +489,10 @@ class Affiliates
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
+        else
+        {
+            sql +="default,";
+        }
         if(dirtyFlag_[11])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
@@ -489,10 +507,6 @@ class Affiliates
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
-        else
-        {
-            sql +="default,";
-        }
         if(dirtyFlag_[13])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
@@ -506,6 +520,11 @@ class Affiliates
         else
         {
             sql +="default,";
+        }
+        if(dirtyFlag_[15])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
         }
         if(parametersCount > 0)
         {

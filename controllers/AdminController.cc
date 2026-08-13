@@ -14,6 +14,153 @@
 #include "dto/PartnerInvoiceDto.h"
 #include "dto/PartnerQuotaDto.h"
 
+Task<HttpResponsePtr> AdminController::getAllPublications(HttpRequestPtr req) {
+
+  int pageSize = 10; // Default page size
+  int pageNo = 1;    //  Default page number
+
+  if (!req->getParameter("pageSize").empty()) {
+    try {
+      pageSize = std::stoi(req->getParameter("pageSize"));
+      pageSize = std::max(1, std::min(100, pageSize)); // Limit between 1-100
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  if (!req->getParameter("pageNo").empty()) {
+    try {
+      pageNo = std::stoi(req->getParameter("pageNo"));
+      pageNo = std::max(1, pageNo); // Ensure page number is at least 1
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  std::string query = req->getParameter("query");
+  if (query.empty()) {
+    query = ""; // Default to empty string if not specified
+  }
+
+
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &publicationService = plugin->getPublicationService();
+
+  auto result = co_await publicationService.getAllPublications(pageNo, pageSize, query);
+
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+
+}
+
+Task<HttpResponsePtr> AdminController::createPublication(HttpRequestPtr req) {
+
+  auto jsonBody = req->getJsonObject();
+
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  gnp::dto::PublicationDto dto;
+  dto.fromJson(*jsonBody);
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &publicationService = plugin->getPublicationService();
+
+  auto result = co_await publicationService.create(dto);
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+
+
+}
+
+Task<HttpResponsePtr> AdminController::updatePublication(HttpRequestPtr req, const std::string &publicationId) {
+
+  auto jsonBody = req->getJsonObject();
+
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  gnp::dto::PublicationDto dto;
+  dto.fromJson(*jsonBody);
+
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &publicationService = plugin->getPublicationService();
+
+  auto result = co_await publicationService.update(dto, publicationId);
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+
+}
+
+Task<HttpResponsePtr> AdminController::activate(HttpRequestPtr req, const std::string &publicationId) {
+
+  if (publicationId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Missing required parameter: Publication Id";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &publicationService = plugin->getPublicationService();
+
+  auto result = co_await publicationService.activate(publicationId);
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+
+}
+
+
+Task<HttpResponsePtr> AdminController::deactivate(HttpRequestPtr req, const std::string &publicationId) {
+
+  if (publicationId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Missing required parameter: Publication Id";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &publicationService = plugin->getPublicationService();
+
+  auto result = co_await publicationService.deactivate(publicationId);
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+
+}
+
+
+Task<HttpResponsePtr> AdminController::deletePublication(HttpRequestPtr req, const std::string &publicationId) {
+
+  if (publicationId.empty()) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Missing required parameter: Publication Id";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &publicationService = plugin->getPublicationService();
+
+  auto result = co_await publicationService.deletePublication(publicationId);
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+
+}
+
 
 Task<HttpResponsePtr> AdminController::getAllNewsPapers(const HttpRequestPtr req) {
   int pageSize = 10; // Default page size
@@ -148,6 +295,7 @@ Task<HttpResponsePtr> AdminController::getNewsPaperDetails(const HttpRequestPtr 
   co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
 
+
 Task<HttpResponsePtr> AdminController::publishNewsPaper(const HttpRequestPtr req) {
   if (req->getParameter("id").empty()) {
     gnp::dto::BaseApiResponse response;
@@ -168,6 +316,7 @@ Task<HttpResponsePtr> AdminController::publishNewsPaper(const HttpRequestPtr req
   co_return resp;
 }
 
+
 Task<HttpResponsePtr> AdminController::unPublishNewsPaper(const HttpRequestPtr req) {
   if (req->getParameter("id").empty()) {
     gnp::dto::BaseApiResponse response;
@@ -187,6 +336,7 @@ Task<HttpResponsePtr> AdminController::unPublishNewsPaper(const HttpRequestPtr r
   auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
   co_return resp;
 }
+
 
 Task<HttpResponsePtr> AdminController::IngestNewsPaper(const HttpRequestPtr req) {
   auto jsonBody = req->getJsonObject();
@@ -353,13 +503,13 @@ void AdminController::updateUser(
   // write your application logic here
 }
 
-void AdminController::activate(
+void AdminController::activateUser(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) {
   // write your application logic here
 }
 
-void AdminController::deactivate(
+void AdminController::deactivateUser(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) {
   // write your application logic here
@@ -1784,7 +1934,5 @@ Task<HttpResponsePtr> AdminController::manageSettings(HttpRequestPtr req) {
   auto result = co_await settingService.createOrUpdate(dto);
   auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
   co_return resp;
-
-
 
 }

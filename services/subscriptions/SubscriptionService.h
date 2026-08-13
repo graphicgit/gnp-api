@@ -54,7 +54,10 @@ public:
 
   // renewal history
 
+  //misc
   drogon::Task<void> dispatchSubscriptionRenewalReminder();
+
+  drogon::Task<void> unsubscribeNotifications(const std::string &userId, int notificationType);
 
 };
 

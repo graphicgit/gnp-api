@@ -22,8 +22,7 @@ add_executable(${PROJECT_NAME} main.cc
         services/publications/PublicationService.cc
         services/newspapers/NewspaperService.cc
         services/newspapers/NewspaperService.h
-        dto/CreatePublicationDto.h
-        dto/UpdatePublicationDto.h
+        dto/PublicationDto.h
         constants/ErrorCodes.h
         constants/PublicationTypes.h
         dto/UserDto.h
@@ -150,6 +149,7 @@ add_executable(${PROJECT_NAME} main.cc
         services/settings/SettingService.h
         dto/SettingsDto.h
         services/settings/SettingService.cc
+        constants/NotificationTypes.h
 )
 
 # ##############################################################################

@@ -7,40 +7,27 @@
 
 #include <drogon/drogon.h>
 #include <drogon/utils/coroutine.h>
-#include <functional>
-#include <json/json.h>
 #include <string>
-
-#include "../../dto/BaseApiResponse.h"
-#include "../../dto/CreatePublicationDto.h"
-#include "../../dto/UpdatePublicationDto.h"
+#include "dto/BaseApiResponse.h"
+#include "dto/PublicationDto.h"
 
 namespace gnp::services {
 
 class PublicationService {
 
 public:
-  drogon::Task<gnp::dto::BaseApiResponse> getAllPublicationsAsync(int pageNo, int pageSize, const std::string &query);
+  drogon::Task<dto::BaseApiResponse> getAllPublications(int pageNo, int pageSize, const std::string &query);
 
-  void createPublication(
-      const gnp::dto::CreatePublicationDto &userData,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+    drogon::Task<dto::BaseApiResponse> create(const dto::PublicationDto &dto);
 
-  void updatePublication(
-      const gnp::dto::UpdatePublicationDto &userData,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+    drogon::Task<dto::BaseApiResponse> update(const dto::PublicationDto &dto, const std::string &publicationId);
 
-  void activatePublication(
-      const std::string &publicationId,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+    drogon::Task<dto::BaseApiResponse> deletePublication(const std::string &publicationId);
 
-  void deactivatePublication(
-      const std::string &publicationId,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+    drogon::Task<dto::BaseApiResponse> activate(const std::string &publicationId);
 
-  void deletePublication(
-      const std::string &publicationId,
-      const std::function<void(const gnp::dto::BaseApiResponse &)> &callback);
+    drogon::Task<dto::BaseApiResponse> deactivate(const std::string &publicationId);
+
 };
 } // namespace gnp
 #endif // PUBLICATIONSERVICE_H

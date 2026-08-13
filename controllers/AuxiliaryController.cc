@@ -87,3 +87,18 @@ Task<HttpResponsePtr> AuxiliaryController::handleMtnLoyaltyCallback(HttpRequestP
     apiResp.message = "Callback processed";
     co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
+
+
+Task<HttpResponsePtr> AuxiliaryController::unsubscribeNotifications(HttpRequestPtr req, const std::string &userId, int notificationType) {
+
+    auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto &subscriptionService = plugin->getSubscriptionService();
+
+    co_await subscriptionService.unsubscribeNotifications(userId, notificationType);
+
+    gnp::dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Callback processed";
+    co_return HttpResponse::newHttpJsonResponse(response.toJson());
+
+}

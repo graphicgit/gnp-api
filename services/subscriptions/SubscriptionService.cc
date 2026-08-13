@@ -13,9 +13,11 @@
 #include "Newspapers.h"
 #include "PurchaseAttempts.h"
 #include "SubscriptionRenewalHistory.h"
+#include "UserNotificationSubscriptions.h"
 #include "UserSubscriptions.h"
 #include "Users.h"
 #include "bcrypt.h"
+#include "constants/NotificationTypes.h"
 #include "dto/BuyNewspaperCopyDto.h" // Added missing include
 #include "dto/SendEmailDto.h"
 #include "plugins/GnpServicePlugin.h"
@@ -29,6 +31,7 @@
 using namespace drogon::orm;
 using drogon_model::Gnp::PurchaseAttempts;
 using drogon_model::Gnp::SubscriptionRenewalHistory;
+using drogon_model::Gnp::UserNotificationSubscriptions;
 using drogon_model::Gnp::Users;
 using drogon_model::Gnp::UserSubscriptions;
 
@@ -1464,8 +1467,10 @@ drogon::Task<void> SubscriptionService::dispatchSubscriptionRenewalReminder() {
     auto todayStr = now.toFormattedString("%Y-%m-%d");
     auto sevenDaysLaterStr = sevenDaysLater.toFormattedString("%Y-%m-%d");
 
-    //auto subscriptions = co_await mp.findBy(drogon::orm::Criteria(drogon_model::Gnp::UserSubscriptions::Cols::_is_active, drogon::orm::CompareOperator::EQ, true));
-    auto subscriptions = co_await mp.findBy(Criteria(UserSubscriptions::Cols::_email, CompareOperator::EQ, "vavy712@gmail.com") &&  Criteria(UserSubscriptions::Cols::_end_date, CompareOperator::GE, todayStr) && Criteria(UserSubscriptions::Cols::_end_date, CompareOperator::LE, sevenDaysLaterStr));
+    // auto subscriptions = co_await mp.findBy(drogon::orm::Criteria(drogon_model::Gnp::UserSubscriptions::Cols::_is_active, drogon::orm::CompareOperator::EQ, true));
+    auto subscriptions = co_await mp.findBy(Criteria(UserSubscriptions::Cols::_email, CompareOperator::EQ, "vavy712@gmail.com") &&
+                                           Criteria(UserSubscriptions::Cols::_end_date, CompareOperator::GE, todayStr) &&
+                                           Criteria(UserSubscriptions::Cols::_end_date, CompareOperator::LE, sevenDaysLaterStr));
 
     auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
     auto &emailService = plugin->getEmailService();
@@ -1473,7 +1478,7 @@ drogon::Task<void> SubscriptionService::dispatchSubscriptionRenewalReminder() {
     for (const auto &sub : subscriptions) {
       if (sub.getValueOfEmail().empty()) continue;
 
-      // Fetch user's first name for personalization
+      // Personalization
       std::string userName = "Subscriber";
       if (!sub.getValueOfUserId().empty()) {
         try {
@@ -1483,11 +1488,11 @@ drogon::Task<void> SubscriptionService::dispatchSubscriptionRenewalReminder() {
             userName = user.getValueOfFirstName();
           }
         } catch (...) {
-          // Fall back silently on db query error
+          // Fall back silently
         }
       }
 
-      // Fetch past renewal history for this user
+      // Past Renewal History Table Block
       std::string historyHtml = "";
       if (!sub.getValueOfUserId().empty()) {
         try {
@@ -1497,91 +1502,207 @@ drogon::Task<void> SubscriptionService::dispatchSubscriptionRenewalReminder() {
 
           if (!history.empty()) {
             historyHtml += R"(
-              <div style="margin-top: 30px; text-align: left; border-top: 1px solid #eef2f6; padding-top: 20px;">
-                <h3 style="font-size: 16px; color: #1e293b; margin-bottom: 12px; font-weight: 600;">Your Renewal History</h3>
-                <div style="overflow-x: auto;">
-                  <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; color: #475569;">
-                    <thead>
-                      <tr style="border-bottom: 2px solid #e2e8f0; color: #64748b;">
-                        <th style="padding: 8px 4px; font-weight: 600;">Plan</th>
-                        <th style="padding: 8px 4px; font-weight: 600;">Billing Cycle</th>
-                        <th style="padding: 8px 4px; font-weight: 600;">Amount</th>
-                        <th style="padding: 8px 4px; font-weight: 600;">Date</th>
-                        <th style="padding: 8px 4px; font-weight: 600;">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+              <div style="margin-top: 32px; border-top: 1px solid #fee2e2; padding-top: 24px;">
+                <h3 style="font-size: 15px; color: #111827; margin: 0 0 16px 0; font-weight: 700; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                  Payment & Renewal History
+                </h3>
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="border-collapse: separate; font-size: 13px; text-align: left; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; border: 1px solid #fee2e2; border-radius: 8px; overflow: hidden;">
+                  <thead>
+                    <tr style="background-color: #fff1f2; color: #991b1b;">
+                      <th style="padding: 10px 12px; font-weight: 700; border-bottom: 1px solid #fecdd3;">Plan</th>
+                      <th style="padding: 10px 12px; font-weight: 700; border-bottom: 1px solid #fecdd3;">Cycle</th>
+                      <th style="padding: 10px 12px; font-weight: 700; border-bottom: 1px solid #fecdd3;">Amount</th>
+                      <th style="padding: 10px 12px; font-weight: 700; border-bottom: 1px solid #fecdd3;">Date</th>
+                      <th style="padding: 10px 12px; font-weight: 700; border-bottom: 1px solid #fecdd3;">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
             )";
+
             for (const auto& record : history) {
-              std::string dateStr = record.getValueOfCreatedAt().toCustomFormattedStringLocal("%d-%b-%Y %H:%M");
+              std::string dateStr = record.getValueOfCreatedAt().toCustomFormattedStringLocal("%d %b, %Y");
+              bool isSuccess = (record.getValueOfTransactionStatus() == "Successful");
 
-              std::string statusColor = record.getValueOfTransactionStatus() == "Successful" ? "#10b981" : "#ef4444";
-              std::string amountStr = record.getValueOfAmountPaid().empty() ? "N/A" : record.getValueOfAmountPaid();
+              std::string statusBg    = isSuccess ? "#dcfce7" : "#fee2e2";
+              std::string statusColor = isSuccess ? "#16a34a" : "#dc2626";
+              std::string amountStr   = record.getValueOfAmountPaid().empty() ? "N/A" : record.getValueOfAmountPaid();
 
-              historyHtml += "                      <tr style=\"border-bottom: 1px solid #f1f5f9;\">\n";
-              historyHtml += "                        <td style=\"padding: 8px 4px;\">" + record.getValueOfSubscriptionPlanName() + "</td>\n";
-              historyHtml += "                        <td style=\"padding: 8px 4px;\">" + record.getValueOfCurrentBillingCycle() + "</td>\n";
-              historyHtml += "                        <td style=\"padding: 8px 4px;\">" + amountStr + "</td>\n";
-              historyHtml += "                        <td style=\"padding: 8px 4px;\">" + dateStr + "</td>\n";
-              historyHtml += "                        <td style=\"padding: 8px 4px; color: " + statusColor + "; font-weight: 600;\">" + record.getValueOfTransactionStatus() + "</td>\n";
-              historyHtml += "                      </tr>\n";
+              historyHtml += R"(
+                <tr style="border-bottom: 1px solid #f8fafc; background-color: #ffffff;">
+                  <td style="padding: 10px 12px; color: #374151; font-weight: 500;">)" + record.getValueOfSubscriptionPlanName() + R"(</td>
+                  <td style="padding: 10px 12px; color: #6b7280;">)" + record.getValueOfCurrentBillingCycle() + R"(</td>
+                  <td style="padding: 10px 12px; color: #374151; font-weight: 600;">)" + amountStr + R"(</td>
+                  <td style="padding: 10px 12px; color: #6b7280;">)" + dateStr + R"(</td>
+                  <td style="padding: 10px 12px;">
+                    <span style="display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; background-color: )" + statusBg + R"(; color: )" + statusColor + R"(;">
+                      )" + record.getValueOfTransactionStatus() + R"(
+                    </span>
+                  </td>
+                </tr>
+              )";
             }
+
             historyHtml += R"(
-                    </tbody>
-                  </table>
-                </div>
+                  </tbody>
+                </table>
               </div>
             )";
           }
         } catch (...) {
-          // Fall back silently on db query error
+          // Fall back silently
         }
       }
 
-      std::string emailBody =
-          R"(
-          <!DOCTYPE html>
-          <html>
-          <head>
-          <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 0; }
-            .container { max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; }
-            .header { background-color: #ffffff; padding: 32px 24px 20px; text-align: center; border-bottom: 1px solid #e2e8f0; }
-            .header h1 { margin: 0; font-size: 22px; font-weight: 700; color: #0f172a; }
-            .content { padding: 32px 24px; text-align: left; color: #334155; line-height: 1.6; }
-            .content p { margin: 0 0 16px; font-size: 15px; }
-            .footer { background-color: #f8fafc; color: #64748b; padding: 24px; text-align: center; font-size: 13px; border-top: 1px solid #e2e8f0; }
-          </style>
-          </head>
-          <body>
-          <div class="container">
-            <div class="header">
-              <h1>Subscription Renewal</h1>
-            </div>
-            <div class="content">
-              <p>Hi )" + userName + R"(,</p>
-              <p>We hope you are enjoying your Graphic NewsPlus experience! This is a friendly reminder that your subscription is coming up for renewal soon. To keep enjoying uninterrupted access to all your favorite newspapers, magazines, and features, please check that your payment details are up to date.</p>
+      std::string emailBody = R"(<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>Graphic News Plus - Subscription Renewal Reminder</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #fcf8f8; -webkit-font-smoothing: antialiased;">
+  <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fcf8f8; padding: 40px 10px;">
+    <tr>
+      <td align="center">
+        <!-- Main Container -->
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(185, 28, 28, 0.08); border: 1px solid #fee2e2;">
+
+          <!-- Crimson Header -->
+          <tr>
+            <td style="background-color: #991b1b; background: linear-gradient(135deg, #7f1d1d 0%, #b91c1c 100%); padding: 36px 32px; text-align: left;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td>
+                    <span style="display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #fecdd3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                      Graphic News Plus
+                    </span>
+                    <h1 style="margin: 6px 0 0 0; font-size: 24px; font-weight: 700; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; letter-spacing: -0.3px;">
+                      Subscription Renewal
+                    </h1>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Red Decorative Accent Line -->
+          <tr>
+            <td style="background-color: #dc2626; height: 4px; line-height: 4px; font-size: 4px;">&nbsp;</td>
+          </tr>
+
+          <!-- Body Content -->
+          <tr>
+            <td style="padding: 32px;">
+              <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6; color: #374151; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                Hi <strong style="color: #991b1b;">)" + userName + R"(</strong>,
+              </p>
+
+              <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #374151; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                We hope you are enjoying your experience on <strong>Graphic News Plus</strong>! This is a friendly reminder that your subscription is coming up for renewal soon.
+              </p>
+
+              <!-- Notice Callout Box -->
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fff1f2; border: 1px solid #fecdd3; border-left: 4px solid #b91c1c; border-radius: 8px; margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 16px 20px;">
+                    <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #991b1b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                      <strong>Action Recommended:</strong> Please verify that your payment method and billing details are up to date to prevent any interruption to your access.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Action Button -->
+              <div style="text-align: center; margin: 28px 0;">
+                <a href="https://new.graphicnewsplus.com/account/subscription" target="_blank" style="display: inline-block; padding: 12px 28px; background-color: #b91c1c; color: #ffffff; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 700; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; box-shadow: 0 4px 12px rgba(185, 28, 28, 0.2);">
+                  Manage Subscription &rarr;
+                </a>
+              </div>
+
+              <!-- History Block Injection -->
               )" + historyHtml + R"(
-            </div>
-            <div class="footer">
-              <p>Thank you for being a valued subscriber of Graphic NewsPlus.</p>
-            </div>
-          </div>
-          </body>
-          </html>
-          )";
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #fff1f2; padding: 24px 32px; text-align: center; border-top: 1px solid #ffe4e6;">
+              <p style="margin: 0 0 8px 0; font-size: 12px; line-height: 1.5; color: #9f1239; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                Thank you for being a valued subscriber to <strong>Graphic News Plus</strong>.
+              </p>
+              <p style="margin: 0; font-size: 12px; color: #f43f5e; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                &copy; Graphic News Plus. All rights reserved.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>)";
 
       gnp::dto::SendEmailDto emailDto;
       emailDto.setTo(sub.getValueOfEmail());
-      emailDto.setSubject("Subscription Renewal Reminder");
+      emailDto.setSubject("Subscription Renewal Reminder — Graphic News Plus");
       emailDto.setBody(emailBody);
 
-      // dispatch email
+      // Dispatch email
       co_await emailService.sendEmailAsync(emailDto);
     }
   } catch (const std::exception &e) {
     LOG_ERROR << "Failed to dispatch subscription renewal reminder: " << e.what();
   }
 }
+
+
+drogon::Task<void> SubscriptionService::unsubscribeNotifications(const std::string &userId, int notificationType) {
+
+  auto dbClient = drogon::app().getDbClient();
+
+  try {
+    CoroMapper<UserNotificationSubscriptions> notifMapper(dbClient);
+
+    // Look up an existing record for this user + notification type
+    Criteria criteria =
+        Criteria(UserNotificationSubscriptions::Cols::_user_id, CompareOperator::EQ, userId) &&
+        Criteria(UserNotificationSubscriptions::Cols::_notification_type, CompareOperator::EQ, notificationType);
+
+    auto records = co_await notifMapper.findBy(criteria);
+
+    if (!records.empty()) {
+      // Update the existing record to UNSUBSCRIBED
+      auto &record = records.front();
+      record.setSubscriptionStatus(
+          static_cast<int32_t>(gnp::constants::SubscriptionStatus::UNSUBSCRIBED));
+      record.setUpdatedAt(trantor::Date::now());
+      co_await notifMapper.update(record);
+
+      LOG_INFO << "User " << userId
+               << " unsubscribed from notification type " << notificationType;
+    } else {
+      // Insert a new record with UNSUBSCRIBED status (opt-out from the start)
+      UserNotificationSubscriptions newRecord;
+      newRecord.setId(gnp::utils::IdGeneratorUtils::generateGuid());
+      newRecord.setUserId(userId);
+      newRecord.setNotificationType(static_cast<int32_t>(notificationType));
+      newRecord.setSubscriptionStatus(static_cast<int32_t>(gnp::constants::SubscriptionStatus::UNSUBSCRIBED));
+      newRecord.setCreatedAt(trantor::Date::now());
+      newRecord.setUpdatedAt(trantor::Date::now());
+      co_await notifMapper.insert(newRecord);
+
+      LOG_INFO << "User " << userId
+               << " inserted as unsubscribed for notification type "
+               << notificationType;
+    }
+  } catch (const std::exception &e) {
+    LOG_ERROR << "Failed to unsubscribe notifications for user " << userId
+              << ": " << e.what();
+  }
+}
+
 
 } // namespace gnp::services

@@ -353,7 +353,7 @@
             "DisbursementSubscriptionKey": "b544de9587de4fe0805ecfdcb7fcdfb3"
         },
         "G3Bucket": {
-            "BaseStoragePath": "./g3-storage",
+            "BaseStoragePath": "g3-storage",
             "ThumbnailBucketName": "gnp-thumbnails",
             "SplitDocumentBucketName": "gnp-split-documents",
             "MasterDocumentBucketName": "gnp-master-documents",

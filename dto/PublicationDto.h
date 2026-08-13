@@ -9,11 +9,11 @@
 
 namespace gnp::dto {
 
-    class CreatePublicationDto {
+    class PublicationDto {
 
         public:
 
-        CreatePublicationDto() = default;
+        PublicationDto() = default;
 
         void fromJson(const Json::Value& json);
 
@@ -39,7 +39,7 @@ namespace gnp::dto {
     };
 
 
-    inline void CreatePublicationDto::fromJson(const Json::Value& json) {
+    inline void PublicationDto::fromJson(const Json::Value& json) {
 
         if (json.isMember("name") && !json["name"].isNull()) {
             name_ = json["name"].asString();

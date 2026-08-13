@@ -22,12 +22,13 @@ const std::string Affiliates::Cols::_website = "\"website\"";
 const std::string Affiliates::Cols::_platforms = "\"platforms\"";
 const std::string Affiliates::Cols::_total_earnings = "\"total_earnings\"";
 const std::string Affiliates::Cols::_date_joined = "\"date_joined\"";
-const std::string Affiliates::Cols::_updated_at = "\"updated_at\"";
 const std::string Affiliates::Cols::_account_type = "\"account_type\"";
 const std::string Affiliates::Cols::_account_name = "\"account_name\"";
 const std::string Affiliates::Cols::_account_provider = "\"account_provider\"";
 const std::string Affiliates::Cols::_affiliate_id = "\"affiliate_id\"";
 const std::string Affiliates::Cols::_user_id = "\"user_id\"";
+const std::string Affiliates::Cols::_created_at = "\"created_at\"";
+const std::string Affiliates::Cols::_updated_at = "\"updated_at\"";
 const std::string Affiliates::primaryKeyName = "id";
 const bool Affiliates::hasPrimaryKey = true;
 const std::string Affiliates::tableName = "\"affiliates\"";
@@ -42,12 +43,13 @@ const std::vector<typename Affiliates::MetaData> Affiliates::metaData_={
 {"platforms","std::string","jsonb",0,0,0,0},
 {"total_earnings","std::string","numeric",0,0,0,1},
 {"date_joined","::trantor::Date","timestamp with time zone",0,0,0,1},
-{"updated_at","::trantor::Date","timestamp without time zone",0,0,0,0},
 {"account_type","std::string","character varying",50,0,0,0},
 {"account_name","std::string","character varying",255,0,0,1},
 {"account_provider","std::string","character varying",50,0,0,1},
 {"affiliate_id","std::string","character varying",20,0,0,0},
-{"user_id","std::string","uuid",0,0,0,0}
+{"user_id","std::string","uuid",0,0,0,1},
+{"created_at","::trantor::Date","timestamp with time zone",0,0,0,1},
+{"updated_at","::trantor::Date","timestamp without time zone",0,0,0,0}
 };
 const std::string &Affiliates::getColumnName(size_t index) noexcept(false)
 {
@@ -112,6 +114,48 @@ Affiliates::Affiliates(const Row &r, const ssize_t indexOffset) noexcept
                 dateJoined_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
+        if(!r["account_type"].isNull())
+        {
+            accountType_=std::make_shared<std::string>(r["account_type"].as<std::string>());
+        }
+        if(!r["account_name"].isNull())
+        {
+            accountName_=std::make_shared<std::string>(r["account_name"].as<std::string>());
+        }
+        if(!r["account_provider"].isNull())
+        {
+            accountProvider_=std::make_shared<std::string>(r["account_provider"].as<std::string>());
+        }
+        if(!r["affiliate_id"].isNull())
+        {
+            affiliateId_=std::make_shared<std::string>(r["affiliate_id"].as<std::string>());
+        }
+        if(!r["user_id"].isNull())
+        {
+            userId_=std::make_shared<std::string>(r["user_id"].as<std::string>());
+        }
+        if(!r["created_at"].isNull())
+        {
+            auto timeStr = r["created_at"].as<std::string>();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
         if(!r["updated_at"].isNull())
         {
             auto timeStr = r["updated_at"].as<std::string>();
@@ -134,31 +178,11 @@ Affiliates::Affiliates(const Row &r, const ssize_t indexOffset) noexcept
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
-        if(!r["account_type"].isNull())
-        {
-            accountType_=std::make_shared<std::string>(r["account_type"].as<std::string>());
-        }
-        if(!r["account_name"].isNull())
-        {
-            accountName_=std::make_shared<std::string>(r["account_name"].as<std::string>());
-        }
-        if(!r["account_provider"].isNull())
-        {
-            accountProvider_=std::make_shared<std::string>(r["account_provider"].as<std::string>());
-        }
-        if(!r["affiliate_id"].isNull())
-        {
-            affiliateId_=std::make_shared<std::string>(r["affiliate_id"].as<std::string>());
-        }
-        if(!r["user_id"].isNull())
-        {
-            userId_=std::make_shared<std::string>(r["user_id"].as<std::string>());
-        }
     }
     else
     {
         size_t offset = (size_t)indexOffset;
-        if(offset + 15 > r.size())
+        if(offset + 16 > r.size())
         {
             LOG_FATAL << "Invalid SQL result for this model";
             return;
@@ -230,6 +254,54 @@ Affiliates::Affiliates(const Row &r, const ssize_t indexOffset) noexcept
         index = offset + 9;
         if(!r[index].isNull())
         {
+            accountType_=std::make_shared<std::string>(r[index].as<std::string>());
+        }
+        index = offset + 10;
+        if(!r[index].isNull())
+        {
+            accountName_=std::make_shared<std::string>(r[index].as<std::string>());
+        }
+        index = offset + 11;
+        if(!r[index].isNull())
+        {
+            accountProvider_=std::make_shared<std::string>(r[index].as<std::string>());
+        }
+        index = offset + 12;
+        if(!r[index].isNull())
+        {
+            affiliateId_=std::make_shared<std::string>(r[index].as<std::string>());
+        }
+        index = offset + 13;
+        if(!r[index].isNull())
+        {
+            userId_=std::make_shared<std::string>(r[index].as<std::string>());
+        }
+        index = offset + 14;
+        if(!r[index].isNull())
+        {
+            auto timeStr = r[index].as<std::string>();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+        index = offset + 15;
+        if(!r[index].isNull())
+        {
             auto timeStr = r[index].as<std::string>();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
@@ -250,38 +322,13 @@ Affiliates::Affiliates(const Row &r, const ssize_t indexOffset) noexcept
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
-        index = offset + 10;
-        if(!r[index].isNull())
-        {
-            accountType_=std::make_shared<std::string>(r[index].as<std::string>());
-        }
-        index = offset + 11;
-        if(!r[index].isNull())
-        {
-            accountName_=std::make_shared<std::string>(r[index].as<std::string>());
-        }
-        index = offset + 12;
-        if(!r[index].isNull())
-        {
-            accountProvider_=std::make_shared<std::string>(r[index].as<std::string>());
-        }
-        index = offset + 13;
-        if(!r[index].isNull())
-        {
-            affiliateId_=std::make_shared<std::string>(r[index].as<std::string>());
-        }
-        index = offset + 14;
-        if(!r[index].isNull())
-        {
-            userId_=std::make_shared<std::string>(r[index].as<std::string>());
-        }
     }
 
 }
 
 Affiliates::Affiliates(const Json::Value &pJson, const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 15)
+    if(pMasqueradingVector.size() != 16)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -381,7 +428,73 @@ Affiliates::Affiliates(const Json::Value &pJson, const std::vector<std::string> 
         dirtyFlag_[9] = true;
         if(!pJson[pMasqueradingVector[9]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[9]].asString();
+            accountType_=std::make_shared<std::string>(pJson[pMasqueradingVector[9]].asString());
+        }
+    }
+    if(!pMasqueradingVector[10].empty() && pJson.isMember(pMasqueradingVector[10]))
+    {
+        dirtyFlag_[10] = true;
+        if(!pJson[pMasqueradingVector[10]].isNull())
+        {
+            accountName_=std::make_shared<std::string>(pJson[pMasqueradingVector[10]].asString());
+        }
+    }
+    if(!pMasqueradingVector[11].empty() && pJson.isMember(pMasqueradingVector[11]))
+    {
+        dirtyFlag_[11] = true;
+        if(!pJson[pMasqueradingVector[11]].isNull())
+        {
+            accountProvider_=std::make_shared<std::string>(pJson[pMasqueradingVector[11]].asString());
+        }
+    }
+    if(!pMasqueradingVector[12].empty() && pJson.isMember(pMasqueradingVector[12]))
+    {
+        dirtyFlag_[12] = true;
+        if(!pJson[pMasqueradingVector[12]].isNull())
+        {
+            affiliateId_=std::make_shared<std::string>(pJson[pMasqueradingVector[12]].asString());
+        }
+    }
+    if(!pMasqueradingVector[13].empty() && pJson.isMember(pMasqueradingVector[13]))
+    {
+        dirtyFlag_[13] = true;
+        if(!pJson[pMasqueradingVector[13]].isNull())
+        {
+            userId_=std::make_shared<std::string>(pJson[pMasqueradingVector[13]].asString());
+        }
+    }
+    if(!pMasqueradingVector[14].empty() && pJson.isMember(pMasqueradingVector[14]))
+    {
+        dirtyFlag_[14] = true;
+        if(!pJson[pMasqueradingVector[14]].isNull())
+        {
+            auto timeStr = pJson[pMasqueradingVector[14]].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+    }
+    if(!pMasqueradingVector[15].empty() && pJson.isMember(pMasqueradingVector[15]))
+    {
+        dirtyFlag_[15] = true;
+        if(!pJson[pMasqueradingVector[15]].isNull())
+        {
+            auto timeStr = pJson[pMasqueradingVector[15]].asString();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -400,46 +513,6 @@ Affiliates::Affiliates(const Json::Value &pJson, const std::vector<std::string> 
                 }
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
-        }
-    }
-    if(!pMasqueradingVector[10].empty() && pJson.isMember(pMasqueradingVector[10]))
-    {
-        dirtyFlag_[10] = true;
-        if(!pJson[pMasqueradingVector[10]].isNull())
-        {
-            accountType_=std::make_shared<std::string>(pJson[pMasqueradingVector[10]].asString());
-        }
-    }
-    if(!pMasqueradingVector[11].empty() && pJson.isMember(pMasqueradingVector[11]))
-    {
-        dirtyFlag_[11] = true;
-        if(!pJson[pMasqueradingVector[11]].isNull())
-        {
-            accountName_=std::make_shared<std::string>(pJson[pMasqueradingVector[11]].asString());
-        }
-    }
-    if(!pMasqueradingVector[12].empty() && pJson.isMember(pMasqueradingVector[12]))
-    {
-        dirtyFlag_[12] = true;
-        if(!pJson[pMasqueradingVector[12]].isNull())
-        {
-            accountProvider_=std::make_shared<std::string>(pJson[pMasqueradingVector[12]].asString());
-        }
-    }
-    if(!pMasqueradingVector[13].empty() && pJson.isMember(pMasqueradingVector[13]))
-    {
-        dirtyFlag_[13] = true;
-        if(!pJson[pMasqueradingVector[13]].isNull())
-        {
-            affiliateId_=std::make_shared<std::string>(pJson[pMasqueradingVector[13]].asString());
-        }
-    }
-    if(!pMasqueradingVector[14].empty() && pJson.isMember(pMasqueradingVector[14]))
-    {
-        dirtyFlag_[14] = true;
-        if(!pJson[pMasqueradingVector[14]].isNull())
-        {
-            userId_=std::make_shared<std::string>(pJson[pMasqueradingVector[14]].asString());
         }
     }
 }
@@ -536,9 +609,75 @@ Affiliates::Affiliates(const Json::Value &pJson) noexcept(false)
             }
         }
     }
-    if(pJson.isMember("updated_at"))
+    if(pJson.isMember("account_type"))
     {
         dirtyFlag_[9]=true;
+        if(!pJson["account_type"].isNull())
+        {
+            accountType_=std::make_shared<std::string>(pJson["account_type"].asString());
+        }
+    }
+    if(pJson.isMember("account_name"))
+    {
+        dirtyFlag_[10]=true;
+        if(!pJson["account_name"].isNull())
+        {
+            accountName_=std::make_shared<std::string>(pJson["account_name"].asString());
+        }
+    }
+    if(pJson.isMember("account_provider"))
+    {
+        dirtyFlag_[11]=true;
+        if(!pJson["account_provider"].isNull())
+        {
+            accountProvider_=std::make_shared<std::string>(pJson["account_provider"].asString());
+        }
+    }
+    if(pJson.isMember("affiliate_id"))
+    {
+        dirtyFlag_[12]=true;
+        if(!pJson["affiliate_id"].isNull())
+        {
+            affiliateId_=std::make_shared<std::string>(pJson["affiliate_id"].asString());
+        }
+    }
+    if(pJson.isMember("user_id"))
+    {
+        dirtyFlag_[13]=true;
+        if(!pJson["user_id"].isNull())
+        {
+            userId_=std::make_shared<std::string>(pJson["user_id"].asString());
+        }
+    }
+    if(pJson.isMember("created_at"))
+    {
+        dirtyFlag_[14]=true;
+        if(!pJson["created_at"].isNull())
+        {
+            auto timeStr = pJson["created_at"].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+    }
+    if(pJson.isMember("updated_at"))
+    {
+        dirtyFlag_[15]=true;
         if(!pJson["updated_at"].isNull())
         {
             auto timeStr = pJson["updated_at"].asString();
@@ -562,52 +701,12 @@ Affiliates::Affiliates(const Json::Value &pJson) noexcept(false)
             }
         }
     }
-    if(pJson.isMember("account_type"))
-    {
-        dirtyFlag_[10]=true;
-        if(!pJson["account_type"].isNull())
-        {
-            accountType_=std::make_shared<std::string>(pJson["account_type"].asString());
-        }
-    }
-    if(pJson.isMember("account_name"))
-    {
-        dirtyFlag_[11]=true;
-        if(!pJson["account_name"].isNull())
-        {
-            accountName_=std::make_shared<std::string>(pJson["account_name"].asString());
-        }
-    }
-    if(pJson.isMember("account_provider"))
-    {
-        dirtyFlag_[12]=true;
-        if(!pJson["account_provider"].isNull())
-        {
-            accountProvider_=std::make_shared<std::string>(pJson["account_provider"].asString());
-        }
-    }
-    if(pJson.isMember("affiliate_id"))
-    {
-        dirtyFlag_[13]=true;
-        if(!pJson["affiliate_id"].isNull())
-        {
-            affiliateId_=std::make_shared<std::string>(pJson["affiliate_id"].asString());
-        }
-    }
-    if(pJson.isMember("user_id"))
-    {
-        dirtyFlag_[14]=true;
-        if(!pJson["user_id"].isNull())
-        {
-            userId_=std::make_shared<std::string>(pJson["user_id"].asString());
-        }
-    }
 }
 
 void Affiliates::updateByMasqueradedJson(const Json::Value &pJson,
                                             const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 15)
+    if(pMasqueradingVector.size() != 16)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -706,7 +805,73 @@ void Affiliates::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[9] = true;
         if(!pJson[pMasqueradingVector[9]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[9]].asString();
+            accountType_=std::make_shared<std::string>(pJson[pMasqueradingVector[9]].asString());
+        }
+    }
+    if(!pMasqueradingVector[10].empty() && pJson.isMember(pMasqueradingVector[10]))
+    {
+        dirtyFlag_[10] = true;
+        if(!pJson[pMasqueradingVector[10]].isNull())
+        {
+            accountName_=std::make_shared<std::string>(pJson[pMasqueradingVector[10]].asString());
+        }
+    }
+    if(!pMasqueradingVector[11].empty() && pJson.isMember(pMasqueradingVector[11]))
+    {
+        dirtyFlag_[11] = true;
+        if(!pJson[pMasqueradingVector[11]].isNull())
+        {
+            accountProvider_=std::make_shared<std::string>(pJson[pMasqueradingVector[11]].asString());
+        }
+    }
+    if(!pMasqueradingVector[12].empty() && pJson.isMember(pMasqueradingVector[12]))
+    {
+        dirtyFlag_[12] = true;
+        if(!pJson[pMasqueradingVector[12]].isNull())
+        {
+            affiliateId_=std::make_shared<std::string>(pJson[pMasqueradingVector[12]].asString());
+        }
+    }
+    if(!pMasqueradingVector[13].empty() && pJson.isMember(pMasqueradingVector[13]))
+    {
+        dirtyFlag_[13] = true;
+        if(!pJson[pMasqueradingVector[13]].isNull())
+        {
+            userId_=std::make_shared<std::string>(pJson[pMasqueradingVector[13]].asString());
+        }
+    }
+    if(!pMasqueradingVector[14].empty() && pJson.isMember(pMasqueradingVector[14]))
+    {
+        dirtyFlag_[14] = true;
+        if(!pJson[pMasqueradingVector[14]].isNull())
+        {
+            auto timeStr = pJson[pMasqueradingVector[14]].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+    }
+    if(!pMasqueradingVector[15].empty() && pJson.isMember(pMasqueradingVector[15]))
+    {
+        dirtyFlag_[15] = true;
+        if(!pJson[pMasqueradingVector[15]].isNull())
+        {
+            auto timeStr = pJson[pMasqueradingVector[15]].asString();
             struct tm stm;
             memset(&stm,0,sizeof(stm));
             auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
@@ -725,46 +890,6 @@ void Affiliates::updateByMasqueradedJson(const Json::Value &pJson,
                 }
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
-        }
-    }
-    if(!pMasqueradingVector[10].empty() && pJson.isMember(pMasqueradingVector[10]))
-    {
-        dirtyFlag_[10] = true;
-        if(!pJson[pMasqueradingVector[10]].isNull())
-        {
-            accountType_=std::make_shared<std::string>(pJson[pMasqueradingVector[10]].asString());
-        }
-    }
-    if(!pMasqueradingVector[11].empty() && pJson.isMember(pMasqueradingVector[11]))
-    {
-        dirtyFlag_[11] = true;
-        if(!pJson[pMasqueradingVector[11]].isNull())
-        {
-            accountName_=std::make_shared<std::string>(pJson[pMasqueradingVector[11]].asString());
-        }
-    }
-    if(!pMasqueradingVector[12].empty() && pJson.isMember(pMasqueradingVector[12]))
-    {
-        dirtyFlag_[12] = true;
-        if(!pJson[pMasqueradingVector[12]].isNull())
-        {
-            accountProvider_=std::make_shared<std::string>(pJson[pMasqueradingVector[12]].asString());
-        }
-    }
-    if(!pMasqueradingVector[13].empty() && pJson.isMember(pMasqueradingVector[13]))
-    {
-        dirtyFlag_[13] = true;
-        if(!pJson[pMasqueradingVector[13]].isNull())
-        {
-            affiliateId_=std::make_shared<std::string>(pJson[pMasqueradingVector[13]].asString());
-        }
-    }
-    if(!pMasqueradingVector[14].empty() && pJson.isMember(pMasqueradingVector[14]))
-    {
-        dirtyFlag_[14] = true;
-        if(!pJson[pMasqueradingVector[14]].isNull())
-        {
-            userId_=std::make_shared<std::string>(pJson[pMasqueradingVector[14]].asString());
         }
     }
 }
@@ -860,9 +985,75 @@ void Affiliates::updateByJson(const Json::Value &pJson) noexcept(false)
             }
         }
     }
-    if(pJson.isMember("updated_at"))
+    if(pJson.isMember("account_type"))
     {
         dirtyFlag_[9] = true;
+        if(!pJson["account_type"].isNull())
+        {
+            accountType_=std::make_shared<std::string>(pJson["account_type"].asString());
+        }
+    }
+    if(pJson.isMember("account_name"))
+    {
+        dirtyFlag_[10] = true;
+        if(!pJson["account_name"].isNull())
+        {
+            accountName_=std::make_shared<std::string>(pJson["account_name"].asString());
+        }
+    }
+    if(pJson.isMember("account_provider"))
+    {
+        dirtyFlag_[11] = true;
+        if(!pJson["account_provider"].isNull())
+        {
+            accountProvider_=std::make_shared<std::string>(pJson["account_provider"].asString());
+        }
+    }
+    if(pJson.isMember("affiliate_id"))
+    {
+        dirtyFlag_[12] = true;
+        if(!pJson["affiliate_id"].isNull())
+        {
+            affiliateId_=std::make_shared<std::string>(pJson["affiliate_id"].asString());
+        }
+    }
+    if(pJson.isMember("user_id"))
+    {
+        dirtyFlag_[13] = true;
+        if(!pJson["user_id"].isNull())
+        {
+            userId_=std::make_shared<std::string>(pJson["user_id"].asString());
+        }
+    }
+    if(pJson.isMember("created_at"))
+    {
+        dirtyFlag_[14] = true;
+        if(!pJson["created_at"].isNull())
+        {
+            auto timeStr = pJson["created_at"].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+    }
+    if(pJson.isMember("updated_at"))
+    {
+        dirtyFlag_[15] = true;
         if(!pJson["updated_at"].isNull())
         {
             auto timeStr = pJson["updated_at"].asString();
@@ -884,46 +1075,6 @@ void Affiliates::updateByJson(const Json::Value &pJson) noexcept(false)
                 }
                 updatedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
-        }
-    }
-    if(pJson.isMember("account_type"))
-    {
-        dirtyFlag_[10] = true;
-        if(!pJson["account_type"].isNull())
-        {
-            accountType_=std::make_shared<std::string>(pJson["account_type"].asString());
-        }
-    }
-    if(pJson.isMember("account_name"))
-    {
-        dirtyFlag_[11] = true;
-        if(!pJson["account_name"].isNull())
-        {
-            accountName_=std::make_shared<std::string>(pJson["account_name"].asString());
-        }
-    }
-    if(pJson.isMember("account_provider"))
-    {
-        dirtyFlag_[12] = true;
-        if(!pJson["account_provider"].isNull())
-        {
-            accountProvider_=std::make_shared<std::string>(pJson["account_provider"].asString());
-        }
-    }
-    if(pJson.isMember("affiliate_id"))
-    {
-        dirtyFlag_[13] = true;
-        if(!pJson["affiliate_id"].isNull())
-        {
-            affiliateId_=std::make_shared<std::string>(pJson["affiliate_id"].asString());
-        }
-    }
-    if(pJson.isMember("user_id"))
-    {
-        dirtyFlag_[14] = true;
-        if(!pJson["user_id"].isNull())
-        {
-            userId_=std::make_shared<std::string>(pJson["user_id"].asString());
         }
     }
 }
@@ -1136,28 +1287,6 @@ void Affiliates::setDateJoined(const ::trantor::Date &pDateJoined) noexcept
     dirtyFlag_[8] = true;
 }
 
-const ::trantor::Date &Affiliates::getValueOfUpdatedAt() const noexcept
-{
-    static const ::trantor::Date defaultValue = ::trantor::Date();
-    if(updatedAt_)
-        return *updatedAt_;
-    return defaultValue;
-}
-const std::shared_ptr<::trantor::Date> &Affiliates::getUpdatedAt() const noexcept
-{
-    return updatedAt_;
-}
-void Affiliates::setUpdatedAt(const ::trantor::Date &pUpdatedAt) noexcept
-{
-    updatedAt_ = std::make_shared<::trantor::Date>(pUpdatedAt);
-    dirtyFlag_[9] = true;
-}
-void Affiliates::setUpdatedAtToNull() noexcept
-{
-    updatedAt_.reset();
-    dirtyFlag_[9] = true;
-}
-
 const std::string &Affiliates::getValueOfAccountType() const noexcept
 {
     static const std::string defaultValue = std::string();
@@ -1172,17 +1301,17 @@ const std::shared_ptr<std::string> &Affiliates::getAccountType() const noexcept
 void Affiliates::setAccountType(const std::string &pAccountType) noexcept
 {
     accountType_ = std::make_shared<std::string>(pAccountType);
-    dirtyFlag_[10] = true;
+    dirtyFlag_[9] = true;
 }
 void Affiliates::setAccountType(std::string &&pAccountType) noexcept
 {
     accountType_ = std::make_shared<std::string>(std::move(pAccountType));
-    dirtyFlag_[10] = true;
+    dirtyFlag_[9] = true;
 }
 void Affiliates::setAccountTypeToNull() noexcept
 {
     accountType_.reset();
-    dirtyFlag_[10] = true;
+    dirtyFlag_[9] = true;
 }
 
 const std::string &Affiliates::getValueOfAccountName() const noexcept
@@ -1199,12 +1328,12 @@ const std::shared_ptr<std::string> &Affiliates::getAccountName() const noexcept
 void Affiliates::setAccountName(const std::string &pAccountName) noexcept
 {
     accountName_ = std::make_shared<std::string>(pAccountName);
-    dirtyFlag_[11] = true;
+    dirtyFlag_[10] = true;
 }
 void Affiliates::setAccountName(std::string &&pAccountName) noexcept
 {
     accountName_ = std::make_shared<std::string>(std::move(pAccountName));
-    dirtyFlag_[11] = true;
+    dirtyFlag_[10] = true;
 }
 
 const std::string &Affiliates::getValueOfAccountProvider() const noexcept
@@ -1221,12 +1350,12 @@ const std::shared_ptr<std::string> &Affiliates::getAccountProvider() const noexc
 void Affiliates::setAccountProvider(const std::string &pAccountProvider) noexcept
 {
     accountProvider_ = std::make_shared<std::string>(pAccountProvider);
-    dirtyFlag_[12] = true;
+    dirtyFlag_[11] = true;
 }
 void Affiliates::setAccountProvider(std::string &&pAccountProvider) noexcept
 {
     accountProvider_ = std::make_shared<std::string>(std::move(pAccountProvider));
-    dirtyFlag_[12] = true;
+    dirtyFlag_[11] = true;
 }
 
 const std::string &Affiliates::getValueOfAffiliateId() const noexcept
@@ -1243,17 +1372,17 @@ const std::shared_ptr<std::string> &Affiliates::getAffiliateId() const noexcept
 void Affiliates::setAffiliateId(const std::string &pAffiliateId) noexcept
 {
     affiliateId_ = std::make_shared<std::string>(pAffiliateId);
-    dirtyFlag_[13] = true;
+    dirtyFlag_[12] = true;
 }
 void Affiliates::setAffiliateId(std::string &&pAffiliateId) noexcept
 {
     affiliateId_ = std::make_shared<std::string>(std::move(pAffiliateId));
-    dirtyFlag_[13] = true;
+    dirtyFlag_[12] = true;
 }
 void Affiliates::setAffiliateIdToNull() noexcept
 {
     affiliateId_.reset();
-    dirtyFlag_[13] = true;
+    dirtyFlag_[12] = true;
 }
 
 const std::string &Affiliates::getValueOfUserId() const noexcept
@@ -1270,17 +1399,51 @@ const std::shared_ptr<std::string> &Affiliates::getUserId() const noexcept
 void Affiliates::setUserId(const std::string &pUserId) noexcept
 {
     userId_ = std::make_shared<std::string>(pUserId);
-    dirtyFlag_[14] = true;
+    dirtyFlag_[13] = true;
 }
 void Affiliates::setUserId(std::string &&pUserId) noexcept
 {
     userId_ = std::make_shared<std::string>(std::move(pUserId));
+    dirtyFlag_[13] = true;
+}
+
+const ::trantor::Date &Affiliates::getValueOfCreatedAt() const noexcept
+{
+    static const ::trantor::Date defaultValue = ::trantor::Date();
+    if(createdAt_)
+        return *createdAt_;
+    return defaultValue;
+}
+const std::shared_ptr<::trantor::Date> &Affiliates::getCreatedAt() const noexcept
+{
+    return createdAt_;
+}
+void Affiliates::setCreatedAt(const ::trantor::Date &pCreatedAt) noexcept
+{
+    createdAt_ = std::make_shared<::trantor::Date>(pCreatedAt);
     dirtyFlag_[14] = true;
 }
-void Affiliates::setUserIdToNull() noexcept
+
+const ::trantor::Date &Affiliates::getValueOfUpdatedAt() const noexcept
 {
-    userId_.reset();
-    dirtyFlag_[14] = true;
+    static const ::trantor::Date defaultValue = ::trantor::Date();
+    if(updatedAt_)
+        return *updatedAt_;
+    return defaultValue;
+}
+const std::shared_ptr<::trantor::Date> &Affiliates::getUpdatedAt() const noexcept
+{
+    return updatedAt_;
+}
+void Affiliates::setUpdatedAt(const ::trantor::Date &pUpdatedAt) noexcept
+{
+    updatedAt_ = std::make_shared<::trantor::Date>(pUpdatedAt);
+    dirtyFlag_[15] = true;
+}
+void Affiliates::setUpdatedAtToNull() noexcept
+{
+    updatedAt_.reset();
+    dirtyFlag_[15] = true;
 }
 
 void Affiliates::updateId(const uint64_t id)
@@ -1299,12 +1462,13 @@ const std::vector<std::string> &Affiliates::insertColumns() noexcept
         "platforms",
         "total_earnings",
         "date_joined",
-        "updated_at",
         "account_type",
         "account_name",
         "account_provider",
         "affiliate_id",
-        "user_id"
+        "user_id",
+        "created_at",
+        "updated_at"
     };
     return inCols;
 }
@@ -1412,17 +1576,6 @@ void Affiliates::outputArgs(drogon::orm::internal::SqlBinder &binder) const
     }
     if(dirtyFlag_[9])
     {
-        if(getUpdatedAt())
-        {
-            binder << getValueOfUpdatedAt();
-        }
-        else
-        {
-            binder << nullptr;
-        }
-    }
-    if(dirtyFlag_[10])
-    {
         if(getAccountType())
         {
             binder << getValueOfAccountType();
@@ -1432,7 +1585,7 @@ void Affiliates::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[11])
+    if(dirtyFlag_[10])
     {
         if(getAccountName())
         {
@@ -1443,7 +1596,7 @@ void Affiliates::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[12])
+    if(dirtyFlag_[11])
     {
         if(getAccountProvider())
         {
@@ -1454,7 +1607,7 @@ void Affiliates::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[13])
+    if(dirtyFlag_[12])
     {
         if(getAffiliateId())
         {
@@ -1465,11 +1618,33 @@ void Affiliates::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[14])
+    if(dirtyFlag_[13])
     {
         if(getUserId())
         {
             binder << getValueOfUserId();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[14])
+    {
+        if(getCreatedAt())
+        {
+            binder << getValueOfCreatedAt();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[15])
+    {
+        if(getUpdatedAt())
+        {
+            binder << getValueOfUpdatedAt();
         }
         else
         {
@@ -1540,6 +1715,10 @@ const std::vector<std::string> Affiliates::updateColumns() const
     if(dirtyFlag_[14])
     {
         ret.push_back(getColumnName(14));
+    }
+    if(dirtyFlag_[15])
+    {
+        ret.push_back(getColumnName(15));
     }
     return ret;
 }
@@ -1647,17 +1826,6 @@ void Affiliates::updateArgs(drogon::orm::internal::SqlBinder &binder) const
     }
     if(dirtyFlag_[9])
     {
-        if(getUpdatedAt())
-        {
-            binder << getValueOfUpdatedAt();
-        }
-        else
-        {
-            binder << nullptr;
-        }
-    }
-    if(dirtyFlag_[10])
-    {
         if(getAccountType())
         {
             binder << getValueOfAccountType();
@@ -1667,7 +1835,7 @@ void Affiliates::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[11])
+    if(dirtyFlag_[10])
     {
         if(getAccountName())
         {
@@ -1678,7 +1846,7 @@ void Affiliates::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[12])
+    if(dirtyFlag_[11])
     {
         if(getAccountProvider())
         {
@@ -1689,7 +1857,7 @@ void Affiliates::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[13])
+    if(dirtyFlag_[12])
     {
         if(getAffiliateId())
         {
@@ -1700,11 +1868,33 @@ void Affiliates::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[14])
+    if(dirtyFlag_[13])
     {
         if(getUserId())
         {
             binder << getValueOfUserId();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[14])
+    {
+        if(getCreatedAt())
+        {
+            binder << getValueOfCreatedAt();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[15])
+    {
+        if(getUpdatedAt())
+        {
+            binder << getValueOfUpdatedAt();
         }
         else
         {
@@ -1787,14 +1977,6 @@ Json::Value Affiliates::toJson() const
     {
         ret["date_joined"]=Json::Value();
     }
-    if(getUpdatedAt())
-    {
-        ret["updated_at"]=getUpdatedAt()->toDbStringLocal();
-    }
-    else
-    {
-        ret["updated_at"]=Json::Value();
-    }
     if(getAccountType())
     {
         ret["account_type"]=getValueOfAccountType();
@@ -1835,6 +2017,22 @@ Json::Value Affiliates::toJson() const
     {
         ret["user_id"]=Json::Value();
     }
+    if(getCreatedAt())
+    {
+        ret["created_at"]=getCreatedAt()->toDbStringLocal();
+    }
+    else
+    {
+        ret["created_at"]=Json::Value();
+    }
+    if(getUpdatedAt())
+    {
+        ret["updated_at"]=getUpdatedAt()->toDbStringLocal();
+    }
+    else
+    {
+        ret["updated_at"]=Json::Value();
+    }
     return ret;
 }
 
@@ -1847,7 +2045,7 @@ Json::Value Affiliates::toMasqueradedJson(
     const std::vector<std::string> &pMasqueradingVector) const
 {
     Json::Value ret;
-    if(pMasqueradingVector.size() == 15)
+    if(pMasqueradingVector.size() == 16)
     {
         if(!pMasqueradingVector[0].empty())
         {
@@ -1950,9 +2148,9 @@ Json::Value Affiliates::toMasqueradedJson(
         }
         if(!pMasqueradingVector[9].empty())
         {
-            if(getUpdatedAt())
+            if(getAccountType())
             {
-                ret[pMasqueradingVector[9]]=getUpdatedAt()->toDbStringLocal();
+                ret[pMasqueradingVector[9]]=getValueOfAccountType();
             }
             else
             {
@@ -1961,9 +2159,9 @@ Json::Value Affiliates::toMasqueradedJson(
         }
         if(!pMasqueradingVector[10].empty())
         {
-            if(getAccountType())
+            if(getAccountName())
             {
-                ret[pMasqueradingVector[10]]=getValueOfAccountType();
+                ret[pMasqueradingVector[10]]=getValueOfAccountName();
             }
             else
             {
@@ -1972,9 +2170,9 @@ Json::Value Affiliates::toMasqueradedJson(
         }
         if(!pMasqueradingVector[11].empty())
         {
-            if(getAccountName())
+            if(getAccountProvider())
             {
-                ret[pMasqueradingVector[11]]=getValueOfAccountName();
+                ret[pMasqueradingVector[11]]=getValueOfAccountProvider();
             }
             else
             {
@@ -1983,9 +2181,9 @@ Json::Value Affiliates::toMasqueradedJson(
         }
         if(!pMasqueradingVector[12].empty())
         {
-            if(getAccountProvider())
+            if(getAffiliateId())
             {
-                ret[pMasqueradingVector[12]]=getValueOfAccountProvider();
+                ret[pMasqueradingVector[12]]=getValueOfAffiliateId();
             }
             else
             {
@@ -1994,9 +2192,9 @@ Json::Value Affiliates::toMasqueradedJson(
         }
         if(!pMasqueradingVector[13].empty())
         {
-            if(getAffiliateId())
+            if(getUserId())
             {
-                ret[pMasqueradingVector[13]]=getValueOfAffiliateId();
+                ret[pMasqueradingVector[13]]=getValueOfUserId();
             }
             else
             {
@@ -2005,13 +2203,24 @@ Json::Value Affiliates::toMasqueradedJson(
         }
         if(!pMasqueradingVector[14].empty())
         {
-            if(getUserId())
+            if(getCreatedAt())
             {
-                ret[pMasqueradingVector[14]]=getValueOfUserId();
+                ret[pMasqueradingVector[14]]=getCreatedAt()->toDbStringLocal();
             }
             else
             {
                 ret[pMasqueradingVector[14]]=Json::Value();
+            }
+        }
+        if(!pMasqueradingVector[15].empty())
+        {
+            if(getUpdatedAt())
+            {
+                ret[pMasqueradingVector[15]]=getUpdatedAt()->toDbStringLocal();
+            }
+            else
+            {
+                ret[pMasqueradingVector[15]]=Json::Value();
             }
         }
         return ret;
@@ -2089,14 +2298,6 @@ Json::Value Affiliates::toMasqueradedJson(
     {
         ret["date_joined"]=Json::Value();
     }
-    if(getUpdatedAt())
-    {
-        ret["updated_at"]=getUpdatedAt()->toDbStringLocal();
-    }
-    else
-    {
-        ret["updated_at"]=Json::Value();
-    }
     if(getAccountType())
     {
         ret["account_type"]=getValueOfAccountType();
@@ -2136,6 +2337,22 @@ Json::Value Affiliates::toMasqueradedJson(
     else
     {
         ret["user_id"]=Json::Value();
+    }
+    if(getCreatedAt())
+    {
+        ret["created_at"]=getCreatedAt()->toDbStringLocal();
+    }
+    else
+    {
+        ret["created_at"]=Json::Value();
+    }
+    if(getUpdatedAt())
+    {
+        ret["updated_at"]=getUpdatedAt()->toDbStringLocal();
+    }
+    else
+    {
+        ret["updated_at"]=Json::Value();
     }
     return ret;
 }
@@ -2207,34 +2424,44 @@ bool Affiliates::validateJsonForCreation(const Json::Value &pJson, std::string &
         if(!validJsonOfField(8, "date_joined", pJson["date_joined"], err, true))
             return false;
     }
-    if(pJson.isMember("updated_at"))
-    {
-        if(!validJsonOfField(9, "updated_at", pJson["updated_at"], err, true))
-            return false;
-    }
     if(pJson.isMember("account_type"))
     {
-        if(!validJsonOfField(10, "account_type", pJson["account_type"], err, true))
+        if(!validJsonOfField(9, "account_type", pJson["account_type"], err, true))
             return false;
     }
     if(pJson.isMember("account_name"))
     {
-        if(!validJsonOfField(11, "account_name", pJson["account_name"], err, true))
+        if(!validJsonOfField(10, "account_name", pJson["account_name"], err, true))
             return false;
     }
     if(pJson.isMember("account_provider"))
     {
-        if(!validJsonOfField(12, "account_provider", pJson["account_provider"], err, true))
+        if(!validJsonOfField(11, "account_provider", pJson["account_provider"], err, true))
             return false;
     }
     if(pJson.isMember("affiliate_id"))
     {
-        if(!validJsonOfField(13, "affiliate_id", pJson["affiliate_id"], err, true))
+        if(!validJsonOfField(12, "affiliate_id", pJson["affiliate_id"], err, true))
             return false;
     }
     if(pJson.isMember("user_id"))
     {
-        if(!validJsonOfField(14, "user_id", pJson["user_id"], err, true))
+        if(!validJsonOfField(13, "user_id", pJson["user_id"], err, true))
+            return false;
+    }
+    else
+    {
+        err="The user_id column cannot be null";
+        return false;
+    }
+    if(pJson.isMember("created_at"))
+    {
+        if(!validJsonOfField(14, "created_at", pJson["created_at"], err, true))
+            return false;
+    }
+    if(pJson.isMember("updated_at"))
+    {
+        if(!validJsonOfField(15, "updated_at", pJson["updated_at"], err, true))
             return false;
     }
     return true;
@@ -2243,7 +2470,7 @@ bool Affiliates::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                                                     const std::vector<std::string> &pMasqueradingVector,
                                                     std::string &err)
 {
-    if(pMasqueradingVector.size() != 15)
+    if(pMasqueradingVector.size() != 16)
     {
         err = "Bad masquerading vector";
         return false;
@@ -2380,12 +2607,25 @@ bool Affiliates::validateMasqueradedJsonForCreation(const Json::Value &pJson,
               if(!validJsonOfField(13, pMasqueradingVector[13], pJson[pMasqueradingVector[13]], err, true))
                   return false;
           }
+        else
+        {
+            err="The " + pMasqueradingVector[13] + " column cannot be null";
+            return false;
+        }
       }
       if(!pMasqueradingVector[14].empty())
       {
           if(pJson.isMember(pMasqueradingVector[14]))
           {
               if(!validJsonOfField(14, pMasqueradingVector[14], pJson[pMasqueradingVector[14]], err, true))
+                  return false;
+          }
+      }
+      if(!pMasqueradingVector[15].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[15]))
+          {
+              if(!validJsonOfField(15, pMasqueradingVector[15], pJson[pMasqueradingVector[15]], err, true))
                   return false;
           }
       }
@@ -2449,34 +2689,39 @@ bool Affiliates::validateJsonForUpdate(const Json::Value &pJson, std::string &er
         if(!validJsonOfField(8, "date_joined", pJson["date_joined"], err, false))
             return false;
     }
-    if(pJson.isMember("updated_at"))
-    {
-        if(!validJsonOfField(9, "updated_at", pJson["updated_at"], err, false))
-            return false;
-    }
     if(pJson.isMember("account_type"))
     {
-        if(!validJsonOfField(10, "account_type", pJson["account_type"], err, false))
+        if(!validJsonOfField(9, "account_type", pJson["account_type"], err, false))
             return false;
     }
     if(pJson.isMember("account_name"))
     {
-        if(!validJsonOfField(11, "account_name", pJson["account_name"], err, false))
+        if(!validJsonOfField(10, "account_name", pJson["account_name"], err, false))
             return false;
     }
     if(pJson.isMember("account_provider"))
     {
-        if(!validJsonOfField(12, "account_provider", pJson["account_provider"], err, false))
+        if(!validJsonOfField(11, "account_provider", pJson["account_provider"], err, false))
             return false;
     }
     if(pJson.isMember("affiliate_id"))
     {
-        if(!validJsonOfField(13, "affiliate_id", pJson["affiliate_id"], err, false))
+        if(!validJsonOfField(12, "affiliate_id", pJson["affiliate_id"], err, false))
             return false;
     }
     if(pJson.isMember("user_id"))
     {
-        if(!validJsonOfField(14, "user_id", pJson["user_id"], err, false))
+        if(!validJsonOfField(13, "user_id", pJson["user_id"], err, false))
+            return false;
+    }
+    if(pJson.isMember("created_at"))
+    {
+        if(!validJsonOfField(14, "created_at", pJson["created_at"], err, false))
+            return false;
+    }
+    if(pJson.isMember("updated_at"))
+    {
+        if(!validJsonOfField(15, "updated_at", pJson["updated_at"], err, false))
             return false;
     }
     return true;
@@ -2485,7 +2730,7 @@ bool Affiliates::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
                                                   const std::vector<std::string> &pMasqueradingVector,
                                                   std::string &err)
 {
-    if(pMasqueradingVector.size() != 15)
+    if(pMasqueradingVector.size() != 16)
     {
         err = "Bad masquerading vector";
         return false;
@@ -2569,6 +2814,11 @@ bool Affiliates::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
       if(!pMasqueradingVector[14].empty() && pJson.isMember(pMasqueradingVector[14]))
       {
           if(!validJsonOfField(14, pMasqueradingVector[14], pJson[pMasqueradingVector[14]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[15].empty() && pJson.isMember(pMasqueradingVector[15]))
+      {
+          if(!validJsonOfField(15, pMasqueradingVector[15], pJson[pMasqueradingVector[15]], err, false))
               return false;
       }
     }
@@ -2743,17 +2993,6 @@ bool Affiliates::validJsonOfField(size_t index,
                 err="Type error in the "+fieldName+" field";
                 return false;
             }
-            break;
-        case 10:
-            if(pJson.isNull())
-            {
-                return true;
-            }
-            if(!pJson.isString())
-            {
-                err="Type error in the "+fieldName+" field";
-                return false;
-            }
             if(pJson.isString() && std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>{}
                 .from_bytes(pJson.asCString()).size() > 50)
             {
@@ -2763,7 +3002,7 @@ bool Affiliates::validJsonOfField(size_t index,
                 return false;
             }
             break;
-        case 11:
+        case 10:
             if(pJson.isNull())
             {
                 err="The " + fieldName + " column cannot be null";
@@ -2783,7 +3022,7 @@ bool Affiliates::validJsonOfField(size_t index,
                 return false;
             }
             break;
-        case 12:
+        case 11:
             if(pJson.isNull())
             {
                 err="The " + fieldName + " column cannot be null";
@@ -2803,7 +3042,7 @@ bool Affiliates::validJsonOfField(size_t index,
                 return false;
             }
             break;
-        case 13:
+        case 12:
             if(pJson.isNull())
             {
                 return true;
@@ -2822,7 +3061,31 @@ bool Affiliates::validJsonOfField(size_t index,
                 return false;
             }
             break;
+        case 13:
+            if(pJson.isNull())
+            {
+                err="The " + fieldName + " column cannot be null";
+                return false;
+            }
+            if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
         case 14:
+            if(pJson.isNull())
+            {
+                err="The " + fieldName + " column cannot be null";
+                return false;
+            }
+            if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 15:
             if(pJson.isNull())
             {
                 return true;
