@@ -655,11 +655,14 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartnerSubscr
   try {
     auto user = co_await mp.insert(newUser);
 
+    LOG_INFO << "[createPartnerSubscriber] Created subscriber — email: "
+             << user.getValueOfEmail() << ", password: " << password;
+
     // 1. Fetch partner to get quota and subscription dates
+
     CoroMapper<CommercialPartners> partnerMapper(dbClient);
     auto partner = co_await partnerMapper.findOne(
-        Criteria(CommercialPartners::Cols::_id, CompareOperator::EQ,
-                 dto.getPartnerId()));
+        Criteria(CommercialPartners::Cols::_id, CompareOperator::EQ, dto.getPartnerId()));
 
     // 2. Fetch plan and newspapers for entitlements
     CoroMapper<SubscriptionPlans> planMapper(dbClient);
@@ -970,6 +973,9 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartnerSubscr
 
     emailDto.setBody(emailBody);
     co_await emailService.sendEmailAsync(emailDto);
+
+    //log the email and password of the user
+
 
     // 6. Reduce subscriber slots for commercial partner
     auto remainingQuota = partner.getValueOfRemainingQuota();

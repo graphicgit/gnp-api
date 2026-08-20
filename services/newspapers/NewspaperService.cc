@@ -831,6 +831,20 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::ingestAsync(const dto:
     successResponse.message = "Newspaper created successfully";
     successResponse.result["id"] = insertedNewspaper.getValueOfId();
 
+    // Grant newspaper entitlements for the publication date in the background
+    const std::string publicationDate = dto.getPublicationDate().toDbStringLocal();
+    drogon::async_run([publicationDate]() -> drogon::Task<void> {
+      try {
+        auto plugin = drogon::app().getPlugin<plugins::GnpServicePlugin>();
+        auto &newspaperService = plugin->getNewsPaperService();
+
+        co_await newspaperService.regenerateNewspaperEntitlement(publicationDate);
+      } catch (const std::exception &e) {
+        LOG_ERROR << "Background entitlement grant failed for date " << publicationDate
+                  << ": " << e.what();
+      }
+    });
+
     co_return successResponse;
   } catch (const drogon::orm::DrogonDbException &e) {
     dto::BaseApiResponse errorResponse;

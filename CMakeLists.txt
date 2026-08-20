@@ -150,6 +150,7 @@ add_executable(${PROJECT_NAME} main.cc
         dto/SettingsDto.h
         services/settings/SettingService.cc
         constants/NotificationTypes.h
+        dto/ArticleDto.h
 )
 
 # ##############################################################################

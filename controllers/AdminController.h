@@ -145,7 +145,7 @@ public:
 
   METHOD_LIST_END
 
-  // publications
+  // subscription plans ...
  drogon::Task<HttpResponsePtr> getAllSubscriptionPlans(HttpRequestPtr req);
  drogon::Task<HttpResponsePtr> createSubscriptionPlan(HttpRequestPtr req);
  drogon::Task<HttpResponsePtr> updateSubscriptionPlan(HttpRequestPtr req);
@@ -174,7 +174,7 @@ public:
   void deactivateUser(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
   void deleteUser(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback);
 
-  // subscription plans...
+  // publications ...
 
   Task<HttpResponsePtr> getAllPublications(HttpRequestPtr req);
   Task<HttpResponsePtr> createPublication(HttpRequestPtr req);

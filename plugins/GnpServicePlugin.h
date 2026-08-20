@@ -13,6 +13,7 @@
 #include "services/audit_logs/AuditLogService.h"
 #include "services/campaigns/CampaignService.h"
 #include "services/categories/CategoryService.h"
+#include "services/content/ContentService.h"
 #include "services/coupons/CouponService.h"
 #include "services/email/EmailService.h"
 #include "services/g3_storage/G3StorageService.h"
@@ -77,6 +78,7 @@ public:
   ::gnp::services::ReportingService &getReportingService() { return reportingService_; }
   ::gnp::services::G3StorageService &getG3StorageService() { return g3StorageService_; }
   ::gnp::services::SettingService &getSettingService() { return settingService_; }
+  ::gnp::services::ContentService &getContentService() { return contentService_; }
 
 private:
   services::RedisCacheManager redisCacheService_;
@@ -101,6 +103,7 @@ private:
   ::gnp::services::AdminUserInvitationService adminUserInvitationService_;
   ::gnp::services::AuditLogService auditLogService_;
   ::gnp::services::TagService tagService_;
+  ::gnp::services::ContentService contentService_;
   ::gnp::services::CategoryService categoryService_;
   ::gnp::services::PartnerUserLogService partnerUserActivityLogService_;
   ::gnp::services::PartnerApiLogService partnerApiLogService_;

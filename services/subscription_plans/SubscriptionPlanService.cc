@@ -14,8 +14,7 @@ using drogon_model::Gnp::SubscriptionPlans;
 
 namespace gnp::services {
 
-drogon::Task<gnp::dto::BaseApiResponse>
-SubscriptionPlanService::getAllPlansAsync(int pageNo, int pageSize,
+drogon::Task<gnp::dto::BaseApiResponse> SubscriptionPlanService::getAllPlansAsync(int pageNo, int pageSize,
                                           const std::string &query) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<SubscriptionPlans> mp(dbClient);
@@ -111,8 +110,7 @@ SubscriptionPlanService::getAllPlansAsync(int pageNo, int pageSize,
   }
 }
 
-drogon::Task<gnp::dto::BaseApiResponse>
-SubscriptionPlanService::createPlanAsync(
+drogon::Task<gnp::dto::BaseApiResponse> SubscriptionPlanService::createPlanAsync(
 
     const gnp::dto::CreateSubscriptionPlanDto &dto) {
 
