@@ -67,6 +67,7 @@ class CommercialPartners
         static const std::string _total_amount_due;
         static const std::string _current_invoice_no;
         static const std::string _cost_per_head;
+        static const std::string _account_type;
     };
 
     static const int primaryKeyNumber;
@@ -335,8 +336,18 @@ class CommercialPartners
     void setCostPerHead(const std::string &pCostPerHead) noexcept;
     void setCostPerHead(std::string &&pCostPerHead) noexcept;
 
+    /**  For column account_type  */
+    ///Get the value of the column account_type, returns the default value if the column is null
+    const std::string &getValueOfAccountType() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getAccountType() const noexcept;
+    ///Set the value of the column account_type
+    void setAccountType(const std::string &pAccountType) noexcept;
+    void setAccountType(std::string &&pAccountType) noexcept;
+    void setAccountTypeToNull() noexcept;
 
-    static size_t getColumnNumber() noexcept {  return 23;  }
+
+    static size_t getColumnNumber() noexcept {  return 24;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -381,6 +392,7 @@ class CommercialPartners
     std::shared_ptr<std::string> totalAmountDue_;
     std::shared_ptr<std::string> currentInvoiceNo_;
     std::shared_ptr<std::string> costPerHead_;
+    std::shared_ptr<std::string> accountType_;
     struct MetaData
     {
         const std::string colName_;
@@ -392,7 +404,7 @@ class CommercialPartners
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[23]={ false };
+    bool dirtyFlag_[24]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -535,6 +547,11 @@ class CommercialPartners
         if(!dirtyFlag_[22])
         {
             needSelection=true;
+        }
+        if(dirtyFlag_[23])
+        {
+            sql += "account_type,";
+            ++parametersCount;
         }
         if(parametersCount > 0)
         {
@@ -705,6 +722,11 @@ class CommercialPartners
         else
         {
             sql +="default,";
+        }
+        if(dirtyFlag_[23])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
         }
         if(parametersCount > 0)
         {

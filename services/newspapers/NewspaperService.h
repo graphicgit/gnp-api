@@ -10,6 +10,7 @@
 #include <drogon/drogon.h>
 #include "dto/NewsPaperDto.h"
 #include "dto/OcrIngestionDto.h"
+#include "dto/ReportDto.h"
 
 namespace gnp::services {
 
@@ -59,6 +60,9 @@ public:
    drogon::Task<gnp::dto::BaseApiResponse> handleOcrIngestion(const dto::OcrIngestionDto &dto);
 
    drogon::Task<void> dispatchDailyNewsUpdate();
+
+    //reports
+    drogon::Task<::gnp::dto::BaseApiResponse> getNewspaperEngagementReport(const gnp::dto::ReportDto &dto);
 };
 
 } // namespace gnp::services

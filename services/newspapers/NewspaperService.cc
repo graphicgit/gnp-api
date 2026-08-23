@@ -19,6 +19,8 @@
 #include <fstream>
 #include <vector>
 
+#include "CommercialPartners.h"
+
 using namespace drogon::orm;
 using drogon_model::Gnp::Newspapers;
 
@@ -856,7 +858,275 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::ingestAsync(const dto:
   }
 }
 
+drogon::Task<::gnp::dto::BaseApiResponse> NewspaperService::getNewspaperEngagementReport(const gnp::dto::ReportDto &dto) {
 
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<drogon_model::Gnp::CommercialPartners> partnerMapper(dbClient);
+
+  try {
+
+
+    // Fetch partner details
+    auto partner = co_await partnerMapper.findByPrimaryKey(dto.getPartnerId());
+
+    // Parse dates
+    trantor::Date startDateObj = trantor::Date::fromDbStringLocal(dto.getStartDate() + " 00:00:00");
+    trantor::Date endDateObj = trantor::Date::fromDbStringLocal(dto.getStartDate() + " 23:59:59");
+
+    // Get partner's subscribers
+    CoroMapper<drogon_model::Gnp::Users> userMapper(dbClient);
+    auto users = co_await userMapper.findBy(
+        Criteria(drogon_model::Gnp::Users::Cols::_partner_id, CompareOperator::EQ, dto.getPartnerId()) &&
+        Criteria(drogon_model::Gnp::Users::Cols::_is_active, CompareOperator::EQ, true));
+
+    std::vector<std::string> userIds;
+    for (const auto &user : users) {
+      userIds.push_back(user.getValueOfId());
+    }
+
+    // 1. Get Newspaper Engagement Stats (Reads)
+    std::string engagementSql =
+        "SELECT "
+        "  n.id as newspaper_id, "
+        "  n.title as newspaper_title, "
+        "  n.publication_date, "
+        "  n.price, "
+        "  COUNT(DISTINCT pr.user_id) as unique_readers, "
+        "  COUNT(pr.id) as total_reads, "
+        "  AVG(pr.time_spent_seconds) as avg_time_spent "
+        "FROM newspapers n "
+        "LEFT JOIN publication_reads pr ON n.id = pr.newspaper_id "
+        "  AND pr.partner_id = $1 "
+        "  AND pr.read_at >= $2 "
+        "  AND pr.read_at <= $3 "
+        "WHERE n.publication_date >= $2 "
+        "  AND n.publication_date <= $3 "
+        "  AND n.is_archived = false "
+        "GROUP BY n.id, n.title, n.publication_date, n.price "
+        "ORDER BY n.publication_date DESC, total_reads DESC";
+
+    auto engagementResult = co_await dbClient->execSqlCoro(
+        engagementSql, dto.getPartnerId(), startDateObj.toDbStringLocal(), endDateObj.toDbStringLocal());
+
+    // 2. Get Sales Data
+    std::string salesSql =
+        "SELECT "
+        "  n.id as newspaper_id, "
+        "  n.title as newspaper_title, "
+        "  n.price as unit_price, "
+        "  SUM(n.sales) as total_sales, "
+        "  COUNT(*) as copies_sold "
+        "FROM newspapers n "
+        "WHERE n.publication_date >= $1 "
+        "  AND n.publication_date <= $2 "
+        "  AND n.is_archived = false "
+        "  AND n.sales > 0 "
+        "GROUP BY n.id, n.title, n.price "
+        "ORDER BY total_sales DESC";
+
+    auto salesResult = co_await dbClient->execSqlCoro(
+        salesSql, startDateObj.toDbStringLocal(), endDateObj.toDbStringLocal());
+
+    // 3. Get Partner Subscriber Count
+    long totalSubscribers = users.size();
+
+    // 4. Build Response
+    gnp::dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Newspaper engagement report retrieved successfully";
+
+    Json::Value reportData;
+
+    // Report Metadata
+    reportData["partnerName"] = partner.getValueOfName();
+    reportData["partnerId"] = dto.getPartnerId();
+    reportData["reportPeriod"]["startDate"] = dto.getStartDate();
+    reportData["reportPeriod"]["endDate"] = dto.getStartDate();
+    reportData["reportPeriod"]["totalDays"] = (Json::Int64)((endDateObj.microSecondsSinceEpoch() - startDateObj.microSecondsSinceEpoch()) / (1000000LL * 3600 * 24)) + 1;
+    reportData["totalSubscribers"] = (Json::UInt64)totalSubscribers;
+    reportData["generatedAt"] = trantor::Date::now().toDbStringLocal();
+
+    // Engagement Summary
+    double totalEngagement = 0;
+    double avgEngagementPerSubscriber = 0;
+
+    // 5. Process Engagement Data
+    Json::Value engagementItems = Json::arrayValue;
+    Json::Value engagementSummary;
+    engagementSummary["totalNewspapers"] = 0;
+    engagementSummary["totalReads"] = 0;
+    engagementSummary["totalUniqueReaders"] = 0;
+    engagementSummary["avgTimeSpent"] = 0.0;
+
+    for (const auto &row : engagementResult) {
+      Json::Value item;
+      item["newspaperId"] = row["newspaper_id"].as<std::string>();
+      item["title"] = row["newspaper_title"].as<std::string>();
+      item["publicationDate"] = row["publication_date"].as<std::string>();
+
+      double price = row["price"].isNull() ? 0.0 : row["price"].as<double>();
+      item["price"] = price;
+
+      long uniqueReaders = row["unique_readers"].isNull() ? 0 : row["unique_readers"].as<long>();
+      item["uniqueReaders"] = (Json::UInt64)uniqueReaders;
+
+      long totalReads = row["total_reads"].isNull() ? 0 : row["total_reads"].as<long>();
+      item["totalReads"] = (Json::UInt64)totalReads;
+
+      double avgTimeSpent = row["avg_time_spent"].isNull() ? 0.0 : row["avg_time_spent"].as<double>();
+      item["avgTimeSpent"] = avgTimeSpent;
+
+      // Engagement rate for this newspaper
+      double engagementRate = 0.0;
+      if (totalSubscribers > 0 && uniqueReaders > 0) {
+        engagementRate = ((double)uniqueReaders / totalSubscribers) * 100.0;
+      }
+      item["engagementRate"] = std::round(engagementRate * 10) / 10.0;
+
+      // Time spent formatting (minutes:seconds)
+      int minutes = (int)(avgTimeSpent / 60);
+      int seconds = (int)(avgTimeSpent % 60);
+      
+      item["timeSpentFormatted"] = std::to_string(minutes) + "m " + std::to_string(seconds) + "s";
+
+      engagementItems.append(item);
+
+      // Update summary
+      engagementSummary["totalNewspapers"] = engagementSummary["totalNewspapers"].asInt() + 1;
+      engagementSummary["totalReads"] = engagementSummary["totalReads"].asInt64() + totalReads;
+      engagementSummary["totalUniqueReaders"] = engagementSummary["totalUniqueReaders"].asInt64() + uniqueReaders;
+    }
+
+    // Calculate average time spent
+    if (engagementResult.size() > 0) {
+      double avgTimeSpentTotal = 0.0;
+      for (const auto &row : engagementResult) {
+        double timeSpent = row["avg_time_spent"].isNull() ? 0.0 : row["avg_time_spent"].as<double>();
+        avgTimeSpentTotal += timeSpent;
+      }
+      engagementSummary["avgTimeSpent"] = std::round((avgTimeSpentTotal / engagementResult.size()) * 10) / 10.0;
+    }
+
+    // Overall engagement rate
+    if (totalSubscribers > 0 && engagementSummary["totalUniqueReaders"].asInt64() > 0) {
+      double overallEngagementRate = ((double)engagementSummary["totalUniqueReaders"].asInt64() / (totalSubscribers * engagementSummary["totalNewspapers"].asInt())) * 100.0;
+      engagementSummary["overallEngagementRate"] = std::round(overallEngagementRate * 10) / 10.0;
+    } else {
+      engagementSummary["overallEngagementRate"] = 0.0;
+    }
+
+    reportData["engagement"] = engagementItems;
+    reportData["engagementSummary"] = engagementSummary;
+
+    // 6. Process Sales Data
+    Json::Value salesItems = Json::arrayValue;
+    Json::Value salesSummary;
+    salesSummary["totalRevenue"] = 0.0;
+    salesSummary["totalCopiesSold"] = 0;
+    salesSummary["averagePrice"] = 0.0;
+    salesSummary["bestSellingNewspaper"] = Json::nullValue;
+
+    double totalSalesAmount = 0.0;
+    long totalCopies = 0;
+
+    for (const auto &row : salesResult) {
+      Json::Value item;
+      item["newspaperId"] = row["newspaper_id"].as<std::string>();
+      item["title"] = row["newspaper_title"].as<std::string>();
+
+      double unitPrice = row["unit_price"].isNull() ? 0.0 : row["unit_price"].as<double>();
+      item["unitPrice"] = unitPrice;
+
+      long copiesSold = row["copies_sold"].isNull() ? 0 : row["copies_sold"].as<long>();
+      item["copiesSold"] = (Json::UInt64)copiesSold;
+
+      double totalSales = row["total_sales"].isNull() ? 0.0 : row["total_sales"].as<double>();
+      item["totalSales"] = totalSales;
+
+      // Revenue per copy
+      double revenuePerCopy = 0.0;
+      if (copiesSold > 0) {
+        revenuePerCopy = totalSales / copiesSold;
+      }
+      item["revenuePerCopy"] = revenuePerCopy;
+
+      salesItems.append(item);
+
+      totalSalesAmount += totalSales;
+      totalCopies += copiesSold;
+    }
+
+    salesSummary["totalRevenue"] = totalSalesAmount;
+    salesSummary["totalCopiesSold"] = (Json::UInt64)totalCopies;
+
+    if (totalCopies > 0) {
+      salesSummary["averagePrice"] = std::round((totalSalesAmount / totalCopies) * 100) / 100.0;
+    } else {
+      salesSummary["averagePrice"] = 0.0;
+    }
+
+    // Find best selling newspaper
+    if (!salesResult.empty()) {
+      std::string bestSellerTitle;
+      double bestSellerSales = 0.0;
+      for (const auto &row : salesResult) {
+        double sales = row["total_sales"].isNull() ? 0.0 : row["total_sales"].as<double>();
+        if (sales > bestSellerSales) {
+          bestSellerSales = sales;
+          bestSellerTitle = row["newspaper_title"].as<std::string>();
+        }
+      }
+      Json::Value bestSeller;
+      bestSeller["title"] = bestSellerTitle;
+      bestSeller["revenue"] = bestSellerSales;
+      salesSummary["bestSellingNewspaper"] = bestSeller;
+    }
+
+    reportData["sales"] = salesItems;
+    reportData["salesSummary"] = salesSummary;
+
+    // 7. Calculate Combined Insights
+    Json::Value insights;
+
+    // Top Performing Newspaper (by engagement)
+    if (engagementResult.size() > 0) {
+      std::string topEngagementTitle;
+      long topEngagementReads = 0;
+      for (const auto &row : engagementResult) {
+        long reads = row["total_reads"].isNull() ? 0 : row["total_reads"].as<long>();
+        if (reads > topEngagementReads) {
+          topEngagementReads = reads;
+          topEngagementTitle = row["newspaper_title"].as<std::string>();
+        }
+      }
+      insights["mostEngagedNewspaper"] = topEngagementTitle;
+      insights["mostEngagedReads"] = (Json::UInt64)topEngagementReads;
+    } else {
+      insights["mostEngagedNewspaper"] = "N/A";
+      insights["mostEngagedReads"] = 0;
+    }
+
+    // Revenue to engagement ratio
+    if (totalSalesAmount > 0 && engagementSummary["totalReads"].asInt64() > 0) {
+      insights["revenuePerRead"] = std::round((totalSalesAmount / engagementSummary["totalReads"].asInt64()) * 100) / 100.0;
+    } else {
+      insights["revenuePerRead"] = 0.0;
+    }
+
+    reportData["insights"] = insights;
+
+    response.result = reportData;
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to retrieve newspaper engagement report";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
 
 drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::update(const dto::NewsPaperDto &dto, const std::string &id) {
   auto dbClient = drogon::app().getDbClient();

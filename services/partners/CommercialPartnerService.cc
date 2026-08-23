@@ -117,6 +117,7 @@ drogon::Task<gnp::dto::BaseApiResponse> CommercialPartnerService::getAll(int pag
       camelCaseCommercialPartner["currency"] =
           commercialPartnerJson["currency"];
       camelCaseCommercialPartner["status"] = commercialPartnerJson["status"];
+      camelCaseCommercialPartner["accountType"] = commercialPartnerJson["account_type"];
       camelCaseCommercialPartner["subAccountEnabled"] =
           commercialPartnerJson["sub_account_enabled"];
       camelCaseCommercialPartner["subscriberQuota"] =

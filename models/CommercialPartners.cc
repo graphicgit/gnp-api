@@ -36,6 +36,7 @@ const std::string CommercialPartners::Cols::_subscription_end_date = "\"subscrip
 const std::string CommercialPartners::Cols::_total_amount_due = "\"total_amount_due\"";
 const std::string CommercialPartners::Cols::_current_invoice_no = "\"current_invoice_no\"";
 const std::string CommercialPartners::Cols::_cost_per_head = "\"cost_per_head\"";
+const std::string CommercialPartners::Cols::_account_type = "\"account_type\"";
 const std::string CommercialPartners::primaryKeyName = "id";
 const bool CommercialPartners::hasPrimaryKey = true;
 const std::string CommercialPartners::tableName = "\"commercial_partners\"";
@@ -63,7 +64,8 @@ const std::vector<typename CommercialPartners::MetaData> CommercialPartners::met
 {"subscription_end_date","::trantor::Date","timestamp with time zone",0,0,0,0},
 {"total_amount_due","std::string","numeric",0,0,0,1},
 {"current_invoice_no","std::string","character varying",20,0,0,0},
-{"cost_per_head","std::string","numeric",0,0,0,1}
+{"cost_per_head","std::string","numeric",0,0,0,1},
+{"account_type","std::string","character varying",20,0,0,0}
 };
 const std::string &CommercialPartners::getColumnName(size_t index) noexcept(false)
 {
@@ -243,11 +245,15 @@ CommercialPartners::CommercialPartners(const Row &r, const ssize_t indexOffset) 
         {
             costPerHead_=std::make_shared<std::string>(r["cost_per_head"].as<std::string>());
         }
+        if(!r["account_type"].isNull())
+        {
+            accountType_=std::make_shared<std::string>(r["account_type"].as<std::string>());
+        }
     }
     else
     {
         size_t offset = (size_t)indexOffset;
-        if(offset + 23 > r.size())
+        if(offset + 24 > r.size())
         {
             LOG_FATAL << "Invalid SQL result for this model";
             return;
@@ -445,13 +451,18 @@ CommercialPartners::CommercialPartners(const Row &r, const ssize_t indexOffset) 
         {
             costPerHead_=std::make_shared<std::string>(r[index].as<std::string>());
         }
+        index = offset + 23;
+        if(!r[index].isNull())
+        {
+            accountType_=std::make_shared<std::string>(r[index].as<std::string>());
+        }
     }
 
 }
 
 CommercialPartners::CommercialPartners(const Json::Value &pJson, const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 23)
+    if(pMasqueradingVector.size() != 24)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -711,6 +722,14 @@ CommercialPartners::CommercialPartners(const Json::Value &pJson, const std::vect
         if(!pJson[pMasqueradingVector[22]].isNull())
         {
             costPerHead_=std::make_shared<std::string>(pJson[pMasqueradingVector[22]].asString());
+        }
+    }
+    if(!pMasqueradingVector[23].empty() && pJson.isMember(pMasqueradingVector[23]))
+    {
+        dirtyFlag_[23] = true;
+        if(!pJson[pMasqueradingVector[23]].isNull())
+        {
+            accountType_=std::make_shared<std::string>(pJson[pMasqueradingVector[23]].asString());
         }
     }
 }
@@ -974,12 +993,20 @@ CommercialPartners::CommercialPartners(const Json::Value &pJson) noexcept(false)
             costPerHead_=std::make_shared<std::string>(pJson["cost_per_head"].asString());
         }
     }
+    if(pJson.isMember("account_type"))
+    {
+        dirtyFlag_[23]=true;
+        if(!pJson["account_type"].isNull())
+        {
+            accountType_=std::make_shared<std::string>(pJson["account_type"].asString());
+        }
+    }
 }
 
 void CommercialPartners::updateByMasqueradedJson(const Json::Value &pJson,
                                             const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 23)
+    if(pMasqueradingVector.size() != 24)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -1240,6 +1267,14 @@ void CommercialPartners::updateByMasqueradedJson(const Json::Value &pJson,
             costPerHead_=std::make_shared<std::string>(pJson[pMasqueradingVector[22]].asString());
         }
     }
+    if(!pMasqueradingVector[23].empty() && pJson.isMember(pMasqueradingVector[23]))
+    {
+        dirtyFlag_[23] = true;
+        if(!pJson[pMasqueradingVector[23]].isNull())
+        {
+            accountType_=std::make_shared<std::string>(pJson[pMasqueradingVector[23]].asString());
+        }
+    }
 }
 
 void CommercialPartners::updateByJson(const Json::Value &pJson) noexcept(false)
@@ -1498,6 +1533,14 @@ void CommercialPartners::updateByJson(const Json::Value &pJson) noexcept(false)
         if(!pJson["cost_per_head"].isNull())
         {
             costPerHead_=std::make_shared<std::string>(pJson["cost_per_head"].asString());
+        }
+    }
+    if(pJson.isMember("account_type"))
+    {
+        dirtyFlag_[23] = true;
+        if(!pJson["account_type"].isNull())
+        {
+            accountType_=std::make_shared<std::string>(pJson["account_type"].asString());
         }
     }
 }
@@ -2060,6 +2103,33 @@ void CommercialPartners::setCostPerHead(std::string &&pCostPerHead) noexcept
     dirtyFlag_[22] = true;
 }
 
+const std::string &CommercialPartners::getValueOfAccountType() const noexcept
+{
+    static const std::string defaultValue = std::string();
+    if(accountType_)
+        return *accountType_;
+    return defaultValue;
+}
+const std::shared_ptr<std::string> &CommercialPartners::getAccountType() const noexcept
+{
+    return accountType_;
+}
+void CommercialPartners::setAccountType(const std::string &pAccountType) noexcept
+{
+    accountType_ = std::make_shared<std::string>(pAccountType);
+    dirtyFlag_[23] = true;
+}
+void CommercialPartners::setAccountType(std::string &&pAccountType) noexcept
+{
+    accountType_ = std::make_shared<std::string>(std::move(pAccountType));
+    dirtyFlag_[23] = true;
+}
+void CommercialPartners::setAccountTypeToNull() noexcept
+{
+    accountType_.reset();
+    dirtyFlag_[23] = true;
+}
+
 void CommercialPartners::updateId(const uint64_t id)
 {
 }
@@ -2089,7 +2159,8 @@ const std::vector<std::string> &CommercialPartners::insertColumns() noexcept
         "subscription_end_date",
         "total_amount_due",
         "current_invoice_no",
-        "cost_per_head"
+        "cost_per_head",
+        "account_type"
     };
     return inCols;
 }
@@ -2349,6 +2420,17 @@ void CommercialPartners::outputArgs(drogon::orm::internal::SqlBinder &binder) co
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[23])
+    {
+        if(getAccountType())
+        {
+            binder << getValueOfAccountType();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 
 const std::vector<std::string> CommercialPartners::updateColumns() const
@@ -2445,6 +2527,10 @@ const std::vector<std::string> CommercialPartners::updateColumns() const
     if(dirtyFlag_[22])
     {
         ret.push_back(getColumnName(22));
+    }
+    if(dirtyFlag_[23])
+    {
+        ret.push_back(getColumnName(23));
     }
     return ret;
 }
@@ -2704,6 +2790,17 @@ void CommercialPartners::updateArgs(drogon::orm::internal::SqlBinder &binder) co
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[23])
+    {
+        if(getAccountType())
+        {
+            binder << getValueOfAccountType();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 Json::Value CommercialPartners::toJson() const
 {
@@ -2892,6 +2989,14 @@ Json::Value CommercialPartners::toJson() const
     {
         ret["cost_per_head"]=Json::Value();
     }
+    if(getAccountType())
+    {
+        ret["account_type"]=getValueOfAccountType();
+    }
+    else
+    {
+        ret["account_type"]=Json::Value();
+    }
     return ret;
 }
 
@@ -2904,7 +3009,7 @@ Json::Value CommercialPartners::toMasqueradedJson(
     const std::vector<std::string> &pMasqueradingVector) const
 {
     Json::Value ret;
-    if(pMasqueradingVector.size() == 23)
+    if(pMasqueradingVector.size() == 24)
     {
         if(!pMasqueradingVector[0].empty())
         {
@@ -3159,6 +3264,17 @@ Json::Value CommercialPartners::toMasqueradedJson(
                 ret[pMasqueradingVector[22]]=Json::Value();
             }
         }
+        if(!pMasqueradingVector[23].empty())
+        {
+            if(getAccountType())
+            {
+                ret[pMasqueradingVector[23]]=getValueOfAccountType();
+            }
+            else
+            {
+                ret[pMasqueradingVector[23]]=Json::Value();
+            }
+        }
         return ret;
     }
     LOG_ERROR << "Masquerade failed";
@@ -3346,6 +3462,14 @@ Json::Value CommercialPartners::toMasqueradedJson(
     {
         ret["cost_per_head"]=Json::Value();
     }
+    if(getAccountType())
+    {
+        ret["account_type"]=getValueOfAccountType();
+    }
+    else
+    {
+        ret["account_type"]=Json::Value();
+    }
     return ret;
 }
 
@@ -3471,13 +3595,18 @@ bool CommercialPartners::validateJsonForCreation(const Json::Value &pJson, std::
         if(!validJsonOfField(22, "cost_per_head", pJson["cost_per_head"], err, true))
             return false;
     }
+    if(pJson.isMember("account_type"))
+    {
+        if(!validJsonOfField(23, "account_type", pJson["account_type"], err, true))
+            return false;
+    }
     return true;
 }
 bool CommercialPartners::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                                                             const std::vector<std::string> &pMasqueradingVector,
                                                             std::string &err)
 {
-    if(pMasqueradingVector.size() != 23)
+    if(pMasqueradingVector.size() != 24)
     {
         err = "Bad masquerading vector";
         return false;
@@ -3672,6 +3801,14 @@ bool CommercialPartners::validateMasqueradedJsonForCreation(const Json::Value &p
                   return false;
           }
       }
+      if(!pMasqueradingVector[23].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[23]))
+          {
+              if(!validJsonOfField(23, pMasqueradingVector[23], pJson[pMasqueradingVector[23]], err, true))
+                  return false;
+          }
+      }
     }
     catch(const Json::LogicError &e)
     {
@@ -3802,13 +3939,18 @@ bool CommercialPartners::validateJsonForUpdate(const Json::Value &pJson, std::st
         if(!validJsonOfField(22, "cost_per_head", pJson["cost_per_head"], err, false))
             return false;
     }
+    if(pJson.isMember("account_type"))
+    {
+        if(!validJsonOfField(23, "account_type", pJson["account_type"], err, false))
+            return false;
+    }
     return true;
 }
 bool CommercialPartners::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
                                                           const std::vector<std::string> &pMasqueradingVector,
                                                           std::string &err)
 {
-    if(pMasqueradingVector.size() != 23)
+    if(pMasqueradingVector.size() != 24)
     {
         err = "Bad masquerading vector";
         return false;
@@ -3932,6 +4074,11 @@ bool CommercialPartners::validateMasqueradedJsonForUpdate(const Json::Value &pJs
       if(!pMasqueradingVector[22].empty() && pJson.isMember(pMasqueradingVector[22]))
       {
           if(!validJsonOfField(22, pMasqueradingVector[22], pJson[pMasqueradingVector[22]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[23].empty() && pJson.isMember(pMasqueradingVector[23]))
+      {
+          if(!validJsonOfField(23, pMasqueradingVector[23], pJson[pMasqueradingVector[23]], err, false))
               return false;
       }
     }
@@ -4287,6 +4434,25 @@ bool CommercialPartners::validJsonOfField(size_t index,
             if(!pJson.isString())
             {
                 err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 23:
+            if(pJson.isNull())
+            {
+                return true;
+            }
+            if(!pJson.isString())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            if(pJson.isString() && std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>{}
+                .from_bytes(pJson.asCString()).size() > 20)
+            {
+                err="String length exceeds limit for the " +
+                    fieldName +
+                    " field (the maximum value is 20)";
                 return false;
             }
             break;
