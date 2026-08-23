@@ -3332,8 +3332,8 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerAn
     // Build single aggregated item - Clean and minimal
     Json::Value item;
     item["description"] = "Invoice for new and renewed subscriptions";
-    item["quantity"] = quantity;
-    item["unitPrice"] = subscriberQuota;
+    item["quantity"] = totalInvoiceAmount / std::stod(partner.getValueOfCostPerHead());
+    item["unitPrice"] = partner.getValueOfCostPerHead();
     item["amount"] = totalInvoiceAmount;
     item["balance"] = totalBalance;
     item["outstanding"] = totalInvoiceAmount - totalBalance;
