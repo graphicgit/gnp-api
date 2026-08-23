@@ -3268,7 +3268,8 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerAn
   }
 }
 
- drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerInvoiceGenerationReport(const gnp::dto::ReportDto &dto) {
+
+  drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerInvoiceGenerationReport(const gnp::dto::ReportDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<CommercialPartners> partnerMapper(dbClient);
@@ -3285,13 +3286,13 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerAn
 
     auto partner = co_await partnerMapper.findByPrimaryKey(dto.getPartnerId());
 
-    // Query partner_invoices table with raw values
+    // Query partner_invoices table with aggregated values
     std::string sql =
-        "SELECT invoice_number, description, unit_price, invoice_amount, "
-        "balance, currency, due_date, status, billing_cycle, created_at "
+        "SELECT "
+        "SUM(invoice_amount) as total_invoice_amount, "
+        "SUM(balance) as total_balance "
         "FROM partner_invoices "
-        "WHERE partner_id = $1 AND created_at >= $2 AND created_at <= $3 "
-        "ORDER BY created_at DESC";
+        "WHERE partner_id = $1 AND created_at >= $2 AND created_at <= $3";
 
     auto result = co_await dbClient->execSqlCoro(sql, dto.getPartnerId(), dto.getStartDate(), dto.getEndDate());
 
@@ -3314,98 +3315,57 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerAn
 
     invoiceData["billingPeriod"] = dto.getStartDate() + " - " + dto.getEndDate();
 
-    Json::Value items = Json::arrayValue;
-    double subtotal = 0.0;
-    double totalBalance = 0.0;
+    // Extract aggregated values
+    double totalInvoiceAmount = result[0]["total_invoice_amount"].isNull() ? 0.0 : result[0]["total_invoice_amount"].as<double>();
+    double totalBalance = result[0]["total_balance"].isNull() ? 0.0 : result[0]["total_balance"].as<double>();
 
-    for (const auto &row : result) {
-      Json::Value item;
+    // Get partner's subscriber quota for quantity calculation
+    double subscriberQuota = partner.getValueOfSubscriberQuota();
 
-      // Raw values from database
-      std::string invoiceNumber = row["invoice_number"].isNull() ? "N/A" : row["invoice_number"].as<std::string>();
-      std::string description = row["description"].isNull() ? "Subscription" : row["description"].as<std::string>();
-      std::string billingCycle = row["billing_cycle"].isNull() ? "Monthly" : row["billing_cycle"].as<std::string>();
-      std::string currency = row["currency"].isNull() ? "GHS" : row["currency"].as<std::string>();
-      std::string status = row["status"].isNull() ? "Pending" : row["status"].as<std::string>();
 
-      double unitPrice = row["unit_price"].isNull() ? 0.0 : row["unit_price"].as<double>();
-      double invoiceAmount = row["invoice_amount"].isNull() ? 0.0 : row["invoice_amount"].as<double>();
-      double balance = row["balance"].isNull() ? 0.0 : row["balance"].as<double>();
-
-      // Due date
-      std::string dueDate;
-      if (!row["due_date"].isNull()) {
-        dueDate = row["due_date"].as<std::string>();
-      }
-
-      // Created at date
-      std::string createdAt;
-      if (!row["created_at"].isNull()) {
-        createdAt = row["created_at"].as<std::string>();
-      }
-
-      // Build item with raw values
-      item["invoiceNumber"] = invoiceNumber;
-      item["description"] = description;
-      item["billingCycle"] = billingCycle;
-      item["currency"] = currency;
-      item["status"] = status;
-      item["unitPrice"] = unitPrice;
-      item["invoiceAmount"] = invoiceAmount;
-      item["balance"] = balance;
-      item["dueDate"] = dueDate.empty() ? Json::nullValue : Json::Value(dueDate);
-      item["createdAt"] = createdAt.empty() ? Json::nullValue : Json::Value(createdAt);
-
-      // Each invoice is a line item with quantity = 1
-      item["quantity"] = 1;
-      item["amount"] = invoiceAmount;
-
-      // Outstanding amount for this invoice
-      item["outstanding"] = invoiceAmount - balance;
-
-      subtotal += invoiceAmount;
-      totalBalance += balance;
-
-      items.append(item);
+    // Calculate quantity: totalInvoiceAmount / subscriberQuota
+    double quantity = 0.0;
+    if (subscriberQuota > 0 && totalInvoiceAmount > 0) {
+      quantity = totalInvoiceAmount / subscriberQuota;
     }
 
+    // Build single aggregated item - Clean and minimal
+    Json::Value item;
+    item["description"] = "Invoice for new and renewed subscriptions";
+    item["quantity"] = quantity;
+    item["unitPrice"] = subscriberQuota;
+    item["amount"] = totalInvoiceAmount;
+    item["balance"] = totalBalance;
+    item["outstanding"] = totalInvoiceAmount - totalBalance;
+
+    Json::Value items = Json::arrayValue;
+
     // If no invoices found, add a placeholder
-    if (items.empty()) {
+    if (totalInvoiceAmount == 0) {
       Json::Value emptyItem;
-      emptyItem["invoiceNumber"] = "N/A";
       emptyItem["description"] = "No invoices found for this period";
-      emptyItem["billingCycle"] = "N/A";
-      emptyItem["currency"] = "GHS";
-      emptyItem["status"] = "N/A";
-      emptyItem["unitPrice"] = 0.0;
-      emptyItem["invoiceAmount"] = 0.0;
-      emptyItem["balance"] = 0.0;
-      emptyItem["dueDate"] = Json::nullValue;
-      emptyItem["createdAt"] = Json::nullValue;
       emptyItem["quantity"] = 0;
+      emptyItem["unitPrice"] = 0;
       emptyItem["amount"] = 0.0;
+      emptyItem["balance"] = 0.0;
       emptyItem["outstanding"] = 0.0;
       items.append(emptyItem);
+    } else {
+      items.append(item);
     }
 
     invoiceData["items"] = items;
 
-    // Summary calculations using raw values
-    invoiceData["subtotal"] = subtotal;
+    // Summary calculations
+    invoiceData["subtotal"] = totalInvoiceAmount;
     invoiceData["totalBalance"] = totalBalance;
-    invoiceData["outstandingBalance"] = subtotal - totalBalance;
+    invoiceData["outstandingBalance"] = totalInvoiceAmount - totalBalance;
 
     // VAT calculation (15%)
-    double vat = subtotal * 0.15;
+    double vat = totalInvoiceAmount * 0.15;
     invoiceData["vat"] = vat;
     invoiceData["discount"] = 0.0;
-    invoiceData["totalDue"] = subtotal + vat;
-
-    // Additional summary
-    invoiceData["summary"] = Json::Value(Json::objectValue);
-    invoiceData["summary"]["totalInvoices"] = (Json::UInt64)result.size();
-    invoiceData["summary"]["currency"] = "GHS";
-    invoiceData["summary"]["totalOutstanding"] = subtotal - totalBalance;
+    invoiceData["totalDue"] = totalInvoiceAmount + vat;
 
     response.result = invoiceData;
     co_return response;
@@ -3419,6 +3379,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerAn
     co_return errorResponse;
   }
 }
+
 
 
 drogon::Task<dto::BaseApiResponse> CommercialPartnerService::bulkUploadSubscribersJson(
