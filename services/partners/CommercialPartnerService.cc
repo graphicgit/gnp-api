@@ -3268,19 +3268,30 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerAn
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerInvoiceGenerationReport(const gnp::dto::ReportDto &dto) {
+ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerInvoiceGenerationReport(const gnp::dto::ReportDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<CommercialPartners> partnerMapper(dbClient);
 
   try {
+    // Validate partner ID
+    if (dto.getPartnerId().empty()) {
+      gnp::dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.message = "Partner ID is required";
+      errorResponse.error["code"] = constants::ERR_VALIDATION;
+      co_return errorResponse;
+    }
+
     auto partner = co_await partnerMapper.findByPrimaryKey(dto.getPartnerId());
 
-    std::string sql = 
-        "SELECT subscription_plan_name, amount_paid, COUNT(*) as qty "
-        "FROM subscription_renewal_history "
+    // Query partner_invoices table with raw values
+    std::string sql =
+        "SELECT invoice_number, description, unit_price, invoice_amount, "
+        "balance, currency, due_date, status, billing_cycle, created_at "
+        "FROM partner_invoices "
         "WHERE partner_id = $1 AND created_at >= $2 AND created_at <= $3 "
-        "GROUP BY subscription_plan_name, amount_paid";
+        "ORDER BY created_at DESC";
 
     auto result = co_await dbClient->execSqlCoro(sql, dto.getPartnerId(), dto.getStartDate(), dto.getEndDate());
 
@@ -3289,57 +3300,114 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerIn
     response.message = "Invoice generation report retrieved successfully";
 
     Json::Value invoiceData;
-    
-    invoiceData["invoiceNo"] = "INV-" + std::to_string(trantor::Date::now().microSecondsSinceEpoch() / 1000).substr(0, 9); 
+
+    // Generate invoice number
+    invoiceData["invoiceNo"] = "INV-" + std::to_string(trantor::Date::now().microSecondsSinceEpoch() / 1000).substr(0, 9);
     invoiceData["date"] = trantor::Date::now().toCustomFormattedString("%d/%m/%Y");
     invoiceData["dueDate"] = trantor::Date::now().after(14 * 24 * 3600).toCustomFormattedString("%d/%m/%Y");
-    
+
+    // Billed to information
     Json::Value billedTo;
     billedTo["name"] = partner.getValueOfName();
     billedTo["email"] = partner.getValueOfBillingEmail();
     invoiceData["billedTo"] = billedTo;
-    
+
     invoiceData["billingPeriod"] = dto.getStartDate() + " - " + dto.getEndDate();
 
     Json::Value items = Json::arrayValue;
     double subtotal = 0.0;
+    double totalBalance = 0.0;
 
     for (const auto &row : result) {
       Json::Value item;
-      
-      std::string planName = row["subscription_plan_name"].isNull() ? "Subscription" : row["subscription_plan_name"].as<std::string>();
-      item["description"] = planName;
-      
-      long qty = row["qty"].as<long>();
-      item["quantity"] = (Json::UInt64)qty;
-      
-      double unitPrice = 0.0;
-      if (!row["amount_paid"].isNull()) {
-          try {
-             unitPrice = std::stod(row["amount_paid"].as<std::string>());
-          } catch(...) {}
+
+      // Raw values from database
+      std::string invoiceNumber = row["invoice_number"].isNull() ? "N/A" : row["invoice_number"].as<std::string>();
+      std::string description = row["description"].isNull() ? "Subscription" : row["description"].as<std::string>();
+      std::string billingCycle = row["billing_cycle"].isNull() ? "Monthly" : row["billing_cycle"].as<std::string>();
+      std::string currency = row["currency"].isNull() ? "GHS" : row["currency"].as<std::string>();
+      std::string status = row["status"].isNull() ? "Pending" : row["status"].as<std::string>();
+
+      double unitPrice = row["unit_price"].isNull() ? 0.0 : row["unit_price"].as<double>();
+      double invoiceAmount = row["invoice_amount"].isNull() ? 0.0 : row["invoice_amount"].as<double>();
+      double balance = row["balance"].isNull() ? 0.0 : row["balance"].as<double>();
+
+      // Due date
+      std::string dueDate;
+      if (!row["due_date"].isNull()) {
+        dueDate = row["due_date"].as<std::string>();
       }
-      
+
+      // Created at date
+      std::string createdAt;
+      if (!row["created_at"].isNull()) {
+        createdAt = row["created_at"].as<std::string>();
+      }
+
+      // Build item with raw values
+      item["invoiceNumber"] = invoiceNumber;
+      item["description"] = description;
+      item["billingCycle"] = billingCycle;
+      item["currency"] = currency;
+      item["status"] = status;
       item["unitPrice"] = unitPrice;
-      
-      double amount = unitPrice * qty;
-      item["amount"] = amount;
-      
-      subtotal += amount;
-      
+      item["invoiceAmount"] = invoiceAmount;
+      item["balance"] = balance;
+      item["dueDate"] = dueDate.empty() ? Json::nullValue : Json::Value(dueDate);
+      item["createdAt"] = createdAt.empty() ? Json::nullValue : Json::Value(createdAt);
+
+      // Each invoice is a line item with quantity = 1
+      item["quantity"] = 1;
+      item["amount"] = invoiceAmount;
+
+      // Outstanding amount for this invoice
+      item["outstanding"] = invoiceAmount - balance;
+
+      subtotal += invoiceAmount;
+      totalBalance += balance;
+
       items.append(item);
     }
 
+    // If no invoices found, add a placeholder
+    if (items.empty()) {
+      Json::Value emptyItem;
+      emptyItem["invoiceNumber"] = "N/A";
+      emptyItem["description"] = "No invoices found for this period";
+      emptyItem["billingCycle"] = "N/A";
+      emptyItem["currency"] = "GHS";
+      emptyItem["status"] = "N/A";
+      emptyItem["unitPrice"] = 0.0;
+      emptyItem["invoiceAmount"] = 0.0;
+      emptyItem["balance"] = 0.0;
+      emptyItem["dueDate"] = Json::nullValue;
+      emptyItem["createdAt"] = Json::nullValue;
+      emptyItem["quantity"] = 0;
+      emptyItem["amount"] = 0.0;
+      emptyItem["outstanding"] = 0.0;
+      items.append(emptyItem);
+    }
+
     invoiceData["items"] = items;
-    
+
+    // Summary calculations using raw values
     invoiceData["subtotal"] = subtotal;
+    invoiceData["totalBalance"] = totalBalance;
+    invoiceData["outstandingBalance"] = subtotal - totalBalance;
+
+    // VAT calculation (15%)
     double vat = subtotal * 0.15;
     invoiceData["vat"] = vat;
     invoiceData["discount"] = 0.0;
     invoiceData["totalDue"] = subtotal + vat;
 
-    response.result = invoiceData;
+    // Additional summary
+    invoiceData["summary"] = Json::Value(Json::objectValue);
+    invoiceData["summary"]["totalInvoices"] = (Json::UInt64)result.size();
+    invoiceData["summary"]["currency"] = "GHS";
+    invoiceData["summary"]["totalOutstanding"] = subtotal - totalBalance;
 
+    response.result = invoiceData;
     co_return response;
 
   } catch (const DrogonDbException &e) {
@@ -3351,6 +3419,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerIn
     co_return errorResponse;
   }
 }
+
 
 drogon::Task<dto::BaseApiResponse> CommercialPartnerService::bulkUploadSubscribersJson(
     const std::string partnerId, const Json::Value &jsonArray) {
