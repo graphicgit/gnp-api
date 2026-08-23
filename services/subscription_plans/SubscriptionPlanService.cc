@@ -110,9 +110,7 @@ drogon::Task<gnp::dto::BaseApiResponse> SubscriptionPlanService::getAllPlansAsyn
   }
 }
 
-drogon::Task<gnp::dto::BaseApiResponse> SubscriptionPlanService::createPlanAsync(
-
-    const gnp::dto::CreateSubscriptionPlanDto &dto) {
+drogon::Task<gnp::dto::BaseApiResponse> SubscriptionPlanService::createPlanAsync(const gnp::dto::SubscriptionPlanDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<drogon_model::Gnp::SubscriptionPlans> mp(dbClient);
@@ -146,15 +144,14 @@ drogon::Task<gnp::dto::BaseApiResponse> SubscriptionPlanService::createPlanAsync
 }
 
 drogon::Task<gnp::dto::BaseApiResponse> SubscriptionPlanService::updatePlanAsync(
-    const gnp::dto::UpdateSubscriptionPlanDto &dto) {
+    const gnp::dto::SubscriptionPlanDto &dto, const std::string &id) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<drogon_model::Gnp::SubscriptionPlans> mp(dbClient);
 
   try {
     Criteria criteria =
-        Criteria(drogon_model::Gnp::SubscriptionPlans::Cols::_id,
-                 CompareOperator::EQ, dto.getId());
+        Criteria(drogon_model::Gnp::SubscriptionPlans::Cols::_id, id);
 
     auto subscriptionPlan = co_await mp.findOne(criteria);
 

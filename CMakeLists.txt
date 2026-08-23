@@ -30,8 +30,7 @@ add_executable(${PROJECT_NAME} main.cc
         services/hubtel_sms/HubtelSmsApi.h
         dto/SigninDto.h
         services/subscription_plans/SubscriptionPlanService.h
-        dto/CreateSubscriptionPlanDto.h
-        dto/UpdateSubscriptionPlanDto.h
+        dto/SubscriptionPlanDto.h
         services/subscription_plans/SubscriptionPlanService.cc
         dto/IngestNewsPaperDto.h
         services/email/EmailService.h
@@ -151,6 +150,7 @@ add_executable(${PROJECT_NAME} main.cc
         services/settings/SettingService.cc
         constants/NotificationTypes.h
         dto/ArticleDto.h
+        dto/ReportDto.h
 )
 
 # ##############################################################################

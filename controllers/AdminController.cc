@@ -572,7 +572,7 @@ drogon::Task<HttpResponsePtr> AdminController::createSubscriptionPlan(HttpReques
     co_return resp;
   }
 
-  gnp::dto::CreateSubscriptionPlanDto dto;
+  gnp::dto::SubscriptionPlanDto dto;
 
   dto.fromJson(*jsonBody);
 
@@ -584,7 +584,7 @@ drogon::Task<HttpResponsePtr> AdminController::createSubscriptionPlan(HttpReques
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr> AdminController::updateSubscriptionPlan(HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::updateSubscriptionPlan(HttpRequestPtr req, const std::string &id) {
 
   auto jsonBody = req->getJsonObject();
 
@@ -597,21 +597,19 @@ drogon::Task<HttpResponsePtr> AdminController::updateSubscriptionPlan(HttpReques
     co_return resp;
   }
 
-  gnp::dto::UpdateSubscriptionPlanDto dto;
+  gnp::dto::SubscriptionPlanDto dto;
 
   dto.fromJson(*jsonBody);
 
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &subscriptionPlanService = plugin->getSubscriptionPlanService();
 
-  auto result = co_await subscriptionPlanService.updatePlanAsync(dto);
+  auto result = co_await subscriptionPlanService.updatePlanAsync(dto, id);
   auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
   co_return resp;
 }
 
-drogon::Task<HttpResponsePtr> AdminController::deleteSubscriptionPlan(HttpRequestPtr req) {
-
-  auto id = req->getParameter("id");
+drogon::Task<HttpResponsePtr> AdminController::deleteSubscriptionPlan(HttpRequestPtr req, const std::string &id) {
 
   if (id.empty()) {
     gnp::dto::BaseApiResponse response;

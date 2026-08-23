@@ -8,11 +8,11 @@
 
 namespace gnp::dto {
 
-    class CreateSubscriptionPlanDto {
+    class SubscriptionPlanDto {
 
     public:
 
-        CreateSubscriptionPlanDto() = default;
+        SubscriptionPlanDto() = default;
 
         void fromJson(const Json::Value& json);
 
@@ -20,8 +20,8 @@ namespace gnp::dto {
         [[nodiscard]] const std::string& getName() const { return name_; }
         [[nodiscard]] const std::string& getPlanType() const { return plan_type_; }
         [[nodiscard]] const std::string& getDescription() const { return description_; }
-        [[nodiscard]] const std::string&  getPricing() const { return pricing_; }
-        [[nodiscard]] const std::string&  getTargetPublications() const { return target_publications_; }
+        [[nodiscard]] const std::string& getPricing() const { return pricing_; }
+        [[nodiscard]] const std::string& getTargetPublications() const { return target_publications_; }
 
         // Setters
         void setName(const std::string& name) { name_ = name; }
@@ -39,7 +39,7 @@ namespace gnp::dto {
         std::string target_publications_;
     };
 
-    inline void CreateSubscriptionPlanDto::fromJson(const Json::Value& json) {
+    inline void SubscriptionPlanDto::fromJson(const Json::Value& json) {
 
         if (json.isMember("name") && !json["name"].isNull()) {
             name_ = json["name"].asString();

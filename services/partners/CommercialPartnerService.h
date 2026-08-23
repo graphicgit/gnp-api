@@ -17,6 +17,7 @@
 #include "dto/GeneratePartnerApiKeyDto.h"
 #include "dto/PartnerOnboardingDto.h"
 #include "dto/PartnerQuotaDto.h"
+#include "dto/ReportDto.h"
 #include "dto/UpdatePartnerApiKeyDto.h"
 #include "dto/UpdatePartnerSubscriberDto.h"
 
@@ -93,6 +94,8 @@ public:
     drogon::Task<::gnp::dto::BaseApiResponse> getPartnerEngagementReport(const std::string &partnerId, const std::string &period);
 
     drogon::Task<::gnp::dto::BaseApiResponse> getPartnerAnalyticsCharts(const std::string &partnerId, const std::string &period);
+
+    drogon::Task<::gnp::dto::BaseApiResponse> getPartnerInvoiceGenerationReport(const gnp::dto::ReportDto &dto);
 
     drogon::Task<::gnp::dto::BaseApiResponse> bulkUploadSubscribersJson(std::string partnerId, const Json::Value &jsonArray);
 

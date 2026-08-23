@@ -42,8 +42,8 @@ public:
   // subscription plans
   ADD_METHOD_TO(AdminController::getAllSubscriptionPlans, std::string(PREFIX) + "get-all-subscription-plans", Get, Options, "JwtAuthFilter");
   ADD_METHOD_TO(AdminController::createSubscriptionPlan, std::string(PREFIX) + "create-subscription-plan", Post, Options, "JwtAuthFilter");
-  ADD_METHOD_TO(AdminController::updateSubscriptionPlan, std::string(PREFIX) + "update-subscription-plan", Post, Options, "JwtAuthFilter");
-  ADD_METHOD_TO(AdminController::deleteSubscriptionPlan, std::string(PREFIX) + "delete-subscription-plan", Delete, Options, "JwtAuthFilter");
+  ADD_METHOD_TO(AdminController::updateSubscriptionPlan, std::string(PREFIX) + "update-subscription-plan/{1}", Post, Options, "JwtAuthFilter");
+  ADD_METHOD_TO(AdminController::deleteSubscriptionPlan, std::string(PREFIX) + "delete-subscription-plan/{1}", Delete, Options, "JwtAuthFilter");
 
   // user subscription
   ADD_METHOD_TO(AdminController::getAllUserSubscriptions, std::string(PREFIX) + "get-all-subscriptions", Get, "JwtAuthFilter");
@@ -148,8 +148,8 @@ public:
   // subscription plans ...
  drogon::Task<HttpResponsePtr> getAllSubscriptionPlans(HttpRequestPtr req);
  drogon::Task<HttpResponsePtr> createSubscriptionPlan(HttpRequestPtr req);
- drogon::Task<HttpResponsePtr> updateSubscriptionPlan(HttpRequestPtr req);
- drogon::Task<HttpResponsePtr> deleteSubscriptionPlan(HttpRequestPtr req);
+ drogon::Task<HttpResponsePtr> updateSubscriptionPlan(HttpRequestPtr req, const std::string &id);
+ drogon::Task<HttpResponsePtr> deleteSubscriptionPlan(HttpRequestPtr req, const std::string &id);
 
 
   // Newspapers

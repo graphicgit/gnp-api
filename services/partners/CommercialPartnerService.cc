@@ -32,6 +32,8 @@
 #include <iomanip>
 #include <sstream>
 
+#include "dto/ReportDto.h"
+
 using namespace drogon::orm;
 
 using ::drogon_model::Gnp::CommercialPartners;
@@ -974,8 +976,8 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartnerSubscr
     emailDto.setBody(emailBody);
     co_await emailService.sendEmailAsync(emailDto);
 
-    //log the email and password of the user
-
+    LOG_INFO << "[createPartnerSubscriber] Created subscriber — email: "
+             << user.getValueOfEmail() << ", password: " << password;
 
     // 6. Reduce subscriber slots for commercial partner
     auto remainingQuota = partner.getValueOfRemainingQuota();
@@ -3260,6 +3262,90 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerAn
     gnp::dto::BaseApiResponse errorResponse;
     errorResponse.success = false;
     errorResponse.message = "Failed to retrieve analytics charts";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerInvoiceGenerationReport(const gnp::dto::ReportDto &dto) {
+
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<CommercialPartners> partnerMapper(dbClient);
+
+  try {
+    auto partner = co_await partnerMapper.findByPrimaryKey(dto.getPartnerId());
+
+    std::string sql = 
+        "SELECT subscription_plan_name, amount_paid, COUNT(*) as qty "
+        "FROM subscription_renewal_history "
+        "WHERE partner_id = $1 AND created_at >= $2 AND created_at <= $3 "
+        "GROUP BY subscription_plan_name, amount_paid";
+
+    auto result = co_await dbClient->execSqlCoro(sql, dto.getPartnerId(), dto.getStartDate(), dto.getEndDate());
+
+    gnp::dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Invoice generation report retrieved successfully";
+
+    Json::Value invoiceData;
+    
+    invoiceData["invoiceNo"] = "INV-" + std::to_string(trantor::Date::now().microSecondsSinceEpoch() / 1000).substr(0, 9); 
+    invoiceData["date"] = trantor::Date::now().toCustomFormattedString("%d/%m/%Y");
+    invoiceData["dueDate"] = trantor::Date::now().after(14 * 24 * 3600).toCustomFormattedString("%d/%m/%Y");
+    
+    Json::Value billedTo;
+    billedTo["name"] = partner.getValueOfName();
+    billedTo["email"] = partner.getValueOfBillingEmail();
+    invoiceData["billedTo"] = billedTo;
+    
+    invoiceData["billingPeriod"] = dto.getStartDate() + " - " + dto.getEndDate();
+
+    Json::Value items = Json::arrayValue;
+    double subtotal = 0.0;
+
+    for (const auto &row : result) {
+      Json::Value item;
+      
+      std::string planName = row["subscription_plan_name"].isNull() ? "Subscription" : row["subscription_plan_name"].as<std::string>();
+      item["description"] = planName;
+      
+      long qty = row["qty"].as<long>();
+      item["quantity"] = (Json::UInt64)qty;
+      
+      double unitPrice = 0.0;
+      if (!row["amount_paid"].isNull()) {
+          try {
+             unitPrice = std::stod(row["amount_paid"].as<std::string>());
+          } catch(...) {}
+      }
+      
+      item["unitPrice"] = unitPrice;
+      
+      double amount = unitPrice * qty;
+      item["amount"] = amount;
+      
+      subtotal += amount;
+      
+      items.append(item);
+    }
+
+    invoiceData["items"] = items;
+    
+    invoiceData["subtotal"] = subtotal;
+    double vat = subtotal * 0.15;
+    invoiceData["vat"] = vat;
+    invoiceData["discount"] = 0.0;
+    invoiceData["totalDue"] = subtotal + vat;
+
+    response.result = invoiceData;
+
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to retrieve invoice generation report";
     errorResponse.error["code"] = constants::ERR_DB_QUERY;
     errorResponse.error["detail"] = e.base().what();
     co_return errorResponse;
