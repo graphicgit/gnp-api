@@ -111,6 +111,7 @@ public:
    ADD_METHOD_TO(AdminController::createSubscriber, std::string(PREFIX) + "create-subscriber", Post, Options, "JwtAuthFilter");
    ADD_METHOD_TO(AdminController::updateSubscriber, std::string(PREFIX) + "update-subscriber/{1}", Put, Options, "JwtAuthFilter");
    ADD_METHOD_TO(AdminController::deleteSubscriber, std::string(PREFIX) + "delete-subscriber/{1}", Delete, Options, "JwtAuthFilter");
+   ADD_METHOD_TO(AdminController::resetSubscriberPassword, std::string(PREFIX) + "reset-subscriber-password/{1}", Get, Options, "JwtAuthFilter");
 
     // coupon
     ADD_METHOD_TO(AdminController::getAllCoupons, std::string(PREFIX) + "get-all-coupons", Get, Options, "JwtAuthFilter");
@@ -244,6 +245,7 @@ public:
  drogon::Task<HttpResponsePtr> createSubscriber(HttpRequestPtr req);
  drogon::Task<HttpResponsePtr> updateSubscriber(HttpRequestPtr req, std::string subscriberId);
  drogon::Task<HttpResponsePtr> deleteSubscriber(HttpRequestPtr req, std::string subscriberId);
+ drogon::Task<HttpResponsePtr> resetSubscriberPassword(HttpRequestPtr req, std::string subscriberId);
 
 
    // partner invoices

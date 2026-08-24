@@ -18,6 +18,9 @@ namespace gnp::services {
 
 class UserService {
 public:
+
+    // use redis to track the number of users who have logged in to a particular account
+
   drogon::Task<dto::BaseApiResponse> getAll(int pageNo, int pageSize, const std::string &query);
 
   drogon::Task<dto::BaseApiResponse> getAllSubscribers(int pageNo, int pageSize, const std::string &query);
@@ -53,6 +56,8 @@ public:
   drogon::Task<gnp::dto::BaseApiResponse> deactivateUserAccount(const std::string &userId);
 
   drogon::Task<gnp::dto::BaseApiResponse> deleteUser(const std::string &userId);
+
+  drogon::Task<gnp::dto::BaseApiResponse> resetUserPassword(const std::string &userId);
 
   drogon::Task<gnp::dto::BaseApiResponse> deletePartnerAdminUser(const std::string &userId, const std::string &partnerId);
 

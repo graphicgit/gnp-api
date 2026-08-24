@@ -23,6 +23,7 @@
 #include "CommercialPartners.h"
 #include "plugins/GnpServicePlugin.h"
 #include "utils/PasswordUtils.h"
+#include "utils/StringUtils.h"
 
 using namespace drogon::orm;
 using drogon_model::Gnp::Users;
@@ -1625,6 +1626,109 @@ drogon::Task<dto::BaseApiResponse> UserService::deleteUser(const std::string &us
   }
   co_return response;
 }
+
+
+drogon::Task<gnp::dto::BaseApiResponse> UserService::resetUserPassword(const std::string &userId) {
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<Users> mp(dbClient);
+
+  try {
+    // 1. Find the user
+    auto user = co_await mp.findByPrimaryKey(userId);
+
+    // 2. Generate new random password
+    std::string newPassword = gnp::utils::PasswordUtils::generateRandomPassword(8);
+
+    // 3. Update password hash
+    user.setPasswordHash(bcrypt::generateHash(newPassword));
+    user.setUpdatedAt(trantor::Date::now());
+    co_await mp.update(user);
+
+    // 4. Send email with new credentials
+    auto plugin = drogon::app().getPlugin<plugins::GnpServicePlugin>();
+    auto &emailService = plugin->getEmailService();
+
+    dto::SendEmailDto emailDto;
+    emailDto.setTo(gnp::utils::StringUtils::trim(user.getValueOfEmail()));
+    emailDto.setSubject("Graphic News Plus - Password Reset");
+
+    std::string emailBody = R"html(
+      <!DOCTYPE html>
+      <html>
+      <head>
+      <meta charset="UTF-8">
+      <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .header { background-color: #D32F2F; color: #ffffff; padding: 20px; text-align: center; }
+        .content { padding: 30px; color: #333333; }
+        .credentials { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; }
+        .credential-item { margin: 10px 0; }
+        .credential-label { font-weight: bold; color: #666; }
+        .credential-value { font-size: 18px; color: #D32F2F; font-family: monospace; }
+        .footer { background-color: #f4f4f4; color: #666666; padding: 10px; text-align: center; font-size: 12px; }
+      </style>
+      </head>
+      <body>
+      <div class="container">
+        <div class="header">
+          <h1>Graphic News Plus</h1>
+        </div>
+        <div class="content">
+          <p>Hello )html" + user.getValueOfFirstName() + R"html(,</p>
+          <p>Your password for Graphic News Plus has been reset by an administrator.</p>
+          <p>Below are your new login credentials:</p>
+          <div class="credentials">
+            <div class="credential-item">
+              <div class="credential-label">Username:</div>
+              <div class="credential-value">)html" + user.getValueOfUsername() + R"html(</div>
+            </div>
+            <div class="credential-item">
+              <div class="credential-label">Email:</div>
+              <div class="credential-value">)html" + user.getValueOfEmail() + R"html(</div>
+            </div>
+            <div class="credential-item">
+              <div class="credential-label">New Password:</div>
+              <div class="credential-value">)html" + newPassword + R"html(</div>
+            </div>
+          </div>
+          <p>Please keep these credentials secure and change your password after your next login.</p>
+          <p>You can access the platform at: <a href="https://new.graphicnewsplus.com">https://new.graphicnewsplus.com</a></p>
+        </div>
+        <div class="footer">
+          &copy; )html" + trantor::Date::now().toCustomFormattedString("%Y") + R"html( Graphic News Plus. All rights reserved.
+        </div>
+      </div>
+      </body>
+      </html>
+    )html";
+
+    emailDto.setBody(emailBody);
+    co_await emailService.sendEmailAsync(emailDto);
+
+    gnp::dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Password reset successfully. New password has been sent to the user's email.";
+    response.result["userId"] = userId;
+    co_return response;
+
+  } catch (const drogon::orm::UnexpectedRows &e) {
+    gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "User not found";
+    errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+    co_return errorResponse;
+  } catch (const DrogonDbException &e) {
+    gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Database error while resetting password";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+
 
 drogon::Task<gnp::dto::BaseApiResponse> UserService::deletePartnerAdminUser(const std::string &userId, const std::string &partnerId) {
 

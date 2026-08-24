@@ -1489,6 +1489,25 @@ drogon::Task<HttpResponsePtr> AdminController::deleteSubscriber(HttpRequestPtr r
 
 }
 
+drogon::Task<HttpResponsePtr> AdminController::resetSubscriberPassword(HttpRequestPtr req, std::string subscriberId) {
+
+  if (subscriberId.empty()) {
+    auto resp = HttpResponse::newHttpResponse();
+    resp->setStatusCode(k400BadRequest);
+    resp->setBody("Missing required parameters: subscriberId");
+    co_return resp;
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &userService = plugin->getUserService();
+
+  auto apiResp = co_await userService.resetUserPassword(subscriberId);
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+
+}
+
+
+
 
 drogon::Task<HttpResponsePtr> AdminController::deletePartnerSubscriber(HttpRequestPtr req) {
 
