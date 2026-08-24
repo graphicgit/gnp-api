@@ -3533,23 +3533,36 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerAn
 
 
 
- drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::sendPartnerInvoiceByMail(const gnp::dto::ReportDto &dto) {
+
+  drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::sendPartnerInvoiceByMail(const gnp::dto::ReportDto &dto) {
+  LOG_INFO << "[sendPartnerInvoiceByMail] START — partnerId=" << dto.getPartnerId()
+           << " startDate=" << dto.getStartDate() << " endDate=" << dto.getEndDate();
+
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<CommercialPartners> partnerMapper(dbClient);
 
   try {
-    // Validate partner ID
+    // STEP 1: Validate partner ID
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 1 — Validating partner ID";
     if (dto.getPartnerId().empty()) {
+      LOG_ERROR << "[sendPartnerInvoiceByMail] STEP 1 FAILED — Partner ID is empty";
       gnp::dto::BaseApiResponse errorResponse;
       errorResponse.success = false;
       errorResponse.message = "Partner ID is required";
       errorResponse.error["code"] = constants::ERR_VALIDATION;
       co_return errorResponse;
     }
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 1 — Partner ID validated successfully";
 
+    // STEP 2: Fetch partner details
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 2 — Fetching partner details for partnerId=" << dto.getPartnerId();
     auto partner = co_await partnerMapper.findByPrimaryKey(dto.getPartnerId());
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 2 — Partner found: name=" << partner.getValueOfName()
+             << " billingEmail=" << partner.getValueOfBillingEmail()
+             << " costPerHead=" << partner.getValueOfCostPerHead();
 
-    // Query partner_invoices table with aggregated values
+    // STEP 3: Query invoice data
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 3 — Querying invoice data from partner_invoices table";
     std::string sql =
         "SELECT "
         "SUM(invoice_amount) as total_invoice_amount, "
@@ -3558,43 +3571,62 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerAn
         "WHERE partner_id = $1 AND created_at >= $2 AND created_at <= $3";
 
     auto result = co_await dbClient->execSqlCoro(sql, dto.getPartnerId(), dto.getStartDate(), dto.getEndDate());
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 3 — Query executed, result rows=" << result.size();
 
-    // Extract aggregated values
+    // STEP 4: Extract aggregated values
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 4 — Extracting aggregated values";
     double totalInvoiceAmount = result[0]["total_invoice_amount"].isNull() ? 0.0 : result[0]["total_invoice_amount"].as<double>();
     double totalBalance = result[0]["total_balance"].isNull() ? 0.0 : result[0]["total_balance"].as<double>();
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 4 — totalInvoiceAmount=" << totalInvoiceAmount
+             << " totalBalance=" << totalBalance;
 
+    // STEP 5: Parse unit price
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 5 — Parsing unit price";
     double unitPrice = 0.0;
     try {
       unitPrice = std::stod(partner.getValueOfCostPerHead());
-    } catch (...) {
+      LOG_INFO << "[sendPartnerInvoiceByMail] STEP 5 — unitPrice=" << unitPrice;
+    } catch (const std::exception &e) {
+      LOG_ERROR << "[sendPartnerInvoiceByMail] STEP 5 — Failed to parse unitPrice: " << e.what();
       unitPrice = 0.0;
     }
 
-    // Calculate quantity
+    // STEP 6: Calculate quantity
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 6 — Calculating quantity";
     int quantity = 0;
     if (unitPrice > 0 && totalInvoiceAmount > 0) {
       quantity = (int)std::round(totalInvoiceAmount / unitPrice);
+      LOG_INFO << "[sendPartnerInvoiceByMail] STEP 6 — quantity=" << quantity;
+    } else {
+      LOG_WARN << "[sendPartnerInvoiceByMail] STEP 6 — unitPrice=" << unitPrice
+               << " or totalInvoiceAmount=" << totalInvoiceAmount << " is zero, quantity remains 0";
     }
 
-    // Generate invoice data
+    // STEP 7: Generate invoice data
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 7 — Generating invoice data";
     std::string invoiceNo = "INV-" + std::to_string(trantor::Date::now().microSecondsSinceEpoch() / 1000).substr(0, 9);
     std::string dateStr = trantor::Date::now().toCustomFormattedString("%d/%m/%Y");
     std::string dueDateStr = trantor::Date::now().after(14 * 24 * 3600).toCustomFormattedString("%d/%m/%Y");
     std::string billingPeriod = dto.getStartDate() + " - " + dto.getEndDate();
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 7 — invoiceNo=" << invoiceNo
+             << " dateStr=" << dateStr << " dueDateStr=" << dueDateStr
+             << " billingPeriod=" << billingPeriod;
 
-    // Calculate VAT (7.5%)
+    // STEP 8: Calculate VAT and total
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 8 — Calculating VAT and total due";
     double vatRate = 0.075;
     double vat = totalInvoiceAmount * vatRate;
     double totalDue = totalInvoiceAmount + vat;
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 8 — vat=" << vat << " totalDue=" << totalDue;
 
-    // Format currency values
+    // STEP 9: Build email HTML
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 9 — Building email HTML body";
     auto formatCurrency = [](double amount) -> std::string {
       std::ostringstream ss;
       ss << std::fixed << std::setprecision(2) << amount;
       return ss.str();
     };
 
-    // Build email HTML with Tailwind-like styling
     std::string emailBody = R"html(
 <!DOCTYPE html>
 <html>
@@ -3948,31 +3980,55 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerAn
 </body>
 </html>)html";
 
-    // Send email
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 9 — Email HTML body built, size=" << emailBody.size() << " bytes";
+
+    // STEP 10: Get plugins and services
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 10 — Getting GnpServicePlugin and EmailService";
     auto plugin = drogon::app().getPlugin<plugins::GnpServicePlugin>();
     auto &emailService = plugin->getEmailService();
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 10 — Plugin and EmailService obtained successfully";
 
+    // STEP 11: Prepare email DTO
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 11 — Preparing SendEmailDto";
     dto::SendEmailDto emailDto;
     //emailDto.setTo(gnp::utils::StringUtils::trim(partner.getValueOfBillingEmail()));
     emailDto.setTo("francis.osabutey@gmail.com");
     emailDto.setSubject("Invoice " + invoiceNo + " - Graphic News Plus");
-
-    // Add BCC to billing team if needed
-    // emailDto.setBcc("billing@graphic.com.gh");
-
     emailDto.setBody(emailBody);
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 11 — Email DTO prepared: to=" << "francis.osabutey@gmail.com"
+             << " subject=" << emailDto.getSubject();
 
-    co_await emailService.sendEmailAsync(emailDto);
+    // STEP 12: Send email
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 12 — Sending email asynchronously";
+    try {
+      co_await emailService.sendEmailAsync(emailDto);
+      LOG_INFO << "[sendPartnerInvoiceByMail] STEP 12 — Email sent successfully";
+    } catch (const std::exception &e) {
+      LOG_ERROR << "[sendPartnerInvoiceByMail] STEP 12 FAILED — Email sending failed: " << e.what();
+      gnp::dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.message = "Failed to send invoice email";
+      errorResponse.error["code"] = constants::ERR_UNSUPPORTED_OPERATION;
+      errorResponse.error["detail"] = e.what();
+      co_return errorResponse;
+    }
 
+    // STEP 13: Build success response
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 13 — Building success response";
     gnp::dto::BaseApiResponse response;
     response.success = true;
     response.message = "Invoice sent successfully to " + partner.getValueOfBillingEmail();
     response.result["invoiceNo"] = invoiceNo;
     response.result["sentTo"] = partner.getValueOfBillingEmail();
     response.result["totalAmount"] = totalDue;
+    LOG_INFO << "[sendPartnerInvoiceByMail] COMPLETED — invoiceNo=" << invoiceNo
+             << " sentTo=" << partner.getValueOfBillingEmail()
+             << " totalAmount=" << totalDue;
     co_return response;
 
   } catch (const DrogonDbException &e) {
+    LOG_ERROR << "[sendPartnerInvoiceByMail] DATABASE EXCEPTION — " << e.base().what()
+              << " (partnerId=" << dto.getPartnerId() << ")";
     gnp::dto::BaseApiResponse errorResponse;
     errorResponse.success = false;
     errorResponse.message = "Failed to send invoice email";
@@ -3980,6 +4036,8 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerAn
     errorResponse.error["detail"] = e.base().what();
     co_return errorResponse;
   } catch (const std::exception &e) {
+    LOG_ERROR << "[sendPartnerInvoiceByMail] UNHANDLED EXCEPTION — " << e.what()
+              << " (partnerId=" << dto.getPartnerId() << ")";
     gnp::dto::BaseApiResponse errorResponse;
     errorResponse.success = false;
     errorResponse.message = "Failed to send invoice email";
@@ -3988,6 +4046,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerAn
     co_return errorResponse;
   }
 }
+
 
 
 drogon::Task<dto::BaseApiResponse> CommercialPartnerService::bulkUploadSubscribersJson(
