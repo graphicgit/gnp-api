@@ -264,3 +264,15 @@ Task<HttpResponsePtr> AffiliateController::issueBulkAffiliatePayout(HttpRequestP
     auto apiResp = co_await affiliateService.issueBulkPayout();
     co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
+
+drogon::Task<HttpResponsePtr> AffiliateController::getRecentNewspapers(HttpRequestPtr req, const std::string &affiliateId) {
+
+
+    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto &newsPaperService = plugin->getNewsPaperService();
+
+    auto result = co_await newsPaperService.getRecentNewspapersForAffiliate(1, 10, affiliateId);
+
+    auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+    co_return resp;
+}

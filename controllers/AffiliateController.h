@@ -20,6 +20,7 @@ class AffiliateController : public drogon::HttpController<AffiliateController>
     ADD_METHOD_TO(AffiliateController::getAffiliateCommissions, std::string(PREFIX) + "/get-affiliate-commissions", Get, Options);
     ADD_METHOD_TO(AffiliateController::getAffiliatePayouts, std::string(PREFIX) + "/get-affiliate-payouts", Get, Options);
     ADD_METHOD_TO(AffiliateController::issueBulkAffiliatePayout, std::string(PREFIX) + "/issue-bulk-payouts", Get, Options);
+    ADD_METHOD_TO(AffiliateController::getRecentNewspapers, std::string(PREFIX) + "/get-recent-newspapers/{1}", Get, Options);
     METHOD_LIST_END
 
     drogon::Task<HttpResponsePtr> getAllAffiliates(HttpRequestPtr req);
@@ -33,4 +34,7 @@ class AffiliateController : public drogon::HttpController<AffiliateController>
     drogon::Task<HttpResponsePtr> getAffiliateCommissions(HttpRequestPtr req);
     drogon::Task<HttpResponsePtr> getAffiliatePayouts(HttpRequestPtr req);
     drogon::Task<HttpResponsePtr> issueBulkAffiliatePayout(HttpRequestPtr req);
+
+    //anonymous
+    drogon::Task<HttpResponsePtr> getRecentNewspapers(HttpRequestPtr req, const std::string &affiliateId);
 };

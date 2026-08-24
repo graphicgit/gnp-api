@@ -63,6 +63,8 @@ public:
 
     //reports
     drogon::Task<::gnp::dto::BaseApiResponse> getNewspaperEngagementReport(const gnp::dto::ReportDto &dto);
+
+    drogon::Task<gnp::dto::BaseApiResponse> getRecentNewspapersForAffiliate(int pageNo, int pageSize, const std::string &affiliateId);
 };
 
 } // namespace gnp::services

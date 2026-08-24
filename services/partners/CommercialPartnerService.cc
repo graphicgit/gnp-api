@@ -88,8 +88,7 @@ drogon::Task<gnp::dto::BaseApiResponse> CommercialPartnerService::getAll(int pag
     response.result["pageSize"] = pageSize;
     response.result["lowerBound"] = pageSize * (pageNo - 1) + 1;
     response.result["upperBound"] = Json::Value(
-        (int)totalPages == pageNo ? (Json::UInt64)totalCount
-                                  : (Json::UInt64)(pageNo * pageSize));
+        (int)totalPages == pageNo ? (Json::UInt64)totalCount : (Json::UInt64)(pageNo * pageSize));
     response.result["totalPages"] = (int)totalPages;
 
     Json::Value data = Json::arrayValue;
@@ -104,26 +103,17 @@ drogon::Task<gnp::dto::BaseApiResponse> CommercialPartnerService::getAll(int pag
       camelCaseCommercialPartner["partnerIdentifier"] =
           commercialPartnerJson["identifier"];
       camelCaseCommercialPartner["name"] = commercialPartnerJson["name"];
-      camelCaseCommercialPartner["contactName"] =
-          commercialPartnerJson["contact_name"];
-      camelCaseCommercialPartner["contactEmail"] =
-          commercialPartnerJson["contact_email"];
-      camelCaseCommercialPartner["contactPhone"] =
-          commercialPartnerJson["contact_phone"];
-      camelCaseCommercialPartner["billingEmail"] =
-          commercialPartnerJson["billing_email"];
-      camelCaseCommercialPartner["billingCycle"] =
-          commercialPartnerJson["billing_cycle"];
-      camelCaseCommercialPartner["currency"] =
-          commercialPartnerJson["currency"];
+      camelCaseCommercialPartner["contactName"] = commercialPartnerJson["contact_name"];
+      camelCaseCommercialPartner["contactEmail"] = commercialPartnerJson["contact_email"];
+      camelCaseCommercialPartner["contactPhone"] = commercialPartnerJson["contact_phone"];
+      camelCaseCommercialPartner["billingEmail"] = commercialPartnerJson["billing_email"];
+      camelCaseCommercialPartner["billingCycle"] = commercialPartnerJson["billing_cycle"];
+      camelCaseCommercialPartner["currency"] = commercialPartnerJson["currency"];
       camelCaseCommercialPartner["status"] = commercialPartnerJson["status"];
       camelCaseCommercialPartner["accountType"] = commercialPartnerJson["account_type"];
-      camelCaseCommercialPartner["subAccountEnabled"] =
-          commercialPartnerJson["sub_account_enabled"];
-      camelCaseCommercialPartner["subscriberQuota"] =
-          commercialPartnerJson["subscriber_quota"];
-      camelCaseCommercialPartner["createdAt"] =
-          commercialPartnerJson["created_at"];
+      camelCaseCommercialPartner["subAccountEnabled"] = commercialPartnerJson["sub_account_enabled"];
+      camelCaseCommercialPartner["subscriberQuota"] = commercialPartnerJson["subscriber_quota"];
+      camelCaseCommercialPartner["createdAt"] = commercialPartnerJson["created_at"];
 
       data.append(camelCaseCommercialPartner);
     }
