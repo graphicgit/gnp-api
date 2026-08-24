@@ -28,3 +28,28 @@ drogon::Task<HttpResponsePtr> ReportsController::generatePartnerInvoice(HttpRequ
 
 
 }
+
+
+drogon::Task<HttpResponsePtr> ReportsController::generateNewspaperEngagementReport(HttpRequestPtr req) {
+
+
+    auto jsonPtr = req->getJsonObject();
+    if (!jsonPtr) {
+        gnp::dto::BaseApiResponse response;
+        response.success = false;
+        response.error["message"] = "Invalid JSON body";
+        auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+        resp->setStatusCode(k400BadRequest);
+        co_return resp;
+    }
+
+    gnp::dto::ReportDto dto;
+    dto.fromJson(*jsonPtr);
+
+    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto &newspaperService = plugin->getNewsPaperService();
+
+    auto apiResp = co_await newspaperService.getNewspaperEngagementReport(dto);
+    co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+
+}
