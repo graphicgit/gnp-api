@@ -3512,7 +3512,9 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerAn
 
     // VAT calculation (15%)
     double vat = totalInvoiceAmount * 0.15;
+    double getflNhil = totalInvoiceAmount * 0.05;
     invoiceData["vat"] = vat;
+    invoiceData["getflNhil"] = getflNhil;
     invoiceData["discount"] = 0.0;
     invoiceData["totalDue"] = totalInvoiceAmount + vat;
 
@@ -3529,6 +3531,463 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerAn
   }
 }
 
+
+
+ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::sendPartnerInvoiceByMail(const gnp::dto::ReportDto &dto) {
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<CommercialPartners> partnerMapper(dbClient);
+
+  try {
+    // Validate partner ID
+    if (dto.getPartnerId().empty()) {
+      gnp::dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.message = "Partner ID is required";
+      errorResponse.error["code"] = constants::ERR_VALIDATION;
+      co_return errorResponse;
+    }
+
+    auto partner = co_await partnerMapper.findByPrimaryKey(dto.getPartnerId());
+
+    // Query partner_invoices table with aggregated values
+    std::string sql =
+        "SELECT "
+        "SUM(invoice_amount) as total_invoice_amount, "
+        "SUM(balance) as total_balance "
+        "FROM partner_invoices "
+        "WHERE partner_id = $1 AND created_at >= $2 AND created_at <= $3";
+
+    auto result = co_await dbClient->execSqlCoro(sql, dto.getPartnerId(), dto.getStartDate(), dto.getEndDate());
+
+    // Extract aggregated values
+    double totalInvoiceAmount = result[0]["total_invoice_amount"].isNull() ? 0.0 : result[0]["total_invoice_amount"].as<double>();
+    double totalBalance = result[0]["total_balance"].isNull() ? 0.0 : result[0]["total_balance"].as<double>();
+
+    double unitPrice = 0.0;
+    try {
+      unitPrice = std::stod(partner.getValueOfCostPerHead());
+    } catch (...) {
+      unitPrice = 0.0;
+    }
+
+    // Calculate quantity
+    int quantity = 0;
+    if (unitPrice > 0 && totalInvoiceAmount > 0) {
+      quantity = (int)std::round(totalInvoiceAmount / unitPrice);
+    }
+
+    // Generate invoice data
+    std::string invoiceNo = "INV-" + std::to_string(trantor::Date::now().microSecondsSinceEpoch() / 1000).substr(0, 9);
+    std::string dateStr = trantor::Date::now().toCustomFormattedString("%d/%m/%Y");
+    std::string dueDateStr = trantor::Date::now().after(14 * 24 * 3600).toCustomFormattedString("%d/%m/%Y");
+    std::string billingPeriod = dto.getStartDate() + " - " + dto.getEndDate();
+
+    // Calculate VAT (7.5%)
+    double vatRate = 0.075;
+    double vat = totalInvoiceAmount * vatRate;
+    double totalDue = totalInvoiceAmount + vat;
+
+    // Format currency values
+    auto formatCurrency = [](double amount) -> std::string {
+      std::ostringstream ss;
+      ss << std::fixed << std::setprecision(2) << amount;
+      return ss.str();
+    };
+
+    // Build email HTML with Tailwind-like styling
+    std::string emailBody = R"html(
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f3f4f6;
+    padding: 40px 20px;
+  }
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+    overflow: hidden;
+  }
+  .header {
+    background: #ffffff;
+    padding: 30px 40px;
+    border-bottom: 2px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .logo {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1f2937;
+    letter-spacing: -0.5px;
+  }
+  .logo span {
+    color: #dc2626;
+  }
+  .invoice-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #6b7280;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .invoice-title h2 {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1f2937;
+    letter-spacing: 0;
+    margin-top: 2px;
+  }
+  .body-content {
+    padding: 30px 40px 40px;
+  }
+  .info-grid {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .info-group {
+    flex: 1;
+  }
+  .info-group:last-child {
+    text-align: right;
+  }
+  .info-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .info-value {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1f2937;
+  }
+  .info-value.sub {
+    font-weight: 400;
+    color: #4b5563;
+  }
+  .billed-to {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .billed-to .label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .billed-to .name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1f2937;
+  }
+  .billed-to .email {
+    font-size: 14px;
+    color: #6b7280;
+  }
+  .billing-period {
+    margin-bottom: 20px;
+  }
+  .billing-period .label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .billing-period .value {
+    font-size: 16px;
+    font-weight: 500;
+    color: #1f2937;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0 30px;
+  }
+  thead {
+    background-color: #f9fafb;
+  }
+  th {
+    text-align: left;
+    padding: 12px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #e5e7eb;
+  }
+  td {
+    padding: 14px 16px;
+    font-size: 14px;
+    color: #1f2937;
+    border-bottom: 1px solid #f3f4f6;
+  }
+  .text-right {
+    text-align: right;
+  }
+  .font-mono {
+    font-family: 'Courier New', monospace;
+  }
+  .summary {
+    max-width: 320px;
+    margin-left: auto;
+    margin-top: 20px;
+  }
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 14px;
+    color: #4b5563;
+  }
+  .summary-row.total {
+    border-top: 2px solid #1f2937;
+    margin-top: 4px;
+    padding-top: 14px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #1f2937;
+  }
+  .summary-row .label {
+    font-weight: 500;
+  }
+  .summary-row .value {
+    font-weight: 600;
+  }
+  .summary-row.total .value {
+    color: #dc2626;
+  }
+  .footer {
+    background: #f9fafb;
+    padding: 30px 40px;
+    border-top: 1px solid #e5e7eb;
+  }
+  .footer-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 10px;
+  }
+  .footer p {
+    font-size: 14px;
+    color: #4b5563;
+    line-height: 1.6;
+    margin-bottom: 4px;
+  }
+  .footer .highlight {
+    font-weight: 600;
+    color: #1f2937;
+  }
+  .footer .contact {
+    margin-top: 10px;
+    color: #6b7280;
+    font-size: 13px;
+  }
+  .footer .contact a {
+    color: #dc2626;
+    text-decoration: none;
+  }
+  .footer .contact a:hover {
+    text-decoration: underline;
+  }
+  @media (max-width: 600px) {
+    .header {
+      flex-direction: column;
+      gap: 12px;
+      text-align: center;
+      padding: 20px;
+    }
+    .info-grid {
+      flex-direction: column;
+      gap: 12px;
+    }
+    .info-group:last-child {
+      text-align: left;
+    }
+    .body-content {
+      padding: 20px;
+    }
+    .footer {
+      padding: 20px;
+    }
+    .summary {
+      max-width: 100%;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-left">
+      <span class="logo">GRAPHIC <span>NEWS</span> PLUS</span>
+    </div>
+    <div class="invoice-title">
+      <div>INVOICE</div>
+      <h2>#)html" + invoiceNo + R"html(</h2>
+    </div>
+  </div>
+
+  <!-- BODY -->
+  <div class="body-content">
+
+    <!-- Info Grid -->
+    <div class="info-grid">
+      <div class="info-group">
+        <div class="info-label">Invoice Date</div>
+        <div class="info-value">)html" + dateStr + R"html(</div>
+      </div>
+      <div class="info-group">
+        <div class="info-label">Due Date</div>
+        <div class="info-value">)html" + dueDateStr + R"html(</div>
+      </div>
+      <div class="info-group">
+        <div class="info-label">Invoice No</div>
+        <div class="info-value">)html" + invoiceNo + R"html(</div>
+      </div>
+    </div>
+
+    <!-- Billed To -->
+    <div class="billed-to">
+      <div class="label">Billed To</div>
+      <div class="name">)html" + partner.getValueOfName() + R"html(</div>
+      <div class="email">)html" + partner.getValueOfBillingEmail() + R"html(</div>
+    </div>
+
+    <!-- Billing Period -->
+    <div class="billing-period">
+      <div class="label">Billing Period</div>
+      <div class="value">)html" + billingPeriod + R"html(</div>
+    </div>
+
+    <!-- Table -->
+    <table>
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th style="text-align: right;">Qty / Imps</th>
+          <th style="text-align: right;">Unit Price ($)</th>
+          <th style="text-align: right;">Amount ($)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Invoice for new and renewed subscriptions</td>
+          <td class="text-right font-mono">)html" + std::to_string(quantity) + R"html(</td>
+          <td class="text-right font-mono">)html" + formatCurrency(unitPrice) + R"html(</td>
+          <td class="text-right font-mono">)html" + formatCurrency(totalInvoiceAmount) + R"html(</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Summary -->
+    <div class="summary">
+      <div class="summary-row">
+        <span class="label">Subtotal</span>
+        <span class="value">GHS )html" + formatCurrency(totalInvoiceAmount) + R"html(</span>
+      </div>
+      <div class="summary-row">
+        <span class="label">VAT (7.5%)</span>
+        <span class="value">GHS )html" + formatCurrency(vat) + R"html(</span>
+      </div>
+      <div class="summary-row">
+        <span class="label">Discount</span>
+        <span class="value">GHS 0.00</span>
+      </div>
+      <div class="summary-row total">
+        <span class="label">Total Due</span>
+        <span class="value">GHS )html" + formatCurrency(totalDue) + R"html(</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-title">Payment Instructions:</div>
+    <p>Please make payment to Graphic Communications Group Ltd. via Bank Transfer.</p>
+    <p><span class="highlight">Bank:</span> Ghana Commercial Bank (GCB)</p>
+    <p><span class="highlight">Account No:</span> 3201001382531</p>
+    <p><span class="highlight">Branch:</span> High Street</p>
+    <p class="contact">
+      If you have any questions concerning this invoice, please contact
+      <a href="mailto:billing@graphic.com.gh">billing@graphic.com.gh</a>
+    </p>
+  </div>
+
+</div>
+
+</body>
+</html>)html";
+
+    // Send email
+    auto plugin = drogon::app().getPlugin<plugins::GnpServicePlugin>();
+    auto &emailService = plugin->getEmailService();
+
+    dto::SendEmailDto emailDto;
+    //emailDto.setTo(gnp::utils::StringUtils::trim(partner.getValueOfBillingEmail()));
+    emailDto.setTo("francis.osabutey@gmail.com");
+    emailDto.setSubject("Invoice " + invoiceNo + " - Graphic News Plus");
+
+    // Add BCC to billing team if needed
+    // emailDto.setBcc("billing@graphic.com.gh");
+
+    emailDto.setBody(emailBody);
+
+    co_await emailService.sendEmailAsync(emailDto);
+
+    gnp::dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Invoice sent successfully to " + partner.getValueOfBillingEmail();
+    response.result["invoiceNo"] = invoiceNo;
+    response.result["sentTo"] = partner.getValueOfBillingEmail();
+    response.result["totalAmount"] = totalDue;
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to send invoice email";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  } catch (const std::exception &e) {
+    gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to send invoice email";
+    errorResponse.error["code"] = constants::ERR_UNSUPPORTED_OPERATION;
+    errorResponse.error["detail"] = e.what();
+    co_return errorResponse;
+  }
+}
 
 
 drogon::Task<dto::BaseApiResponse> CommercialPartnerService::bulkUploadSubscribersJson(

@@ -1729,7 +1729,6 @@ drogon::Task<gnp::dto::BaseApiResponse> UserService::resetUserPassword(const std
 }
 
 
-
 drogon::Task<gnp::dto::BaseApiResponse> UserService::deletePartnerAdminUser(const std::string &userId, const std::string &partnerId) {
 
   auto dbClient = drogon::app().getDbClient();

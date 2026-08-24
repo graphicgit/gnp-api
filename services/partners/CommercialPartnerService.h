@@ -101,6 +101,8 @@ public:
 
     drogon::Task<::gnp::dto::BaseApiResponse> getPartnerInvoiceGenerationReport(const gnp::dto::ReportDto &dto);
 
+    drogon::Task<::gnp::dto::BaseApiResponse> sendPartnerInvoiceByMail(const gnp::dto::ReportDto &dto);
+
     drogon::Task<::gnp::dto::BaseApiResponse> bulkUploadSubscribersJson(std::string partnerId, const Json::Value &jsonArray);
 
     drogon::Task<::gnp::dto::BaseApiResponse> updatePartnerQuota(std::string partnerId, const dto::PartnerQuotaDto &dto);
