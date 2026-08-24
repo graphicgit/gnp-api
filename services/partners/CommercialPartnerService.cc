@@ -1333,6 +1333,164 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::deletePartner(const
   }
 }
 
+
+
+
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::deactivateSubscriber(const std::string &partnerId, const std::string &id) {
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<Users> userMapper(dbClient);
+  CoroMapper<UserSubscriptions> subMapper(dbClient);
+
+  try {
+    // 1. Verify user exists and belongs to the partner
+    auto user = co_await userMapper.findOne(
+        Criteria(Users::Cols::_id, CompareOperator::EQ, id) &&
+        Criteria(Users::Cols::_partner_id, CompareOperator::EQ, partnerId));
+
+    // 2. Check if user has an active subscription
+    auto subscriptions = co_await subMapper.findBy(
+        Criteria(UserSubscriptions::Cols::_user_id, CompareOperator::EQ, id) &&
+        Criteria(UserSubscriptions::Cols::_is_active, CompareOperator::EQ, true));
+
+    if (!subscriptions.empty()) {
+      // Deactivate the subscription
+      auto sub = subscriptions[0];
+      sub.setIsActive(false);
+      co_await subMapper.update(sub);
+    }
+
+    // 3. Deactivate the user
+    user.setIsActive(false);
+    co_await userMapper.update(user);
+
+    // 4. Update partner quota (recover the seat)
+    CoroMapper<CommercialPartners> partnerMapper(dbClient);
+    auto partner = co_await partnerMapper.findByPrimaryKey(partnerId);
+    partner.setRemainingQuota(partner.getValueOfRemainingQuota() + 1);
+    co_await partnerMapper.update(partner);
+
+    dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Subscriber deactivated successfully";
+    response.result["userId"] = id;
+    response.result["status"] = "Inactive";
+    co_return response;
+
+  } catch (const drogon::orm::UnexpectedRows &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Subscriber not found or does not belong to this partner";
+    errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+    co_return errorResponse;
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Database error while deactivating subscriber";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::resetSubscriberPassword(const std::string &partnerId, const std::string &id) {
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<Users> mp(dbClient);
+
+  try {
+    // 1. Verify user exists and belongs to the partner
+    auto user = co_await mp.findOne(
+        Criteria(Users::Cols::_id, CompareOperator::EQ, id) &&
+        Criteria(Users::Cols::_partner_id, CompareOperator::EQ, partnerId));
+
+    // 2. Generate new password
+    std::string newPassword = utils::PasswordUtils::generateRandomPassword(8);
+
+    // 3. Update password hash
+    user.setPasswordHash(bcrypt::generateHash(newPassword));
+    co_await mp.update(user);
+
+    // 4. Send email with new credentials
+    auto plugin = drogon::app().getPlugin<plugins::GnpServicePlugin>();
+    auto &emailService = plugin->getEmailService();
+
+    dto::SendEmailDto emailDto;
+    emailDto.setTo(gnp::utils::StringUtils::trim(user.getValueOfEmail()));
+    emailDto.setSubject("Graphic News Plus - Password Reset");
+
+    std::string emailBody = R"html(
+      <!DOCTYPE html>
+      <html>
+      <head>
+      <meta charset="UTF-8">
+      <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .header { background-color: #D32F2F; color: #ffffff; padding: 20px; text-align: center; }
+        .content { padding: 30px; color: #333333; }
+        .credentials { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; }
+        .credential-item { margin: 10px 0; }
+        .credential-label { font-weight: bold; color: #666; }
+        .credential-value { font-size: 18px; color: #D32F2F; font-family: monospace; }
+        .footer { background-color: #f4f4f4; color: #666666; padding: 10px; text-align: center; font-size: 12px; }
+      </style>
+      </head>
+      <body>
+      <div class="container">
+        <div class="header">
+          <h1>Graphic News Plus</h1>
+        </div>
+        <div class="content">
+          <p>Hello )html" + user.getValueOfFirstName() + R"html(,</p>
+          <p>Your password for Graphic News Plus has been reset by your organization administrator.</p>
+          <p>Below are your new login credentials:</p>
+          <div class="credentials">
+            <div class="credential-item">
+              <div class="credential-label">Username (Email):</div>
+              <div class="credential-value">)html" + user.getValueOfEmail() + R"html(</div>
+            </div>
+            <div class="credential-item">
+              <div class="credential-label">New Password:</div>
+              <div class="credential-value">)html" + newPassword + R"html(</div>
+            </div>
+          </div>
+          <p>Please keep these credentials secure and change your password after your next login.</p>
+          <p>You can access the platform at: <a href="https://new.graphicnewsplus.com">https://new.graphicnewsplus.com</a></p>
+        </div>
+        <div class="footer">
+          &copy; )html" + trantor::Date::now().toCustomFormattedString("%Y") + R"html( Graphic News Plus. All rights reserved.
+        </div>
+      </div>
+      </body>
+      </html>
+    )html";
+
+    emailDto.setBody(emailBody);
+    co_await emailService.sendEmailAsync(emailDto);
+
+    dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Password reset successfully. New password has been sent to the subscriber's email.";
+    response.result["userId"] = id;
+    co_return response;
+
+  } catch (const drogon::orm::UnexpectedRows &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Subscriber not found or does not belong to this partner";
+    errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+    co_return errorResponse;
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Database error while resetting password";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+
+
 // for admin use
 drogon::Task<dto::BaseApiResponse> CommercialPartnerService::getPartnerStats() {
 

@@ -267,7 +267,6 @@ Task<HttpResponsePtr> AffiliateController::issueBulkAffiliatePayout(HttpRequestP
 
 drogon::Task<HttpResponsePtr> AffiliateController::getRecentNewspapers(HttpRequestPtr req, const std::string &affiliateId) {
 
-
     auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
     auto &newsPaperService = plugin->getNewsPaperService();
 

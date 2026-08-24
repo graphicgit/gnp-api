@@ -26,12 +26,10 @@ drogon::Task<HttpResponsePtr> ReportsController::generatePartnerInvoice(HttpRequ
     auto apiResp = co_await commercialPartnerService.getPartnerInvoiceGenerationReport(dto);
     co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 
-
 }
 
 
 drogon::Task<HttpResponsePtr> ReportsController::generateNewspaperEngagementReport(HttpRequestPtr req) {
-
 
     auto jsonPtr = req->getJsonObject();
     if (!jsonPtr) {

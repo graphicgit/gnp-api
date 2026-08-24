@@ -769,3 +769,32 @@ Task<HttpResponsePtr> PartnerController::getSubscriberSubscriptionDetails(HttpRe
 
 }
 
+
+Task<HttpResponsePtr> PartnerController::deactivateSubscriber(HttpRequestPtr req, const std::string &subscriberId) {
+
+  auto partnerId = req->attributes()->get<std::string>("partnerId");
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &commercialPartnerService = plugin->getCommercialPartnerService();
+
+  auto result = co_await commercialPartnerService.deactivateSubscriber(partnerId, subscriberId);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+
+}
+
+
+
+Task<HttpResponsePtr> PartnerController::resetSubscriberPassword(HttpRequestPtr req, const std::string &subscriberId) {
+
+  auto partnerId = req->attributes()->get<std::string>("partnerId");
+
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &commercialPartnerService = plugin->getCommercialPartnerService();
+
+  auto result = co_await commercialPartnerService.resetSubscriberPassword(partnerId, subscriberId);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+
+}

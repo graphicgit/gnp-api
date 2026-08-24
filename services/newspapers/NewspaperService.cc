@@ -224,6 +224,7 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::getRecentNewspapersFor
   CoroMapper<Newspapers> mp(dbClient);
 
   //check if partner id exists
+  //track number of times the affiliate link was called
 
   // 1. Build the search criteria: Only published and non archived newspapers
   Criteria searchCriteria = Criteria(Newspapers::Cols::_is_published, CompareOperator::EQ, true) && Criteria(Newspapers::Cols::_is_archived, CompareOperator::EQ, false);
