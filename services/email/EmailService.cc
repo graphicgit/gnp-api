@@ -12,8 +12,7 @@ drogon::Task<gnp::dto::BaseApiResponse> EmailService::sendEmailAsync(const dto::
 
   try {
     // call an api to push the email.
-    auto client =
-        drogon::HttpClient::newHttpClient("https://archive.graphic.com.gh");
+    auto client = drogon::HttpClient::newHttpClient("https://archive.graphic.com.gh");
 
     auto &app = drogon::app();
     auto customConfig = app.getCustomConfig();
