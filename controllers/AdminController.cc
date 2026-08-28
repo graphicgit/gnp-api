@@ -1467,7 +1467,7 @@ drogon::Task<HttpResponsePtr> AdminController::createAffiliate(HttpRequestPtr re
 }
 
 
-drogon::Task<HttpResponsePtr> AdminController::updateAffiliate(HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::updateAffiliate(HttpRequestPtr req, const std::string &affiliateId) {
 
   gnp::dto::BaseApiResponse response;
   response.success = true;
@@ -1479,7 +1479,7 @@ drogon::Task<HttpResponsePtr> AdminController::updateAffiliate(HttpRequestPtr re
 }
 
 
-drogon::Task<HttpResponsePtr> AdminController::updateAffiliateProfileImage(HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::updateAffiliateProfileImage(HttpRequestPtr req, const std::string &affiliateId) {
 
   gnp::dto::BaseApiResponse response;
   response.success = true;
