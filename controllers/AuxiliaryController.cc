@@ -5,15 +5,15 @@
 #include "dto/PartnerOnboardingDto.h"
 #include "plugins/GnpServicePlugin.h"
 #include "models/PartnerApiRequestLogs.h"
-#include "models/CommercialPartnerApiKeys.h"
 #include <drogon/utils/coroutine.h>
-#include <drogon/orm/CoroMapper.h>
 #include <trantor/utils/Logger.h>
 #include <trantor/utils/Date.h>
 #include <algorithm>
 
 namespace {
-    // Coroutine: resolves ClientId -> partner_id + api_key_id, then inserts the log row.
+    // Coroutine: logs the request/response to PartnerApiRequestLogs.
+    // NOTE: This endpoint is a system integration (no ClientId/ApiKey in the request),
+    // so partner_id and api_key_id fields are intentionally left unset.
     drogon::Task<void> logApiRequestAsync(
             const drogon::HttpRequestPtr& req,
             const drogon::HttpResponsePtr& resp,
@@ -27,28 +27,9 @@ namespace {
         logEntry.setRequestIp(req->peerAddr().toIp());
         logEntry.setUserAgent(req->getHeader("User-Agent"));
         logEntry.setCreatedAt(startTime);
-
-        const std::string clientId = req->getHeader("ClientId");
-        if (!clientId.empty()) {
-            logEntry.setClientId(clientId);
-
-            // Resolve partner_id and api_key_id from the ClientId header.
-            try {
-                auto dbClient = drogon::app().getDbClient();
-                drogon::orm::CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> keyMapper(dbClient);
-                auto apiKey = co_await keyMapper.findOne(
-                    drogon::orm::Criteria(
-                        drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_client_id,
-                        drogon::orm::CompareOperator::EQ,
-                        clientId));
-                logEntry.setPartnerId(apiKey.getValueOfPartnerId());
-                logEntry.setApiKeyId(apiKey.getValueOfId());
-            } catch (const drogon::orm::DrogonDbException& e) {
-                // ClientId not found (e.g. bad/missing key) — log anyway without FK fields.
-                LOG_WARN << "[logApiRequestAsync] Could not resolve ClientId '" << clientId
-                         << "' to an API key: " << e.base().what();
-            }
-        }
+        logEntry.setClientId("gnp_TDEXLvnWgM"); // mtn client secret
+        logEntry.setPartnerId("5731e4cd-8226-43b8-81c4-cb436fa0a007"); // mtn partner id
+        logEntry.setApiKeyId("d37c07a6-0e73-43c8-972b-109d93b8920d"); // mtn api key
 
         if (req->getJsonObject()) {
             logEntry.setRequestBody(req->getJsonObject()->toStyledString());
