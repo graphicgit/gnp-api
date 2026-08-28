@@ -65,6 +65,8 @@ public:
   // auth
   drogon::Task<dto::BaseApiResponse> validateUserCredentials(const dto::SigninDto &signin_dto);
 
+  drogon::Task<dto::BaseApiResponse> validateAffiliateUserCredentials(const dto::SigninDto &signin_dto);
+
   drogon::Task<dto::BaseApiResponse> validateUserPasskeys(const dto::LoginUserPasskeyDto &passkeyDto);
 
   drogon::Task<dto::BaseApiResponse> validateAdminUserCredentials(const dto::SigninDto &signin_dto);

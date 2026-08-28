@@ -632,8 +632,7 @@ SubscriptionService::completeUserOneTimeBuyAsync(const std::string &userId,
   co_return response;
 }
 
-drogon::Task<gnp::dto::BaseApiResponse>
-SubscriptionService::validateNewsPaperEntitlementAsync(
+drogon::Task<gnp::dto::BaseApiResponse> SubscriptionService::validateNewsPaperEntitlementAsync(
     const std::string &newsPaperId, const std::string &userId) {
 
   dto::BaseApiResponse response;
@@ -693,6 +692,7 @@ SubscriptionService::validateNewsPaperEntitlementAsync(
 
   co_return response;
 }
+
 
 void SubscriptionService::grantNewsPaperAccessToRequester(
     const dto::GrantNewsPaperAccessDto &dto,

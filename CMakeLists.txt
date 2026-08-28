@@ -75,8 +75,7 @@ add_executable(${PROJECT_NAME} main.cc
         services/quartz/QuartzApi.cc
         services/affiliates/AffiliateService.h
         services/affiliates/AffiliateService.cc
-        dto/CreateAffiliateDto.h
-        dto/UpdateAffiliateDto.h
+        dto/AffiliateDto.h
         controllers/AffiliateController.cc
         services/coupons/CouponService.h
         services/coupons/CouponService.cc
@@ -151,6 +150,12 @@ add_executable(${PROJECT_NAME} main.cc
         constants/NotificationTypes.h
         dto/ArticleDto.h
         dto/ReportDto.h
+        dto/AffiliateSignupDto.h
+        utils/TimeUtils.h
+        utils/TimeUtils.cc
+        dto/AffiliateSettingsDto.h
+        services/games/GameManager.h
+        services/games/GameManager.cc
 )
 
 # ##############################################################################

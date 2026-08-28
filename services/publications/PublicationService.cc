@@ -66,9 +66,6 @@ drogon::Task<gnp::dto::BaseApiResponse> PublicationService::getAllPublications(i
       camelCasePublication["description"] = publicationJson["description"];
       camelCasePublication["price"] = publicationJson["price"];
       camelCasePublication["sortOrder"] = publicationJson["sort_order"];
-      camelCasePublication["sortOrder"] = publicationJson["sort_order"];
-      //camelCasePublication["publishingDays"] = publicationJson["publishing_days"];
-      camelCasePublication["updatedAt"] = publicationJson["updated_at"];
 
       data.append(camelCasePublication);
     }
@@ -93,9 +90,8 @@ drogon::Task<BaseApiResponse> PublicationService::create(const gnp::dto::Publica
 
   newPublication.setName(dto.getName());
   newPublication.setDescription(dto.getDescription());
-  newPublication.setType(dto.getType());
   newPublication.setPrice(dto.getPrice());
-  newPublication.setIsActive(true);
+  newPublication.setIsActive(dto.getActive());
 
   try {
     auto publication = co_await mp.insert(newPublication);
@@ -132,6 +128,8 @@ drogon::Task<gnp::dto::BaseApiResponse> PublicationService::update(const dto::Pu
       publication.setDescription(dto.getDescription());
     if (!dto.getPrice().empty())
       publication.setPrice(dto.getPrice());
+
+    publication.setIsActive(dto.getActive());
 
     try {
       co_await mp.update(publication);

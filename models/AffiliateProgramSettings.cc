@@ -15,8 +15,10 @@ using namespace drogon_model::Gnp;
 
 const std::string AffiliateProgramSettings::Cols::_id = "\"id\"";
 const std::string AffiliateProgramSettings::Cols::_default_commission_rate = "\"default_commission_rate\"";
+const std::string AffiliateProgramSettings::Cols::_minimum_payout_amount = "\"minimum_payout_amount\"";
 const std::string AffiliateProgramSettings::Cols::_maximum_payout_amount = "\"maximum_payout_amount\"";
 const std::string AffiliateProgramSettings::Cols::_payout_schedule = "\"payout_schedule\"";
+const std::string AffiliateProgramSettings::Cols::_session_duration = "\"session_duration\"";
 const std::string AffiliateProgramSettings::Cols::_terms_and_conditions = "\"terms_and_conditions\"";
 const std::string AffiliateProgramSettings::primaryKeyName = "id";
 const bool AffiliateProgramSettings::hasPrimaryKey = true;
@@ -25,9 +27,11 @@ const std::string AffiliateProgramSettings::tableName = "\"affiliate_program_set
 const std::vector<typename AffiliateProgramSettings::MetaData> AffiliateProgramSettings::metaData_={
 {"id","std::string","uuid",0,0,1,1},
 {"default_commission_rate","std::string","numeric",0,0,0,1},
+{"minimum_payout_amount","std::string","numeric",0,0,0,1},
 {"maximum_payout_amount","std::string","numeric",0,0,0,1},
-{"payout_schedule","std::string","character varying",20,0,0,1},
-{"terms_and_conditions","std::string","character varying",250,0,0,1}
+{"payout_schedule","int32_t","integer",4,0,0,0},
+{"session_duration","int32_t","integer",4,0,0,0},
+{"terms_and_conditions","std::string","character varying",1000,0,0,1}
 };
 const std::string &AffiliateProgramSettings::getColumnName(size_t index) noexcept(false)
 {
@@ -46,13 +50,21 @@ AffiliateProgramSettings::AffiliateProgramSettings(const Row &r, const ssize_t i
         {
             defaultCommissionRate_=std::make_shared<std::string>(r["default_commission_rate"].as<std::string>());
         }
+        if(!r["minimum_payout_amount"].isNull())
+        {
+            minimumPayoutAmount_=std::make_shared<std::string>(r["minimum_payout_amount"].as<std::string>());
+        }
         if(!r["maximum_payout_amount"].isNull())
         {
             maximumPayoutAmount_=std::make_shared<std::string>(r["maximum_payout_amount"].as<std::string>());
         }
         if(!r["payout_schedule"].isNull())
         {
-            payoutSchedule_=std::make_shared<std::string>(r["payout_schedule"].as<std::string>());
+            payoutSchedule_=std::make_shared<int32_t>(r["payout_schedule"].as<int32_t>());
+        }
+        if(!r["session_duration"].isNull())
+        {
+            sessionDuration_=std::make_shared<int32_t>(r["session_duration"].as<int32_t>());
         }
         if(!r["terms_and_conditions"].isNull())
         {
@@ -62,7 +74,7 @@ AffiliateProgramSettings::AffiliateProgramSettings(const Row &r, const ssize_t i
     else
     {
         size_t offset = (size_t)indexOffset;
-        if(offset + 5 > r.size())
+        if(offset + 7 > r.size())
         {
             LOG_FATAL << "Invalid SQL result for this model";
             return;
@@ -81,14 +93,24 @@ AffiliateProgramSettings::AffiliateProgramSettings(const Row &r, const ssize_t i
         index = offset + 2;
         if(!r[index].isNull())
         {
-            maximumPayoutAmount_=std::make_shared<std::string>(r[index].as<std::string>());
+            minimumPayoutAmount_=std::make_shared<std::string>(r[index].as<std::string>());
         }
         index = offset + 3;
         if(!r[index].isNull())
         {
-            payoutSchedule_=std::make_shared<std::string>(r[index].as<std::string>());
+            maximumPayoutAmount_=std::make_shared<std::string>(r[index].as<std::string>());
         }
         index = offset + 4;
+        if(!r[index].isNull())
+        {
+            payoutSchedule_=std::make_shared<int32_t>(r[index].as<int32_t>());
+        }
+        index = offset + 5;
+        if(!r[index].isNull())
+        {
+            sessionDuration_=std::make_shared<int32_t>(r[index].as<int32_t>());
+        }
+        index = offset + 6;
         if(!r[index].isNull())
         {
             termsAndConditions_=std::make_shared<std::string>(r[index].as<std::string>());
@@ -99,7 +121,7 @@ AffiliateProgramSettings::AffiliateProgramSettings(const Row &r, const ssize_t i
 
 AffiliateProgramSettings::AffiliateProgramSettings(const Json::Value &pJson, const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 5)
+    if(pMasqueradingVector.size() != 7)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -125,7 +147,7 @@ AffiliateProgramSettings::AffiliateProgramSettings(const Json::Value &pJson, con
         dirtyFlag_[2] = true;
         if(!pJson[pMasqueradingVector[2]].isNull())
         {
-            maximumPayoutAmount_=std::make_shared<std::string>(pJson[pMasqueradingVector[2]].asString());
+            minimumPayoutAmount_=std::make_shared<std::string>(pJson[pMasqueradingVector[2]].asString());
         }
     }
     if(!pMasqueradingVector[3].empty() && pJson.isMember(pMasqueradingVector[3]))
@@ -133,7 +155,7 @@ AffiliateProgramSettings::AffiliateProgramSettings(const Json::Value &pJson, con
         dirtyFlag_[3] = true;
         if(!pJson[pMasqueradingVector[3]].isNull())
         {
-            payoutSchedule_=std::make_shared<std::string>(pJson[pMasqueradingVector[3]].asString());
+            maximumPayoutAmount_=std::make_shared<std::string>(pJson[pMasqueradingVector[3]].asString());
         }
     }
     if(!pMasqueradingVector[4].empty() && pJson.isMember(pMasqueradingVector[4]))
@@ -141,7 +163,23 @@ AffiliateProgramSettings::AffiliateProgramSettings(const Json::Value &pJson, con
         dirtyFlag_[4] = true;
         if(!pJson[pMasqueradingVector[4]].isNull())
         {
-            termsAndConditions_=std::make_shared<std::string>(pJson[pMasqueradingVector[4]].asString());
+            payoutSchedule_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[4]].asInt64());
+        }
+    }
+    if(!pMasqueradingVector[5].empty() && pJson.isMember(pMasqueradingVector[5]))
+    {
+        dirtyFlag_[5] = true;
+        if(!pJson[pMasqueradingVector[5]].isNull())
+        {
+            sessionDuration_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[5]].asInt64());
+        }
+    }
+    if(!pMasqueradingVector[6].empty() && pJson.isMember(pMasqueradingVector[6]))
+    {
+        dirtyFlag_[6] = true;
+        if(!pJson[pMasqueradingVector[6]].isNull())
+        {
+            termsAndConditions_=std::make_shared<std::string>(pJson[pMasqueradingVector[6]].asString());
         }
     }
 }
@@ -164,9 +202,17 @@ AffiliateProgramSettings::AffiliateProgramSettings(const Json::Value &pJson) noe
             defaultCommissionRate_=std::make_shared<std::string>(pJson["default_commission_rate"].asString());
         }
     }
-    if(pJson.isMember("maximum_payout_amount"))
+    if(pJson.isMember("minimum_payout_amount"))
     {
         dirtyFlag_[2]=true;
+        if(!pJson["minimum_payout_amount"].isNull())
+        {
+            minimumPayoutAmount_=std::make_shared<std::string>(pJson["minimum_payout_amount"].asString());
+        }
+    }
+    if(pJson.isMember("maximum_payout_amount"))
+    {
+        dirtyFlag_[3]=true;
         if(!pJson["maximum_payout_amount"].isNull())
         {
             maximumPayoutAmount_=std::make_shared<std::string>(pJson["maximum_payout_amount"].asString());
@@ -174,15 +220,23 @@ AffiliateProgramSettings::AffiliateProgramSettings(const Json::Value &pJson) noe
     }
     if(pJson.isMember("payout_schedule"))
     {
-        dirtyFlag_[3]=true;
+        dirtyFlag_[4]=true;
         if(!pJson["payout_schedule"].isNull())
         {
-            payoutSchedule_=std::make_shared<std::string>(pJson["payout_schedule"].asString());
+            payoutSchedule_=std::make_shared<int32_t>((int32_t)pJson["payout_schedule"].asInt64());
+        }
+    }
+    if(pJson.isMember("session_duration"))
+    {
+        dirtyFlag_[5]=true;
+        if(!pJson["session_duration"].isNull())
+        {
+            sessionDuration_=std::make_shared<int32_t>((int32_t)pJson["session_duration"].asInt64());
         }
     }
     if(pJson.isMember("terms_and_conditions"))
     {
-        dirtyFlag_[4]=true;
+        dirtyFlag_[6]=true;
         if(!pJson["terms_and_conditions"].isNull())
         {
             termsAndConditions_=std::make_shared<std::string>(pJson["terms_and_conditions"].asString());
@@ -193,7 +247,7 @@ AffiliateProgramSettings::AffiliateProgramSettings(const Json::Value &pJson) noe
 void AffiliateProgramSettings::updateByMasqueradedJson(const Json::Value &pJson,
                                             const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 5)
+    if(pMasqueradingVector.size() != 7)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -218,7 +272,7 @@ void AffiliateProgramSettings::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[2] = true;
         if(!pJson[pMasqueradingVector[2]].isNull())
         {
-            maximumPayoutAmount_=std::make_shared<std::string>(pJson[pMasqueradingVector[2]].asString());
+            minimumPayoutAmount_=std::make_shared<std::string>(pJson[pMasqueradingVector[2]].asString());
         }
     }
     if(!pMasqueradingVector[3].empty() && pJson.isMember(pMasqueradingVector[3]))
@@ -226,7 +280,7 @@ void AffiliateProgramSettings::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[3] = true;
         if(!pJson[pMasqueradingVector[3]].isNull())
         {
-            payoutSchedule_=std::make_shared<std::string>(pJson[pMasqueradingVector[3]].asString());
+            maximumPayoutAmount_=std::make_shared<std::string>(pJson[pMasqueradingVector[3]].asString());
         }
     }
     if(!pMasqueradingVector[4].empty() && pJson.isMember(pMasqueradingVector[4]))
@@ -234,7 +288,23 @@ void AffiliateProgramSettings::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[4] = true;
         if(!pJson[pMasqueradingVector[4]].isNull())
         {
-            termsAndConditions_=std::make_shared<std::string>(pJson[pMasqueradingVector[4]].asString());
+            payoutSchedule_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[4]].asInt64());
+        }
+    }
+    if(!pMasqueradingVector[5].empty() && pJson.isMember(pMasqueradingVector[5]))
+    {
+        dirtyFlag_[5] = true;
+        if(!pJson[pMasqueradingVector[5]].isNull())
+        {
+            sessionDuration_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[5]].asInt64());
+        }
+    }
+    if(!pMasqueradingVector[6].empty() && pJson.isMember(pMasqueradingVector[6]))
+    {
+        dirtyFlag_[6] = true;
+        if(!pJson[pMasqueradingVector[6]].isNull())
+        {
+            termsAndConditions_=std::make_shared<std::string>(pJson[pMasqueradingVector[6]].asString());
         }
     }
 }
@@ -256,9 +326,17 @@ void AffiliateProgramSettings::updateByJson(const Json::Value &pJson) noexcept(f
             defaultCommissionRate_=std::make_shared<std::string>(pJson["default_commission_rate"].asString());
         }
     }
-    if(pJson.isMember("maximum_payout_amount"))
+    if(pJson.isMember("minimum_payout_amount"))
     {
         dirtyFlag_[2] = true;
+        if(!pJson["minimum_payout_amount"].isNull())
+        {
+            minimumPayoutAmount_=std::make_shared<std::string>(pJson["minimum_payout_amount"].asString());
+        }
+    }
+    if(pJson.isMember("maximum_payout_amount"))
+    {
+        dirtyFlag_[3] = true;
         if(!pJson["maximum_payout_amount"].isNull())
         {
             maximumPayoutAmount_=std::make_shared<std::string>(pJson["maximum_payout_amount"].asString());
@@ -266,15 +344,23 @@ void AffiliateProgramSettings::updateByJson(const Json::Value &pJson) noexcept(f
     }
     if(pJson.isMember("payout_schedule"))
     {
-        dirtyFlag_[3] = true;
+        dirtyFlag_[4] = true;
         if(!pJson["payout_schedule"].isNull())
         {
-            payoutSchedule_=std::make_shared<std::string>(pJson["payout_schedule"].asString());
+            payoutSchedule_=std::make_shared<int32_t>((int32_t)pJson["payout_schedule"].asInt64());
+        }
+    }
+    if(pJson.isMember("session_duration"))
+    {
+        dirtyFlag_[5] = true;
+        if(!pJson["session_duration"].isNull())
+        {
+            sessionDuration_=std::make_shared<int32_t>((int32_t)pJson["session_duration"].asInt64());
         }
     }
     if(pJson.isMember("terms_and_conditions"))
     {
-        dirtyFlag_[4] = true;
+        dirtyFlag_[6] = true;
         if(!pJson["terms_and_conditions"].isNull())
         {
             termsAndConditions_=std::make_shared<std::string>(pJson["terms_and_conditions"].asString());
@@ -331,6 +417,28 @@ void AffiliateProgramSettings::setDefaultCommissionRate(std::string &&pDefaultCo
     dirtyFlag_[1] = true;
 }
 
+const std::string &AffiliateProgramSettings::getValueOfMinimumPayoutAmount() const noexcept
+{
+    static const std::string defaultValue = std::string();
+    if(minimumPayoutAmount_)
+        return *minimumPayoutAmount_;
+    return defaultValue;
+}
+const std::shared_ptr<std::string> &AffiliateProgramSettings::getMinimumPayoutAmount() const noexcept
+{
+    return minimumPayoutAmount_;
+}
+void AffiliateProgramSettings::setMinimumPayoutAmount(const std::string &pMinimumPayoutAmount) noexcept
+{
+    minimumPayoutAmount_ = std::make_shared<std::string>(pMinimumPayoutAmount);
+    dirtyFlag_[2] = true;
+}
+void AffiliateProgramSettings::setMinimumPayoutAmount(std::string &&pMinimumPayoutAmount) noexcept
+{
+    minimumPayoutAmount_ = std::make_shared<std::string>(std::move(pMinimumPayoutAmount));
+    dirtyFlag_[2] = true;
+}
+
 const std::string &AffiliateProgramSettings::getValueOfMaximumPayoutAmount() const noexcept
 {
     static const std::string defaultValue = std::string();
@@ -345,34 +453,56 @@ const std::shared_ptr<std::string> &AffiliateProgramSettings::getMaximumPayoutAm
 void AffiliateProgramSettings::setMaximumPayoutAmount(const std::string &pMaximumPayoutAmount) noexcept
 {
     maximumPayoutAmount_ = std::make_shared<std::string>(pMaximumPayoutAmount);
-    dirtyFlag_[2] = true;
+    dirtyFlag_[3] = true;
 }
 void AffiliateProgramSettings::setMaximumPayoutAmount(std::string &&pMaximumPayoutAmount) noexcept
 {
     maximumPayoutAmount_ = std::make_shared<std::string>(std::move(pMaximumPayoutAmount));
-    dirtyFlag_[2] = true;
+    dirtyFlag_[3] = true;
 }
 
-const std::string &AffiliateProgramSettings::getValueOfPayoutSchedule() const noexcept
+const int32_t &AffiliateProgramSettings::getValueOfPayoutSchedule() const noexcept
 {
-    static const std::string defaultValue = std::string();
+    static const int32_t defaultValue = int32_t();
     if(payoutSchedule_)
         return *payoutSchedule_;
     return defaultValue;
 }
-const std::shared_ptr<std::string> &AffiliateProgramSettings::getPayoutSchedule() const noexcept
+const std::shared_ptr<int32_t> &AffiliateProgramSettings::getPayoutSchedule() const noexcept
 {
     return payoutSchedule_;
 }
-void AffiliateProgramSettings::setPayoutSchedule(const std::string &pPayoutSchedule) noexcept
+void AffiliateProgramSettings::setPayoutSchedule(const int32_t &pPayoutSchedule) noexcept
 {
-    payoutSchedule_ = std::make_shared<std::string>(pPayoutSchedule);
-    dirtyFlag_[3] = true;
+    payoutSchedule_ = std::make_shared<int32_t>(pPayoutSchedule);
+    dirtyFlag_[4] = true;
 }
-void AffiliateProgramSettings::setPayoutSchedule(std::string &&pPayoutSchedule) noexcept
+void AffiliateProgramSettings::setPayoutScheduleToNull() noexcept
 {
-    payoutSchedule_ = std::make_shared<std::string>(std::move(pPayoutSchedule));
-    dirtyFlag_[3] = true;
+    payoutSchedule_.reset();
+    dirtyFlag_[4] = true;
+}
+
+const int32_t &AffiliateProgramSettings::getValueOfSessionDuration() const noexcept
+{
+    static const int32_t defaultValue = int32_t();
+    if(sessionDuration_)
+        return *sessionDuration_;
+    return defaultValue;
+}
+const std::shared_ptr<int32_t> &AffiliateProgramSettings::getSessionDuration() const noexcept
+{
+    return sessionDuration_;
+}
+void AffiliateProgramSettings::setSessionDuration(const int32_t &pSessionDuration) noexcept
+{
+    sessionDuration_ = std::make_shared<int32_t>(pSessionDuration);
+    dirtyFlag_[5] = true;
+}
+void AffiliateProgramSettings::setSessionDurationToNull() noexcept
+{
+    sessionDuration_.reset();
+    dirtyFlag_[5] = true;
 }
 
 const std::string &AffiliateProgramSettings::getValueOfTermsAndConditions() const noexcept
@@ -389,12 +519,12 @@ const std::shared_ptr<std::string> &AffiliateProgramSettings::getTermsAndConditi
 void AffiliateProgramSettings::setTermsAndConditions(const std::string &pTermsAndConditions) noexcept
 {
     termsAndConditions_ = std::make_shared<std::string>(pTermsAndConditions);
-    dirtyFlag_[4] = true;
+    dirtyFlag_[6] = true;
 }
 void AffiliateProgramSettings::setTermsAndConditions(std::string &&pTermsAndConditions) noexcept
 {
     termsAndConditions_ = std::make_shared<std::string>(std::move(pTermsAndConditions));
-    dirtyFlag_[4] = true;
+    dirtyFlag_[6] = true;
 }
 
 void AffiliateProgramSettings::updateId(const uint64_t id)
@@ -406,8 +536,10 @@ const std::vector<std::string> &AffiliateProgramSettings::insertColumns() noexce
     static const std::vector<std::string> inCols={
         "id",
         "default_commission_rate",
+        "minimum_payout_amount",
         "maximum_payout_amount",
         "payout_schedule",
+        "session_duration",
         "terms_and_conditions"
     };
     return inCols;
@@ -439,6 +571,17 @@ void AffiliateProgramSettings::outputArgs(drogon::orm::internal::SqlBinder &bind
     }
     if(dirtyFlag_[2])
     {
+        if(getMinimumPayoutAmount())
+        {
+            binder << getValueOfMinimumPayoutAmount();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[3])
+    {
         if(getMaximumPayoutAmount())
         {
             binder << getValueOfMaximumPayoutAmount();
@@ -448,7 +591,7 @@ void AffiliateProgramSettings::outputArgs(drogon::orm::internal::SqlBinder &bind
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[3])
+    if(dirtyFlag_[4])
     {
         if(getPayoutSchedule())
         {
@@ -459,7 +602,18 @@ void AffiliateProgramSettings::outputArgs(drogon::orm::internal::SqlBinder &bind
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[4])
+    if(dirtyFlag_[5])
+    {
+        if(getSessionDuration())
+        {
+            binder << getValueOfSessionDuration();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[6])
     {
         if(getTermsAndConditions())
         {
@@ -495,6 +649,14 @@ const std::vector<std::string> AffiliateProgramSettings::updateColumns() const
     {
         ret.push_back(getColumnName(4));
     }
+    if(dirtyFlag_[5])
+    {
+        ret.push_back(getColumnName(5));
+    }
+    if(dirtyFlag_[6])
+    {
+        ret.push_back(getColumnName(6));
+    }
     return ret;
 }
 
@@ -524,6 +686,17 @@ void AffiliateProgramSettings::updateArgs(drogon::orm::internal::SqlBinder &bind
     }
     if(dirtyFlag_[2])
     {
+        if(getMinimumPayoutAmount())
+        {
+            binder << getValueOfMinimumPayoutAmount();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[3])
+    {
         if(getMaximumPayoutAmount())
         {
             binder << getValueOfMaximumPayoutAmount();
@@ -533,7 +706,7 @@ void AffiliateProgramSettings::updateArgs(drogon::orm::internal::SqlBinder &bind
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[3])
+    if(dirtyFlag_[4])
     {
         if(getPayoutSchedule())
         {
@@ -544,7 +717,18 @@ void AffiliateProgramSettings::updateArgs(drogon::orm::internal::SqlBinder &bind
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[4])
+    if(dirtyFlag_[5])
+    {
+        if(getSessionDuration())
+        {
+            binder << getValueOfSessionDuration();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[6])
     {
         if(getTermsAndConditions())
         {
@@ -575,6 +759,14 @@ Json::Value AffiliateProgramSettings::toJson() const
     {
         ret["default_commission_rate"]=Json::Value();
     }
+    if(getMinimumPayoutAmount())
+    {
+        ret["minimum_payout_amount"]=getValueOfMinimumPayoutAmount();
+    }
+    else
+    {
+        ret["minimum_payout_amount"]=Json::Value();
+    }
     if(getMaximumPayoutAmount())
     {
         ret["maximum_payout_amount"]=getValueOfMaximumPayoutAmount();
@@ -590,6 +782,14 @@ Json::Value AffiliateProgramSettings::toJson() const
     else
     {
         ret["payout_schedule"]=Json::Value();
+    }
+    if(getSessionDuration())
+    {
+        ret["session_duration"]=getValueOfSessionDuration();
+    }
+    else
+    {
+        ret["session_duration"]=Json::Value();
     }
     if(getTermsAndConditions())
     {
@@ -611,7 +811,7 @@ Json::Value AffiliateProgramSettings::toMasqueradedJson(
     const std::vector<std::string> &pMasqueradingVector) const
 {
     Json::Value ret;
-    if(pMasqueradingVector.size() == 5)
+    if(pMasqueradingVector.size() == 7)
     {
         if(!pMasqueradingVector[0].empty())
         {
@@ -637,9 +837,9 @@ Json::Value AffiliateProgramSettings::toMasqueradedJson(
         }
         if(!pMasqueradingVector[2].empty())
         {
-            if(getMaximumPayoutAmount())
+            if(getMinimumPayoutAmount())
             {
-                ret[pMasqueradingVector[2]]=getValueOfMaximumPayoutAmount();
+                ret[pMasqueradingVector[2]]=getValueOfMinimumPayoutAmount();
             }
             else
             {
@@ -648,9 +848,9 @@ Json::Value AffiliateProgramSettings::toMasqueradedJson(
         }
         if(!pMasqueradingVector[3].empty())
         {
-            if(getPayoutSchedule())
+            if(getMaximumPayoutAmount())
             {
-                ret[pMasqueradingVector[3]]=getValueOfPayoutSchedule();
+                ret[pMasqueradingVector[3]]=getValueOfMaximumPayoutAmount();
             }
             else
             {
@@ -659,13 +859,35 @@ Json::Value AffiliateProgramSettings::toMasqueradedJson(
         }
         if(!pMasqueradingVector[4].empty())
         {
-            if(getTermsAndConditions())
+            if(getPayoutSchedule())
             {
-                ret[pMasqueradingVector[4]]=getValueOfTermsAndConditions();
+                ret[pMasqueradingVector[4]]=getValueOfPayoutSchedule();
             }
             else
             {
                 ret[pMasqueradingVector[4]]=Json::Value();
+            }
+        }
+        if(!pMasqueradingVector[5].empty())
+        {
+            if(getSessionDuration())
+            {
+                ret[pMasqueradingVector[5]]=getValueOfSessionDuration();
+            }
+            else
+            {
+                ret[pMasqueradingVector[5]]=Json::Value();
+            }
+        }
+        if(!pMasqueradingVector[6].empty())
+        {
+            if(getTermsAndConditions())
+            {
+                ret[pMasqueradingVector[6]]=getValueOfTermsAndConditions();
+            }
+            else
+            {
+                ret[pMasqueradingVector[6]]=Json::Value();
             }
         }
         return ret;
@@ -687,6 +909,14 @@ Json::Value AffiliateProgramSettings::toMasqueradedJson(
     {
         ret["default_commission_rate"]=Json::Value();
     }
+    if(getMinimumPayoutAmount())
+    {
+        ret["minimum_payout_amount"]=getValueOfMinimumPayoutAmount();
+    }
+    else
+    {
+        ret["minimum_payout_amount"]=Json::Value();
+    }
     if(getMaximumPayoutAmount())
     {
         ret["maximum_payout_amount"]=getValueOfMaximumPayoutAmount();
@@ -702,6 +932,14 @@ Json::Value AffiliateProgramSettings::toMasqueradedJson(
     else
     {
         ret["payout_schedule"]=Json::Value();
+    }
+    if(getSessionDuration())
+    {
+        ret["session_duration"]=getValueOfSessionDuration();
+    }
+    else
+    {
+        ret["session_duration"]=Json::Value();
     }
     if(getTermsAndConditions())
     {
@@ -726,24 +964,29 @@ bool AffiliateProgramSettings::validateJsonForCreation(const Json::Value &pJson,
         if(!validJsonOfField(1, "default_commission_rate", pJson["default_commission_rate"], err, true))
             return false;
     }
+    if(pJson.isMember("minimum_payout_amount"))
+    {
+        if(!validJsonOfField(2, "minimum_payout_amount", pJson["minimum_payout_amount"], err, true))
+            return false;
+    }
     if(pJson.isMember("maximum_payout_amount"))
     {
-        if(!validJsonOfField(2, "maximum_payout_amount", pJson["maximum_payout_amount"], err, true))
+        if(!validJsonOfField(3, "maximum_payout_amount", pJson["maximum_payout_amount"], err, true))
             return false;
     }
     if(pJson.isMember("payout_schedule"))
     {
-        if(!validJsonOfField(3, "payout_schedule", pJson["payout_schedule"], err, true))
+        if(!validJsonOfField(4, "payout_schedule", pJson["payout_schedule"], err, true))
             return false;
     }
-    else
+    if(pJson.isMember("session_duration"))
     {
-        err="The payout_schedule column cannot be null";
-        return false;
+        if(!validJsonOfField(5, "session_duration", pJson["session_duration"], err, true))
+            return false;
     }
     if(pJson.isMember("terms_and_conditions"))
     {
-        if(!validJsonOfField(4, "terms_and_conditions", pJson["terms_and_conditions"], err, true))
+        if(!validJsonOfField(6, "terms_and_conditions", pJson["terms_and_conditions"], err, true))
             return false;
     }
     else
@@ -757,7 +1000,7 @@ bool AffiliateProgramSettings::validateMasqueradedJsonForCreation(const Json::Va
                                                                   const std::vector<std::string> &pMasqueradingVector,
                                                                   std::string &err)
 {
-    if(pMasqueradingVector.size() != 5)
+    if(pMasqueradingVector.size() != 7)
     {
         err = "Bad masquerading vector";
         return false;
@@ -794,11 +1037,6 @@ bool AffiliateProgramSettings::validateMasqueradedJsonForCreation(const Json::Va
               if(!validJsonOfField(3, pMasqueradingVector[3], pJson[pMasqueradingVector[3]], err, true))
                   return false;
           }
-        else
-        {
-            err="The " + pMasqueradingVector[3] + " column cannot be null";
-            return false;
-        }
       }
       if(!pMasqueradingVector[4].empty())
       {
@@ -807,9 +1045,25 @@ bool AffiliateProgramSettings::validateMasqueradedJsonForCreation(const Json::Va
               if(!validJsonOfField(4, pMasqueradingVector[4], pJson[pMasqueradingVector[4]], err, true))
                   return false;
           }
+      }
+      if(!pMasqueradingVector[5].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[5]))
+          {
+              if(!validJsonOfField(5, pMasqueradingVector[5], pJson[pMasqueradingVector[5]], err, true))
+                  return false;
+          }
+      }
+      if(!pMasqueradingVector[6].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[6]))
+          {
+              if(!validJsonOfField(6, pMasqueradingVector[6], pJson[pMasqueradingVector[6]], err, true))
+                  return false;
+          }
         else
         {
-            err="The " + pMasqueradingVector[4] + " column cannot be null";
+            err="The " + pMasqueradingVector[6] + " column cannot be null";
             return false;
         }
       }
@@ -838,19 +1092,29 @@ bool AffiliateProgramSettings::validateJsonForUpdate(const Json::Value &pJson, s
         if(!validJsonOfField(1, "default_commission_rate", pJson["default_commission_rate"], err, false))
             return false;
     }
+    if(pJson.isMember("minimum_payout_amount"))
+    {
+        if(!validJsonOfField(2, "minimum_payout_amount", pJson["minimum_payout_amount"], err, false))
+            return false;
+    }
     if(pJson.isMember("maximum_payout_amount"))
     {
-        if(!validJsonOfField(2, "maximum_payout_amount", pJson["maximum_payout_amount"], err, false))
+        if(!validJsonOfField(3, "maximum_payout_amount", pJson["maximum_payout_amount"], err, false))
             return false;
     }
     if(pJson.isMember("payout_schedule"))
     {
-        if(!validJsonOfField(3, "payout_schedule", pJson["payout_schedule"], err, false))
+        if(!validJsonOfField(4, "payout_schedule", pJson["payout_schedule"], err, false))
+            return false;
+    }
+    if(pJson.isMember("session_duration"))
+    {
+        if(!validJsonOfField(5, "session_duration", pJson["session_duration"], err, false))
             return false;
     }
     if(pJson.isMember("terms_and_conditions"))
     {
-        if(!validJsonOfField(4, "terms_and_conditions", pJson["terms_and_conditions"], err, false))
+        if(!validJsonOfField(6, "terms_and_conditions", pJson["terms_and_conditions"], err, false))
             return false;
     }
     return true;
@@ -859,7 +1123,7 @@ bool AffiliateProgramSettings::validateMasqueradedJsonForUpdate(const Json::Valu
                                                                 const std::vector<std::string> &pMasqueradingVector,
                                                                 std::string &err)
 {
-    if(pMasqueradingVector.size() != 5)
+    if(pMasqueradingVector.size() != 7)
     {
         err = "Bad masquerading vector";
         return false;
@@ -893,6 +1157,16 @@ bool AffiliateProgramSettings::validateMasqueradedJsonForUpdate(const Json::Valu
       if(!pMasqueradingVector[4].empty() && pJson.isMember(pMasqueradingVector[4]))
       {
           if(!validJsonOfField(4, pMasqueradingVector[4], pJson[pMasqueradingVector[4]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[5].empty() && pJson.isMember(pMasqueradingVector[5]))
+      {
+          if(!validJsonOfField(5, pMasqueradingVector[5], pJson[pMasqueradingVector[5]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[6].empty() && pJson.isMember(pMasqueradingVector[6]))
+      {
+          if(!validJsonOfField(6, pMasqueradingVector[6], pJson[pMasqueradingVector[6]], err, false))
               return false;
       }
     }
@@ -958,16 +1232,30 @@ bool AffiliateProgramSettings::validJsonOfField(size_t index,
                 err="Type error in the "+fieldName+" field";
                 return false;
             }
-            if(pJson.isString() && std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>{}
-                .from_bytes(pJson.asCString()).size() > 20)
+            break;
+        case 4:
+            if(pJson.isNull())
             {
-                err="String length exceeds limit for the " +
-                    fieldName +
-                    " field (the maximum value is 20)";
+                return true;
+            }
+            if(!pJson.isInt())
+            {
+                err="Type error in the "+fieldName+" field";
                 return false;
             }
             break;
-        case 4:
+        case 5:
+            if(pJson.isNull())
+            {
+                return true;
+            }
+            if(!pJson.isInt())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 6:
             if(pJson.isNull())
             {
                 err="The " + fieldName + " column cannot be null";
@@ -979,11 +1267,11 @@ bool AffiliateProgramSettings::validJsonOfField(size_t index,
                 return false;
             }
             if(pJson.isString() && std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>{}
-                .from_bytes(pJson.asCString()).size() > 250)
+                .from_bytes(pJson.asCString()).size() > 1000)
             {
                 err="String length exceeds limit for the " +
                     fieldName +
-                    " field (the maximum value is 250)";
+                    " field (the maximum value is 1000)";
                 return false;
             }
             break;

@@ -149,7 +149,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CouponService::createAsync(const ::gnp
 
     coupon.setUsageQuota(dto.getUsageQuota());
     coupon.setUsageCount(0);
-    coupon.setStatus(constants::StatusTypes::Draft);
+    coupon.setStatus(constants::StatusTypes::DRAFT);
     coupon.setCreatedAt(trantor::Date::now());
 
     auto inserted = co_await mapper.insert(coupon);

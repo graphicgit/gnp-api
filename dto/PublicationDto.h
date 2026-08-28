@@ -20,13 +20,13 @@ namespace gnp::dto {
         // Getters
         [[nodiscard]] const std::string& getName() const { return name_; }
         [[nodiscard]] const std::string& getDescription() const { return description_; }
-        [[nodiscard]] int getType() const { return type_; }
+        [[nodiscard]] bool getActive() const { return is_active_; }
         [[nodiscard]] const std::string& getPrice() const { return price_; }
 
         // Setters
         void setName(const std::string& name) { name_ = name; }
         void setDescription(const std::string& description) { description_ = description; }
-        void setType(int type) { type_ = type; }
+        void setActive(bool type) { is_active_ = type; }
         void setPrice(const std::string& price) { price_ = price; }
 
     private:
@@ -34,7 +34,7 @@ namespace gnp::dto {
         std::string name_;
         std::string description_;
         std::string price_;
-        int type_ = 0;
+        bool is_active_ = false;
 
     };
 
@@ -45,16 +45,16 @@ namespace gnp::dto {
             name_ = json["name"].asString();
         }
 
-        if (json.isMember("type") && !json["type"].isNull()) {
-            type_ = json["type"].asInt();
-        }
-
         if (json.isMember("description") && !json["description"].isNull()) {
             description_ = json["description"].asString();
         }
 
         if (json.isMember("price") && !json["price"].isNull()) {
             price_ = json["price"].asString();
+        }
+
+        if (json.isMember("isActive") && !json["isActive"].isNull()) {
+           setActive(json["isActive"].asBool());
         }
 
     }

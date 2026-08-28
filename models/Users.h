@@ -73,6 +73,7 @@ class Users
         static const std::string _last_active;
         static const std::string _roles;
         static const std::string _profile_image;
+        static const std::string _affiliate_id;
     };
 
     static const int primaryKeyNumber;
@@ -403,8 +404,18 @@ class Users
     void setProfileImage(const std::string &pProfileImage) noexcept;
     void setProfileImageToNull() noexcept;
 
+    /**  For column affiliate_id  */
+    ///Get the value of the column affiliate_id, returns the default value if the column is null
+    const std::string &getValueOfAffiliateId() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getAffiliateId() const noexcept;
+    ///Set the value of the column affiliate_id
+    void setAffiliateId(const std::string &pAffiliateId) noexcept;
+    void setAffiliateId(std::string &&pAffiliateId) noexcept;
+    void setAffiliateIdToNull() noexcept;
 
-    static size_t getColumnNumber() noexcept {  return 29;  }
+
+    static size_t getColumnNumber() noexcept {  return 30;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -455,6 +466,7 @@ class Users
     std::shared_ptr<::trantor::Date> lastActive_;
     std::shared_ptr<std::string> roles_;
     std::shared_ptr<std::vector<char>> profileImage_;
+    std::shared_ptr<std::string> affiliateId_;
     struct MetaData
     {
         const std::string colName_;
@@ -466,7 +478,7 @@ class Users
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[29]={ false };
+    bool dirtyFlag_[30]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -635,6 +647,11 @@ class Users
         if(dirtyFlag_[28])
         {
             sql += "profile_image,";
+            ++parametersCount;
+        }
+        if(dirtyFlag_[29])
+        {
+            sql += "affiliate_id,";
             ++parametersCount;
         }
         if(parametersCount > 0)
@@ -821,6 +838,11 @@ class Users
             sql.append(placeholderStr, n);
         }
         if(dirtyFlag_[28])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[29])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);

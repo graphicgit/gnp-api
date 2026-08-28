@@ -4,11 +4,90 @@
 #include "dto/MtnBroadBandCallbackResponseDto.h"
 #include "dto/PartnerOnboardingDto.h"
 #include "plugins/GnpServicePlugin.h"
+#include "models/PartnerApiRequestLogs.h"
+#include "models/CommercialPartnerApiKeys.h"
+#include <drogon/utils/coroutine.h>
+#include <drogon/orm/CoroMapper.h>
 #include <trantor/utils/Logger.h>
+#include <trantor/utils/Date.h>
 #include <algorithm>
+
+namespace {
+    // Coroutine: resolves ClientId -> partner_id + api_key_id, then inserts the log row.
+    drogon::Task<void> logApiRequestAsync(
+            const drogon::HttpRequestPtr& req,
+            const drogon::HttpResponsePtr& resp,
+            const trantor::Date& startTime) {
+        auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+        auto logService = &plugin->getPartnerApiLogService();
+
+        drogon_model::Gnp::PartnerApiRequestLogs logEntry;
+        logEntry.setEndpoint(req->path());
+        logEntry.setMethod(req->methodString());
+        logEntry.setRequestIp(req->peerAddr().toIp());
+        logEntry.setUserAgent(req->getHeader("User-Agent"));
+        logEntry.setCreatedAt(startTime);
+
+        const std::string clientId = req->getHeader("ClientId");
+        if (!clientId.empty()) {
+            logEntry.setClientId(clientId);
+
+            // Resolve partner_id and api_key_id from the ClientId header.
+            try {
+                auto dbClient = drogon::app().getDbClient();
+                drogon::orm::CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> keyMapper(dbClient);
+                auto apiKey = co_await keyMapper.findOne(
+                    drogon::orm::Criteria(
+                        drogon_model::Gnp::CommercialPartnerApiKeys::Cols::_client_id,
+                        drogon::orm::CompareOperator::EQ,
+                        clientId));
+                logEntry.setPartnerId(apiKey.getValueOfPartnerId());
+                logEntry.setApiKeyId(apiKey.getValueOfId());
+            } catch (const drogon::orm::DrogonDbException& e) {
+                // ClientId not found (e.g. bad/missing key) — log anyway without FK fields.
+                LOG_WARN << "[logApiRequestAsync] Could not resolve ClientId '" << clientId
+                         << "' to an API key: " << e.base().what();
+            }
+        }
+
+        if (req->getJsonObject()) {
+            logEntry.setRequestBody(req->getJsonObject()->toStyledString());
+        }
+
+        if (!req->getParameters().empty()) {
+            Json::Value params(Json::objectValue);
+            for (const auto& [k, v] : req->getParameters()) {
+                params[k] = v;
+            }
+            logEntry.setRequestParams(params.toStyledString());
+        }
+
+        logEntry.setResponseStatusCode(resp->statusCode());
+        logEntry.setResponseBody(std::string(resp->getBody()));
+        logEntry.setIsSuccessful(resp->statusCode() >= 200 && resp->statusCode() < 300);
+
+        auto endTime = trantor::Date::now();
+        logEntry.setCompletedAt(endTime);
+        logEntry.setResponseTimeMs(
+            static_cast<int32_t>(
+                (endTime.microSecondsSinceEpoch() - startTime.microSecondsSinceEpoch()) / 1000));
+
+        co_await logService->logRequestAsync(logEntry);
+    }
+
+    // Thin fire-and-forget wrapper so call-sites stay non-blocking.
+    void logApiRequest(const drogon::HttpRequestPtr& req,
+                       const drogon::HttpResponsePtr& resp,
+                       const trantor::Date& startTime) {
+        drogon::async_run([req, resp, startTime]() -> drogon::Task<void> {
+            co_await logApiRequestAsync(req, resp, startTime);
+        });
+    }
+}
 
 
 Task<HttpResponsePtr> AuxiliaryController::handleMtnLoyaltyCallback(HttpRequestPtr req) {
+    auto startTime = trantor::Date::now();
 
     auto jsonPtr = req->getJsonObject();
 
@@ -18,6 +97,7 @@ Task<HttpResponsePtr> AuxiliaryController::handleMtnLoyaltyCallback(HttpRequestP
         response.error["message"] = "Invalid JSON body";
         auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
         resp->setStatusCode(k400BadRequest);
+        logApiRequest(req, resp, startTime);
         co_return resp;
     }
 
@@ -85,7 +165,9 @@ Task<HttpResponsePtr> AuxiliaryController::handleMtnLoyaltyCallback(HttpRequestP
     gnp::dto::BaseApiResponse apiResp;
     apiResp.success = true;
     apiResp.message = "Callback processed";
-    co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+    auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+    logApiRequest(req, resp, startTime);
+    co_return resp;
 }
 
 

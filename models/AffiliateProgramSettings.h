@@ -46,8 +46,10 @@ class AffiliateProgramSettings
     {
         static const std::string _id;
         static const std::string _default_commission_rate;
+        static const std::string _minimum_payout_amount;
         static const std::string _maximum_payout_amount;
         static const std::string _payout_schedule;
+        static const std::string _session_duration;
         static const std::string _terms_and_conditions;
     };
 
@@ -118,6 +120,15 @@ class AffiliateProgramSettings
     void setDefaultCommissionRate(const std::string &pDefaultCommissionRate) noexcept;
     void setDefaultCommissionRate(std::string &&pDefaultCommissionRate) noexcept;
 
+    /**  For column minimum_payout_amount  */
+    ///Get the value of the column minimum_payout_amount, returns the default value if the column is null
+    const std::string &getValueOfMinimumPayoutAmount() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getMinimumPayoutAmount() const noexcept;
+    ///Set the value of the column minimum_payout_amount
+    void setMinimumPayoutAmount(const std::string &pMinimumPayoutAmount) noexcept;
+    void setMinimumPayoutAmount(std::string &&pMinimumPayoutAmount) noexcept;
+
     /**  For column maximum_payout_amount  */
     ///Get the value of the column maximum_payout_amount, returns the default value if the column is null
     const std::string &getValueOfMaximumPayoutAmount() const noexcept;
@@ -129,12 +140,21 @@ class AffiliateProgramSettings
 
     /**  For column payout_schedule  */
     ///Get the value of the column payout_schedule, returns the default value if the column is null
-    const std::string &getValueOfPayoutSchedule() const noexcept;
+    const int32_t &getValueOfPayoutSchedule() const noexcept;
     ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<std::string> &getPayoutSchedule() const noexcept;
+    const std::shared_ptr<int32_t> &getPayoutSchedule() const noexcept;
     ///Set the value of the column payout_schedule
-    void setPayoutSchedule(const std::string &pPayoutSchedule) noexcept;
-    void setPayoutSchedule(std::string &&pPayoutSchedule) noexcept;
+    void setPayoutSchedule(const int32_t &pPayoutSchedule) noexcept;
+    void setPayoutScheduleToNull() noexcept;
+
+    /**  For column session_duration  */
+    ///Get the value of the column session_duration, returns the default value if the column is null
+    const int32_t &getValueOfSessionDuration() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<int32_t> &getSessionDuration() const noexcept;
+    ///Set the value of the column session_duration
+    void setSessionDuration(const int32_t &pSessionDuration) noexcept;
+    void setSessionDurationToNull() noexcept;
 
     /**  For column terms_and_conditions  */
     ///Get the value of the column terms_and_conditions, returns the default value if the column is null
@@ -146,7 +166,7 @@ class AffiliateProgramSettings
     void setTermsAndConditions(std::string &&pTermsAndConditions) noexcept;
 
 
-    static size_t getColumnNumber() noexcept {  return 5;  }
+    static size_t getColumnNumber() noexcept {  return 7;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -170,8 +190,10 @@ class AffiliateProgramSettings
     void updateId(const uint64_t id);
     std::shared_ptr<std::string> id_;
     std::shared_ptr<std::string> defaultCommissionRate_;
+    std::shared_ptr<std::string> minimumPayoutAmount_;
     std::shared_ptr<std::string> maximumPayoutAmount_;
-    std::shared_ptr<std::string> payoutSchedule_;
+    std::shared_ptr<int32_t> payoutSchedule_;
+    std::shared_ptr<int32_t> sessionDuration_;
     std::shared_ptr<std::string> termsAndConditions_;
     struct MetaData
     {
@@ -184,7 +206,7 @@ class AffiliateProgramSettings
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[5]={ false };
+    bool dirtyFlag_[7]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -214,18 +236,31 @@ class AffiliateProgramSettings
         {
             needSelection=true;
         }
-        sql += "maximum_payout_amount,";
+        sql += "minimum_payout_amount,";
         ++parametersCount;
         if(!dirtyFlag_[2])
         {
             needSelection=true;
         }
-        if(dirtyFlag_[3])
+        sql += "maximum_payout_amount,";
+        ++parametersCount;
+        if(!dirtyFlag_[3])
         {
-            sql += "payout_schedule,";
-            ++parametersCount;
+            needSelection=true;
         }
-        if(dirtyFlag_[4])
+        sql += "payout_schedule,";
+        ++parametersCount;
+        if(!dirtyFlag_[4])
+        {
+            needSelection=true;
+        }
+        sql += "session_duration,";
+        ++parametersCount;
+        if(!dirtyFlag_[5])
+        {
+            needSelection=true;
+        }
+        if(dirtyFlag_[6])
         {
             sql += "terms_and_conditions,";
             ++parametersCount;
@@ -273,7 +308,29 @@ class AffiliateProgramSettings
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
+        else
+        {
+            sql +="default,";
+        }
         if(dirtyFlag_[4])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
+        }
+        if(dirtyFlag_[5])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
+        }
+        if(dirtyFlag_[6])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);

@@ -162,12 +162,12 @@ class AffiliateCommissions
 
     /**  For column status  */
     ///Get the value of the column status, returns the default value if the column is null
-    const std::string &getValueOfStatus() const noexcept;
+    const int32_t &getValueOfStatus() const noexcept;
     ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<std::string> &getStatus() const noexcept;
+    const std::shared_ptr<int32_t> &getStatus() const noexcept;
     ///Set the value of the column status
-    void setStatus(const std::string &pStatus) noexcept;
-    void setStatus(std::string &&pStatus) noexcept;
+    void setStatus(const int32_t &pStatus) noexcept;
+    void setStatusToNull() noexcept;
 
     /**  For column created_at  */
     ///Get the value of the column created_at, returns the default value if the column is null
@@ -215,7 +215,7 @@ class AffiliateCommissions
     std::shared_ptr<std::string> amount_;
     std::shared_ptr<std::string> orderId_;
     std::shared_ptr<std::string> transactionReference_;
-    std::shared_ptr<std::string> status_;
+    std::shared_ptr<int32_t> status_;
     std::shared_ptr<::trantor::Date> createdAt_;
     std::shared_ptr<::trantor::Date> updatedAt_;
     struct MetaData
@@ -279,10 +279,11 @@ class AffiliateCommissions
             sql += "transaction_reference,";
             ++parametersCount;
         }
-        if(dirtyFlag_[6])
+        sql += "status,";
+        ++parametersCount;
+        if(!dirtyFlag_[6])
         {
-            sql += "status,";
-            ++parametersCount;
+            needSelection=true;
         }
         sql += "created_at,";
         ++parametersCount;
@@ -348,6 +349,10 @@ class AffiliateCommissions
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
         }
         if(dirtyFlag_[7])
         {

@@ -1,4 +1,6 @@
 #include "AdminController.h"
+
+#include "dto/AffiliateSettingsDto.h"
 #include "dto/AssignPartnerSubscriberPlanDto.h"
 #include "dto/CreateCampaignDto.h"
 #include "dto/GeneratePartnerApiKeyDto.h"
@@ -13,6 +15,17 @@
 #include "services/partner_invoice/PartnerInvoiceService.h"
 #include "dto/PartnerInvoiceDto.h"
 #include "dto/PartnerQuotaDto.h"
+
+drogon::Task<HttpResponsePtr> AdminController::getDashboardData(HttpRequestPtr req) {
+
+  gnp::dto::BaseApiResponse response;
+  response.success = false;
+  response.error["message"] = "Missing required parameter: Publication Id";
+  auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+  resp->setStatusCode(k400BadRequest);
+  co_return resp;
+
+}
 
 Task<HttpResponsePtr> AdminController::getAllPublications(HttpRequestPtr req) {
 
@@ -1075,7 +1088,6 @@ drogon::Task<HttpResponsePtr> AdminController::uploadPartnerSubscribers(const Ht
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
-
 drogon::Task<HttpResponsePtr> AdminController::updatePartnerQuota(const HttpRequestPtr req, const std::string &partnerId) {
 
   auto jsonBody = req->getJsonObject();
@@ -1190,6 +1202,306 @@ drogon::Task<HttpResponsePtr> AdminController::deletePartner(HttpRequestPtr req)
   auto apiResp = co_await commercialPartnerService.deletePartner(partnerId);
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
+
+
+//affiliates
+
+drogon::Task<HttpResponsePtr> AdminController::getAllAffiliates(HttpRequestPtr req) {
+
+  int pageSize = 10; // Default page size
+  int pageNo = 1;    //  Default page number
+
+  if (!req->getParameter("pageSize").empty()) {
+    try {
+      pageSize = std::stoi(req->getParameter("pageSize"));
+      pageSize = std::max(1, std::min(100, pageSize)); // Limit between 1-100
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  if (!req->getParameter("pageNo").empty()) {
+    try {
+      pageNo = std::stoi(req->getParameter("pageNo"));
+      pageNo = std::max(1, pageNo); // Ensure page number is at least 1
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  std::string query = req->getParameter("query");
+
+  if (query.empty()) {
+    query = "";
+  }
+
+  std::string sortBy = req->getParameter("sortBy");
+
+  if (sortBy.empty()) {
+    sortBy = "";
+  }
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &affiliateService = plugin->getAffiliateService();
+
+  auto apiResp = co_await affiliateService.getAll(pageNo, pageSize, query, sortBy);
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+
+}
+
+
+drogon::Task<HttpResponsePtr> AdminController::getAffiliateApplicants(HttpRequestPtr req) {
+
+  int pageSize = 10; // Default page size
+  int pageNo = 1;    //  Default page number
+
+  if (!req->getParameter("pageSize").empty()) {
+    try {
+      pageSize = std::stoi(req->getParameter("pageSize"));
+      pageSize = std::max(1, std::min(100, pageSize)); // Limit between 1-100
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  if (!req->getParameter("pageNo").empty()) {
+    try {
+      pageNo = std::stoi(req->getParameter("pageNo"));
+      pageNo = std::max(1, pageNo); // Ensure page number is at least 1
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  std::string query = req->getParameter("query");
+
+  if (query.empty()) {
+    query = "";
+  }
+
+  int status = std::stoi(req->getParameter("status"));
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &affiliateService = plugin->getAffiliateService();
+
+  auto apiResp = co_await affiliateService.getAllApplicants(pageNo, pageSize, query, status);
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+
+}
+
+
+drogon::Task<HttpResponsePtr> AdminController::getAffiliateCommissions(HttpRequestPtr req) {
+
+  int pageSize = 10; // Default page size
+  int pageNo = 1;    //  Default page number
+
+  if (!req->getParameter("pageSize").empty()) {
+    try {
+      pageSize = std::stoi(req->getParameter("pageSize"));
+      pageSize = std::max(1, std::min(100, pageSize)); // Limit between 1-100
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  if (!req->getParameter("pageNo").empty()) {
+    try {
+      pageNo = std::stoi(req->getParameter("pageNo"));
+      pageNo = std::max(1, pageNo); // Ensure page number is at least 1
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  std::string affiliateId = req->getParameter("affiliateId");
+
+  if (affiliateId.empty()) {
+    affiliateId = "";
+  }
+
+
+  std::string startDate = req->getParameter("startDate");
+
+  if (startDate.empty()) {
+    startDate = "";
+  }
+
+  std::string endDate = req->getParameter("endDate");
+
+  if (endDate.empty()) {
+    endDate = "";
+  }
+
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &affiliateService = plugin->getAffiliateService();
+
+  auto apiResp = co_await affiliateService.getAllCommissions(pageNo, pageSize, affiliateId, startDate, endDate);
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+
+}
+
+drogon::Task<HttpResponsePtr> AdminController::getAffiliatePayouts(HttpRequestPtr req) {
+
+  int pageSize = 10; // Default page size
+  int pageNo = 1;    //  Default page number
+
+  if (!req->getParameter("pageSize").empty()) {
+    try {
+      pageSize = std::stoi(req->getParameter("pageSize"));
+      pageSize = std::max(1, std::min(100, pageSize)); // Limit between 1-100
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  if (!req->getParameter("pageNo").empty()) {
+    try {
+      pageNo = std::stoi(req->getParameter("pageNo"));
+      pageNo = std::max(1, pageNo); // Ensure page number is at least 1
+    } catch (...) {
+      // Keep default if conversion fails
+    }
+  }
+
+  std::string affiliateId = req->getParameter("affiliateId");
+
+  if (affiliateId.empty()) {
+    affiliateId = "";
+  }
+
+
+  std::string startDate = req->getParameter("startDate");
+
+  if (startDate.empty()) {
+    startDate = "";
+  }
+
+  std::string endDate = req->getParameter("endDate");
+
+  if (endDate.empty()) {
+    endDate = "";
+  }
+
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &affiliateService = plugin->getAffiliateService();
+
+  auto apiResp = co_await affiliateService.getAllPayouts(pageNo, pageSize, affiliateId, startDate, endDate);
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+
+}
+
+
+drogon::Task<HttpResponsePtr> AdminController::getAffiliateProgramSettings(HttpRequestPtr req) {
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &affiliateService = plugin->getAffiliateService();
+
+  auto apiResp = co_await affiliateService.getAffiliateSettings();
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+
+}
+
+
+drogon::Task<HttpResponsePtr> AdminController::createAffiliateProgramSettings(HttpRequestPtr req) {
+
+
+  auto jsonBody = req->getJsonObject();
+
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  gnp::dto::AffiliateSettingsDto dto;
+
+  dto.fromJson(*jsonBody);
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &affiliateService = plugin->getAffiliateService();
+
+  auto result = co_await affiliateService.createAffiliateSettings(dto);
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+
+}
+
+
+drogon::Task<HttpResponsePtr> AdminController::getOverallAffiliateStats(HttpRequestPtr req) {
+  gnp::dto::BaseApiResponse response;
+  response.success = true;
+  response.result["message"] = "Bulk payout processing completed.";
+
+  auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+  co_return resp;
+
+
+}
+
+drogon::Task<HttpResponsePtr> AdminController::getAffiliateAccountStats(HttpRequestPtr req) {
+
+  gnp::dto::BaseApiResponse response;
+  response.success = true;
+  response.result["message"] = "Bulk payout processing completed.";
+
+  auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+  co_return resp;
+
+}
+
+
+drogon::Task<HttpResponsePtr> AdminController::createAffiliate(HttpRequestPtr req) {
+
+  gnp::dto::BaseApiResponse response;
+  response.success = true;
+  response.result["message"] = "Bulk payout processing completed.";
+
+  auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+  co_return resp;
+
+}
+
+
+drogon::Task<HttpResponsePtr> AdminController::updateAffiliate(HttpRequestPtr req) {
+
+  gnp::dto::BaseApiResponse response;
+  response.success = true;
+  response.result["message"] = "Bulk payout processing completed.";
+
+  auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+  co_return resp;
+
+}
+
+
+drogon::Task<HttpResponsePtr> AdminController::updateAffiliateProfileImage(HttpRequestPtr req) {
+
+  gnp::dto::BaseApiResponse response;
+  response.success = true;
+  response.result["message"] = "Bulk payout processing completed.";
+
+  auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+  co_return resp;
+
+}
+
+
+drogon::Task<HttpResponsePtr> AdminController::deleteAffiliate(HttpRequestPtr req) {
+
+  gnp::dto::BaseApiResponse response;
+  response.success = true;
+  response.result["message"] = "Bulk payout processing completed.";
+
+  auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+  co_return resp;
+
+}
+
 
 void AdminController::enablePartnerSubaccount(
     const HttpRequestPtr &req,

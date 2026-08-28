@@ -45,6 +45,7 @@ using ::drogon_model::Gnp::UserSubscriptions;
 
 namespace gnp::services {
 
+
 drogon::Task<gnp::dto::BaseApiResponse> CommercialPartnerService::getAll(int pageNo, int pageSize, const std::string &query) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -131,6 +132,10 @@ drogon::Task<gnp::dto::BaseApiResponse> CommercialPartnerService::getAll(int pag
     co_return errorResponse;
   }
 }
+
+
+
+
 
 drogon::Task<dto::BaseApiResponse> CommercialPartnerService::getAllSubscribers(int pageNo, int pageSize,
                                             const std::string &query,

@@ -121,7 +121,5 @@ namespace gnp::dto {
 
     }
 
-
-
 }
 #endif //GNPAPI_ARTICLEDTO_H
