@@ -230,12 +230,11 @@ public:
  drogon::Task<HttpResponsePtr> getAffiliateProgramSettings(HttpRequestPtr req);
  drogon::Task<HttpResponsePtr> createAffiliateProgramSettings(HttpRequestPtr req);
  drogon::Task<HttpResponsePtr> getOverallAffiliateStats(HttpRequestPtr req);
- drogon::Task<HttpResponsePtr> getAffiliateAccountStats(HttpRequestPtr req);
+ drogon::Task<HttpResponsePtr> getAffiliateAccountStats(HttpRequestPtr req, const std::string &affiliateId);
  drogon::Task<HttpResponsePtr> createAffiliate(HttpRequestPtr req);
  drogon::Task<HttpResponsePtr> updateAffiliate(HttpRequestPtr req);
  drogon::Task<HttpResponsePtr> updateAffiliateProfileImage(HttpRequestPtr req);
  drogon::Task<HttpResponsePtr> deleteAffiliate(HttpRequestPtr req);
-
 
   drogon::Task<HttpResponsePtr> assignPartnerSubscribersPlan(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> updatePartner(HttpRequestPtr req);

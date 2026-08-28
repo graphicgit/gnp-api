@@ -1443,7 +1443,7 @@ drogon::Task<HttpResponsePtr> AdminController::getOverallAffiliateStats(HttpRequ
 
 }
 
-drogon::Task<HttpResponsePtr> AdminController::getAffiliateAccountStats(HttpRequestPtr req) {
+drogon::Task<HttpResponsePtr> AdminController::getAffiliateAccountStats(HttpRequestPtr req, const std::string &affiliateId) {
 
   gnp::dto::BaseApiResponse response;
   response.success = true;
