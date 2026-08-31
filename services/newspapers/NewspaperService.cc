@@ -7,10 +7,19 @@
 #include "constants/ErrorCodes.h"
 #include <drogon/orm/Mapper.h>
 #include <jwt-cpp/jwt.h>
-
-#include "NewspaperDetail.h"
+#include "NewspaperDetails.h"
+#include "UserNotificationSubscriptions.h"
 #include "UserSubscriptions.h"
+#include "Users.h"
+#include "constants/NotificationTypes.h"
 #include "utils/IdGeneratorUtils.h"
+#include "plugins/GnpServicePlugin.h"
+#include <drogon/drogon.h>
+#include <fstream>
+#include <vector>
+
+#include "CommercialPartners.h"
+#include "constants/StatusTypes.h"
 
 using namespace drogon::orm;
 using drogon_model::Gnp::Newspapers;
@@ -136,6 +145,8 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::getAllAsync(
   }
 }
 
+
+
 drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::getLatestNewsPapers(int pageNo, int pageSize) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Newspapers> mp(dbClient);
@@ -205,6 +216,82 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::getLatestNewsPapers(in
     co_return errorResponse;
   }
 }
+
+
+
+drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::getRecentNewspapersForAffiliate(int pageNo, int pageSize, const std::string &affiliateId) {
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<Newspapers> mp(dbClient);
+
+  //check if partner id exists
+  //track number of times the affiliate link was called
+
+  // 1. Build the search criteria: Only published and non archived newspapers
+  Criteria searchCriteria = Criteria(Newspapers::Cols::_is_published, CompareOperator::EQ, true) && Criteria(Newspapers::Cols::_is_archived, CompareOperator::EQ, false);
+
+  try {
+    size_t totalCount = co_await mp.count(searchCriteria);
+
+    if (totalCount == 0) {
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.result["data"] = Json::arrayValue;
+      response.result["totalCount"] = 0;
+      co_return response;
+    }
+
+    int offset = (pageNo - 1) * pageSize;
+    auto publications = co_await mp.limit(pageSize)
+            .offset(offset)
+            .orderBy(Newspapers::Cols::_publication_date, SortOrder::DESC)
+            .findBy(searchCriteria);
+
+    dto::BaseApiResponse response;
+    auto totalPages = (totalCount + pageSize - 1) / pageSize;
+
+    response.success = true;
+    response.result["totalCount"] = (Json::UInt64)totalCount;
+    response.result["pageNo"] = pageNo;
+    response.result["pageSize"] = pageSize;
+    response.result["lowerBound"] = pageSize * (pageNo - 1) + 1;
+    response.result["upperBound"] = Json::Value(
+        (int)totalPages == pageNo ? (Json::UInt64)totalCount
+                                  : (Json::UInt64)(pageNo * pageSize));
+    response.result["totalPages"] = (int)totalPages;
+
+    Json::Value data = Json::arrayValue;
+    for (const auto &newspaper : publications) {
+      Json::Value newsPaperJson = newspaper.toJson();
+
+      // Convert snake_case to camelCase
+      Json::Value camelCaseRole;
+      camelCaseRole["id"] = newsPaperJson["id"];
+      camelCaseRole["title"] = newsPaperJson["title"];
+      camelCaseRole["slug"] = newsPaperJson["slug"];
+      camelCaseRole["price"] = newsPaperJson["price"];
+      camelCaseRole["editionNumber"] = newsPaperJson["edition_number"];
+      camelCaseRole["thumbnailId"] = newsPaperJson["thumbnail_id"];
+      camelCaseRole["fileType"] = newsPaperJson["file_type"];
+      camelCaseRole["isFree"] = newsPaperJson["is_free"];
+      camelCaseRole["publicationDate"] = newsPaperJson["publication_date"];
+
+      data.append(camelCaseRole);
+    }
+
+    response.result["data"] = data;
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["message"] =  "Database error while fetching latest newspapers.";
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+
 
 drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::getRedactedDetailsAsync(const std::string &id) {
   auto dbClient = drogon::app().getDbClient();
@@ -809,7 +896,7 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::ingestAsync(const dto:
   newspaper.setIsPopular(dto.getIsPopular());
   newspaper.setFullDescription(dto.getFullDescription());
   newspaper.setThumbnailId(dto.getThumbnailId());
-  newspaper.setFileType("pdf");
+  newspaper.setFileType(constants::FileTypes::PDF);
   newspaper.setStorageService(dto.getStorageService());
   newspaper.setDocumentId(dto.getDocumentId());
   newspaper.setIsPublished(false);
@@ -824,11 +911,210 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::ingestAsync(const dto:
     successResponse.message = "Newspaper created successfully";
     successResponse.result["id"] = insertedNewspaper.getValueOfId();
 
+    // Grant newspaper entitlements for the publication date in the background
+    const std::string publicationDate = dto.getPublicationDate().toDbStringLocal();
+    drogon::async_run([publicationDate]() -> drogon::Task<void> {
+      try {
+        auto plugin = drogon::app().getPlugin<plugins::GnpServicePlugin>();
+        auto &newspaperService = plugin->getNewsPaperService();
+
+        co_await newspaperService.regenerateNewspaperEntitlement(publicationDate);
+      } catch (const std::exception &e) {
+        LOG_ERROR << "Background entitlement grant failed for date " << publicationDate
+                  << ": " << e.what();
+      }
+    });
+
     co_return successResponse;
   } catch (const drogon::orm::DrogonDbException &e) {
     dto::BaseApiResponse errorResponse;
     errorResponse.success = false;
     errorResponse.message = "Database error while creating Newspaper";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+
+drogon::Task<::gnp::dto::BaseApiResponse> NewspaperService::getNewspaperEngagementReport(const gnp::dto::ReportDto &dto) {
+
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<drogon_model::Gnp::CommercialPartners> partnerMapper(dbClient);
+
+  try {
+
+
+    auto partner = co_await partnerMapper.findByPrimaryKey(dto.getPartnerId());
+
+    // Parse dates
+    trantor::Date startDateObj = trantor::Date::fromDbStringLocal(dto.getStartDate() + " 00:00:00");
+    trantor::Date endDateObj = trantor::Date::fromDbStringLocal(dto.getEndDate() + " 23:59:59");
+
+    // Get partner's subscribers count
+    CoroMapper<drogon_model::Gnp::Users> userMapper(dbClient);
+    auto totalSubscribers = co_await userMapper.count(
+        Criteria(drogon_model::Gnp::Users::Cols::_partner_id, CompareOperator::EQ, dto.getPartnerId()) &&
+        Criteria(drogon_model::Gnp::Users::Cols::_is_active, CompareOperator::EQ, true));
+
+    // Query newspaper engagement and sales data
+    std::string sql =
+        "SELECT "
+        "  n.id as newspaper_id, "
+        "  n.title as newspaper_title, "
+        "  n.publication_date, "
+        "  n.price, "
+        "  n.views as total_views, "
+        "  n.sales as total_sales, "
+        "  COALESCE(n.sales / NULLIF(n.price, 0), 0) as copies_sold "
+        "FROM newspapers n "
+        "WHERE n.publication_date >= $1 "
+        "  AND n.publication_date <= $2 "
+        "  AND n.is_archived = false "
+        "  AND n.is_published = true "
+        "ORDER BY n.publication_date DESC, n.views DESC";
+
+    auto result = co_await dbClient->execSqlCoro(
+        sql, startDateObj.toDbStringLocal(), endDateObj.toDbStringLocal());
+
+    // Build Response
+    gnp::dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Newspaper engagement report retrieved successfully";
+
+    Json::Value reportData;
+
+    // Report Metadata
+    reportData["partnerName"] = partner.getValueOfName();
+    reportData["partnerId"] = dto.getPartnerId();
+    reportData["reportPeriod"]["startDate"] = dto.getStartDate();
+    reportData["reportPeriod"]["endDate"] = dto.getEndDate();
+    reportData["reportPeriod"]["totalDays"] = (Json::Int64)((endDateObj.microSecondsSinceEpoch() - startDateObj.microSecondsSinceEpoch()) / (1000000LL * 3600 * 24)) + 1;
+    reportData["totalSubscribers"] = (Json::UInt64)totalSubscribers;
+    reportData["generatedAt"] = trantor::Date::now().toDbStringLocal();
+
+    Json::Value items = Json::arrayValue;
+    Json::Value summary;
+    summary["totalNewspapers"] = 0;
+    summary["totalViews"] = 0;
+    summary["totalSales"] = 0.0;
+    summary["totalCopiesSold"] = 0;
+    summary["averagePrice"] = 0.0;
+
+    double totalSales = 0.0;
+    long totalCopies = 0;
+    long totalViews = 0;
+    double totalPriceSum = 0.0;
+
+    for (const auto &row : result) {
+      Json::Value item;
+
+      std::string newspaperId = row["newspaper_id"].as<std::string>();
+      std::string title = row["newspaper_title"].as<std::string>();
+      std::string pubDate = row["publication_date"].as<std::string>();
+
+      double price = row["price"].isNull() ? 0.0 : row["price"].as<double>();
+      long views = row["total_views"].isNull() ? 0 : row["total_views"].as<long>();
+      double sales = row["total_sales"].isNull() ? 0.0 : row["total_sales"].as<double>();
+      long copiesSold = row["copies_sold"].isNull() ? 0 : row["copies_sold"].as<long>();
+
+      item["newspaperId"] = newspaperId;
+      item["title"] = title;
+      item["publicationDate"] = pubDate;
+      item["price"] = price;
+      item["views"] = (Json::UInt64)views;
+      item["sales"] = sales;
+      item["copiesSold"] = (Json::UInt64)copiesSold;
+
+      // Calculate engagement metrics
+      double viewsPerSubscriber = 0.0;
+      if (totalSubscribers > 0) {
+        viewsPerSubscriber = (double)views / totalSubscribers;
+      }
+      item["viewsPerSubscriber"] = std::round(viewsPerSubscriber * 100) / 100.0;
+
+      // Revenue per view
+      double revenuePerView = 0.0;
+      if (views > 0 && sales > 0) {
+        revenuePerView = sales / views;
+      }
+      item["revenuePerView"] = std::round(revenuePerView * 100) / 100.0;
+
+      items.append(item);
+
+      // Update summary
+      totalViews += views;
+      totalSales += sales;
+      totalCopies += copiesSold;
+      totalPriceSum += price;
+      summary["totalNewspapers"] = summary["totalNewspapers"].asInt() + 1;
+    }
+
+    summary["totalViews"] = (Json::UInt64)totalViews;
+    summary["totalSales"] = totalSales;
+    summary["totalCopiesSold"] = (Json::UInt64)totalCopies;
+
+    if (result.size() > 0) {
+      summary["averagePrice"] = std::round((totalPriceSum / result.size()) * 100) / 100.0;
+    }
+
+    // Calculate overall engagement rate
+    double engagementRate = 0.0;
+    if (totalSubscribers > 0 && totalViews > 0) {
+      engagementRate = ((double)totalViews / (totalSubscribers * result.size())) * 100.0;
+    }
+    summary["engagementRate"] = std::round(engagementRate * 10) / 10.0;
+
+    // Find best performing newspaper
+    if (result.size() > 0) {
+      Json::Value bestPerforming;
+      std::string bestTitle;
+      long bestViews = 0;
+      double bestSales = 0.0;
+
+      for (const auto &row : result) {
+        long views = row["total_views"].isNull() ? 0 : row["total_views"].as<long>();
+        double sales = row["total_sales"].isNull() ? 0.0 : row["total_sales"].as<double>();
+
+        if (views > bestViews) {
+          bestViews = views;
+          bestTitle = row["newspaper_title"].as<std::string>();
+          bestSales = sales;
+        }
+      }
+
+      bestPerforming["title"] = bestTitle;
+      bestPerforming["views"] = (Json::UInt64)bestViews;
+      bestPerforming["sales"] = bestSales;
+      summary["bestPerformingNewspaper"] = bestPerforming;
+    }
+
+    reportData["items"] = items;
+    reportData["summary"] = summary;
+
+    // Add insights
+    Json::Value insights;
+    if (totalSales > 0 && totalViews > 0) {
+      insights["revenuePerView"] = std::round((totalSales / totalViews) * 100) / 100.0;
+    } else {
+      insights["revenuePerView"] = 0.0;
+    }
+
+    if (totalCopies > 0 && totalSales > 0) {
+      insights["averageRevenuePerCopy"] = std::round((totalSales / totalCopies) * 100) / 100.0;
+    } else {
+      insights["averageRevenuePerCopy"] = 0.0;
+    }
+
+    reportData["insights"] = insights;
+
+    response.result = reportData;
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to retrieve newspaper engagement report";
     errorResponse.error["code"] = constants::ERR_DB_QUERY;
     errorResponse.error["detail"] = e.base().what();
     co_return errorResponse;
@@ -855,7 +1141,7 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::update(const dto::News
     newspaper.setIsPopular(dto.getIsPopular());
     if (!dto.getFullDescription().empty()) newspaper.setFullDescription(dto.getFullDescription());
     if (!dto.getThumbnailId().empty()) newspaper.setThumbnailId(dto.getThumbnailId());
-    if (!dto.getFileType().empty()) newspaper.setFileType(dto.getFileType());
+    newspaper.setFileType(dto.getFileType());
     if (!dto.getStorageService().empty()) newspaper.setStorageService(dto.getStorageService());
     if (!dto.getDocumentId().empty()) newspaper.setDocumentId(dto.getDocumentId());
     if (!dto.getFeaturedStories().empty()) newspaper.setFeaturedStories(dto.getFeaturedStories());
@@ -911,6 +1197,10 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::publishAsync(const std
     dto::BaseApiResponse response;
     response.success = true;
     response.message = "Newspaper published successfully.";
+
+    // send daily news update reminder based in system settings
+    // better still it can be managed by plugins to prevent tight coupling. 
+
     co_return response;
 
   } catch (const DrogonDbException &e) {
@@ -1147,7 +1437,7 @@ void NewspaperService::incrementViewCount(
 
   auto dbClient = drogon::app().getDbClient();
   auto mp_newspaper = drogon::orm::CoroMapper<drogon_model::Gnp::Newspapers>(dbClient);
-  auto mp_detail = drogon::orm::CoroMapper<drogon_model::Gnp::NewspaperDetail>(dbClient);
+  auto mp_detail = drogon::orm::CoroMapper<drogon_model::Gnp::NewspaperDetails>(dbClient);
 
   try {
     // check if a newspaper exists for that publication date
@@ -1172,6 +1462,7 @@ void NewspaperService::incrementViewCount(
       for (auto& c : slugStr) {
           if (c >= 'A' && c <= 'Z') c = c + ('a' - 'A');
       }
+      new_newspaper.setId(dto.getId());
       new_newspaper.setSlug(slugStr);
       new_newspaper.setPrice("0.1");
       new_newspaper.setIsArchived(true);
@@ -1188,10 +1479,11 @@ void NewspaperService::incrementViewCount(
       new_newspaper.setPublicationId("485ac7f9-022d-4a30-818e-41732d90da18");
       new_newspaper.setPublicationName("Daily Graphic");
       new_newspaper.setCreatorName("System");
+      new_newspaper.setThumbnailId("--");
+      new_newspaper.setDocumentId("--");
 
       new_newspaper.setFileType(dto.getFileType());
-      if (!dto.getThumbnailId().empty()) new_newspaper.setThumbnailId(dto.getThumbnailId());
-      if (!dto.getDocumentId().empty()) new_newspaper.setDocumentId(dto.getDocumentId());
+
       new_newspaper.setCreatedAt(trantor::Date::now());
       new_newspaper.setIsPublished(false);
       new_newspaper.setIsFree(false);
@@ -1203,7 +1495,7 @@ void NewspaperService::incrementViewCount(
       newspaper = newspapers[0];
     }
 
-    drogon_model::Gnp::NewspaperDetail detail;
+    drogon_model::Gnp::NewspaperDetails detail;
     detail.setNewspaperId(newspaper.getValueOfId());
     detail.setPageText(dto.getPageText());
     detail.setPageNumber(dto.getPageNumber());
@@ -1214,8 +1506,6 @@ void NewspaperService::incrementViewCount(
 
     detail.setPublishedDate(trantor::Date::fromDbStringLocal("2023-02-02 00:00:00"));
 
-    if (!dto.getThumbnailId().empty()) detail.setThumbnailId(dto.getThumbnailId());
-    if (!dto.getDocumentId().empty()) detail.setDocumentId(dto.getDocumentId());
     if (!dto.getContentType().empty()) detail.setContentType(dto.getContentType());
 
 
@@ -1250,4 +1540,204 @@ void NewspaperService::incrementViewCount(
     co_return errorResponse;
   }
 }
+
+
+  drogon::Task<void> NewspaperService::dispatchDailyNewsUpdate() {
+  auto dbClient = drogon::app().getDbClient();
+  drogon::orm::CoroMapper<drogon_model::Gnp::Users> mp(dbClient);
+
+  try {
+    // auto users = co_await mp.findBy(drogon::orm::Criteria(drogon_model::Gnp::Users::Cols::_is_active, drogon::orm::CompareOperator::EQ, true));
+    auto users = co_await mp.findBy(drogon::orm::Criteria(drogon_model::Gnp::Users::Cols::_email, drogon::orm::CompareOperator::EQ, "vavy712@gmail.com"));
+
+    // Formatted date for editorial layout (e.g., "12 Aug, 2026")
+    auto rawDate = ::trantor::Date::now();
+    auto todayFormatted = rawDate.toCustomFormattedStringLocal("%d %b, %Y");
+    auto todayIso = rawDate.toCustomFormattedStringLocal("%Y-%m-%d");
+
+    CoroMapper<Newspapers> newsMapper(dbClient);
+
+    Criteria newsCriteria =
+        Criteria(Newspapers::Cols::_publication_date, CompareOperator::EQ, todayIso) &&
+        Criteria(Newspapers::Cols::_is_published,     CompareOperator::EQ, true) &&
+        Criteria(Newspapers::Cols::_is_archived,      CompareOperator::EQ, false);
+
+    auto todaysNewspapers = co_await newsMapper.orderBy(Newspapers::Cols::_publication_date, SortOrder::DESC).findBy(newsCriteria);
+
+    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto &emailService = plugin->getEmailService();
+
+    // Generate newspaper cards HTML
+    std::string newspaperCards;
+    for (const auto &newspaper : todaysNewspapers) {
+      const std::string title     = newspaper.getValueOfTitle();
+      const std::string id        = newspaper.getValueOfId();
+      const std::string shortDesc = newspaper.getValueOfFullDescription();
+
+      std::string imgSrc = "https://archive.graphic.com.gh/img/news-avatar.png";
+
+      newspaperCards += R"(
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px; background-color: #ffffff; border: 1px solid #fee2e2; border-left: 4px solid #dc2626; border-radius: 8px; border-collapse: separate; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.02);">
+          <tr>
+            <td style="padding: 20px;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td width="90" valign="top" style="padding-right: 18px;">
+                    <img src=")" + imgSrc + R"(" alt=")" + title + R"(" width="90" height="115" style="display: block; width: 90px; height: 115px; object-fit: cover; border-radius: 6px; border: 1px solid #fecdd3;" />
+                  </td>
+                  <td valign="top" style="text-align: left;">
+                    <h3 style="margin: 0 0 8px 0; font-size: 17px; line-height: 1.3; font-weight: 700; color: #111827; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                      )" + title + R"(
+                    </h3>
+                    <p style="margin: 0 0 16px 0; font-size: 13px; line-height: 1.5; color: #4b5563; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                      )" + shortDesc + R"(
+                    </p>
+                    <div>
+                      <a href="https://new.graphicnewsplus.com/newspapers/)" + id + R"(" target="_blank" style="display: inline-block; padding: 9px 20px; background-color: #b91c1c; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                        Read Edition &rarr;
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      )";
+    }
+
+    // Fall-back message when no newspapers are available
+    if (newspaperCards.empty()) {
+      newspaperCards = R"(
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fff1f2; border: 1px dashed #fca5a5; border-radius: 8px; margin-bottom: 24px;">
+          <tr>
+            <td style="padding: 32px; text-align: center;">
+              <p style="margin: 0; font-size: 14px; color: #991b1b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                No new editions have been published today. Please check back later or explore previous archives!
+              </p>
+            </td>
+          </tr>
+        </table>
+      )";
+    }
+
+    CoroMapper<drogon_model::Gnp::UserNotificationSubscriptions> notifMapper(dbClient);
+
+    for (const auto &user : users) {
+      if (user.getValueOfEmail().empty()) continue;
+
+      // Check if user has opted out of DAILY_NEWS_UPDATE notifications
+      Criteria optOutCriteria =
+          Criteria(drogon_model::Gnp::UserNotificationSubscriptions::Cols::_user_id,
+                   CompareOperator::EQ, user.getValueOfId()) &&
+          Criteria(drogon_model::Gnp::UserNotificationSubscriptions::Cols::_notification_type,
+                   CompareOperator::EQ,
+                   static_cast<int32_t>(gnp::constants::NotificationTypes::DAILY_NEWS_UPDATE)) &&
+          Criteria(drogon_model::Gnp::UserNotificationSubscriptions::Cols::_subscription_status,
+                   CompareOperator::EQ,
+                   static_cast<int32_t>(gnp::constants::SubscriptionStatus::UNSUBSCRIBED));
+
+      auto optOutRecords = co_await notifMapper.findBy(optOutCriteria);
+      if (!optOutRecords.empty()) {
+        LOG_INFO << "Skipping daily news update for user " << user.getValueOfId()
+                 << " (opted out)";
+        continue;
+      }
+
+      const std::string firstName = user.getValueOfFirstName().empty() ? "GNP Us" : user.getValueOfFirstName();
+
+      std::string emailBody = R"(<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>Graphic NewsPlus - Daily Briefing</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #fcf8f8; -webkit-font-smoothing: antialiased;">
+  <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fcf8f8; padding: 40px 10px;">
+    <tr>
+      <td align="center">
+        <!-- Main Container -->
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(185, 28, 28, 0.08); border: 1px solid #fee2e2;">
+
+          <!-- Deep Crimson Header -->
+          <tr>
+            <td style="background-color: #991b1b; background: linear-gradient(135deg, #7f1d1d 0%, #b91c1c 100%); padding: 36px 32px; text-align: left;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td>
+                    <span style="display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #fecdd3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                      Graphic NewsPlus
+                    </span>
+                    <h1 style="margin: 6px 0 0 0; font-size: 24px; font-weight: 700; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; letter-spacing: -0.3px;">
+                      Your Daily Digest
+                    </h1>
+                  </td>
+                  <td align="right" valign="bottom">
+                    <span style="font-size: 13px; font-weight: 600; color: #fecdd3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                      )" + todayFormatted + R"(
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Red Decorative Accent Strip -->
+          <tr>
+            <td style="background-color: #dc2626; height: 4px; line-height: 4px; font-size: 4px;">&nbsp;</td>
+          </tr>
+
+          <!-- Body Content -->
+          <tr>
+            <td style="padding: 32px;">
+              <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #374151; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                Hello <strong style="color: #991b1b;">)" + firstName + R"(</strong>,<br/>
+                Here are today's featured editions curated for you. Click any edition to start reading instantly.
+              </p>
+
+              <!-- Newspaper Cards Injection -->
+              )" + newspaperCards + R"(
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #fff1f2; padding: 24px 32px; text-align: center; border-top: 1px solid #ffe4e6;">
+              <p style="margin: 0 0 8px 0; font-size: 12px; line-height: 1.5; color: #9f1239; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                You are receiving this daily update as an active subscriber to <strong>Graphic NewsPlus</strong>.
+              </p>
+              <p style="margin: 0 0 12px 0; font-size: 12px; color: #f43f5e; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                &copy; Graphic NewsPlus. All rights reserved.
+              </p>
+              <p style="margin: 0; font-size: 11px; color: #6b7280; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                Don&apos;t want these emails?
+                <a href="https://new.graphicnewsplus.com/notifications/unsubscribe?userId=)" + user.getValueOfId() + R"(&type=0" target="_blank" style="color: #dc2626; text-decoration: underline; font-weight: 600;">Unsubscribe from Daily Digest</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>)";
+
+      gnp::dto::SendEmailDto emailDto;
+      emailDto.setTo(user.getValueOfEmail());
+      emailDto.setSubject("Your Daily News Update — " + todayFormatted);
+      emailDto.setBody(emailBody);
+
+      // Dispatch email
+      co_await emailService.sendEmailAsync(emailDto);
+    }
+  } catch (const std::exception &e) {
+    LOG_ERROR << "Failed to dispatch daily news update: " << e.what();
+  }
+}
+
+
 } // namespace gnp::services

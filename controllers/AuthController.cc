@@ -393,7 +393,7 @@ Task<HttpResponsePtr> AuthController::affiliateSignIn(HttpRequestPtr req) {
   }
 
   auto userService = std::make_shared<gnp::services::UserService>();
-  auto result = co_await userService->validateAdminUserCredentials(signin_dto);
+  auto result = co_await userService->validateAffiliateUserCredentials(signin_dto);
 
   auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
   resp->setStatusCode(result.success ? k200OK : k500InternalServerError);
@@ -487,8 +487,6 @@ Task<HttpResponsePtr> AuthController::changeAdminUserPassword(HttpRequestPtr req
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 
 }
-
-
 
 
 void AuthController::setAuthCookie(const HttpResponsePtr &resp, const std::string &token) {

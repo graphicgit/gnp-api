@@ -33,7 +33,7 @@ const std::vector<typename AffiliateCommissions::MetaData> AffiliateCommissions:
 {"amount","std::string","numeric",0,0,0,1},
 {"order_id","std::string","character varying",50,0,0,0},
 {"transaction_reference","std::string","character varying",50,0,0,0},
-{"status","std::string","character varying",50,0,0,1},
+{"status","int32_t","integer",4,0,0,0},
 {"created_at","::trantor::Date","timestamp with time zone",0,0,0,1},
 {"updated_at","::trantor::Date","timestamp without time zone",0,0,0,0}
 };
@@ -72,7 +72,7 @@ AffiliateCommissions::AffiliateCommissions(const Row &r, const ssize_t indexOffs
         }
         if(!r["status"].isNull())
         {
-            status_=std::make_shared<std::string>(r["status"].as<std::string>());
+            status_=std::make_shared<int32_t>(r["status"].as<int32_t>());
         }
         if(!r["created_at"].isNull())
         {
@@ -161,7 +161,7 @@ AffiliateCommissions::AffiliateCommissions(const Row &r, const ssize_t indexOffs
         index = offset + 6;
         if(!r[index].isNull())
         {
-            status_=std::make_shared<std::string>(r[index].as<std::string>());
+            status_=std::make_shared<int32_t>(r[index].as<int32_t>());
         }
         index = offset + 7;
         if(!r[index].isNull())
@@ -273,7 +273,7 @@ AffiliateCommissions::AffiliateCommissions(const Json::Value &pJson, const std::
         dirtyFlag_[6] = true;
         if(!pJson[pMasqueradingVector[6]].isNull())
         {
-            status_=std::make_shared<std::string>(pJson[pMasqueradingVector[6]].asString());
+            status_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[6]].asInt64());
         }
     }
     if(!pMasqueradingVector[7].empty() && pJson.isMember(pMasqueradingVector[7]))
@@ -385,7 +385,7 @@ AffiliateCommissions::AffiliateCommissions(const Json::Value &pJson) noexcept(fa
         dirtyFlag_[6]=true;
         if(!pJson["status"].isNull())
         {
-            status_=std::make_shared<std::string>(pJson["status"].asString());
+            status_=std::make_shared<int32_t>((int32_t)pJson["status"].asInt64());
         }
     }
     if(pJson.isMember("created_at"))
@@ -502,7 +502,7 @@ void AffiliateCommissions::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[6] = true;
         if(!pJson[pMasqueradingVector[6]].isNull())
         {
-            status_=std::make_shared<std::string>(pJson[pMasqueradingVector[6]].asString());
+            status_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[6]].asInt64());
         }
     }
     if(!pMasqueradingVector[7].empty() && pJson.isMember(pMasqueradingVector[7]))
@@ -613,7 +613,7 @@ void AffiliateCommissions::updateByJson(const Json::Value &pJson) noexcept(false
         dirtyFlag_[6] = true;
         if(!pJson["status"].isNull())
         {
-            status_=std::make_shared<std::string>(pJson["status"].asString());
+            status_=std::make_shared<int32_t>((int32_t)pJson["status"].asInt64());
         }
     }
     if(pJson.isMember("created_at"))
@@ -817,25 +817,25 @@ void AffiliateCommissions::setTransactionReferenceToNull() noexcept
     dirtyFlag_[5] = true;
 }
 
-const std::string &AffiliateCommissions::getValueOfStatus() const noexcept
+const int32_t &AffiliateCommissions::getValueOfStatus() const noexcept
 {
-    static const std::string defaultValue = std::string();
+    static const int32_t defaultValue = int32_t();
     if(status_)
         return *status_;
     return defaultValue;
 }
-const std::shared_ptr<std::string> &AffiliateCommissions::getStatus() const noexcept
+const std::shared_ptr<int32_t> &AffiliateCommissions::getStatus() const noexcept
 {
     return status_;
 }
-void AffiliateCommissions::setStatus(const std::string &pStatus) noexcept
+void AffiliateCommissions::setStatus(const int32_t &pStatus) noexcept
 {
-    status_ = std::make_shared<std::string>(pStatus);
+    status_ = std::make_shared<int32_t>(pStatus);
     dirtyFlag_[6] = true;
 }
-void AffiliateCommissions::setStatus(std::string &&pStatus) noexcept
+void AffiliateCommissions::setStatusToNull() noexcept
 {
-    status_ = std::make_shared<std::string>(std::move(pStatus));
+    status_.reset();
     dirtyFlag_[6] = true;
 }
 
@@ -1458,11 +1458,6 @@ bool AffiliateCommissions::validateJsonForCreation(const Json::Value &pJson, std
         if(!validJsonOfField(6, "status", pJson["status"], err, true))
             return false;
     }
-    else
-    {
-        err="The status column cannot be null";
-        return false;
-    }
     if(pJson.isMember("created_at"))
     {
         if(!validJsonOfField(7, "created_at", pJson["created_at"], err, true))
@@ -1550,11 +1545,6 @@ bool AffiliateCommissions::validateMasqueradedJsonForCreation(const Json::Value 
               if(!validJsonOfField(6, pMasqueradingVector[6], pJson[pMasqueradingVector[6]], err, true))
                   return false;
           }
-        else
-        {
-            err="The " + pMasqueradingVector[6] + " column cannot be null";
-            return false;
-        }
       }
       if(!pMasqueradingVector[7].empty())
       {
@@ -1807,20 +1797,11 @@ bool AffiliateCommissions::validJsonOfField(size_t index,
         case 6:
             if(pJson.isNull())
             {
-                err="The " + fieldName + " column cannot be null";
-                return false;
+                return true;
             }
-            if(!pJson.isString())
+            if(!pJson.isInt())
             {
                 err="Type error in the "+fieldName+" field";
-                return false;
-            }
-            if(pJson.isString() && std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>{}
-                .from_bytes(pJson.asCString()).size() > 50)
-            {
-                err="String length exceeds limit for the " +
-                    fieldName +
-                    " field (the maximum value is 50)";
                 return false;
             }
             break;

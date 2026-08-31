@@ -22,8 +22,7 @@ add_executable(${PROJECT_NAME} main.cc
         services/publications/PublicationService.cc
         services/newspapers/NewspaperService.cc
         services/newspapers/NewspaperService.h
-        dto/CreatePublicationDto.h
-        dto/UpdatePublicationDto.h
+        dto/PublicationDto.h
         constants/ErrorCodes.h
         constants/PublicationTypes.h
         dto/UserDto.h
@@ -31,8 +30,7 @@ add_executable(${PROJECT_NAME} main.cc
         services/hubtel_sms/HubtelSmsApi.h
         dto/SigninDto.h
         services/subscription_plans/SubscriptionPlanService.h
-        dto/CreateSubscriptionPlanDto.h
-        dto/UpdateSubscriptionPlanDto.h
+        dto/SubscriptionPlanDto.h
         services/subscription_plans/SubscriptionPlanService.cc
         dto/IngestNewsPaperDto.h
         services/email/EmailService.h
@@ -77,8 +75,7 @@ add_executable(${PROJECT_NAME} main.cc
         services/quartz/QuartzApi.cc
         services/affiliates/AffiliateService.h
         services/affiliates/AffiliateService.cc
-        dto/CreateAffiliateDto.h
-        dto/UpdateAffiliateDto.h
+        dto/AffiliateDto.h
         controllers/AffiliateController.cc
         services/coupons/CouponService.h
         services/coupons/CouponService.cc
@@ -147,6 +144,20 @@ add_executable(${PROJECT_NAME} main.cc
         services/telegram/TelegramService.h
         dto/PartnerQuotaDto.h
         dto/ChangePasswordDto.h
+        services/settings/SettingService.h
+        dto/SettingsDto.h
+        services/settings/SettingService.cc
+        constants/NotificationTypes.h
+        dto/ArticleDto.h
+        dto/ReportDto.h
+        dto/AffiliateSignupDto.h
+        utils/TimeUtils.h
+        utils/TimeUtils.cc
+        dto/AffiliateSettingsDto.h
+        services/games/GameManager.h
+        services/games/GameManager.cc
+        services/rag/RagManager.h
+        services/rag/RagManager.cc
 )
 
 # ##############################################################################

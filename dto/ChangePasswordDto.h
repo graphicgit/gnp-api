@@ -45,4 +45,6 @@ namespace gnp::dto {
     }
 
 }
+
+
 #endif //GNPAPI_CHANGEPASSWORDDTO_H

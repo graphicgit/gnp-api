@@ -105,8 +105,7 @@ bool G3StorageService::deleteFile(const std::string &bucketName, const std::stri
   }
 }
 
-std::optional<std::string>
-G3StorageService::getFilePath(const std::string &bucketName,
+std::optional<std::string> G3StorageService::getFilePath(const std::string &bucketName,
                               const std::string &fileName) const {
   std::string filePath = buildFilePath(bucketName, fileName);
   if (std::filesystem::exists(filePath) &&

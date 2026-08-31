@@ -115,8 +115,7 @@ PartnerInvoiceService::getAll(int pageNo, int pageSize,
   }
 }
 
-drogon::Task<dto::BaseApiResponse>
-PartnerInvoiceService::createInvoice(const dto::PartnerInvoiceDto &dto) {
+drogon::Task<dto::BaseApiResponse> PartnerInvoiceService::createInvoice(const dto::PartnerInvoiceDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<PartnerInvoices> mp(dbClient);
@@ -151,7 +150,7 @@ PartnerInvoiceService::createInvoice(const dto::PartnerInvoiceDto &dto) {
     invoice.setStatus(dto.getStatus().empty() ? "Pending" : dto.getStatus());
 
     invoice.setDueDate(dto.getDueDate());
-    invoice.setCreatedAt(trantor::Date::now());
+    invoice.setCreatedAt(dto.getInvoiceDate()); //
 
     auto result = co_await mp.insert(invoice);
 
@@ -464,8 +463,7 @@ PartnerInvoiceService::generatePartnerInvoices(const std::string &invoiceDate) {
       invDto.setPartnerEmail(partnerEmail);
 
       invDto.setBillingCycle("Daily"); // Or derive from subscriptions
-      invDto.setInvoiceNumber(
-          "GNP-INV-" + utils::IdGeneratorUtils::generateAlphanumericId());
+      invDto.setInvoiceNumber("GNP-INV-" + utils::IdGeneratorUtils::generateAlphanumericId());
       invDto.setDescription("Invoice for new and renewed subscriptions as of " +
                             invoiceDate);
       invDto.setUnitPrice(costPerHead);
@@ -473,6 +471,8 @@ PartnerInvoiceService::generatePartnerInvoices(const std::string &invoiceDate) {
       invDto.setBalance(totalInvoiceAmount);
       invDto.setCurrency("GHS");
       invDto.setStatus("Pending");
+
+
       trantor::Date invoiceDateObj;
       if (!invoiceDate.empty()) {
         invoiceDateObj =
@@ -482,8 +482,7 @@ PartnerInvoiceService::generatePartnerInvoices(const std::string &invoiceDate) {
       }
       invDto.setInvoiceDate(invoiceDateObj);
 
-      invDto.setDueDate(
-          invoiceDateObj.after(30.0 * 24.0 * 3600.0)); // 30 days due
+      invDto.setDueDate(invoiceDateObj.after(30.0 * 24.0 * 3600.0)); // 30 days due
 
       auto createRes = co_await createInvoice(invDto);
       if (createRes.success) {

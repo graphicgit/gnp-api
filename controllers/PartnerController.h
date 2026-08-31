@@ -25,6 +25,8 @@ class PartnerController : public drogon::HttpController<PartnerController>
   ADD_METHOD_TO(PartnerController::activateApiKey, std::string(PREFIX) + "activate-partner-api-key", Get, Options, "PartnerJwtAuthFilter");
   ADD_METHOD_TO(PartnerController::deleteApiKey, std::string(PREFIX) + "delete-partner-api-key", Delete, Options, "PartnerJwtAuthFilter");
   ADD_METHOD_TO(PartnerController::deleteSubscriber, std::string(PREFIX) + "delete-subscriber", Delete, Options, "PartnerJwtAuthFilter");
+  ADD_METHOD_TO(PartnerController::deactivateSubscriber, std::string(PREFIX) + "deactivate-subscriber/{1}", Delete, Options, "PartnerJwtAuthFilter");
+  ADD_METHOD_TO(PartnerController::resetSubscriberPassword, std::string(PREFIX) + "reset-subscriber-password/{1}", Delete, Options, "PartnerJwtAuthFilter");
   //ADD_METHOD_TO(PartnerController::bulkUploadSubscribers, std::string(PREFIX) + "bulk-upload-subscribers", Post, Options, "PartnerJwtAuthFilter");
 
     //partner roles
@@ -71,6 +73,9 @@ class PartnerController : public drogon::HttpController<PartnerController>
     Task<HttpResponsePtr> createAdminUser(HttpRequestPtr req);
     Task<HttpResponsePtr> updateAdminUser(HttpRequestPtr req, const std::string &adminUserId);
     Task<HttpResponsePtr> deleteAdminUser(HttpRequestPtr req);
+
+    Task<HttpResponsePtr> deactivateSubscriber(HttpRequestPtr req, const std::string &subscriberId);
+    Task<HttpResponsePtr> resetSubscriberPassword(HttpRequestPtr req, const std::string &subscriberId);
 
     //
     Task<HttpResponsePtr> getSubscriberSubscriptionDetails(HttpRequestPtr req, const std::string &userId);

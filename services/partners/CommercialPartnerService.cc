@@ -32,6 +32,8 @@
 #include <iomanip>
 #include <sstream>
 
+#include "dto/ReportDto.h"
+
 using namespace drogon::orm;
 
 using ::drogon_model::Gnp::CommercialPartners;
@@ -42,6 +44,7 @@ using ::drogon_model::Gnp::UserSessions;
 using ::drogon_model::Gnp::UserSubscriptions;
 
 namespace gnp::services {
+
 
 drogon::Task<gnp::dto::BaseApiResponse> CommercialPartnerService::getAll(int pageNo, int pageSize, const std::string &query) {
 
@@ -86,8 +89,7 @@ drogon::Task<gnp::dto::BaseApiResponse> CommercialPartnerService::getAll(int pag
     response.result["pageSize"] = pageSize;
     response.result["lowerBound"] = pageSize * (pageNo - 1) + 1;
     response.result["upperBound"] = Json::Value(
-        (int)totalPages == pageNo ? (Json::UInt64)totalCount
-                                  : (Json::UInt64)(pageNo * pageSize));
+        (int)totalPages == pageNo ? (Json::UInt64)totalCount : (Json::UInt64)(pageNo * pageSize));
     response.result["totalPages"] = (int)totalPages;
 
     Json::Value data = Json::arrayValue;
@@ -102,25 +104,17 @@ drogon::Task<gnp::dto::BaseApiResponse> CommercialPartnerService::getAll(int pag
       camelCaseCommercialPartner["partnerIdentifier"] =
           commercialPartnerJson["identifier"];
       camelCaseCommercialPartner["name"] = commercialPartnerJson["name"];
-      camelCaseCommercialPartner["contactName"] =
-          commercialPartnerJson["contact_name"];
-      camelCaseCommercialPartner["contactEmail"] =
-          commercialPartnerJson["contact_email"];
-      camelCaseCommercialPartner["contactPhone"] =
-          commercialPartnerJson["contact_phone"];
-      camelCaseCommercialPartner["billingEmail"] =
-          commercialPartnerJson["billing_email"];
-      camelCaseCommercialPartner["billingCycle"] =
-          commercialPartnerJson["billing_cycle"];
-      camelCaseCommercialPartner["currency"] =
-          commercialPartnerJson["currency"];
+      camelCaseCommercialPartner["contactName"] = commercialPartnerJson["contact_name"];
+      camelCaseCommercialPartner["contactEmail"] = commercialPartnerJson["contact_email"];
+      camelCaseCommercialPartner["contactPhone"] = commercialPartnerJson["contact_phone"];
+      camelCaseCommercialPartner["billingEmail"] = commercialPartnerJson["billing_email"];
+      camelCaseCommercialPartner["billingCycle"] = commercialPartnerJson["billing_cycle"];
+      camelCaseCommercialPartner["currency"] = commercialPartnerJson["currency"];
       camelCaseCommercialPartner["status"] = commercialPartnerJson["status"];
-      camelCaseCommercialPartner["subAccountEnabled"] =
-          commercialPartnerJson["sub_account_enabled"];
-      camelCaseCommercialPartner["subscriberQuota"] =
-          commercialPartnerJson["subscriber_quota"];
-      camelCaseCommercialPartner["createdAt"] =
-          commercialPartnerJson["created_at"];
+      camelCaseCommercialPartner["accountType"] = commercialPartnerJson["account_type"];
+      camelCaseCommercialPartner["subAccountEnabled"] = commercialPartnerJson["sub_account_enabled"];
+      camelCaseCommercialPartner["subscriberQuota"] = commercialPartnerJson["subscriber_quota"];
+      camelCaseCommercialPartner["createdAt"] = commercialPartnerJson["created_at"];
 
       data.append(camelCaseCommercialPartner);
     }
@@ -138,6 +132,8 @@ drogon::Task<gnp::dto::BaseApiResponse> CommercialPartnerService::getAll(int pag
     co_return errorResponse;
   }
 }
+
+
 
 drogon::Task<dto::BaseApiResponse> CommercialPartnerService::getAllSubscribers(int pageNo, int pageSize,
                                             const std::string &query,
@@ -655,11 +651,14 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartnerSubscr
   try {
     auto user = co_await mp.insert(newUser);
 
+    LOG_INFO << "[createPartnerSubscriber] Created subscriber — email: "
+             << user.getValueOfEmail() << ", password: " << password;
+
     // 1. Fetch partner to get quota and subscription dates
+
     CoroMapper<CommercialPartners> partnerMapper(dbClient);
     auto partner = co_await partnerMapper.findOne(
-        Criteria(CommercialPartners::Cols::_id, CompareOperator::EQ,
-                 dto.getPartnerId()));
+        Criteria(CommercialPartners::Cols::_id, CompareOperator::EQ, dto.getPartnerId()));
 
     // 2. Fetch plan and newspapers for entitlements
     CoroMapper<SubscriptionPlans> planMapper(dbClient);
@@ -970,6 +969,9 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartnerSubscr
 
     emailDto.setBody(emailBody);
     co_await emailService.sendEmailAsync(emailDto);
+
+    LOG_INFO << "[createPartnerSubscriber] Created subscriber — email: "
+             << user.getValueOfEmail() << ", password: " << password;
 
     // 6. Reduce subscriber slots for commercial partner
     auto remainingQuota = partner.getValueOfRemainingQuota();
@@ -1333,6 +1335,164 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::deletePartner(const
     co_return errorResponse;
   }
 }
+
+
+
+
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::deactivateSubscriber(const std::string &partnerId, const std::string &id) {
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<Users> userMapper(dbClient);
+  CoroMapper<UserSubscriptions> subMapper(dbClient);
+
+  try {
+    // 1. Verify user exists and belongs to the partner
+    auto user = co_await userMapper.findOne(
+        Criteria(Users::Cols::_id, CompareOperator::EQ, id) &&
+        Criteria(Users::Cols::_partner_id, CompareOperator::EQ, partnerId));
+
+    // 2. Check if user has an active subscription
+    auto subscriptions = co_await subMapper.findBy(
+        Criteria(UserSubscriptions::Cols::_user_id, CompareOperator::EQ, id) &&
+        Criteria(UserSubscriptions::Cols::_is_active, CompareOperator::EQ, true));
+
+    if (!subscriptions.empty()) {
+      // Deactivate the subscription
+      auto sub = subscriptions[0];
+      sub.setIsActive(false);
+      co_await subMapper.update(sub);
+    }
+
+    // 3. Deactivate the user
+    user.setIsActive(false);
+    co_await userMapper.update(user);
+
+    // 4. Update partner quota (recover the seat)
+    CoroMapper<CommercialPartners> partnerMapper(dbClient);
+    auto partner = co_await partnerMapper.findByPrimaryKey(partnerId);
+    partner.setRemainingQuota(partner.getValueOfRemainingQuota() + 1);
+    co_await partnerMapper.update(partner);
+
+    dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Subscriber deactivated successfully";
+    response.result["userId"] = id;
+    response.result["status"] = "Inactive";
+    co_return response;
+
+  } catch (const drogon::orm::UnexpectedRows &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Subscriber not found or does not belong to this partner";
+    errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+    co_return errorResponse;
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Database error while deactivating subscriber";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+drogon::Task<dto::BaseApiResponse> CommercialPartnerService::resetSubscriberPassword(const std::string &partnerId, const std::string &id) {
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<Users> mp(dbClient);
+
+  try {
+    // 1. Verify user exists and belongs to the partner
+    auto user = co_await mp.findOne(
+        Criteria(Users::Cols::_id, CompareOperator::EQ, id) &&
+        Criteria(Users::Cols::_partner_id, CompareOperator::EQ, partnerId));
+
+    // 2. Generate new password
+    std::string newPassword = utils::PasswordUtils::generateRandomPassword(8);
+
+    // 3. Update password hash
+    user.setPasswordHash(bcrypt::generateHash(newPassword));
+    co_await mp.update(user);
+
+    // 4. Send email with new credentials
+    auto plugin = drogon::app().getPlugin<plugins::GnpServicePlugin>();
+    auto &emailService = plugin->getEmailService();
+
+    dto::SendEmailDto emailDto;
+    emailDto.setTo(gnp::utils::StringUtils::trim(user.getValueOfEmail()));
+    emailDto.setSubject("Graphic News Plus - Password Reset");
+
+    std::string emailBody = R"html(
+      <!DOCTYPE html>
+      <html>
+      <head>
+      <meta charset="UTF-8">
+      <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .header { background-color: #D32F2F; color: #ffffff; padding: 20px; text-align: center; }
+        .content { padding: 30px; color: #333333; }
+        .credentials { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; }
+        .credential-item { margin: 10px 0; }
+        .credential-label { font-weight: bold; color: #666; }
+        .credential-value { font-size: 18px; color: #D32F2F; font-family: monospace; }
+        .footer { background-color: #f4f4f4; color: #666666; padding: 10px; text-align: center; font-size: 12px; }
+      </style>
+      </head>
+      <body>
+      <div class="container">
+        <div class="header">
+          <h1>Graphic News Plus</h1>
+        </div>
+        <div class="content">
+          <p>Hello )html" + user.getValueOfFirstName() + R"html(,</p>
+          <p>Your password for Graphic News Plus has been reset by your organization administrator.</p>
+          <p>Below are your new login credentials:</p>
+          <div class="credentials">
+            <div class="credential-item">
+              <div class="credential-label">Username (Email):</div>
+              <div class="credential-value">)html" + user.getValueOfEmail() + R"html(</div>
+            </div>
+            <div class="credential-item">
+              <div class="credential-label">New Password:</div>
+              <div class="credential-value">)html" + newPassword + R"html(</div>
+            </div>
+          </div>
+          <p>Please keep these credentials secure and change your password after your next login.</p>
+          <p>You can access the platform at: <a href="https://new.graphicnewsplus.com">https://new.graphicnewsplus.com</a></p>
+        </div>
+        <div class="footer">
+          &copy; )html" + trantor::Date::now().toCustomFormattedString("%Y") + R"html( Graphic News Plus. All rights reserved.
+        </div>
+      </div>
+      </body>
+      </html>
+    )html";
+
+    emailDto.setBody(emailBody);
+    co_await emailService.sendEmailAsync(emailDto);
+
+    dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Password reset successfully. New password has been sent to the subscriber's email.";
+    response.result["userId"] = id;
+    co_return response;
+
+  } catch (const drogon::orm::UnexpectedRows &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Subscriber not found or does not belong to this partner";
+    errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+    co_return errorResponse;
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Database error while resetting password";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+
 
 // for admin use
 drogon::Task<dto::BaseApiResponse> CommercialPartnerService::getPartnerStats() {
@@ -2049,8 +2209,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
            << " smsProvider=" << dto.getSmsProvider();
 
   auto dbClient = drogon::app().getDbClient();
-  CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> apiKeyMapper(
-      dbClient);
+  CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> apiKeyMapper(dbClient);
 
   try {
     // STEP 1: Verify API Key exists and is active
@@ -2108,11 +2267,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
                 "user: phoneNumber="
              << dto.getPhoneNumber() << " partnerId=" << partnerId;
     CoroMapper<drogon_model::Gnp::Users> userMapper(dbClient);
-    auto existingUsers = co_await userMapper.findBy(
-        Criteria(drogon_model::Gnp::Users::Cols::_phone_number,
-                 CompareOperator::EQ, dto.getPhoneNumber()) &&
-        Criteria(drogon_model::Gnp::Users::Cols::_partner_id,
-                 CompareOperator::EQ, partnerId));
+    auto existingUsers = co_await userMapper.findBy(Criteria(drogon_model::Gnp::Users::Cols::_phone_number, CompareOperator::EQ, dto.getPhoneNumber()) && Criteria(drogon_model::Gnp::Users::Cols::_partner_id, CompareOperator::EQ, partnerId));
     LOG_INFO << "[onboardSubscriberAsync] STEP 3 — existingUsers count="
              << existingUsers.size();
 
@@ -3259,6 +3414,638 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerAn
     co_return errorResponse;
   }
 }
+
+
+  drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::getPartnerInvoiceGenerationReport(const gnp::dto::ReportDto &dto) {
+
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<CommercialPartners> partnerMapper(dbClient);
+
+  try {
+    // Validate partner ID
+    if (dto.getPartnerId().empty()) {
+      gnp::dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.message = "Partner ID is required";
+      errorResponse.error["code"] = constants::ERR_VALIDATION;
+      co_return errorResponse;
+    }
+
+    auto partner = co_await partnerMapper.findByPrimaryKey(dto.getPartnerId());
+
+    // Query partner_invoices table with aggregated values
+    std::string sql =
+        "SELECT "
+        "SUM(invoice_amount) as total_invoice_amount, "
+        "SUM(balance) as total_balance "
+        "FROM partner_invoices "
+        "WHERE partner_id = $1 AND created_at >= $2 AND created_at <= $3";
+
+    auto result = co_await dbClient->execSqlCoro(sql, dto.getPartnerId(), dto.getStartDate(), dto.getEndDate());
+
+    gnp::dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Invoice generation report retrieved successfully";
+
+    Json::Value invoiceData;
+
+    // Generate invoice number
+    invoiceData["invoiceNo"] = "INV-" + std::to_string(trantor::Date::now().microSecondsSinceEpoch() / 1000).substr(0, 9);
+    invoiceData["date"] = trantor::Date::now().toCustomFormattedString("%d/%m/%Y");
+    invoiceData["dueDate"] = trantor::Date::now().after(14 * 24 * 3600).toCustomFormattedString("%d/%m/%Y");
+
+    // Billed to information
+    Json::Value billedTo;
+    billedTo["name"] = partner.getValueOfName();
+    billedTo["email"] = partner.getValueOfBillingEmail();
+    invoiceData["billedTo"] = billedTo;
+
+    invoiceData["billingPeriod"] = dto.getStartDate() + " - " + dto.getEndDate();
+
+    // Extract aggregated values
+    double totalInvoiceAmount = result[0]["total_invoice_amount"].isNull() ? 0.0 : result[0]["total_invoice_amount"].as<double>();
+    double totalBalance = result[0]["total_balance"].isNull() ? 0.0 : result[0]["total_balance"].as<double>();
+
+    // Get partner's subscriber quota for quantity calculation
+    double subscriberQuota = partner.getValueOfSubscriberQuota();
+
+
+    // Calculate quantity: totalInvoiceAmount / subscriberQuota
+    double quantity = 0.0;
+    if (subscriberQuota > 0 && totalInvoiceAmount > 0) {
+      quantity = totalInvoiceAmount / subscriberQuota;
+    }
+
+    // Build single aggregated item - Clean and minimal
+    Json::Value item;
+    item["description"] = "Invoice for new and renewed subscriptions";
+    item["quantity"] = totalInvoiceAmount / std::stod(partner.getValueOfCostPerHead());
+    item["unitPrice"] = partner.getValueOfCostPerHead();
+    item["amount"] = totalInvoiceAmount;
+    item["balance"] = totalBalance;
+    item["outstanding"] = totalInvoiceAmount - totalBalance;
+
+    Json::Value items = Json::arrayValue;
+
+    // If no invoices found, add a placeholder
+    if (totalInvoiceAmount == 0) {
+      Json::Value emptyItem;
+      emptyItem["description"] = "No invoices found for this period";
+      emptyItem["quantity"] = 0;
+      emptyItem["unitPrice"] = 0;
+      emptyItem["amount"] = 0.0;
+      emptyItem["balance"] = 0.0;
+      emptyItem["outstanding"] = 0.0;
+      items.append(emptyItem);
+    } else {
+      items.append(item);
+    }
+
+    invoiceData["items"] = items;
+
+    // Summary calculations
+    invoiceData["subtotal"] = totalInvoiceAmount;
+    invoiceData["totalBalance"] = totalBalance;
+    invoiceData["outstandingBalance"] = totalInvoiceAmount - totalBalance;
+
+    // VAT calculation (15%)
+    double vat = totalInvoiceAmount * 0.15;
+    double getflNhil = totalInvoiceAmount * 0.05;
+    invoiceData["vat"] = vat;
+    invoiceData["getflNhil"] = getflNhil;
+    invoiceData["discount"] = 0.0;
+    invoiceData["totalDue"] = totalInvoiceAmount + vat;
+
+    response.result = invoiceData;
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to retrieve invoice generation report";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+
+
+
+  drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::sendPartnerInvoiceByMail(const gnp::dto::ReportDto &dto) {
+  LOG_INFO << "[sendPartnerInvoiceByMail] START — partnerId=" << dto.getPartnerId()
+           << " startDate=" << dto.getStartDate() << " endDate=" << dto.getEndDate();
+
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<CommercialPartners> partnerMapper(dbClient);
+
+  try {
+    // STEP 1: Validate partner ID
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 1 — Validating partner ID";
+    if (dto.getPartnerId().empty()) {
+      LOG_ERROR << "[sendPartnerInvoiceByMail] STEP 1 FAILED — Partner ID is empty";
+      gnp::dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.message = "Partner ID is required";
+      errorResponse.error["code"] = constants::ERR_VALIDATION;
+      co_return errorResponse;
+    }
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 1 — Partner ID validated successfully";
+
+    // STEP 2: Fetch partner details
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 2 — Fetching partner details for partnerId=" << dto.getPartnerId();
+    auto partner = co_await partnerMapper.findByPrimaryKey(dto.getPartnerId());
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 2 — Partner found: name=" << partner.getValueOfName()
+             << " billingEmail=" << partner.getValueOfBillingEmail()
+             << " costPerHead=" << partner.getValueOfCostPerHead();
+
+    // STEP 3: Query invoice data
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 3 — Querying invoice data from partner_invoices table";
+    std::string sql =
+        "SELECT "
+        "SUM(invoice_amount) as total_invoice_amount, "
+        "SUM(balance) as total_balance "
+        "FROM partner_invoices "
+        "WHERE partner_id = $1 AND created_at >= $2 AND created_at <= $3";
+
+    auto result = co_await dbClient->execSqlCoro(sql, dto.getPartnerId(), dto.getStartDate(), dto.getEndDate());
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 3 — Query executed, result rows=" << result.size();
+
+    // STEP 4: Extract aggregated values
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 4 — Extracting aggregated values";
+    double totalInvoiceAmount = result[0]["total_invoice_amount"].isNull() ? 0.0 : result[0]["total_invoice_amount"].as<double>();
+    double totalBalance = result[0]["total_balance"].isNull() ? 0.0 : result[0]["total_balance"].as<double>();
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 4 — totalInvoiceAmount=" << totalInvoiceAmount
+             << " totalBalance=" << totalBalance;
+
+    // STEP 5: Parse unit price
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 5 — Parsing unit price";
+    double unitPrice = 0.0;
+    try {
+      unitPrice = std::stod(partner.getValueOfCostPerHead());
+      LOG_INFO << "[sendPartnerInvoiceByMail] STEP 5 — unitPrice=" << unitPrice;
+    } catch (const std::exception &e) {
+      LOG_ERROR << "[sendPartnerInvoiceByMail] STEP 5 — Failed to parse unitPrice: " << e.what();
+      unitPrice = 0.0;
+    }
+
+    // STEP 6: Calculate quantity
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 6 — Calculating quantity";
+    int quantity = 0;
+    if (unitPrice > 0 && totalInvoiceAmount > 0) {
+      quantity = (int)std::round(totalInvoiceAmount / unitPrice);
+      LOG_INFO << "[sendPartnerInvoiceByMail] STEP 6 — quantity=" << quantity;
+    } else {
+      LOG_WARN << "[sendPartnerInvoiceByMail] STEP 6 — unitPrice=" << unitPrice
+               << " or totalInvoiceAmount=" << totalInvoiceAmount << " is zero, quantity remains 0";
+    }
+
+    // STEP 7: Generate invoice data
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 7 — Generating invoice data";
+    std::string invoiceNo = "INV-" + std::to_string(trantor::Date::now().microSecondsSinceEpoch() / 1000).substr(0, 9);
+    std::string dateStr = trantor::Date::now().toCustomFormattedString("%d/%m/%Y");
+    std::string dueDateStr = trantor::Date::now().after(14 * 24 * 3600).toCustomFormattedString("%d/%m/%Y");
+    std::string billingPeriod = dto.getStartDate() + " - " + dto.getEndDate();
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 7 — invoiceNo=" << invoiceNo
+             << " dateStr=" << dateStr << " dueDateStr=" << dueDateStr
+             << " billingPeriod=" << billingPeriod;
+
+    // STEP 8: Calculate VAT and total
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 8 — Calculating VAT and total due";
+    double vatRate = 0.075;
+    double vat = totalInvoiceAmount * vatRate;
+    double totalDue = totalInvoiceAmount + vat;
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 8 — vat=" << vat << " totalDue=" << totalDue;
+
+    // STEP 9: Build email HTML
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 9 — Building email HTML body";
+    auto formatCurrency = [](double amount) -> std::string {
+      std::ostringstream ss;
+      ss << std::fixed << std::setprecision(2) << amount;
+      return ss.str();
+    };
+
+    std::string emailBody = R"html(
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f3f4f6;
+    padding: 40px 20px;
+  }
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+    overflow: hidden;
+  }
+  .header {
+    background: #ffffff;
+    padding: 30px 40px;
+    border-bottom: 2px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .logo {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1f2937;
+    letter-spacing: -0.5px;
+  }
+  .logo span {
+    color: #dc2626;
+  }
+  .invoice-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #6b7280;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .invoice-title h2 {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1f2937;
+    letter-spacing: 0;
+    margin-top: 2px;
+  }
+  .body-content {
+    padding: 30px 40px 40px;
+  }
+  .info-grid {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .info-group {
+    flex: 1;
+  }
+  .info-group:last-child {
+    text-align: right;
+  }
+  .info-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .info-value {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1f2937;
+  }
+  .info-value.sub {
+    font-weight: 400;
+    color: #4b5563;
+  }
+  .billed-to {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .billed-to .label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .billed-to .name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1f2937;
+  }
+  .billed-to .email {
+    font-size: 14px;
+    color: #6b7280;
+  }
+  .billing-period {
+    margin-bottom: 20px;
+  }
+  .billing-period .label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .billing-period .value {
+    font-size: 16px;
+    font-weight: 500;
+    color: #1f2937;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0 30px;
+  }
+  thead {
+    background-color: #f9fafb;
+  }
+  th {
+    text-align: left;
+    padding: 12px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #e5e7eb;
+  }
+  td {
+    padding: 14px 16px;
+    font-size: 14px;
+    color: #1f2937;
+    border-bottom: 1px solid #f3f4f6;
+  }
+  .text-right {
+    text-align: right;
+  }
+  .font-mono {
+    font-family: 'Courier New', monospace;
+  }
+  .summary {
+    max-width: 320px;
+    margin-left: auto;
+    margin-top: 20px;
+  }
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 14px;
+    color: #4b5563;
+  }
+  .summary-row.total {
+    border-top: 2px solid #1f2937;
+    margin-top: 4px;
+    padding-top: 14px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #1f2937;
+  }
+  .summary-row .label {
+    font-weight: 500;
+  }
+  .summary-row .value {
+    font-weight: 600;
+  }
+  .summary-row.total .value {
+    color: #dc2626;
+  }
+  .footer {
+    background: #f9fafb;
+    padding: 30px 40px;
+    border-top: 1px solid #e5e7eb;
+  }
+  .footer-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 10px;
+  }
+  .footer p {
+    font-size: 14px;
+    color: #4b5563;
+    line-height: 1.6;
+    margin-bottom: 4px;
+  }
+  .footer .highlight {
+    font-weight: 600;
+    color: #1f2937;
+  }
+  .footer .contact {
+    margin-top: 10px;
+    color: #6b7280;
+    font-size: 13px;
+  }
+  .footer .contact a {
+    color: #dc2626;
+    text-decoration: none;
+  }
+  .footer .contact a:hover {
+    text-decoration: underline;
+  }
+  @media (max-width: 600px) {
+    .header {
+      flex-direction: column;
+      gap: 12px;
+      text-align: center;
+      padding: 20px;
+    }
+    .info-grid {
+      flex-direction: column;
+      gap: 12px;
+    }
+    .info-group:last-child {
+      text-align: left;
+    }
+    .body-content {
+      padding: 20px;
+    }
+    .footer {
+      padding: 20px;
+    }
+    .summary {
+      max-width: 100%;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-left">
+      <span class="logo">GRAPHIC <span>NEWS</span> PLUS</span>
+    </div>
+    <div class="invoice-title">
+      <div>INVOICE</div>
+      <h2>#)html" + invoiceNo + R"html(</h2>
+    </div>
+  </div>
+
+  <!-- BODY -->
+  <div class="body-content">
+
+    <!-- Info Grid -->
+    <div class="info-grid">
+      <div class="info-group">
+        <div class="info-label">Invoice Date</div>
+        <div class="info-value">)html" + dateStr + R"html(</div>
+      </div>
+      <div class="info-group">
+        <div class="info-label">Due Date</div>
+        <div class="info-value">)html" + dueDateStr + R"html(</div>
+      </div>
+      <div class="info-group">
+        <div class="info-label">Invoice No</div>
+        <div class="info-value">)html" + invoiceNo + R"html(</div>
+      </div>
+    </div>
+
+    <!-- Billed To -->
+    <div class="billed-to">
+      <div class="label">Billed To</div>
+      <div class="name">)html" + partner.getValueOfName() + R"html(</div>
+      <div class="email">)html" + partner.getValueOfBillingEmail() + R"html(</div>
+    </div>
+
+    <!-- Billing Period -->
+    <div class="billing-period">
+      <div class="label">Billing Period</div>
+      <div class="value">)html" + billingPeriod + R"html(</div>
+    </div>
+
+    <!-- Table -->
+    <table>
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th style="text-align: right;">Qty / Imps</th>
+          <th style="text-align: right;">Unit Price ($)</th>
+          <th style="text-align: right;">Amount ($)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Invoice for new and renewed subscriptions</td>
+          <td class="text-right font-mono">)html" + std::to_string(quantity) + R"html(</td>
+          <td class="text-right font-mono">)html" + formatCurrency(unitPrice) + R"html(</td>
+          <td class="text-right font-mono">)html" + formatCurrency(totalInvoiceAmount) + R"html(</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Summary -->
+    <div class="summary">
+      <div class="summary-row">
+        <span class="label">Subtotal</span>
+        <span class="value">GHS )html" + formatCurrency(totalInvoiceAmount) + R"html(</span>
+      </div>
+      <div class="summary-row">
+        <span class="label">VAT (7.5%)</span>
+        <span class="value">GHS )html" + formatCurrency(vat) + R"html(</span>
+      </div>
+      <div class="summary-row">
+        <span class="label">Discount</span>
+        <span class="value">GHS 0.00</span>
+      </div>
+      <div class="summary-row total">
+        <span class="label">Total Due</span>
+        <span class="value">GHS )html" + formatCurrency(totalDue) + R"html(</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-title">Payment Instructions:</div>
+    <p>Please make payment to Graphic Communications Group Ltd. via Bank Transfer.</p>
+    <p><span class="highlight">Bank:</span> Ghana Commercial Bank (GCB)</p>
+    <p><span class="highlight">Account No:</span> 3201001382531</p>
+    <p><span class="highlight">Branch:</span> High Street</p>
+    <p class="contact">
+      If you have any questions concerning this invoice, please contact
+      <a href="mailto:billing@graphic.com.gh">billing@graphic.com.gh</a>
+    </p>
+  </div>
+
+</div>
+
+</body>
+</html>)html";
+
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 9 — Email HTML body built, size=" << emailBody.size() << " bytes";
+
+    // STEP 10: Get plugins and services
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 10 — Getting GnpServicePlugin and EmailService";
+    auto plugin = drogon::app().getPlugin<plugins::GnpServicePlugin>();
+    auto &emailService = plugin->getEmailService();
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 10 — Plugin and EmailService obtained successfully";
+
+    // STEP 11: Prepare email DTO
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 11 — Preparing SendEmailDto";
+    dto::SendEmailDto emailDto;
+    //emailDto.setTo(gnp::utils::StringUtils::trim(partner.getValueOfBillingEmail()));
+    emailDto.setTo("francis.osabutey@gmail.com");
+    emailDto.setSubject("Invoice " + invoiceNo + " - Graphic News Plus");
+    emailDto.setBody(emailBody);
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 11 — Email DTO prepared: to=" << "francis.osabutey@gmail.com"
+             << " subject=" << emailDto.getSubject();
+
+    // STEP 12: Send email
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 12 — Sending email asynchronously";
+    try {
+      co_await emailService.sendEmailAsync(emailDto);
+      LOG_INFO << "[sendPartnerInvoiceByMail] STEP 12 — Email sent successfully";
+    } catch (const std::exception &e) {
+      LOG_ERROR << "[sendPartnerInvoiceByMail] STEP 12 FAILED — Email sending failed: " << e.what();
+      gnp::dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.message = "Failed to send invoice email";
+      errorResponse.error["code"] = constants::ERR_UNSUPPORTED_OPERATION;
+      errorResponse.error["detail"] = e.what();
+      co_return errorResponse;
+    }
+
+    // STEP 13: Build success response
+    LOG_INFO << "[sendPartnerInvoiceByMail] STEP 13 — Building success response";
+    gnp::dto::BaseApiResponse response;
+    response.success = true;
+    response.message = "Invoice sent successfully to " + partner.getValueOfBillingEmail();
+    response.result["invoiceNo"] = invoiceNo;
+    response.result["sentTo"] = partner.getValueOfBillingEmail();
+    response.result["totalAmount"] = totalDue;
+    LOG_INFO << "[sendPartnerInvoiceByMail] COMPLETED — invoiceNo=" << invoiceNo
+             << " sentTo=" << partner.getValueOfBillingEmail()
+             << " totalAmount=" << totalDue;
+    co_return response;
+
+  } catch (const DrogonDbException &e) {
+    LOG_ERROR << "[sendPartnerInvoiceByMail] DATABASE EXCEPTION — " << e.base().what()
+              << " (partnerId=" << dto.getPartnerId() << ")";
+    gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to send invoice email";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  } catch (const std::exception &e) {
+    LOG_ERROR << "[sendPartnerInvoiceByMail] UNHANDLED EXCEPTION — " << e.what()
+              << " (partnerId=" << dto.getPartnerId() << ")";
+    gnp::dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Failed to send invoice email";
+    errorResponse.error["code"] = constants::ERR_UNSUPPORTED_OPERATION;
+    errorResponse.error["detail"] = e.what();
+    co_return errorResponse;
+  }
+}
+
+
 
 drogon::Task<dto::BaseApiResponse> CommercialPartnerService::bulkUploadSubscribersJson(
     const std::string partnerId, const Json::Value &jsonArray) {

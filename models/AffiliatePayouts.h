@@ -172,12 +172,12 @@ class AffiliatePayouts
 
     /**  For column status  */
     ///Get the value of the column status, returns the default value if the column is null
-    const std::string &getValueOfStatus() const noexcept;
+    const int32_t &getValueOfStatus() const noexcept;
     ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<std::string> &getStatus() const noexcept;
+    const std::shared_ptr<int32_t> &getStatus() const noexcept;
     ///Set the value of the column status
-    void setStatus(const std::string &pStatus) noexcept;
-    void setStatus(std::string &&pStatus) noexcept;
+    void setStatus(const int32_t &pStatus) noexcept;
+    void setStatusToNull() noexcept;
 
     /**  For column platforms  */
     ///Get the value of the column platforms, returns the default value if the column is null
@@ -236,7 +236,7 @@ class AffiliatePayouts
     std::shared_ptr<std::string> accountType_;
     std::shared_ptr<std::string> accountName_;
     std::shared_ptr<std::string> accountProvider_;
-    std::shared_ptr<std::string> status_;
+    std::shared_ptr<int32_t> status_;
     std::shared_ptr<std::string> platforms_;
     std::shared_ptr<::trantor::Date> createdAt_;
     std::shared_ptr<::trantor::Date> updatedAt_;
@@ -306,10 +306,11 @@ class AffiliatePayouts
             sql += "account_provider,";
             ++parametersCount;
         }
-        if(dirtyFlag_[7])
+        sql += "status,";
+        ++parametersCount;
+        if(!dirtyFlag_[7])
         {
-            sql += "status,";
-            ++parametersCount;
+            needSelection=true;
         }
         if(dirtyFlag_[8])
         {
@@ -385,6 +386,10 @@ class AffiliatePayouts
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
         }
         if(dirtyFlag_[8])
         {

@@ -45,20 +45,24 @@ class Affiliates
     struct Cols
     {
         static const std::string _id;
-        static const std::string _name;
+        static const std::string _first_name;
+        static const std::string _last_name;
         static const std::string _email;
         static const std::string _phone;
         static const std::string _status;
-        static const std::string _website;
-        static const std::string _platforms;
         static const std::string _total_earnings;
+        static const std::string _wallet_balance;
         static const std::string _date_joined;
-        static const std::string _updated_at;
         static const std::string _account_type;
         static const std::string _account_name;
         static const std::string _account_provider;
+        static const std::string _bank_code;
         static const std::string _affiliate_id;
+        static const std::string _profile_image;
         static const std::string _user_id;
+        static const std::string _require_two_factor_auth;
+        static const std::string _created_at;
+        static const std::string _updated_at;
     };
 
     static const int primaryKeyNumber;
@@ -119,14 +123,25 @@ class Affiliates
     void setId(const std::string &pId) noexcept;
     void setId(std::string &&pId) noexcept;
 
-    /**  For column name  */
-    ///Get the value of the column name, returns the default value if the column is null
-    const std::string &getValueOfName() const noexcept;
+    /**  For column first_name  */
+    ///Get the value of the column first_name, returns the default value if the column is null
+    const std::string &getValueOfFirstName() const noexcept;
     ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<std::string> &getName() const noexcept;
-    ///Set the value of the column name
-    void setName(const std::string &pName) noexcept;
-    void setName(std::string &&pName) noexcept;
+    const std::shared_ptr<std::string> &getFirstName() const noexcept;
+    ///Set the value of the column first_name
+    void setFirstName(const std::string &pFirstName) noexcept;
+    void setFirstName(std::string &&pFirstName) noexcept;
+    void setFirstNameToNull() noexcept;
+
+    /**  For column last_name  */
+    ///Get the value of the column last_name, returns the default value if the column is null
+    const std::string &getValueOfLastName() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getLastName() const noexcept;
+    ///Set the value of the column last_name
+    void setLastName(const std::string &pLastName) noexcept;
+    void setLastName(std::string &&pLastName) noexcept;
+    void setLastNameToNull() noexcept;
 
     /**  For column email  */
     ///Get the value of the column email, returns the default value if the column is null
@@ -149,31 +164,12 @@ class Affiliates
 
     /**  For column status  */
     ///Get the value of the column status, returns the default value if the column is null
-    const std::string &getValueOfStatus() const noexcept;
+    const int32_t &getValueOfStatus() const noexcept;
     ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<std::string> &getStatus() const noexcept;
+    const std::shared_ptr<int32_t> &getStatus() const noexcept;
     ///Set the value of the column status
-    void setStatus(const std::string &pStatus) noexcept;
-    void setStatus(std::string &&pStatus) noexcept;
-
-    /**  For column website  */
-    ///Get the value of the column website, returns the default value if the column is null
-    const std::string &getValueOfWebsite() const noexcept;
-    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<std::string> &getWebsite() const noexcept;
-    ///Set the value of the column website
-    void setWebsite(const std::string &pWebsite) noexcept;
-    void setWebsite(std::string &&pWebsite) noexcept;
-
-    /**  For column platforms  */
-    ///Get the value of the column platforms, returns the default value if the column is null
-    const std::string &getValueOfPlatforms() const noexcept;
-    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<std::string> &getPlatforms() const noexcept;
-    ///Set the value of the column platforms
-    void setPlatforms(const std::string &pPlatforms) noexcept;
-    void setPlatforms(std::string &&pPlatforms) noexcept;
-    void setPlatformsToNull() noexcept;
+    void setStatus(const int32_t &pStatus) noexcept;
+    void setStatusToNull() noexcept;
 
     /**  For column total_earnings  */
     ///Get the value of the column total_earnings, returns the default value if the column is null
@@ -184,6 +180,15 @@ class Affiliates
     void setTotalEarnings(const std::string &pTotalEarnings) noexcept;
     void setTotalEarnings(std::string &&pTotalEarnings) noexcept;
 
+    /**  For column wallet_balance  */
+    ///Get the value of the column wallet_balance, returns the default value if the column is null
+    const std::string &getValueOfWalletBalance() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getWalletBalance() const noexcept;
+    ///Set the value of the column wallet_balance
+    void setWalletBalance(const std::string &pWalletBalance) noexcept;
+    void setWalletBalance(std::string &&pWalletBalance) noexcept;
+
     /**  For column date_joined  */
     ///Get the value of the column date_joined, returns the default value if the column is null
     const ::trantor::Date &getValueOfDateJoined() const noexcept;
@@ -191,15 +196,6 @@ class Affiliates
     const std::shared_ptr<::trantor::Date> &getDateJoined() const noexcept;
     ///Set the value of the column date_joined
     void setDateJoined(const ::trantor::Date &pDateJoined) noexcept;
-
-    /**  For column updated_at  */
-    ///Get the value of the column updated_at, returns the default value if the column is null
-    const ::trantor::Date &getValueOfUpdatedAt() const noexcept;
-    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<::trantor::Date> &getUpdatedAt() const noexcept;
-    ///Set the value of the column updated_at
-    void setUpdatedAt(const ::trantor::Date &pUpdatedAt) noexcept;
-    void setUpdatedAtToNull() noexcept;
 
     /**  For column account_type  */
     ///Get the value of the column account_type, returns the default value if the column is null
@@ -229,6 +225,15 @@ class Affiliates
     void setAccountProvider(const std::string &pAccountProvider) noexcept;
     void setAccountProvider(std::string &&pAccountProvider) noexcept;
 
+    /**  For column bank_code  */
+    ///Get the value of the column bank_code, returns the default value if the column is null
+    const std::string &getValueOfBankCode() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getBankCode() const noexcept;
+    ///Set the value of the column bank_code
+    void setBankCode(const std::string &pBankCode) noexcept;
+    void setBankCode(std::string &&pBankCode) noexcept;
+
     /**  For column affiliate_id  */
     ///Get the value of the column affiliate_id, returns the default value if the column is null
     const std::string &getValueOfAffiliateId() const noexcept;
@@ -237,7 +242,18 @@ class Affiliates
     ///Set the value of the column affiliate_id
     void setAffiliateId(const std::string &pAffiliateId) noexcept;
     void setAffiliateId(std::string &&pAffiliateId) noexcept;
-    void setAffiliateIdToNull() noexcept;
+
+    /**  For column profile_image  */
+    ///Get the value of the column profile_image, returns the default value if the column is null
+    const std::vector<char> &getValueOfProfileImage() const noexcept;
+    ///Return the column value by std::string with binary data
+    std::string getValueOfProfileImageAsString() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::vector<char>> &getProfileImage() const noexcept;
+    ///Set the value of the column profile_image
+    void setProfileImage(const std::vector<char> &pProfileImage) noexcept;
+    void setProfileImage(const std::string &pProfileImage) noexcept;
+    void setProfileImageToNull() noexcept;
 
     /**  For column user_id  */
     ///Get the value of the column user_id, returns the default value if the column is null
@@ -249,8 +265,34 @@ class Affiliates
     void setUserId(std::string &&pUserId) noexcept;
     void setUserIdToNull() noexcept;
 
+    /**  For column require_two_factor_auth  */
+    ///Get the value of the column require_two_factor_auth, returns the default value if the column is null
+    const bool &getValueOfRequireTwoFactorAuth() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<bool> &getRequireTwoFactorAuth() const noexcept;
+    ///Set the value of the column require_two_factor_auth
+    void setRequireTwoFactorAuth(const bool &pRequireTwoFactorAuth) noexcept;
+    void setRequireTwoFactorAuthToNull() noexcept;
 
-    static size_t getColumnNumber() noexcept {  return 15;  }
+    /**  For column created_at  */
+    ///Get the value of the column created_at, returns the default value if the column is null
+    const ::trantor::Date &getValueOfCreatedAt() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<::trantor::Date> &getCreatedAt() const noexcept;
+    ///Set the value of the column created_at
+    void setCreatedAt(const ::trantor::Date &pCreatedAt) noexcept;
+
+    /**  For column updated_at  */
+    ///Get the value of the column updated_at, returns the default value if the column is null
+    const ::trantor::Date &getValueOfUpdatedAt() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<::trantor::Date> &getUpdatedAt() const noexcept;
+    ///Set the value of the column updated_at
+    void setUpdatedAt(const ::trantor::Date &pUpdatedAt) noexcept;
+    void setUpdatedAtToNull() noexcept;
+
+
+    static size_t getColumnNumber() noexcept {  return 19;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -273,20 +315,24 @@ class Affiliates
     ///For mysql or sqlite3
     void updateId(const uint64_t id);
     std::shared_ptr<std::string> id_;
-    std::shared_ptr<std::string> name_;
+    std::shared_ptr<std::string> firstName_;
+    std::shared_ptr<std::string> lastName_;
     std::shared_ptr<std::string> email_;
     std::shared_ptr<std::string> phone_;
-    std::shared_ptr<std::string> status_;
-    std::shared_ptr<std::string> website_;
-    std::shared_ptr<std::string> platforms_;
+    std::shared_ptr<int32_t> status_;
     std::shared_ptr<std::string> totalEarnings_;
+    std::shared_ptr<std::string> walletBalance_;
     std::shared_ptr<::trantor::Date> dateJoined_;
-    std::shared_ptr<::trantor::Date> updatedAt_;
     std::shared_ptr<std::string> accountType_;
     std::shared_ptr<std::string> accountName_;
     std::shared_ptr<std::string> accountProvider_;
+    std::shared_ptr<std::string> bankCode_;
     std::shared_ptr<std::string> affiliateId_;
+    std::shared_ptr<std::vector<char>> profileImage_;
     std::shared_ptr<std::string> userId_;
+    std::shared_ptr<bool> requireTwoFactorAuth_;
+    std::shared_ptr<::trantor::Date> createdAt_;
+    std::shared_ptr<::trantor::Date> updatedAt_;
     struct MetaData
     {
         const std::string colName_;
@@ -298,7 +344,7 @@ class Affiliates
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[15]={ false };
+    bool dirtyFlag_[19]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -324,35 +370,37 @@ class Affiliates
         }
         if(dirtyFlag_[1])
         {
-            sql += "name,";
+            sql += "first_name,";
             ++parametersCount;
         }
         if(dirtyFlag_[2])
         {
-            sql += "email,";
+            sql += "last_name,";
             ++parametersCount;
         }
         if(dirtyFlag_[3])
         {
-            sql += "phone,";
+            sql += "email,";
             ++parametersCount;
         }
         if(dirtyFlag_[4])
         {
-            sql += "status,";
+            sql += "phone,";
             ++parametersCount;
         }
-        if(dirtyFlag_[5])
+        sql += "status,";
+        ++parametersCount;
+        if(!dirtyFlag_[5])
         {
-            sql += "website,";
-            ++parametersCount;
-        }
-        if(dirtyFlag_[6])
-        {
-            sql += "platforms,";
-            ++parametersCount;
+            needSelection=true;
         }
         sql += "total_earnings,";
+        ++parametersCount;
+        if(!dirtyFlag_[6])
+        {
+            needSelection=true;
+        }
+        sql += "wallet_balance,";
         ++parametersCount;
         if(!dirtyFlag_[7])
         {
@@ -366,36 +414,58 @@ class Affiliates
         }
         if(dirtyFlag_[9])
         {
-            sql += "updated_at,";
-            ++parametersCount;
-        }
-        if(dirtyFlag_[10])
-        {
             sql += "account_type,";
             ++parametersCount;
         }
         sql += "account_name,";
         ++parametersCount;
-        if(!dirtyFlag_[11])
+        if(!dirtyFlag_[10])
         {
             needSelection=true;
         }
         sql += "account_provider,";
         ++parametersCount;
-        if(!dirtyFlag_[12])
+        if(!dirtyFlag_[11])
         {
             needSelection=true;
         }
-        if(dirtyFlag_[13])
+        if(dirtyFlag_[12])
         {
-            sql += "affiliate_id,";
+            sql += "bank_code,";
             ++parametersCount;
         }
-        sql += "user_id,";
+        sql += "affiliate_id,";
         ++parametersCount;
-        if(!dirtyFlag_[14])
+        if(!dirtyFlag_[13])
         {
             needSelection=true;
+        }
+        if(dirtyFlag_[14])
+        {
+            sql += "profile_image,";
+            ++parametersCount;
+        }
+        if(dirtyFlag_[15])
+        {
+            sql += "user_id,";
+            ++parametersCount;
+        }
+        sql += "require_two_factor_auth,";
+        ++parametersCount;
+        if(!dirtyFlag_[16])
+        {
+            needSelection=true;
+        }
+        sql += "created_at,";
+        ++parametersCount;
+        if(!dirtyFlag_[17])
+        {
+            needSelection=true;
+        }
+        if(dirtyFlag_[18])
+        {
+            sql += "updated_at,";
+            ++parametersCount;
         }
         if(parametersCount > 0)
         {
@@ -442,10 +512,18 @@ class Affiliates
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
+        else
+        {
+            sql +="default,";
+        }
         if(dirtyFlag_[6])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
         }
         if(dirtyFlag_[7])
         {
@@ -475,6 +553,10 @@ class Affiliates
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
+        else
+        {
+            sql +="default,";
+        }
         if(dirtyFlag_[11])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
@@ -489,23 +571,47 @@ class Affiliates
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
-        else
-        {
-            sql +="default,";
-        }
         if(dirtyFlag_[13])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
         }
         if(dirtyFlag_[14])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
+        if(dirtyFlag_[15])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[16])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
         else
         {
             sql +="default,";
+        }
+        if(dirtyFlag_[17])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
+        }
+        if(dirtyFlag_[18])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
         }
         if(parametersCount > 0)
         {

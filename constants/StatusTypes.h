@@ -7,22 +7,37 @@
 namespace gnp::constants {
 
     enum StatusTypes {
-
-        Draft = 0,
-        Published = 1,
-        Archived = 2,
-        Deleted = 3,
-        Enabled = 4,
-        Disabled = 5,
-        Upcoming = 6,
-        Ongoing = 7,
-        Completed = 8,
-        Processing = 9,
-        Scheduled = 10,
-        Active = 11,
-        InActive = 12,
-
+        DRAFT = 0,
+        PUBLISHED = 1,
+        ARCHIVED = 2,
+        DELETED = 3,
+        ENABLED = 4,
+        DISABLED = 5,
+        UPCOMING = 6,
+        ONGOING = 7,
+        COMPLETED = 8,
+        PROCESSING = 9,
+        SCHEDULED = 10,
+        ACTIVE = 11,
+        INACTIVE = 12,
+        SUSPENDED = 13,
+        PENDING = 14,
+        CONVERTED = 15,
+        APPROVED = 16,
+        REJECTED = 17,
+        PROCESSING_PAYOUT = 18,
+        PAID = 19
     };
+
+
+    enum FileTypes {
+        PDF = 0,
+        IMAGE = 1,
+        VIDEO = 2,
+        AUDIO = 3,
+    };
+
+
 
 }
 #endif //GNPAPI_STATUSTYPES_H

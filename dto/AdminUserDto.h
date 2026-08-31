@@ -89,4 +89,5 @@ namespace gnp::dto {
     }
 
 }
+
 #endif //GNPAPI_ADMINUSERDTO_H

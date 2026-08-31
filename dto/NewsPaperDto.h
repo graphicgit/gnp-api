@@ -30,7 +30,7 @@ namespace gnp::dto {
         [[nodiscard]] bool getIsPopular() const { return is_popular_; }
         [[nodiscard]] const std::string &getFullDescription() const {  return full_description_; }
         [[nodiscard]] const std::string &getThumbnailId() const { return thumbnail_id_; }
-        [[nodiscard]] const std::string &getFileType() const { return file_type_; }
+        [[nodiscard]] int getFileType() const { return file_type_; }
         [[nodiscard]] const std::string &getStorageService() const { return storage_service_; }
         [[nodiscard]] const std::string &getDocumentId() const { return document_id_; }
         [[nodiscard]] bool isPublished() const { return is_published_; }
@@ -50,7 +50,7 @@ namespace gnp::dto {
         void setIsPopular(bool v) { is_popular_ = v; }
         void setFullDescription(const std::string &v) { full_description_ = v; }
         void setThumbnailId(const std::string &v) { thumbnail_id_ = v; }
-        void setFileType(const std::string &v) { file_type_ = v; }
+        void setFileType(const int &v) { file_type_ = v; }
         void setStorageService(const std::string &v) { storage_service_ = v; }
         void setDocumentId(const std::string &v) { document_id_ = v; }
         void setIsPublished(bool v) { is_published_ = v; }
@@ -70,7 +70,7 @@ namespace gnp::dto {
         bool is_popular_ {false};
         std::string full_description_;
         std::string thumbnail_id_;
-        std::string file_type_;
+        int file_type_ {0};
         std::string featured_stories_;
         std::string storage_service_;
         std::string document_id_;
@@ -127,7 +127,7 @@ namespace gnp::dto {
         }
 
         if (json.isMember("fileType") && !json["fileType"].isNull()) {
-            file_type_ = json["fileType"].asString();
+            file_type_ = json["fileType"].asInt();
         }
 
         if (json.isMember("storageService") && !json["storageService"].isNull()) {

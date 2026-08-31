@@ -8,25 +8,25 @@
 #include "dto/BaseApiResponse.h"
 #include "dto/IngestNewsPaperDto.h"
 #include <drogon/drogon.h>
-
 #include "dto/NewsPaperDto.h"
 #include "dto/OcrIngestionDto.h"
+#include "dto/ReportDto.h"
 
 namespace gnp::services {
 
 class NewspaperService {
 
 public:
-  drogon::Task<gnp::dto::BaseApiResponse> getAllAsync(int pageNo, int pageSize, const std::string &publicationId,
+  drogon::Task<dto::BaseApiResponse> getAllAsync(int pageNo, int pageSize, const std::string &publicationId,
               const std::string &startDate, const std::string &endDate,
               const std::string &query);
 
 
-    drogon::Task<gnp::dto::BaseApiResponse> listAllAsync(int pageNo, int pageSize, const std::string &publicationId,
+    drogon::Task<dto::BaseApiResponse> listAllAsync(int pageNo, int pageSize, const std::string &publicationId,
     const std::string &startDate, const std::string &endDate,
     const std::string &query, const std::string &status);
 
-    drogon::Task<gnp::dto::BaseApiResponse> listAllArchivedAsync(int pageNo, int pageSize, const std::string &publicationId,
+    drogon::Task<dto::BaseApiResponse> listAllArchivedAsync(int pageNo, int pageSize, const std::string &publicationId,
     const std::string &startDate, const std::string &endDate,
     const std::string &query, const std::string &status);
 
@@ -58,6 +58,13 @@ public:
 
    //ocr ingestion ...
    drogon::Task<gnp::dto::BaseApiResponse> handleOcrIngestion(const dto::OcrIngestionDto &dto);
+
+   drogon::Task<void> dispatchDailyNewsUpdate();
+
+    //reports
+    drogon::Task<::gnp::dto::BaseApiResponse> getNewspaperEngagementReport(const gnp::dto::ReportDto &dto);
+
+    drogon::Task<gnp::dto::BaseApiResponse> getRecentNewspapersForAffiliate(int pageNo, int pageSize, const std::string &affiliateId);
 };
 
 } // namespace gnp::services

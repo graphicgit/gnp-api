@@ -13,6 +13,7 @@
 #include "services/audit_logs/AuditLogService.h"
 #include "services/campaigns/CampaignService.h"
 #include "services/categories/CategoryService.h"
+#include "services/content/ContentService.h"
 #include "services/coupons/CouponService.h"
 #include "services/email/EmailService.h"
 #include "services/g3_storage/G3StorageService.h"
@@ -31,6 +32,7 @@
 #include "services/redis/RedisCacheManager.h"
 #include "services/reports/ReportingService.h"
 #include "services/roles/RoleService.h"
+#include "services/settings/SettingService.h"
 #include "services/subscription_plans/SubscriptionPlanService.h"
 #include "services/subscriptions/SubscriptionService.h"
 #include "services/tags/TagService.h"
@@ -75,6 +77,8 @@ public:
   ::gnp::services::CategoryService &getCategoryService() { return categoryService_; }
   ::gnp::services::ReportingService &getReportingService() { return reportingService_; }
   ::gnp::services::G3StorageService &getG3StorageService() { return g3StorageService_; }
+  ::gnp::services::SettingService &getSettingService() { return settingService_; }
+  ::gnp::services::ContentService &getContentService() { return contentService_; }
 
 private:
   services::RedisCacheManager redisCacheService_;
@@ -99,11 +103,13 @@ private:
   ::gnp::services::AdminUserInvitationService adminUserInvitationService_;
   ::gnp::services::AuditLogService auditLogService_;
   ::gnp::services::TagService tagService_;
+  ::gnp::services::ContentService contentService_;
   ::gnp::services::CategoryService categoryService_;
   ::gnp::services::PartnerUserLogService partnerUserActivityLogService_;
   ::gnp::services::PartnerApiLogService partnerApiLogService_;
   ::gnp::services::ReportingService reportingService_;
   ::gnp::services::G3StorageService g3StorageService_;
+  ::gnp::services::SettingService settingService_;
 };
 
 } // namespace gnp::plugins
