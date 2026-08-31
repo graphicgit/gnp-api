@@ -1561,7 +1561,6 @@ drogon::Task<::gnp::dto::BaseApiResponse> AffiliateService::getAffiliateSettings
 
   co_return response;
 
-
 }
 
 

@@ -29,5 +29,8 @@ namespace gnp::constants {
         ACHIEVEMENT_BONUS = 50,
     };
 
+
+
+
 }
 #endif //PUBLICATIONTYPES_H

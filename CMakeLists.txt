@@ -156,6 +156,8 @@ add_executable(${PROJECT_NAME} main.cc
         dto/AffiliateSettingsDto.h
         services/games/GameManager.h
         services/games/GameManager.cc
+        services/rag/RagManager.h
+        services/rag/RagManager.cc
 )
 
 # ##############################################################################

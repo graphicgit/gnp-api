@@ -181,6 +181,7 @@ drogon::Task<dto::BaseApiResponse> UserService::getAllSubscribers(int pageNo, in
   co_return response;
 }
 
+
 drogon::Task<dto::BaseApiResponse> UserService::getDetails(const std::string &userId) {
   auto dbClient = drogon::app().getDbClient();
   auto mp = drogon::orm::CoroMapper<Users>(dbClient);
@@ -225,6 +226,7 @@ drogon::Task<dto::BaseApiResponse> UserService::getDetails(const std::string &us
   }
   co_return response;
 }
+
 
 drogon::Task<dto::BaseApiResponse> UserService::getAdminUsers(int pageNo, int pageSize, const std::string &query) {
   auto dbClient = drogon::app().getDbClient();
@@ -290,6 +292,7 @@ drogon::Task<dto::BaseApiResponse> UserService::getAdminUsers(int pageNo, int pa
   }
   co_return response;
 }
+
 
 drogon::Task<dto::BaseApiResponse> UserService::getPartnerAdminUsers(const std::string &partnerId, int pageNo, int pageSize, const std::string &query) {
   auto dbClient = drogon::app().getDbClient();
@@ -568,6 +571,8 @@ drogon::Task<dto::BaseApiResponse> UserService::update(const dto::UserDto &userD
 
   co_return response;
 }
+
+
 drogon::Task<dto::BaseApiResponse> UserService::updateProfileImage(const std::string &userId, const std::string &logoContent) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -732,7 +737,6 @@ drogon::Task<dto::BaseApiResponse> UserService::invitePartnerAdminUser(const dto
 }
 
 
-
 drogon::Task<dto::BaseApiResponse> UserService::updatePartnerAdminUser(const dto::AdminUserDto &userDto, const std::string &adminUserId, const std::string &partnerId) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -776,7 +780,6 @@ drogon::Task<dto::BaseApiResponse> UserService::updatePartnerAdminUser(const dto
 
   co_return response;
 }
-
 
 
 drogon::Task<dto::BaseApiResponse> UserService::registerUserPasskeys(const dto::RegisterUserPasskeysDto &passKeysDto) {
@@ -888,6 +891,7 @@ drogon::Task<dto::BaseApiResponse> UserService::registerUserPasskeys(const dto::
   co_return response;
 }
 
+
 drogon::Task<dto::BaseApiResponse> UserService::validateUserPasskeys(const dto::LoginUserPasskeyDto &passkeyDto) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -944,15 +948,11 @@ drogon::Task<dto::BaseApiResponse> UserService::validateUserPasskeys(const dto::
     // 2. Cryptographic Verification
     // SignedData = authenticatorData + sha256(clientDataJSON)
 
-    std::string authDataStr =
-        toStandardBase64(passkeyDto.getAuthenticatorData());
-    std::vector<char> authData =
-        drogon::utils::base64DecodeToVector(authDataStr);
+    std::string authDataStr =  toStandardBase64(passkeyDto.getAuthenticatorData());
+    std::vector<char> authData = drogon::utils::base64DecodeToVector(authDataStr);
 
-    std::string clientDataStr =
-        toStandardBase64(passkeyDto.getClientDataJSON());
-    std::vector<char> clientData =
-        drogon::utils::base64DecodeToVector(clientDataStr);
+    std::string clientDataStr = toStandardBase64(passkeyDto.getClientDataJSON());
+    std::vector<char> clientData = drogon::utils::base64DecodeToVector(clientDataStr);
 
     unsigned char clientDataHash[SHA256_DIGEST_LENGTH];
     SHA256((const unsigned char *)clientData.data(), clientData.size(),
@@ -985,8 +985,7 @@ drogon::Task<dto::BaseApiResponse> UserService::validateUserPasskeys(const dto::
     std::vector<char> sigBytes = drogon::utils::base64DecodeToVector(sigStr);
 
     int verifyResult =
-        EVP_DigestVerify(ctx, (const unsigned char *)sigBytes.data(),
-                         sigBytes.size(), signedData.data(), signedData.size());
+        EVP_DigestVerify(ctx, (const unsigned char *)sigBytes.data(), sigBytes.size(), signedData.data(), signedData.size());
 
     EVP_MD_CTX_free(ctx);
     EVP_PKEY_free(pkey);
@@ -1036,11 +1035,9 @@ drogon::Task<dto::BaseApiResponse> UserService::validateUserPasskeys(const dto::
             .set_issuer(jwtIssuer)
             .set_type("JWT")
             .set_issued_at(std::chrono::system_clock::now())
-            .set_expires_at(std::chrono::system_clock::now() +
-                            std::chrono::hours(24 * 120))
+            .set_expires_at(std::chrono::system_clock::now() +  std::chrono::hours(24 * 366))
             .set_payload_claim("userId", jwt::claim(user.getValueOfId()))
-            .set_payload_claim("username",
-                               jwt::claim(user.getValueOfUsername()))
+            .set_payload_claim("username", jwt::claim(user.getValueOfUsername()))
             .set_payload_claim("email", jwt::claim(user.getValueOfEmail()))
             .sign(jwt::algorithm::hs256{jwtSecurityKey});
 
@@ -1049,8 +1046,7 @@ drogon::Task<dto::BaseApiResponse> UserService::validateUserPasskeys(const dto::
     response.result["token"] = token;
     response.result["userId"] = user.getValueOfId();
     response.result["username"] = user.getValueOfUsername();
-    response.result["fullName"] =
-        user.getValueOfFirstName() + " " + user.getValueOfLastName();
+    response.result["fullName"] = user.getValueOfFirstName() + " " + user.getValueOfLastName();
     response.result["email"] = user.getValueOfEmail();
 
   } catch (const DrogonDbException &e) {
@@ -1081,8 +1077,6 @@ drogon::Task<dto::BaseApiResponse> UserService::validateUserCredentials(const dt
     bool passwordMatches =
         bcrypt::validatePassword(signin_dto.getPassword(), storedHash);
 
-    // bool passwordMatches = bcrypt::validatePassword(signin_dto.getPassword(),
-    // user.getValueOfPasswordHash());
 
     if (passwordMatches) {
 
@@ -1102,8 +1096,7 @@ drogon::Task<dto::BaseApiResponse> UserService::validateUserCredentials(const dt
               .set_issuer(jwtIssuer)
               .set_type("JWT")
               .set_issued_at(std::chrono::system_clock::now())
-              .set_expires_at(std::chrono::system_clock::now() +
-                              std::chrono::hours(24 * 30))
+              .set_expires_at(std::chrono::system_clock::now() + std::chrono::hours(24 * 366))
               .set_payload_claim("userId", jwt::claim(user.getValueOfId()))
               .set_payload_claim("username",
                                  jwt::claim(user.getValueOfUsername()))
@@ -1174,10 +1167,9 @@ drogon::Task<dto::BaseApiResponse> UserService::validateAdminUserCredentials(con
               .set_issuer(jwtIssuer)
               .set_type("JWT")
               .set_issued_at(std::chrono::system_clock::now())
-              .set_expires_at(std::chrono::system_clock::now() + std::chrono::hours(24 * 2))
+              .set_expires_at(std::chrono::system_clock::now() + std::chrono::hours(24 * 3660))
               .set_payload_claim("userId", jwt::claim(user.getValueOfId()))
-              .set_payload_claim("username",
-                                 jwt::claim(user.getValueOfUsername()))
+              .set_payload_claim("username", jwt::claim(user.getValueOfUsername()))
               .set_payload_claim("email", jwt::claim(user.getValueOfEmail()))
               .sign(jwt::algorithm::hs256{jwtSecurityKey});
 
@@ -1256,9 +1248,7 @@ drogon::Task<dto::BaseApiResponse> UserService::validatePartnerUserCredentials(c
         response.success = false;
         response.message = "Access denied !";
         response.error["code"] = constants::ERR_UNAUTHORIZED;
-        response.error["message"] =
-            "Sub-account functionality is not enabled for " +
-            commercialPartner.getValueOfName() +
+        response.error["message"] = "Sub-account functionality is not enabled for " +  commercialPartner.getValueOfName() +
             ". Please contact your administrator";
         co_return response;
       }
@@ -1344,20 +1334,12 @@ drogon::Task<dto::BaseApiResponse> UserService::validatePartnerUserCredentials(c
               .set_issuer(jwtIssuer)
               .set_type("JWT")
               .set_issued_at(std::chrono::system_clock::now())
-              .set_expires_at(std::chrono::system_clock::now() +
-                              std::chrono::hours(24 * 30))
-              .set_payload_claim("partnerId",
-                                 jwt::claim(user.getValueOfPartnerId()))
-              .set_payload_claim(
-                  "partnerEmail",
-                  jwt::claim(commercialPartner.getValueOfBillingEmail()))
-              .set_payload_claim("partnerUserId",
-                                 jwt::claim(user.getValueOfId()))
-              .set_payload_claim(
-                  "partnerUserEmail",
-                  jwt::claim(commercialPartner.getValueOfContactEmail()))
-              .set_payload_claim("partnerName",
-                                 jwt::claim(commercialPartner.getValueOfName()))
+              .set_expires_at(std::chrono::system_clock::now() + std::chrono::hours(24 * 366))
+              .set_payload_claim("partnerId", jwt::claim(user.getValueOfPartnerId()))
+              .set_payload_claim("partnerEmail", jwt::claim(commercialPartner.getValueOfBillingEmail()))
+              .set_payload_claim("partnerUserId", jwt::claim(user.getValueOfId()))
+              .set_payload_claim("partnerUserEmail", jwt::claim(commercialPartner.getValueOfContactEmail()))
+              .set_payload_claim("partnerName", jwt::claim(commercialPartner.getValueOfName()))
               .sign(jwt::algorithm::hs256{jwtSecurityKey});
 
 
@@ -1512,7 +1494,7 @@ drogon::Task<dto::BaseApiResponse> UserService::validateAffiliateUserCredentials
               .set_issuer(jwtIssuer)
               .set_type("JWT")
               .set_issued_at(std::chrono::system_clock::now())
-              .set_expires_at(std::chrono::system_clock::now() + std::chrono::hours(24 * 30))
+              .set_expires_at(std::chrono::system_clock::now() + std::chrono::hours(24 * 366))
               .set_payload_claim("affiliateId",jwt::claim(user.getValueOfAffiliateId()))
               .set_payload_claim("affiliateUserId",  jwt::claim(user.getValueOfId()))
               .set_payload_claim("affiliateEmail",jwt::claim(affiliate.getValueOfEmail()))
@@ -1698,6 +1680,7 @@ drogon::Task<dto::BaseApiResponse> UserService::unlockUserAccount(const std::str
   co_return response;
 }
 
+
 drogon::Task<dto::BaseApiResponse> UserService::activateUserAccount(const std::string &userId) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -1728,6 +1711,7 @@ drogon::Task<dto::BaseApiResponse> UserService::activateUserAccount(const std::s
   co_return response;
 }
 
+
 drogon::Task<dto::BaseApiResponse> UserService::deactivateUserAccount(const std::string &userId) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -1757,6 +1741,7 @@ drogon::Task<dto::BaseApiResponse> UserService::deactivateUserAccount(const std:
   }
   co_return response;
 }
+
 
 drogon::Task<dto::BaseApiResponse> UserService::deleteUser(const std::string &userId) {
 
@@ -2069,7 +2054,8 @@ drogon::Task<dto::BaseApiResponse> UserService::changeUserPassword(const std::st
 
   co_return response;
 }
-void UserService::checkAccountStatus(
+
+  void UserService::checkAccountStatus(
     const std::string &identifier, const std::string &identifierType,
     const std::function<void(const gnp::dto::BaseApiResponse &)> &callback) {
 

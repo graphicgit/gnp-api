@@ -57,7 +57,6 @@ class Newspapers
         static const std::string _full_description;
         static const std::string _thumbnail_id;
         static const std::string _document_id;
-        static const std::string _file_type;
         static const std::string _storage_service;
         static const std::string _is_published;
         static const std::string _published_date;
@@ -74,6 +73,7 @@ class Newspapers
         static const std::string _modified_by;
         static const std::string _modifier_name;
         static const std::string _modified_at;
+        static const std::string _file_type;
     };
 
     static const int primaryKeyNumber;
@@ -246,16 +246,6 @@ class Newspapers
     void setDocumentId(std::string &&pDocumentId) noexcept;
     void setDocumentIdToNull() noexcept;
 
-    /**  For column file_type  */
-    ///Get the value of the column file_type, returns the default value if the column is null
-    const std::string &getValueOfFileType() const noexcept;
-    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<std::string> &getFileType() const noexcept;
-    ///Set the value of the column file_type
-    void setFileType(const std::string &pFileType) noexcept;
-    void setFileType(std::string &&pFileType) noexcept;
-    void setFileTypeToNull() noexcept;
-
     /**  For column storage_service  */
     ///Get the value of the column storage_service, returns the default value if the column is null
     const std::string &getValueOfStorageService() const noexcept;
@@ -404,6 +394,15 @@ class Newspapers
     void setModifiedAt(const ::trantor::Date &pModifiedAt) noexcept;
     void setModifiedAtToNull() noexcept;
 
+    /**  For column file_type  */
+    ///Get the value of the column file_type, returns the default value if the column is null
+    const int32_t &getValueOfFileType() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<int32_t> &getFileType() const noexcept;
+    ///Set the value of the column file_type
+    void setFileType(const int32_t &pFileType) noexcept;
+    void setFileTypeToNull() noexcept;
+
 
     static size_t getColumnNumber() noexcept {  return 30;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
@@ -440,7 +439,6 @@ class Newspapers
     std::shared_ptr<std::string> fullDescription_;
     std::shared_ptr<std::string> thumbnailId_;
     std::shared_ptr<std::string> documentId_;
-    std::shared_ptr<std::string> fileType_;
     std::shared_ptr<std::string> storageService_;
     std::shared_ptr<bool> isPublished_;
     std::shared_ptr<::trantor::Date> publishedDate_;
@@ -457,6 +455,7 @@ class Newspapers
     std::shared_ptr<std::string> modifiedBy_;
     std::shared_ptr<std::string> modifierName_;
     std::shared_ptr<::trantor::Date> modifiedAt_;
+    std::shared_ptr<int32_t> fileType_;
     struct MetaData
     {
         const std::string colName_;
@@ -556,95 +555,96 @@ class Newspapers
         }
         if(dirtyFlag_[13])
         {
-            sql += "file_type,";
-            ++parametersCount;
-        }
-        if(dirtyFlag_[14])
-        {
             sql += "storage_service,";
             ++parametersCount;
         }
         sql += "is_published,";
         ++parametersCount;
-        if(!dirtyFlag_[15])
+        if(!dirtyFlag_[14])
         {
             needSelection=true;
         }
-        if(dirtyFlag_[16])
+        if(dirtyFlag_[15])
         {
             sql += "published_date,";
             ++parametersCount;
         }
-        if(dirtyFlag_[17])
+        if(dirtyFlag_[16])
         {
             sql += "created_at,";
             ++parametersCount;
         }
-        if(dirtyFlag_[18])
+        if(dirtyFlag_[17])
         {
             sql += "featured_stories,";
             ++parametersCount;
         }
         sql += "views,";
         ++parametersCount;
-        if(!dirtyFlag_[19])
+        if(!dirtyFlag_[18])
         {
             needSelection=true;
         }
         sql += "sales,";
         ++parametersCount;
-        if(!dirtyFlag_[20])
+        if(!dirtyFlag_[19])
         {
             needSelection=true;
         }
         sql += "publication_date,";
         ++parametersCount;
-        if(!dirtyFlag_[21])
+        if(!dirtyFlag_[20])
         {
             needSelection=true;
         }
-        if(dirtyFlag_[22])
+        if(dirtyFlag_[21])
         {
             sql += "tags,";
             ++parametersCount;
         }
-        if(dirtyFlag_[23])
+        if(dirtyFlag_[22])
         {
             sql += "categories,";
             ++parametersCount;
         }
         sql += "is_archived,";
         ++parametersCount;
-        if(!dirtyFlag_[24])
+        if(!dirtyFlag_[23])
         {
             needSelection=true;
         }
-        if(dirtyFlag_[25])
+        if(dirtyFlag_[24])
         {
             sql += "created_by,";
             ++parametersCount;
         }
         sql += "creator_name,";
         ++parametersCount;
-        if(!dirtyFlag_[26])
+        if(!dirtyFlag_[25])
         {
             needSelection=true;
         }
-        if(dirtyFlag_[27])
+        if(dirtyFlag_[26])
         {
             sql += "modified_by,";
             ++parametersCount;
         }
         sql += "modifier_name,";
         ++parametersCount;
-        if(!dirtyFlag_[28])
+        if(!dirtyFlag_[27])
         {
             needSelection=true;
         }
-        if(dirtyFlag_[29])
+        if(dirtyFlag_[28])
         {
             sql += "modified_at,";
             ++parametersCount;
+        }
+        sql += "file_type,";
+        ++parametersCount;
+        if(!dirtyFlag_[29])
+        {
+            needSelection=true;
         }
         if(parametersCount > 0)
         {
@@ -744,14 +744,14 @@ class Newspapers
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
+        else
+        {
+            sql +="default,";
+        }
         if(dirtyFlag_[15])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
-        }
-        else
-        {
-            sql +="default,";
         }
         if(dirtyFlag_[16])
         {
@@ -767,6 +767,10 @@ class Newspapers
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
         }
         if(dirtyFlag_[19])
         {
@@ -791,10 +795,6 @@ class Newspapers
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
-        else
-        {
-            sql +="default,";
-        }
         if(dirtyFlag_[22])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
@@ -805,35 +805,44 @@ class Newspapers
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
+        else
+        {
+            sql +="default,";
+        }
         if(dirtyFlag_[24])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
-        }
-        else
-        {
-            sql +="default,";
         }
         if(dirtyFlag_[25])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
+        else
+        {
+            sql +="default,";
+        }
         if(dirtyFlag_[26])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
-        }
-        else
-        {
-            sql +="default,";
         }
         if(dirtyFlag_[27])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
+        else
+        {
+            sql +="default,";
+        }
         if(dirtyFlag_[28])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
+        }
+        if(dirtyFlag_[29])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
@@ -841,11 +850,6 @@ class Newspapers
         else
         {
             sql +="default,";
-        }
-        if(dirtyFlag_[29])
-        {
-            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
-            sql.append(placeholderStr, n);
         }
         if(parametersCount > 0)
         {

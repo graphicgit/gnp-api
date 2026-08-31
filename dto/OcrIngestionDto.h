@@ -17,10 +17,11 @@ namespace gnp::dto {
         void fromJson(const Json::Value& json);
 
         // Getters
+        [[nodiscard]] const std::string& getId() const { return id_; }
         [[nodiscard]] const std::string& getTitle() const { return title_; }
         [[nodiscard]] const std::string& getEditionNumber() const { return edition_number_; }
         [[nodiscard]] const trantor::Date& getPublicationDate() const { return publication_date_; }
-        [[nodiscard]] const std::string& getFileType() const { return file_type_; }
+        [[nodiscard]] int getFileType() const { return file_type_; }
         [[nodiscard]] const std::vector<std::string>& getCategories() const { return categories_; }
         [[nodiscard]] const std::vector<std::string>& getTags() const { return tags_; }
         [[nodiscard]] const std::string& getContentType() const { return content_type_; }
@@ -32,10 +33,11 @@ namespace gnp::dto {
         [[nodiscard]] int getPageNumber() const { return page_number_; }
 
         // Setters
+        void setId(const std::string& id) { id_ = id; }
         void setTitle(const std::string& title) { title_ = title; }
         void setEditionNumber(const std::string& value) { edition_number_ = value; }
         void setPublicationDate(const trantor::Date& value) { publication_date_ = value; }
-        void setFileType(const std::string& file_type) { file_type_ = file_type; }
+        void setFileType(const int file_type) { file_type_ = file_type; }
         void setCategories(const std::vector<std::string> &value) { categories_ = value; }
         void setTags(const std::vector<std::string> &value) { tags_ = value; }
         void setContentType(const std::string& value) { content_type_ = value; }
@@ -49,10 +51,11 @@ namespace gnp::dto {
 
     private:
 
+        std::string id_;
         std::string title_;
         std::string edition_number_;
         trantor::Date publication_date_;
-        std::string file_type_;
+        int file_type_ {0};
         std::vector<std::string> categories_;
         std::vector<std::string> tags_;
         std::string content_type_;
@@ -69,6 +72,10 @@ namespace gnp::dto {
 
         if (json.isMember("title") && !json["title"].isNull()) {
             title_ = json["title"].asString();
+        }
+
+        if (json.isMember("id") && !json["id"].isNull()) {
+            id_ = json["id"].asString();
         }
 
         if (json.isMember("editionNumber") && !json["editionNumber"].isNull()) {
@@ -88,7 +95,7 @@ namespace gnp::dto {
         }
 
         if (json.isMember("fileType") && !json["fileType"].isNull()) {
-            file_type_ = json["fileType"].asString();
+            file_type_ = json["fileType"].asInt();
         }
 
         if (json.isMember("tags") && json["tags"].isArray()) {

@@ -135,8 +135,6 @@ drogon::Task<gnp::dto::BaseApiResponse> CommercialPartnerService::getAll(int pag
 
 
 
-
-
 drogon::Task<dto::BaseApiResponse> CommercialPartnerService::getAllSubscribers(int pageNo, int pageSize,
                                             const std::string &query,
                                             const std::string &partnerId) {
@@ -2211,8 +2209,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
            << " smsProvider=" << dto.getSmsProvider();
 
   auto dbClient = drogon::app().getDbClient();
-  CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> apiKeyMapper(
-      dbClient);
+  CoroMapper<drogon_model::Gnp::CommercialPartnerApiKeys> apiKeyMapper(dbClient);
 
   try {
     // STEP 1: Verify API Key exists and is active
@@ -2270,11 +2267,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::onboardSubsc
                 "user: phoneNumber="
              << dto.getPhoneNumber() << " partnerId=" << partnerId;
     CoroMapper<drogon_model::Gnp::Users> userMapper(dbClient);
-    auto existingUsers = co_await userMapper.findBy(
-        Criteria(drogon_model::Gnp::Users::Cols::_phone_number,
-                 CompareOperator::EQ, dto.getPhoneNumber()) &&
-        Criteria(drogon_model::Gnp::Users::Cols::_partner_id,
-                 CompareOperator::EQ, partnerId));
+    auto existingUsers = co_await userMapper.findBy(Criteria(drogon_model::Gnp::Users::Cols::_phone_number, CompareOperator::EQ, dto.getPhoneNumber()) && Criteria(drogon_model::Gnp::Users::Cols::_partner_id, CompareOperator::EQ, partnerId));
     LOG_INFO << "[onboardSubscriberAsync] STEP 3 — existingUsers count="
              << existingUsers.size();
 

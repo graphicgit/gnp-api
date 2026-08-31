@@ -30,6 +30,14 @@ namespace gnp::constants {
     };
 
 
+    enum FileTypes {
+        PDF = 0,
+        IMAGE = 1,
+        VIDEO = 2,
+        AUDIO = 3,
+    };
+
+
 
 }
 #endif //GNPAPI_STATUSTYPES_H

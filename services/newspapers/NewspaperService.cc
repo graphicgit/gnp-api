@@ -7,8 +7,7 @@
 #include "constants/ErrorCodes.h"
 #include <drogon/orm/Mapper.h>
 #include <jwt-cpp/jwt.h>
-
-#include "NewspaperDetail.h"
+#include "NewspaperDetails.h"
 #include "UserNotificationSubscriptions.h"
 #include "UserSubscriptions.h"
 #include "Users.h"
@@ -20,6 +19,7 @@
 #include <vector>
 
 #include "CommercialPartners.h"
+#include "constants/StatusTypes.h"
 
 using namespace drogon::orm;
 using drogon_model::Gnp::Newspapers;
@@ -896,7 +896,7 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::ingestAsync(const dto:
   newspaper.setIsPopular(dto.getIsPopular());
   newspaper.setFullDescription(dto.getFullDescription());
   newspaper.setThumbnailId(dto.getThumbnailId());
-  newspaper.setFileType("pdf");
+  newspaper.setFileType(constants::FileTypes::PDF);
   newspaper.setStorageService(dto.getStorageService());
   newspaper.setDocumentId(dto.getDocumentId());
   newspaper.setIsPublished(false);
@@ -1141,7 +1141,7 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::update(const dto::News
     newspaper.setIsPopular(dto.getIsPopular());
     if (!dto.getFullDescription().empty()) newspaper.setFullDescription(dto.getFullDescription());
     if (!dto.getThumbnailId().empty()) newspaper.setThumbnailId(dto.getThumbnailId());
-    if (!dto.getFileType().empty()) newspaper.setFileType(dto.getFileType());
+    newspaper.setFileType(dto.getFileType());
     if (!dto.getStorageService().empty()) newspaper.setStorageService(dto.getStorageService());
     if (!dto.getDocumentId().empty()) newspaper.setDocumentId(dto.getDocumentId());
     if (!dto.getFeaturedStories().empty()) newspaper.setFeaturedStories(dto.getFeaturedStories());
@@ -1437,7 +1437,7 @@ void NewspaperService::incrementViewCount(
 
   auto dbClient = drogon::app().getDbClient();
   auto mp_newspaper = drogon::orm::CoroMapper<drogon_model::Gnp::Newspapers>(dbClient);
-  auto mp_detail = drogon::orm::CoroMapper<drogon_model::Gnp::NewspaperDetail>(dbClient);
+  auto mp_detail = drogon::orm::CoroMapper<drogon_model::Gnp::NewspaperDetails>(dbClient);
 
   try {
     // check if a newspaper exists for that publication date
@@ -1462,6 +1462,7 @@ void NewspaperService::incrementViewCount(
       for (auto& c : slugStr) {
           if (c >= 'A' && c <= 'Z') c = c + ('a' - 'A');
       }
+      new_newspaper.setId(dto.getId());
       new_newspaper.setSlug(slugStr);
       new_newspaper.setPrice("0.1");
       new_newspaper.setIsArchived(true);
@@ -1478,10 +1479,11 @@ void NewspaperService::incrementViewCount(
       new_newspaper.setPublicationId("485ac7f9-022d-4a30-818e-41732d90da18");
       new_newspaper.setPublicationName("Daily Graphic");
       new_newspaper.setCreatorName("System");
+      new_newspaper.setThumbnailId("--");
+      new_newspaper.setDocumentId("--");
 
       new_newspaper.setFileType(dto.getFileType());
-      if (!dto.getThumbnailId().empty()) new_newspaper.setThumbnailId(dto.getThumbnailId());
-      if (!dto.getDocumentId().empty()) new_newspaper.setDocumentId(dto.getDocumentId());
+
       new_newspaper.setCreatedAt(trantor::Date::now());
       new_newspaper.setIsPublished(false);
       new_newspaper.setIsFree(false);
@@ -1493,7 +1495,7 @@ void NewspaperService::incrementViewCount(
       newspaper = newspapers[0];
     }
 
-    drogon_model::Gnp::NewspaperDetail detail;
+    drogon_model::Gnp::NewspaperDetails detail;
     detail.setNewspaperId(newspaper.getValueOfId());
     detail.setPageText(dto.getPageText());
     detail.setPageNumber(dto.getPageNumber());
@@ -1504,8 +1506,6 @@ void NewspaperService::incrementViewCount(
 
     detail.setPublishedDate(trantor::Date::fromDbStringLocal("2023-02-02 00:00:00"));
 
-    if (!dto.getThumbnailId().empty()) detail.setThumbnailId(dto.getThumbnailId());
-    if (!dto.getDocumentId().empty()) detail.setDocumentId(dto.getDocumentId());
     if (!dto.getContentType().empty()) detail.setContentType(dto.getContentType());
 
 
