@@ -1792,7 +1792,10 @@ void NewspaperService::incrementViewCount(
 }
 
 
-drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::trackUserEngagement(const dto::UserEngagementDto &dto, const std::string &userId) {
+
+drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::trackUserEngagement(
+    const dto::UserEngagementDto &dto,
+    const std::string &userId) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<drogon_model::Gnp::NewspaperEngagement> engagementMapper(dbClient);
@@ -1811,25 +1814,85 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::trackUserEngagement(co
     CoroMapper<drogon_model::Gnp::Users> userMapper(dbClient);
     auto user = co_await userMapper.findByPrimaryKey(userId);
 
-    drogon_model::Gnp::NewspaperEngagement engagement;
-    engagement.setNewspaperId(dto.getNewspaperId());
-    engagement.setUserId(userId);
-    engagement.setPartnerId(user.getValueOfPartnerId());
-    engagement.setDeviceType(dto.getDeviceType());
-    engagement.setViewedAt(trantor::Date::now());
-    engagement.setLastViewed(trantor::Date::now());
-    engagement.setTimeSpentSeconds(0);
-    engagement.setIsCompleted(false);
+    // Check if an engagement record already exists for this user and newspaper
+    auto existingEngagements = co_await engagementMapper
+        .orderBy(drogon_model::Gnp::NewspaperEngagement::Cols::_viewed_at,
+                 SortOrder::DESC)
+        .limit(1)
+        .findBy(
+            Criteria(drogon_model::Gnp::NewspaperEngagement::Cols::_newspaper_id,
+                     CompareOperator::EQ, dto.getNewspaperId()) &&
+            Criteria(drogon_model::Gnp::NewspaperEngagement::Cols::_user_id,
+                     CompareOperator::EQ, userId));
 
-    co_await engagementMapper.insert(engagement);
+    trantor::Date currentTime = trantor::Date::now();
 
-    dto::BaseApiResponse response;
-    response.success = true;
-    response.message = "Engagement tracked successfully";
-    response.result["newspaperId"] = dto.getNewspaperId();
-    response.result["userId"] = userId;
+    if (!existingEngagements.empty()) {
+      // ── UPDATE EXISTING RECORD ──────────────────────────────────────────
+      auto engagement = existingEngagements[0];
 
-    co_return response;
+      // Calculate time spent since last view
+      trantor::Date lastViewed = engagement.getValueOfViewedAt();
+      int64_t diffMicroSeconds = currentTime.microSecondsSinceEpoch() -
+                                 lastViewed.microSecondsSinceEpoch();
+      int32_t timeSpentDelta = static_cast<int32_t>(diffMicroSeconds / 1000000);
+
+      // Only update if delta is positive and reasonable (not more than 1 hour)
+      if (timeSpentDelta > 0 && timeSpentDelta < 3600) {
+        int32_t currentTotal = engagement.getValueOfTimeSpentSeconds();
+        engagement.setTimeSpentSeconds(currentTotal + timeSpentDelta);
+      }
+
+      // Update timestamps
+      engagement.setLastViewed(currentTime);
+      engagement.setViewedAt(currentTime);  // Update viewed_at to current time
+
+      // Update device type if provided and different
+      if (!dto.getDeviceType().empty()) {
+        engagement.setDeviceType(dto.getDeviceType());
+      }
+
+      // Update user agent if provided
+      if (!dto.getUserAgent().empty()) {
+        engagement.setUserAgent(dto.getUserAgent());
+      }
+
+
+      co_await engagementMapper.update(engagement);
+
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.message = "Engagement updated successfully";
+      response.result["newspaperId"] = dto.getNewspaperId();
+      response.result["userId"] = userId;
+      response.result["totalTimeSpentSeconds"] = engagement.getValueOfTimeSpentSeconds();
+
+      response.result["action"] = "updated";
+
+      co_return response;
+
+    } else {
+      // ── CREATE NEW RECORD ──────────────────────────────────────────────
+      drogon_model::Gnp::NewspaperEngagement engagement;
+      engagement.setNewspaperId(dto.getNewspaperId());
+      engagement.setUserId(userId);
+      engagement.setPartnerId(user.getValueOfPartnerId());
+      engagement.setDeviceType(dto.getDeviceType().empty() ? "web" : dto.getDeviceType());
+      engagement.setViewedAt(currentTime);
+      engagement.setLastViewed(currentTime);
+      engagement.setTimeSpentSeconds(0);
+      engagement.setUserAgent(dto.getUserAgent());
+      co_await engagementMapper.insert(engagement);
+
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.message = "Engagement tracked successfully";
+      response.result["newspaperId"] = dto.getNewspaperId();
+      response.result["userId"] = userId;
+      response.result["action"] = "created";
+
+      co_return response;
+    }
 
   } catch (const drogon::orm::UnexpectedRows &e) {
     dto::BaseApiResponse errorResponse;
@@ -1847,6 +1910,7 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::trackUserEngagement(co
     co_return errorResponse;
   }
 }
+
 
 
  drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::updateUserEngagement(
@@ -1906,11 +1970,6 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::trackUserEngagement(co
     engagement.setLastViewed(currentTime);
     engagement.setUserAgent(dto.getUserAgent());
 
-    // If the user has spent more than 30 seconds on the newspaper, mark as completed
-    if (engagement.getValueOfTimeSpentSeconds() >= 30) {
-      engagement.setIsCompleted(true);
-    }
-
     co_await engagementMapper.update(engagement);
 
     dto::BaseApiResponse response;
@@ -1919,7 +1978,6 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::trackUserEngagement(co
     response.result["newspaperId"] = dto.getNewspaperId();
     response.result["userId"] = userId;
     response.result["totalTimeSpentSeconds"] = engagement.getValueOfTimeSpentSeconds();
-    response.result["isCompleted"] = engagement.getValueOfIsCompleted();
 
     co_return response;
 

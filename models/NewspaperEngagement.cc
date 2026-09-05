@@ -20,7 +20,6 @@ const std::string NewspaperEngagement::Cols::_partner_id = "\"partner_id\"";
 const std::string NewspaperEngagement::Cols::_viewed_at = "\"viewed_at\"";
 const std::string NewspaperEngagement::Cols::_last_viewed = "\"last_viewed\"";
 const std::string NewspaperEngagement::Cols::_time_spent_seconds = "\"time_spent_seconds\"";
-const std::string NewspaperEngagement::Cols::_is_completed = "\"is_completed\"";
 const std::string NewspaperEngagement::Cols::_device_type = "\"device_type\"";
 const std::string NewspaperEngagement::Cols::_user_agent = "\"user_agent\"";
 const std::string NewspaperEngagement::primaryKeyName = "id";
@@ -35,7 +34,6 @@ const std::vector<typename NewspaperEngagement::MetaData> NewspaperEngagement::m
 {"viewed_at","::trantor::Date","timestamp with time zone",0,0,0,1},
 {"last_viewed","::trantor::Date","timestamp with time zone",0,0,0,0},
 {"time_spent_seconds","int32_t","integer",4,0,0,1},
-{"is_completed","bool","boolean",1,0,0,1},
 {"device_type","std::string","character varying",50,0,0,1},
 {"user_agent","std::string","character varying",150,0,0,0}
 };
@@ -112,10 +110,6 @@ NewspaperEngagement::NewspaperEngagement(const Row &r, const ssize_t indexOffset
         {
             timeSpentSeconds_=std::make_shared<int32_t>(r["time_spent_seconds"].as<int32_t>());
         }
-        if(!r["is_completed"].isNull())
-        {
-            isCompleted_=std::make_shared<bool>(r["is_completed"].as<bool>());
-        }
         if(!r["device_type"].isNull())
         {
             deviceType_=std::make_shared<std::string>(r["device_type"].as<std::string>());
@@ -128,7 +122,7 @@ NewspaperEngagement::NewspaperEngagement(const Row &r, const ssize_t indexOffset
     else
     {
         size_t offset = (size_t)indexOffset;
-        if(offset + 10 > r.size())
+        if(offset + 9 > r.size())
         {
             LOG_FATAL << "Invalid SQL result for this model";
             return;
@@ -208,14 +202,9 @@ NewspaperEngagement::NewspaperEngagement(const Row &r, const ssize_t indexOffset
         index = offset + 7;
         if(!r[index].isNull())
         {
-            isCompleted_=std::make_shared<bool>(r[index].as<bool>());
-        }
-        index = offset + 8;
-        if(!r[index].isNull())
-        {
             deviceType_=std::make_shared<std::string>(r[index].as<std::string>());
         }
-        index = offset + 9;
+        index = offset + 8;
         if(!r[index].isNull())
         {
             userAgent_=std::make_shared<std::string>(r[index].as<std::string>());
@@ -226,7 +215,7 @@ NewspaperEngagement::NewspaperEngagement(const Row &r, const ssize_t indexOffset
 
 NewspaperEngagement::NewspaperEngagement(const Json::Value &pJson, const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 10)
+    if(pMasqueradingVector.size() != 9)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -328,7 +317,7 @@ NewspaperEngagement::NewspaperEngagement(const Json::Value &pJson, const std::ve
         dirtyFlag_[7] = true;
         if(!pJson[pMasqueradingVector[7]].isNull())
         {
-            isCompleted_=std::make_shared<bool>(pJson[pMasqueradingVector[7]].asBool());
+            deviceType_=std::make_shared<std::string>(pJson[pMasqueradingVector[7]].asString());
         }
     }
     if(!pMasqueradingVector[8].empty() && pJson.isMember(pMasqueradingVector[8]))
@@ -336,15 +325,7 @@ NewspaperEngagement::NewspaperEngagement(const Json::Value &pJson, const std::ve
         dirtyFlag_[8] = true;
         if(!pJson[pMasqueradingVector[8]].isNull())
         {
-            deviceType_=std::make_shared<std::string>(pJson[pMasqueradingVector[8]].asString());
-        }
-    }
-    if(!pMasqueradingVector[9].empty() && pJson.isMember(pMasqueradingVector[9]))
-    {
-        dirtyFlag_[9] = true;
-        if(!pJson[pMasqueradingVector[9]].isNull())
-        {
-            userAgent_=std::make_shared<std::string>(pJson[pMasqueradingVector[9]].asString());
+            userAgent_=std::make_shared<std::string>(pJson[pMasqueradingVector[8]].asString());
         }
     }
 }
@@ -443,17 +424,9 @@ NewspaperEngagement::NewspaperEngagement(const Json::Value &pJson) noexcept(fals
             timeSpentSeconds_=std::make_shared<int32_t>((int32_t)pJson["time_spent_seconds"].asInt64());
         }
     }
-    if(pJson.isMember("is_completed"))
-    {
-        dirtyFlag_[7]=true;
-        if(!pJson["is_completed"].isNull())
-        {
-            isCompleted_=std::make_shared<bool>(pJson["is_completed"].asBool());
-        }
-    }
     if(pJson.isMember("device_type"))
     {
-        dirtyFlag_[8]=true;
+        dirtyFlag_[7]=true;
         if(!pJson["device_type"].isNull())
         {
             deviceType_=std::make_shared<std::string>(pJson["device_type"].asString());
@@ -461,7 +434,7 @@ NewspaperEngagement::NewspaperEngagement(const Json::Value &pJson) noexcept(fals
     }
     if(pJson.isMember("user_agent"))
     {
-        dirtyFlag_[9]=true;
+        dirtyFlag_[8]=true;
         if(!pJson["user_agent"].isNull())
         {
             userAgent_=std::make_shared<std::string>(pJson["user_agent"].asString());
@@ -472,7 +445,7 @@ NewspaperEngagement::NewspaperEngagement(const Json::Value &pJson) noexcept(fals
 void NewspaperEngagement::updateByMasqueradedJson(const Json::Value &pJson,
                                             const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 10)
+    if(pMasqueradingVector.size() != 9)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -573,7 +546,7 @@ void NewspaperEngagement::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[7] = true;
         if(!pJson[pMasqueradingVector[7]].isNull())
         {
-            isCompleted_=std::make_shared<bool>(pJson[pMasqueradingVector[7]].asBool());
+            deviceType_=std::make_shared<std::string>(pJson[pMasqueradingVector[7]].asString());
         }
     }
     if(!pMasqueradingVector[8].empty() && pJson.isMember(pMasqueradingVector[8]))
@@ -581,15 +554,7 @@ void NewspaperEngagement::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[8] = true;
         if(!pJson[pMasqueradingVector[8]].isNull())
         {
-            deviceType_=std::make_shared<std::string>(pJson[pMasqueradingVector[8]].asString());
-        }
-    }
-    if(!pMasqueradingVector[9].empty() && pJson.isMember(pMasqueradingVector[9]))
-    {
-        dirtyFlag_[9] = true;
-        if(!pJson[pMasqueradingVector[9]].isNull())
-        {
-            userAgent_=std::make_shared<std::string>(pJson[pMasqueradingVector[9]].asString());
+            userAgent_=std::make_shared<std::string>(pJson[pMasqueradingVector[8]].asString());
         }
     }
 }
@@ -687,17 +652,9 @@ void NewspaperEngagement::updateByJson(const Json::Value &pJson) noexcept(false)
             timeSpentSeconds_=std::make_shared<int32_t>((int32_t)pJson["time_spent_seconds"].asInt64());
         }
     }
-    if(pJson.isMember("is_completed"))
-    {
-        dirtyFlag_[7] = true;
-        if(!pJson["is_completed"].isNull())
-        {
-            isCompleted_=std::make_shared<bool>(pJson["is_completed"].asBool());
-        }
-    }
     if(pJson.isMember("device_type"))
     {
-        dirtyFlag_[8] = true;
+        dirtyFlag_[7] = true;
         if(!pJson["device_type"].isNull())
         {
             deviceType_=std::make_shared<std::string>(pJson["device_type"].asString());
@@ -705,7 +662,7 @@ void NewspaperEngagement::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("user_agent"))
     {
-        dirtyFlag_[9] = true;
+        dirtyFlag_[8] = true;
         if(!pJson["user_agent"].isNull())
         {
             userAgent_=std::make_shared<std::string>(pJson["user_agent"].asString());
@@ -867,23 +824,6 @@ void NewspaperEngagement::setTimeSpentSeconds(const int32_t &pTimeSpentSeconds) 
     dirtyFlag_[6] = true;
 }
 
-const bool &NewspaperEngagement::getValueOfIsCompleted() const noexcept
-{
-    static const bool defaultValue = bool();
-    if(isCompleted_)
-        return *isCompleted_;
-    return defaultValue;
-}
-const std::shared_ptr<bool> &NewspaperEngagement::getIsCompleted() const noexcept
-{
-    return isCompleted_;
-}
-void NewspaperEngagement::setIsCompleted(const bool &pIsCompleted) noexcept
-{
-    isCompleted_ = std::make_shared<bool>(pIsCompleted);
-    dirtyFlag_[7] = true;
-}
-
 const std::string &NewspaperEngagement::getValueOfDeviceType() const noexcept
 {
     static const std::string defaultValue = std::string();
@@ -898,12 +838,12 @@ const std::shared_ptr<std::string> &NewspaperEngagement::getDeviceType() const n
 void NewspaperEngagement::setDeviceType(const std::string &pDeviceType) noexcept
 {
     deviceType_ = std::make_shared<std::string>(pDeviceType);
-    dirtyFlag_[8] = true;
+    dirtyFlag_[7] = true;
 }
 void NewspaperEngagement::setDeviceType(std::string &&pDeviceType) noexcept
 {
     deviceType_ = std::make_shared<std::string>(std::move(pDeviceType));
-    dirtyFlag_[8] = true;
+    dirtyFlag_[7] = true;
 }
 
 const std::string &NewspaperEngagement::getValueOfUserAgent() const noexcept
@@ -920,17 +860,17 @@ const std::shared_ptr<std::string> &NewspaperEngagement::getUserAgent() const no
 void NewspaperEngagement::setUserAgent(const std::string &pUserAgent) noexcept
 {
     userAgent_ = std::make_shared<std::string>(pUserAgent);
-    dirtyFlag_[9] = true;
+    dirtyFlag_[8] = true;
 }
 void NewspaperEngagement::setUserAgent(std::string &&pUserAgent) noexcept
 {
     userAgent_ = std::make_shared<std::string>(std::move(pUserAgent));
-    dirtyFlag_[9] = true;
+    dirtyFlag_[8] = true;
 }
 void NewspaperEngagement::setUserAgentToNull() noexcept
 {
     userAgent_.reset();
-    dirtyFlag_[9] = true;
+    dirtyFlag_[8] = true;
 }
 
 void NewspaperEngagement::updateId(const uint64_t id)
@@ -947,7 +887,6 @@ const std::vector<std::string> &NewspaperEngagement::insertColumns() noexcept
         "viewed_at",
         "last_viewed",
         "time_spent_seconds",
-        "is_completed",
         "device_type",
         "user_agent"
     };
@@ -1035,17 +974,6 @@ void NewspaperEngagement::outputArgs(drogon::orm::internal::SqlBinder &binder) c
     }
     if(dirtyFlag_[7])
     {
-        if(getIsCompleted())
-        {
-            binder << getValueOfIsCompleted();
-        }
-        else
-        {
-            binder << nullptr;
-        }
-    }
-    if(dirtyFlag_[8])
-    {
         if(getDeviceType())
         {
             binder << getValueOfDeviceType();
@@ -1055,7 +983,7 @@ void NewspaperEngagement::outputArgs(drogon::orm::internal::SqlBinder &binder) c
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[9])
+    if(dirtyFlag_[8])
     {
         if(getUserAgent())
         {
@@ -1106,10 +1034,6 @@ const std::vector<std::string> NewspaperEngagement::updateColumns() const
     if(dirtyFlag_[8])
     {
         ret.push_back(getColumnName(8));
-    }
-    if(dirtyFlag_[9])
-    {
-        ret.push_back(getColumnName(9));
     }
     return ret;
 }
@@ -1195,17 +1119,6 @@ void NewspaperEngagement::updateArgs(drogon::orm::internal::SqlBinder &binder) c
     }
     if(dirtyFlag_[7])
     {
-        if(getIsCompleted())
-        {
-            binder << getValueOfIsCompleted();
-        }
-        else
-        {
-            binder << nullptr;
-        }
-    }
-    if(dirtyFlag_[8])
-    {
         if(getDeviceType())
         {
             binder << getValueOfDeviceType();
@@ -1215,7 +1128,7 @@ void NewspaperEngagement::updateArgs(drogon::orm::internal::SqlBinder &binder) c
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[9])
+    if(dirtyFlag_[8])
     {
         if(getUserAgent())
         {
@@ -1286,14 +1199,6 @@ Json::Value NewspaperEngagement::toJson() const
     {
         ret["time_spent_seconds"]=Json::Value();
     }
-    if(getIsCompleted())
-    {
-        ret["is_completed"]=getValueOfIsCompleted();
-    }
-    else
-    {
-        ret["is_completed"]=Json::Value();
-    }
     if(getDeviceType())
     {
         ret["device_type"]=getValueOfDeviceType();
@@ -1322,7 +1227,7 @@ Json::Value NewspaperEngagement::toMasqueradedJson(
     const std::vector<std::string> &pMasqueradingVector) const
 {
     Json::Value ret;
-    if(pMasqueradingVector.size() == 10)
+    if(pMasqueradingVector.size() == 9)
     {
         if(!pMasqueradingVector[0].empty())
         {
@@ -1403,9 +1308,9 @@ Json::Value NewspaperEngagement::toMasqueradedJson(
         }
         if(!pMasqueradingVector[7].empty())
         {
-            if(getIsCompleted())
+            if(getDeviceType())
             {
-                ret[pMasqueradingVector[7]]=getValueOfIsCompleted();
+                ret[pMasqueradingVector[7]]=getValueOfDeviceType();
             }
             else
             {
@@ -1414,24 +1319,13 @@ Json::Value NewspaperEngagement::toMasqueradedJson(
         }
         if(!pMasqueradingVector[8].empty())
         {
-            if(getDeviceType())
+            if(getUserAgent())
             {
-                ret[pMasqueradingVector[8]]=getValueOfDeviceType();
+                ret[pMasqueradingVector[8]]=getValueOfUserAgent();
             }
             else
             {
                 ret[pMasqueradingVector[8]]=Json::Value();
-            }
-        }
-        if(!pMasqueradingVector[9].empty())
-        {
-            if(getUserAgent())
-            {
-                ret[pMasqueradingVector[9]]=getValueOfUserAgent();
-            }
-            else
-            {
-                ret[pMasqueradingVector[9]]=Json::Value();
             }
         }
         return ret;
@@ -1492,14 +1386,6 @@ Json::Value NewspaperEngagement::toMasqueradedJson(
     else
     {
         ret["time_spent_seconds"]=Json::Value();
-    }
-    if(getIsCompleted())
-    {
-        ret["is_completed"]=getValueOfIsCompleted();
-    }
-    else
-    {
-        ret["is_completed"]=Json::Value();
     }
     if(getDeviceType())
     {
@@ -1567,19 +1453,14 @@ bool NewspaperEngagement::validateJsonForCreation(const Json::Value &pJson, std:
         if(!validJsonOfField(6, "time_spent_seconds", pJson["time_spent_seconds"], err, true))
             return false;
     }
-    if(pJson.isMember("is_completed"))
-    {
-        if(!validJsonOfField(7, "is_completed", pJson["is_completed"], err, true))
-            return false;
-    }
     if(pJson.isMember("device_type"))
     {
-        if(!validJsonOfField(8, "device_type", pJson["device_type"], err, true))
+        if(!validJsonOfField(7, "device_type", pJson["device_type"], err, true))
             return false;
     }
     if(pJson.isMember("user_agent"))
     {
-        if(!validJsonOfField(9, "user_agent", pJson["user_agent"], err, true))
+        if(!validJsonOfField(8, "user_agent", pJson["user_agent"], err, true))
             return false;
     }
     return true;
@@ -1588,7 +1469,7 @@ bool NewspaperEngagement::validateMasqueradedJsonForCreation(const Json::Value &
                                                              const std::vector<std::string> &pMasqueradingVector,
                                                              std::string &err)
 {
-    if(pMasqueradingVector.size() != 10)
+    if(pMasqueradingVector.size() != 9)
     {
         err = "Bad masquerading vector";
         return false;
@@ -1676,14 +1557,6 @@ bool NewspaperEngagement::validateMasqueradedJsonForCreation(const Json::Value &
                   return false;
           }
       }
-      if(!pMasqueradingVector[9].empty())
-      {
-          if(pJson.isMember(pMasqueradingVector[9]))
-          {
-              if(!validJsonOfField(9, pMasqueradingVector[9], pJson[pMasqueradingVector[9]], err, true))
-                  return false;
-          }
-      }
     }
     catch(const Json::LogicError &e)
     {
@@ -1734,19 +1607,14 @@ bool NewspaperEngagement::validateJsonForUpdate(const Json::Value &pJson, std::s
         if(!validJsonOfField(6, "time_spent_seconds", pJson["time_spent_seconds"], err, false))
             return false;
     }
-    if(pJson.isMember("is_completed"))
-    {
-        if(!validJsonOfField(7, "is_completed", pJson["is_completed"], err, false))
-            return false;
-    }
     if(pJson.isMember("device_type"))
     {
-        if(!validJsonOfField(8, "device_type", pJson["device_type"], err, false))
+        if(!validJsonOfField(7, "device_type", pJson["device_type"], err, false))
             return false;
     }
     if(pJson.isMember("user_agent"))
     {
-        if(!validJsonOfField(9, "user_agent", pJson["user_agent"], err, false))
+        if(!validJsonOfField(8, "user_agent", pJson["user_agent"], err, false))
             return false;
     }
     return true;
@@ -1755,7 +1623,7 @@ bool NewspaperEngagement::validateMasqueradedJsonForUpdate(const Json::Value &pJ
                                                            const std::vector<std::string> &pMasqueradingVector,
                                                            std::string &err)
 {
-    if(pMasqueradingVector.size() != 10)
+    if(pMasqueradingVector.size() != 9)
     {
         err = "Bad masquerading vector";
         return false;
@@ -1809,11 +1677,6 @@ bool NewspaperEngagement::validateMasqueradedJsonForUpdate(const Json::Value &pJ
       if(!pMasqueradingVector[8].empty() && pJson.isMember(pMasqueradingVector[8]))
       {
           if(!validJsonOfField(8, pMasqueradingVector[8], pJson[pMasqueradingVector[8]], err, false))
-              return false;
-      }
-      if(!pMasqueradingVector[9].empty() && pJson.isMember(pMasqueradingVector[9]))
-      {
-          if(!validJsonOfField(9, pMasqueradingVector[9], pJson[pMasqueradingVector[9]], err, false))
               return false;
       }
     }
@@ -1920,18 +1783,6 @@ bool NewspaperEngagement::validJsonOfField(size_t index,
                 err="The " + fieldName + " column cannot be null";
                 return false;
             }
-            if(!pJson.isBool())
-            {
-                err="Type error in the "+fieldName+" field";
-                return false;
-            }
-            break;
-        case 8:
-            if(pJson.isNull())
-            {
-                err="The " + fieldName + " column cannot be null";
-                return false;
-            }
             if(!pJson.isString())
             {
                 err="Type error in the "+fieldName+" field";
@@ -1946,7 +1797,7 @@ bool NewspaperEngagement::validJsonOfField(size_t index,
                 return false;
             }
             break;
-        case 9:
+        case 8:
             if(pJson.isNull())
             {
                 return true;

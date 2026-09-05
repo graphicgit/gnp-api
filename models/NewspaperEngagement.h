@@ -51,7 +51,6 @@ class NewspaperEngagement
         static const std::string _viewed_at;
         static const std::string _last_viewed;
         static const std::string _time_spent_seconds;
-        static const std::string _is_completed;
         static const std::string _device_type;
         static const std::string _user_agent;
     };
@@ -167,14 +166,6 @@ class NewspaperEngagement
     ///Set the value of the column time_spent_seconds
     void setTimeSpentSeconds(const int32_t &pTimeSpentSeconds) noexcept;
 
-    /**  For column is_completed  */
-    ///Get the value of the column is_completed, returns the default value if the column is null
-    const bool &getValueOfIsCompleted() const noexcept;
-    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<bool> &getIsCompleted() const noexcept;
-    ///Set the value of the column is_completed
-    void setIsCompleted(const bool &pIsCompleted) noexcept;
-
     /**  For column device_type  */
     ///Get the value of the column device_type, returns the default value if the column is null
     const std::string &getValueOfDeviceType() const noexcept;
@@ -195,7 +186,7 @@ class NewspaperEngagement
     void setUserAgentToNull() noexcept;
 
 
-    static size_t getColumnNumber() noexcept {  return 10;  }
+    static size_t getColumnNumber() noexcept {  return 9;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -224,7 +215,6 @@ class NewspaperEngagement
     std::shared_ptr<::trantor::Date> viewedAt_;
     std::shared_ptr<::trantor::Date> lastViewed_;
     std::shared_ptr<int32_t> timeSpentSeconds_;
-    std::shared_ptr<bool> isCompleted_;
     std::shared_ptr<std::string> deviceType_;
     std::shared_ptr<std::string> userAgent_;
     struct MetaData
@@ -238,7 +228,7 @@ class NewspaperEngagement
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[10]={ false };
+    bool dirtyFlag_[9]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -294,19 +284,13 @@ class NewspaperEngagement
         {
             needSelection=true;
         }
-        sql += "is_completed,";
+        sql += "device_type,";
         ++parametersCount;
         if(!dirtyFlag_[7])
         {
             needSelection=true;
         }
-        sql += "device_type,";
-        ++parametersCount;
-        if(!dirtyFlag_[8])
-        {
-            needSelection=true;
-        }
-        if(dirtyFlag_[9])
+        if(dirtyFlag_[8])
         {
             sql += "user_agent,";
             ++parametersCount;
@@ -379,15 +363,6 @@ class NewspaperEngagement
             sql +="default,";
         }
         if(dirtyFlag_[8])
-        {
-            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
-            sql.append(placeholderStr, n);
-        }
-        else
-        {
-            sql +="default,";
-        }
-        if(dirtyFlag_[9])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
