@@ -18,6 +18,7 @@ const std::string NewspaperEngagement::Cols::_newspaper_id = "\"newspaper_id\"";
 const std::string NewspaperEngagement::Cols::_user_id = "\"user_id\"";
 const std::string NewspaperEngagement::Cols::_partner_id = "\"partner_id\"";
 const std::string NewspaperEngagement::Cols::_viewed_at = "\"viewed_at\"";
+const std::string NewspaperEngagement::Cols::_last_viewed = "\"last_viewed\"";
 const std::string NewspaperEngagement::Cols::_time_spent_seconds = "\"time_spent_seconds\"";
 const std::string NewspaperEngagement::Cols::_is_completed = "\"is_completed\"";
 const std::string NewspaperEngagement::Cols::_device_type = "\"device_type\"";
@@ -31,6 +32,7 @@ const std::vector<typename NewspaperEngagement::MetaData> NewspaperEngagement::m
 {"user_id","std::string","uuid",0,0,0,1},
 {"partner_id","std::string","uuid",0,0,0,1},
 {"viewed_at","::trantor::Date","timestamp with time zone",0,0,0,1},
+{"last_viewed","::trantor::Date","timestamp with time zone",0,0,0,0},
 {"time_spent_seconds","int32_t","integer",4,0,0,1},
 {"is_completed","bool","boolean",1,0,0,1},
 {"device_type","std::string","character varying",50,0,0,1}
@@ -82,6 +84,28 @@ NewspaperEngagement::NewspaperEngagement(const Row &r, const ssize_t indexOffset
                 viewedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
+        if(!r["last_viewed"].isNull())
+        {
+            auto timeStr = r["last_viewed"].as<std::string>();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                lastViewed_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
         if(!r["time_spent_seconds"].isNull())
         {
             timeSpentSeconds_=std::make_shared<int32_t>(r["time_spent_seconds"].as<int32_t>());
@@ -98,7 +122,7 @@ NewspaperEngagement::NewspaperEngagement(const Row &r, const ssize_t indexOffset
     else
     {
         size_t offset = (size_t)indexOffset;
-        if(offset + 8 > r.size())
+        if(offset + 9 > r.size())
         {
             LOG_FATAL << "Invalid SQL result for this model";
             return;
@@ -150,14 +174,37 @@ NewspaperEngagement::NewspaperEngagement(const Row &r, const ssize_t indexOffset
         index = offset + 5;
         if(!r[index].isNull())
         {
-            timeSpentSeconds_=std::make_shared<int32_t>(r[index].as<int32_t>());
+            auto timeStr = r[index].as<std::string>();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                lastViewed_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
         }
         index = offset + 6;
         if(!r[index].isNull())
         {
-            isCompleted_=std::make_shared<bool>(r[index].as<bool>());
+            timeSpentSeconds_=std::make_shared<int32_t>(r[index].as<int32_t>());
         }
         index = offset + 7;
+        if(!r[index].isNull())
+        {
+            isCompleted_=std::make_shared<bool>(r[index].as<bool>());
+        }
+        index = offset + 8;
         if(!r[index].isNull())
         {
             deviceType_=std::make_shared<std::string>(r[index].as<std::string>());
@@ -168,7 +215,7 @@ NewspaperEngagement::NewspaperEngagement(const Row &r, const ssize_t indexOffset
 
 NewspaperEngagement::NewspaperEngagement(const Json::Value &pJson, const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 8)
+    if(pMasqueradingVector.size() != 9)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -236,7 +283,25 @@ NewspaperEngagement::NewspaperEngagement(const Json::Value &pJson, const std::ve
         dirtyFlag_[5] = true;
         if(!pJson[pMasqueradingVector[5]].isNull())
         {
-            timeSpentSeconds_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[5]].asInt64());
+            auto timeStr = pJson[pMasqueradingVector[5]].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                lastViewed_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
         }
     }
     if(!pMasqueradingVector[6].empty() && pJson.isMember(pMasqueradingVector[6]))
@@ -244,7 +309,7 @@ NewspaperEngagement::NewspaperEngagement(const Json::Value &pJson, const std::ve
         dirtyFlag_[6] = true;
         if(!pJson[pMasqueradingVector[6]].isNull())
         {
-            isCompleted_=std::make_shared<bool>(pJson[pMasqueradingVector[6]].asBool());
+            timeSpentSeconds_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[6]].asInt64());
         }
     }
     if(!pMasqueradingVector[7].empty() && pJson.isMember(pMasqueradingVector[7]))
@@ -252,7 +317,15 @@ NewspaperEngagement::NewspaperEngagement(const Json::Value &pJson, const std::ve
         dirtyFlag_[7] = true;
         if(!pJson[pMasqueradingVector[7]].isNull())
         {
-            deviceType_=std::make_shared<std::string>(pJson[pMasqueradingVector[7]].asString());
+            isCompleted_=std::make_shared<bool>(pJson[pMasqueradingVector[7]].asBool());
+        }
+    }
+    if(!pMasqueradingVector[8].empty() && pJson.isMember(pMasqueradingVector[8]))
+    {
+        dirtyFlag_[8] = true;
+        if(!pJson[pMasqueradingVector[8]].isNull())
+        {
+            deviceType_=std::make_shared<std::string>(pJson[pMasqueradingVector[8]].asString());
         }
     }
 }
@@ -317,9 +390,35 @@ NewspaperEngagement::NewspaperEngagement(const Json::Value &pJson) noexcept(fals
             }
         }
     }
-    if(pJson.isMember("time_spent_seconds"))
+    if(pJson.isMember("last_viewed"))
     {
         dirtyFlag_[5]=true;
+        if(!pJson["last_viewed"].isNull())
+        {
+            auto timeStr = pJson["last_viewed"].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                lastViewed_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+    }
+    if(pJson.isMember("time_spent_seconds"))
+    {
+        dirtyFlag_[6]=true;
         if(!pJson["time_spent_seconds"].isNull())
         {
             timeSpentSeconds_=std::make_shared<int32_t>((int32_t)pJson["time_spent_seconds"].asInt64());
@@ -327,7 +426,7 @@ NewspaperEngagement::NewspaperEngagement(const Json::Value &pJson) noexcept(fals
     }
     if(pJson.isMember("is_completed"))
     {
-        dirtyFlag_[6]=true;
+        dirtyFlag_[7]=true;
         if(!pJson["is_completed"].isNull())
         {
             isCompleted_=std::make_shared<bool>(pJson["is_completed"].asBool());
@@ -335,7 +434,7 @@ NewspaperEngagement::NewspaperEngagement(const Json::Value &pJson) noexcept(fals
     }
     if(pJson.isMember("device_type"))
     {
-        dirtyFlag_[7]=true;
+        dirtyFlag_[8]=true;
         if(!pJson["device_type"].isNull())
         {
             deviceType_=std::make_shared<std::string>(pJson["device_type"].asString());
@@ -346,7 +445,7 @@ NewspaperEngagement::NewspaperEngagement(const Json::Value &pJson) noexcept(fals
 void NewspaperEngagement::updateByMasqueradedJson(const Json::Value &pJson,
                                             const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 8)
+    if(pMasqueradingVector.size() != 9)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -413,7 +512,25 @@ void NewspaperEngagement::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[5] = true;
         if(!pJson[pMasqueradingVector[5]].isNull())
         {
-            timeSpentSeconds_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[5]].asInt64());
+            auto timeStr = pJson[pMasqueradingVector[5]].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                lastViewed_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
         }
     }
     if(!pMasqueradingVector[6].empty() && pJson.isMember(pMasqueradingVector[6]))
@@ -421,7 +538,7 @@ void NewspaperEngagement::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[6] = true;
         if(!pJson[pMasqueradingVector[6]].isNull())
         {
-            isCompleted_=std::make_shared<bool>(pJson[pMasqueradingVector[6]].asBool());
+            timeSpentSeconds_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[6]].asInt64());
         }
     }
     if(!pMasqueradingVector[7].empty() && pJson.isMember(pMasqueradingVector[7]))
@@ -429,7 +546,15 @@ void NewspaperEngagement::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[7] = true;
         if(!pJson[pMasqueradingVector[7]].isNull())
         {
-            deviceType_=std::make_shared<std::string>(pJson[pMasqueradingVector[7]].asString());
+            isCompleted_=std::make_shared<bool>(pJson[pMasqueradingVector[7]].asBool());
+        }
+    }
+    if(!pMasqueradingVector[8].empty() && pJson.isMember(pMasqueradingVector[8]))
+    {
+        dirtyFlag_[8] = true;
+        if(!pJson[pMasqueradingVector[8]].isNull())
+        {
+            deviceType_=std::make_shared<std::string>(pJson[pMasqueradingVector[8]].asString());
         }
     }
 }
@@ -493,9 +618,35 @@ void NewspaperEngagement::updateByJson(const Json::Value &pJson) noexcept(false)
             }
         }
     }
-    if(pJson.isMember("time_spent_seconds"))
+    if(pJson.isMember("last_viewed"))
     {
         dirtyFlag_[5] = true;
+        if(!pJson["last_viewed"].isNull())
+        {
+            auto timeStr = pJson["last_viewed"].asString();
+            struct tm stm;
+            memset(&stm,0,sizeof(stm));
+            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
+            time_t t = mktime(&stm);
+            size_t decimalNum = 0;
+            if(p)
+            {
+                if(*p=='.')
+                {
+                    std::string decimals(p+1,&timeStr[timeStr.length()]);
+                    while(decimals.length()<6)
+                    {
+                        decimals += "0";
+                    }
+                    decimalNum = (size_t)atol(decimals.c_str());
+                }
+                lastViewed_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
+            }
+        }
+    }
+    if(pJson.isMember("time_spent_seconds"))
+    {
+        dirtyFlag_[6] = true;
         if(!pJson["time_spent_seconds"].isNull())
         {
             timeSpentSeconds_=std::make_shared<int32_t>((int32_t)pJson["time_spent_seconds"].asInt64());
@@ -503,7 +654,7 @@ void NewspaperEngagement::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("is_completed"))
     {
-        dirtyFlag_[6] = true;
+        dirtyFlag_[7] = true;
         if(!pJson["is_completed"].isNull())
         {
             isCompleted_=std::make_shared<bool>(pJson["is_completed"].asBool());
@@ -511,7 +662,7 @@ void NewspaperEngagement::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("device_type"))
     {
-        dirtyFlag_[7] = true;
+        dirtyFlag_[8] = true;
         if(!pJson["device_type"].isNull())
         {
             deviceType_=std::make_shared<std::string>(pJson["device_type"].asString());
@@ -629,6 +780,28 @@ void NewspaperEngagement::setViewedAt(const ::trantor::Date &pViewedAt) noexcept
     dirtyFlag_[4] = true;
 }
 
+const ::trantor::Date &NewspaperEngagement::getValueOfLastViewed() const noexcept
+{
+    static const ::trantor::Date defaultValue = ::trantor::Date();
+    if(lastViewed_)
+        return *lastViewed_;
+    return defaultValue;
+}
+const std::shared_ptr<::trantor::Date> &NewspaperEngagement::getLastViewed() const noexcept
+{
+    return lastViewed_;
+}
+void NewspaperEngagement::setLastViewed(const ::trantor::Date &pLastViewed) noexcept
+{
+    lastViewed_ = std::make_shared<::trantor::Date>(pLastViewed);
+    dirtyFlag_[5] = true;
+}
+void NewspaperEngagement::setLastViewedToNull() noexcept
+{
+    lastViewed_.reset();
+    dirtyFlag_[5] = true;
+}
+
 const int32_t &NewspaperEngagement::getValueOfTimeSpentSeconds() const noexcept
 {
     static const int32_t defaultValue = int32_t();
@@ -643,7 +816,7 @@ const std::shared_ptr<int32_t> &NewspaperEngagement::getTimeSpentSeconds() const
 void NewspaperEngagement::setTimeSpentSeconds(const int32_t &pTimeSpentSeconds) noexcept
 {
     timeSpentSeconds_ = std::make_shared<int32_t>(pTimeSpentSeconds);
-    dirtyFlag_[5] = true;
+    dirtyFlag_[6] = true;
 }
 
 const bool &NewspaperEngagement::getValueOfIsCompleted() const noexcept
@@ -660,7 +833,7 @@ const std::shared_ptr<bool> &NewspaperEngagement::getIsCompleted() const noexcep
 void NewspaperEngagement::setIsCompleted(const bool &pIsCompleted) noexcept
 {
     isCompleted_ = std::make_shared<bool>(pIsCompleted);
-    dirtyFlag_[6] = true;
+    dirtyFlag_[7] = true;
 }
 
 const std::string &NewspaperEngagement::getValueOfDeviceType() const noexcept
@@ -677,12 +850,12 @@ const std::shared_ptr<std::string> &NewspaperEngagement::getDeviceType() const n
 void NewspaperEngagement::setDeviceType(const std::string &pDeviceType) noexcept
 {
     deviceType_ = std::make_shared<std::string>(pDeviceType);
-    dirtyFlag_[7] = true;
+    dirtyFlag_[8] = true;
 }
 void NewspaperEngagement::setDeviceType(std::string &&pDeviceType) noexcept
 {
     deviceType_ = std::make_shared<std::string>(std::move(pDeviceType));
-    dirtyFlag_[7] = true;
+    dirtyFlag_[8] = true;
 }
 
 void NewspaperEngagement::updateId(const uint64_t id)
@@ -697,6 +870,7 @@ const std::vector<std::string> &NewspaperEngagement::insertColumns() noexcept
         "user_id",
         "partner_id",
         "viewed_at",
+        "last_viewed",
         "time_spent_seconds",
         "is_completed",
         "device_type"
@@ -763,6 +937,17 @@ void NewspaperEngagement::outputArgs(drogon::orm::internal::SqlBinder &binder) c
     }
     if(dirtyFlag_[5])
     {
+        if(getLastViewed())
+        {
+            binder << getValueOfLastViewed();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[6])
+    {
         if(getTimeSpentSeconds())
         {
             binder << getValueOfTimeSpentSeconds();
@@ -772,7 +957,7 @@ void NewspaperEngagement::outputArgs(drogon::orm::internal::SqlBinder &binder) c
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[6])
+    if(dirtyFlag_[7])
     {
         if(getIsCompleted())
         {
@@ -783,7 +968,7 @@ void NewspaperEngagement::outputArgs(drogon::orm::internal::SqlBinder &binder) c
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[7])
+    if(dirtyFlag_[8])
     {
         if(getDeviceType())
         {
@@ -830,6 +1015,10 @@ const std::vector<std::string> NewspaperEngagement::updateColumns() const
     if(dirtyFlag_[7])
     {
         ret.push_back(getColumnName(7));
+    }
+    if(dirtyFlag_[8])
+    {
+        ret.push_back(getColumnName(8));
     }
     return ret;
 }
@@ -893,6 +1082,17 @@ void NewspaperEngagement::updateArgs(drogon::orm::internal::SqlBinder &binder) c
     }
     if(dirtyFlag_[5])
     {
+        if(getLastViewed())
+        {
+            binder << getValueOfLastViewed();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[6])
+    {
         if(getTimeSpentSeconds())
         {
             binder << getValueOfTimeSpentSeconds();
@@ -902,7 +1102,7 @@ void NewspaperEngagement::updateArgs(drogon::orm::internal::SqlBinder &binder) c
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[6])
+    if(dirtyFlag_[7])
     {
         if(getIsCompleted())
         {
@@ -913,7 +1113,7 @@ void NewspaperEngagement::updateArgs(drogon::orm::internal::SqlBinder &binder) c
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[7])
+    if(dirtyFlag_[8])
     {
         if(getDeviceType())
         {
@@ -968,6 +1168,14 @@ Json::Value NewspaperEngagement::toJson() const
     {
         ret["viewed_at"]=Json::Value();
     }
+    if(getLastViewed())
+    {
+        ret["last_viewed"]=getLastViewed()->toDbStringLocal();
+    }
+    else
+    {
+        ret["last_viewed"]=Json::Value();
+    }
     if(getTimeSpentSeconds())
     {
         ret["time_spent_seconds"]=getValueOfTimeSpentSeconds();
@@ -1004,7 +1212,7 @@ Json::Value NewspaperEngagement::toMasqueradedJson(
     const std::vector<std::string> &pMasqueradingVector) const
 {
     Json::Value ret;
-    if(pMasqueradingVector.size() == 8)
+    if(pMasqueradingVector.size() == 9)
     {
         if(!pMasqueradingVector[0].empty())
         {
@@ -1063,9 +1271,9 @@ Json::Value NewspaperEngagement::toMasqueradedJson(
         }
         if(!pMasqueradingVector[5].empty())
         {
-            if(getTimeSpentSeconds())
+            if(getLastViewed())
             {
-                ret[pMasqueradingVector[5]]=getValueOfTimeSpentSeconds();
+                ret[pMasqueradingVector[5]]=getLastViewed()->toDbStringLocal();
             }
             else
             {
@@ -1074,9 +1282,9 @@ Json::Value NewspaperEngagement::toMasqueradedJson(
         }
         if(!pMasqueradingVector[6].empty())
         {
-            if(getIsCompleted())
+            if(getTimeSpentSeconds())
             {
-                ret[pMasqueradingVector[6]]=getValueOfIsCompleted();
+                ret[pMasqueradingVector[6]]=getValueOfTimeSpentSeconds();
             }
             else
             {
@@ -1085,13 +1293,24 @@ Json::Value NewspaperEngagement::toMasqueradedJson(
         }
         if(!pMasqueradingVector[7].empty())
         {
-            if(getDeviceType())
+            if(getIsCompleted())
             {
-                ret[pMasqueradingVector[7]]=getValueOfDeviceType();
+                ret[pMasqueradingVector[7]]=getValueOfIsCompleted();
             }
             else
             {
                 ret[pMasqueradingVector[7]]=Json::Value();
+            }
+        }
+        if(!pMasqueradingVector[8].empty())
+        {
+            if(getDeviceType())
+            {
+                ret[pMasqueradingVector[8]]=getValueOfDeviceType();
+            }
+            else
+            {
+                ret[pMasqueradingVector[8]]=Json::Value();
             }
         }
         return ret;
@@ -1136,6 +1355,14 @@ Json::Value NewspaperEngagement::toMasqueradedJson(
     else
     {
         ret["viewed_at"]=Json::Value();
+    }
+    if(getLastViewed())
+    {
+        ret["last_viewed"]=getLastViewed()->toDbStringLocal();
+    }
+    else
+    {
+        ret["last_viewed"]=Json::Value();
     }
     if(getTimeSpentSeconds())
     {
@@ -1206,19 +1433,24 @@ bool NewspaperEngagement::validateJsonForCreation(const Json::Value &pJson, std:
         if(!validJsonOfField(4, "viewed_at", pJson["viewed_at"], err, true))
             return false;
     }
+    if(pJson.isMember("last_viewed"))
+    {
+        if(!validJsonOfField(5, "last_viewed", pJson["last_viewed"], err, true))
+            return false;
+    }
     if(pJson.isMember("time_spent_seconds"))
     {
-        if(!validJsonOfField(5, "time_spent_seconds", pJson["time_spent_seconds"], err, true))
+        if(!validJsonOfField(6, "time_spent_seconds", pJson["time_spent_seconds"], err, true))
             return false;
     }
     if(pJson.isMember("is_completed"))
     {
-        if(!validJsonOfField(6, "is_completed", pJson["is_completed"], err, true))
+        if(!validJsonOfField(7, "is_completed", pJson["is_completed"], err, true))
             return false;
     }
     if(pJson.isMember("device_type"))
     {
-        if(!validJsonOfField(7, "device_type", pJson["device_type"], err, true))
+        if(!validJsonOfField(8, "device_type", pJson["device_type"], err, true))
             return false;
     }
     return true;
@@ -1227,7 +1459,7 @@ bool NewspaperEngagement::validateMasqueradedJsonForCreation(const Json::Value &
                                                              const std::vector<std::string> &pMasqueradingVector,
                                                              std::string &err)
 {
-    if(pMasqueradingVector.size() != 8)
+    if(pMasqueradingVector.size() != 9)
     {
         err = "Bad masquerading vector";
         return false;
@@ -1312,6 +1544,14 @@ bool NewspaperEngagement::validateMasqueradedJsonForCreation(const Json::Value &
                   return false;
           }
       }
+      if(!pMasqueradingVector[8].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[8]))
+          {
+              if(!validJsonOfField(8, pMasqueradingVector[8], pJson[pMasqueradingVector[8]], err, true))
+                  return false;
+          }
+      }
     }
     catch(const Json::LogicError &e)
     {
@@ -1352,19 +1592,24 @@ bool NewspaperEngagement::validateJsonForUpdate(const Json::Value &pJson, std::s
         if(!validJsonOfField(4, "viewed_at", pJson["viewed_at"], err, false))
             return false;
     }
+    if(pJson.isMember("last_viewed"))
+    {
+        if(!validJsonOfField(5, "last_viewed", pJson["last_viewed"], err, false))
+            return false;
+    }
     if(pJson.isMember("time_spent_seconds"))
     {
-        if(!validJsonOfField(5, "time_spent_seconds", pJson["time_spent_seconds"], err, false))
+        if(!validJsonOfField(6, "time_spent_seconds", pJson["time_spent_seconds"], err, false))
             return false;
     }
     if(pJson.isMember("is_completed"))
     {
-        if(!validJsonOfField(6, "is_completed", pJson["is_completed"], err, false))
+        if(!validJsonOfField(7, "is_completed", pJson["is_completed"], err, false))
             return false;
     }
     if(pJson.isMember("device_type"))
     {
-        if(!validJsonOfField(7, "device_type", pJson["device_type"], err, false))
+        if(!validJsonOfField(8, "device_type", pJson["device_type"], err, false))
             return false;
     }
     return true;
@@ -1373,7 +1618,7 @@ bool NewspaperEngagement::validateMasqueradedJsonForUpdate(const Json::Value &pJ
                                                            const std::vector<std::string> &pMasqueradingVector,
                                                            std::string &err)
 {
-    if(pMasqueradingVector.size() != 8)
+    if(pMasqueradingVector.size() != 9)
     {
         err = "Bad masquerading vector";
         return false;
@@ -1422,6 +1667,11 @@ bool NewspaperEngagement::validateMasqueradedJsonForUpdate(const Json::Value &pJ
       if(!pMasqueradingVector[7].empty() && pJson.isMember(pMasqueradingVector[7]))
       {
           if(!validJsonOfField(7, pMasqueradingVector[7], pJson[pMasqueradingVector[7]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[8].empty() && pJson.isMember(pMasqueradingVector[8]))
+      {
+          if(!validJsonOfField(8, pMasqueradingVector[8], pJson[pMasqueradingVector[8]], err, false))
               return false;
       }
     }
@@ -1503,10 +1753,9 @@ bool NewspaperEngagement::validJsonOfField(size_t index,
         case 5:
             if(pJson.isNull())
             {
-                err="The " + fieldName + " column cannot be null";
-                return false;
+                return true;
             }
-            if(!pJson.isInt())
+            if(!pJson.isString())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;
@@ -1518,13 +1767,25 @@ bool NewspaperEngagement::validJsonOfField(size_t index,
                 err="The " + fieldName + " column cannot be null";
                 return false;
             }
-            if(!pJson.isBool())
+            if(!pJson.isInt())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;
             }
             break;
         case 7:
+            if(pJson.isNull())
+            {
+                err="The " + fieldName + " column cannot be null";
+                return false;
+            }
+            if(!pJson.isBool())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 8:
             if(pJson.isNull())
             {
                 err="The " + fieldName + " column cannot be null";

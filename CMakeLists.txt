@@ -160,6 +160,7 @@ add_executable(${PROJECT_NAME} main.cc
         services/rag/RagManager.cc
         services/telegram/TelegramService.cc
         dto/ActivateDeactivateSubscriber.h
+        dto/UserEngagementDto.h
 )
 
 # ##############################################################################

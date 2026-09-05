@@ -3,6 +3,7 @@
 #include <functional>
 #include <memory>
 
+#include "dto/UserEngagementDto.h"
 #include "plugins/GnpServicePlugin.h"
 #include "services/newspapers/NewspaperService.h"
 
@@ -293,6 +294,61 @@ drogon::Task<HttpResponsePtr> NewsPapersController::ingestPublication(const Http
   auto result = co_await newsPaperService.ingestAsync(dto);
   co_return HttpResponse::newHttpJsonResponse(result.toJson());
 }
+
+
+drogon::Task<HttpResponsePtr> NewsPapersController::trackUserEngagement(HttpRequestPtr req) {
+
+  auto userId = req->attributes()->get<std::string>("userId");
+
+  auto jsonBody = req->getJsonObject();
+
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  gnp::dto::UserEngagementDto dto;
+  dto.fromJson(*jsonBody);
+
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &newsPaperService = plugin->getNewsPaperService();
+
+  auto result = co_await newsPaperService.trackUserEngagement(dto, userId);
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+
+}
+
+
+drogon::Task<HttpResponsePtr> NewsPapersController::updateUserEngagement(HttpRequestPtr req) {
+
+  auto userId = req->attributes()->get<std::string>("userId");
+
+  auto jsonBody = req->getJsonObject();
+
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  gnp::dto::UserEngagementDto dto;
+  dto.fromJson(*jsonBody);
+
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &newsPaperService = plugin->getNewsPaperService();
+
+  auto result = co_await newsPaperService.updateUserEngagement(dto, userId);
+  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+
+}
+
 
 void NewsPapersController::update(
     const HttpRequestPtr &req,

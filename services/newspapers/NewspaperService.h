@@ -11,6 +11,7 @@
 #include "dto/NewsPaperDto.h"
 #include "dto/OcrIngestionDto.h"
 #include "dto/ReportDto.h"
+#include "dto/UserEngagementDto.h"
 
 namespace gnp::services {
 
@@ -59,7 +60,11 @@ public:
    //ocr ingestion ...
    drogon::Task<gnp::dto::BaseApiResponse> handleOcrIngestion(const dto::OcrIngestionDto &dto);
 
-   drogon::Task<void> dispatchDailyNewsUpdate();
+    drogon::Task<void> dispatchDailyNewsUpdate();
+
+    drogon::Task<gnp::dto::BaseApiResponse> trackUserEngagement(const dto::UserEngagementDto &dto, const std::string &userId);
+
+    drogon::Task<gnp::dto::BaseApiResponse> updateUserEngagement(const dto::UserEngagementDto &dto, const std::string &userId);
 
     //reports
     drogon::Task<::gnp::dto::BaseApiResponse> getNewspaperEngagementReport(const gnp::dto::ReportDto &dto);
