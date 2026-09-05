@@ -19,20 +19,17 @@ namespace gnp::dto {
         // Getters
         [[nodiscard]] const std::string& getNewspaperId() const { return newspaperId_; }
         [[nodiscard]] const std::string& getDeviceType() const { return deviceType_; }
-        [[nodiscard]] const trantor::Date& getLastViewedTimestamp() const { return lastViewedTimestamp_; }
         [[nodiscard]] int32_t getTimeSpentInSeconds() const { return timeSpentSeconds_; }
 
         // Setters
         void setNewspaperId(const std::string& value) { newspaperId_ = value; }
         void setDeviceType(const std::string& value) { deviceType_ = value; }
-        void setLastViewedTimestamp(const trantor::Date& value) { lastViewedTimestamp_ = value; }
         void setTimeSpentInSeconds(const int32_t value) { timeSpentSeconds_ = value; }
 
     private:
         std::string newspaperId_;
-        std::string deviceType_;
-        trantor::Date lastViewedTimestamp_;
-        int32_t timeSpentSeconds_ {0};
+        std::string deviceType_ = "web";
+        int32_t timeSpentSeconds_ {5};
 
     };
 
@@ -50,19 +47,7 @@ namespace gnp::dto {
             setTimeSpentInSeconds(json["timeSpentSeconds"].asInt());
         }
 
-        if (json.isMember("lastViewed") && !json["lastViewed"].isNull()) {
 
-            std::string dateStr = json["lastViewed"].asString();
-            if (dateStr.find('T') != std::string::npos) {
-                std::replace(dateStr.begin(), dateStr.end(), 'T', ' ');
-                if (dateStr.length() == 16) dateStr += ":00";
-            } else if (dateStr.length() == 10) {
-                dateStr += " 00:00:00";
-            }
-
-            setLastViewedTimestamp(trantor::Date::fromDbString(dateStr));
-
-        }
 
     }
 

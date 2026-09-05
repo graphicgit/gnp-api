@@ -1889,7 +1889,7 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::trackUserEngagement(co
 
     // Get the current time
     trantor::Date currentTime = trantor::Date::now();
-    trantor::Date lastViewed = engagement.getValueOfLastViewed();
+    trantor::Date lastViewed = engagement.getValueOfViewedAt();
 
     // Calculate time spent in seconds since last view
     int64_t diffMicroSeconds = currentTime.microSecondsSinceEpoch() -
