@@ -1792,13 +1792,13 @@ void NewspaperService::incrementViewCount(
 }
 
 
-
-drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::trackUserEngagement(
+  drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::trackUserEngagement(
     const dto::UserEngagementDto &dto,
     const std::string &userId) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<drogon_model::Gnp::NewspaperEngagement> engagementMapper(dbClient);
+  CoroMapper<drogon_model::Gnp::Newspapers> newspaperMapper(dbClient);
 
   try {
     // Validate required fields
@@ -1826,8 +1826,9 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::trackUserEngagement(
                      CompareOperator::EQ, userId));
 
     trantor::Date currentTime = trantor::Date::now();
+    bool isFirstView = existingEngagements.empty();
 
-    if (!existingEngagements.empty()) {
+    if (!isFirstView) {
       // ── UPDATE EXISTING RECORD ──────────────────────────────────────────
       auto engagement = existingEngagements[0];
 
@@ -1857,7 +1858,6 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::trackUserEngagement(
         engagement.setUserAgent(dto.getUserAgent());
       }
 
-
       co_await engagementMapper.update(engagement);
 
       dto::BaseApiResponse response;
@@ -1866,7 +1866,6 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::trackUserEngagement(
       response.result["newspaperId"] = dto.getNewspaperId();
       response.result["userId"] = userId;
       response.result["totalTimeSpentSeconds"] = engagement.getValueOfTimeSpentSeconds();
-
       response.result["action"] = "updated";
 
       co_return response;
@@ -1881,8 +1880,29 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::trackUserEngagement(
       engagement.setViewedAt(currentTime);
       engagement.setLastViewed(currentTime);
       engagement.setTimeSpentSeconds(0);
-      engagement.setUserAgent(dto.getUserAgent());
+
+      if (!dto.getUserAgent().empty()) {
+        engagement.setUserAgent(dto.getUserAgent());
+      }
+
       co_await engagementMapper.insert(engagement);
+
+      // ── INCREMENT VIEWS IN NEWSPAPER TABLE ─────────────────────────────
+      // Only increment views for the newspaper when it's the first view
+      try {
+        auto newspaper = co_await newspaperMapper.findByPrimaryKey(dto.getNewspaperId());
+        int32_t currentViews = newspaper.getValueOfViews();
+        newspaper.setViews(currentViews + 1);
+        co_await newspaperMapper.update(newspaper);
+
+        LOG_INFO << "[trackUserEngagement] Incremented views for newspaper "
+                 << dto.getNewspaperId() << " from " << currentViews
+                 << " to " << (currentViews + 1);
+      } catch (const std::exception &e) {
+        LOG_ERROR << "[trackUserEngagement] Failed to increment views for newspaper "
+                  << dto.getNewspaperId() << ": " << e.what();
+        // Don't fail the whole operation if view increment fails
+      }
 
       dto::BaseApiResponse response;
       response.success = true;
