@@ -53,6 +53,7 @@ class NewspaperEngagement
         static const std::string _time_spent_seconds;
         static const std::string _is_completed;
         static const std::string _device_type;
+        static const std::string _user_agent;
     };
 
     static const int primaryKeyNumber;
@@ -139,6 +140,7 @@ class NewspaperEngagement
     ///Set the value of the column partner_id
     void setPartnerId(const std::string &pPartnerId) noexcept;
     void setPartnerId(std::string &&pPartnerId) noexcept;
+    void setPartnerIdToNull() noexcept;
 
     /**  For column viewed_at  */
     ///Get the value of the column viewed_at, returns the default value if the column is null
@@ -182,8 +184,18 @@ class NewspaperEngagement
     void setDeviceType(const std::string &pDeviceType) noexcept;
     void setDeviceType(std::string &&pDeviceType) noexcept;
 
+    /**  For column user_agent  */
+    ///Get the value of the column user_agent, returns the default value if the column is null
+    const std::string &getValueOfUserAgent() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getUserAgent() const noexcept;
+    ///Set the value of the column user_agent
+    void setUserAgent(const std::string &pUserAgent) noexcept;
+    void setUserAgent(std::string &&pUserAgent) noexcept;
+    void setUserAgentToNull() noexcept;
 
-    static size_t getColumnNumber() noexcept {  return 9;  }
+
+    static size_t getColumnNumber() noexcept {  return 10;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -214,6 +226,7 @@ class NewspaperEngagement
     std::shared_ptr<int32_t> timeSpentSeconds_;
     std::shared_ptr<bool> isCompleted_;
     std::shared_ptr<std::string> deviceType_;
+    std::shared_ptr<std::string> userAgent_;
     struct MetaData
     {
         const std::string colName_;
@@ -225,7 +238,7 @@ class NewspaperEngagement
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[9]={ false };
+    bool dirtyFlag_[10]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -292,6 +305,11 @@ class NewspaperEngagement
         if(!dirtyFlag_[8])
         {
             needSelection=true;
+        }
+        if(dirtyFlag_[9])
+        {
+            sql += "user_agent,";
+            ++parametersCount;
         }
         if(parametersCount > 0)
         {
@@ -368,6 +386,11 @@ class NewspaperEngagement
         else
         {
             sql +="default,";
+        }
+        if(dirtyFlag_[9])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
         }
         if(parametersCount > 0)
         {

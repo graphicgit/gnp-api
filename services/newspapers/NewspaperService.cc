@@ -1904,6 +1904,7 @@ drogon::Task<gnp::dto::BaseApiResponse> NewspaperService::trackUserEngagement(co
 
     // Update last viewed timestamp
     engagement.setLastViewed(currentTime);
+    engagement.setUserAgent(dto.getUserAgent());
 
     // If the user has spent more than 30 seconds on the newspaper, mark as completed
     if (engagement.getValueOfTimeSpentSeconds() >= 30) {
