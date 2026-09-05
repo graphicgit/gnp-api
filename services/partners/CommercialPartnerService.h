@@ -14,12 +14,18 @@
 #include "dto/AssignPartnerSubscriberPlanDto.h"
 #include <drogon/utils/coroutine.h>
 
+#include "Users.h"
+#include "dto/ActivateDeactivateSubscriber.h"
 #include "dto/GeneratePartnerApiKeyDto.h"
 #include "dto/PartnerOnboardingDto.h"
 #include "dto/PartnerQuotaDto.h"
 #include "dto/ReportDto.h"
 #include "dto/UpdatePartnerApiKeyDto.h"
 #include "dto/UpdatePartnerSubscriberDto.h"
+
+namespace drogon_model::Gnp {
+    class CommercialPartners;
+}
 
 namespace gnp::services {
 
@@ -51,6 +57,7 @@ public:
   drogon::Task<dto::BaseApiResponse> deactivateSubscriber(const std::string &partnerId, const std::string &id);
 
   drogon::Task<dto::BaseApiResponse> resetSubscriberPassword(const std::string &partnerId, const std::string &id);
+
 
   void enableSubaccount(const std::string &id,
       const std::function<void(const dto::BaseApiResponse &)> &callback);
@@ -111,6 +118,17 @@ public:
 
     drogon::Task<::gnp::dto::BaseApiResponse> resetSubscriberPasswordByUserId(const std::string &partnerId, const std::string &userId);
 
+    drogon::Task<::gnp::dto::BaseApiResponse> activateDeactivatePartnerSubscriber(const dto::ActivateDeactivateSubscriberDto &dto);
+
+private:
+    // Helper methods for email notifications
+    drogon::Task<void> sendActivationEmail(const drogon_model::Gnp::Users& user, const drogon_model::Gnp::CommercialPartners& partner);
+
+    drogon::Task<void> sendDeactivationEmail(const drogon_model::Gnp::Users& user, const drogon_model::Gnp::CommercialPartners& partner);
+
+    bool isSystemGeneratedEmail(const std::string& email) const;
+
+    drogon::Task<void> sendSmsNotification(const std::string& phoneNumber, const std::string& message);
 };
 
 }

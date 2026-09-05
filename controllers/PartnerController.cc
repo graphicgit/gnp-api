@@ -2,6 +2,7 @@
 
 #include "dto/BaseApiResponse.h"
 #include "plugins/GnpServicePlugin.h"
+#include "constants/ErrorCodes.h"
 
 
 Task<HttpResponsePtr> PartnerController::getStats(const HttpRequestPtr req) {
@@ -339,6 +340,22 @@ Task<HttpResponsePtr> PartnerController::createSubscriber(HttpRequestPtr req) {
 
   auto result = co_await commercialPartnerService.createPartnerSubscriber(dto);
   auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  if (!result.success) {
+    if (result.error.isMember("code")) {
+      int code = result.error["code"].asInt();
+      if (code == gnp::constants::ERR_RESOURCE_NOT_FOUND) {
+        resp->setStatusCode(k404NotFound);
+      } else if (code == gnp::constants::ERR_DUPLICATE_EMAIL || 
+                 code == gnp::constants::ERR_DUPLICATE_PHONE || 
+                 code == gnp::constants::ERR_QUOTA_EXCEEDED) {
+        resp->setStatusCode(k400BadRequest);
+      } else {
+        resp->setStatusCode(k500InternalServerError);
+      }
+    } else {
+      resp->setStatusCode(k500InternalServerError);
+    }
+  }
   co_return resp;
 
 }

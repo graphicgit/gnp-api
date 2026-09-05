@@ -330,13 +330,7 @@ drogon::Task<HttpResponsePtr> UsersController::activate(HttpRequestPtr req) {
 
   auto result = co_await userService.activateUserAccount(userId);
   auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-  resp->setStatusCode(result.success
-                          ? k200OK
-                          : (result.error.isMember("code") &&
-                                     result.error["code"].asInt() ==
-                                         gnp::constants::ERR_RESOURCE_NOT_FOUND
-                                 ? k404NotFound
-                                 : k500InternalServerError));
+  resp->setStatusCode(result.success ? k200OK : (result.error.isMember("code") && result.error["code"].asInt() == constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
   co_return resp;
 }
 

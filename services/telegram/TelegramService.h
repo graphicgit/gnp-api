@@ -11,7 +11,7 @@ namespace gnp::services {
 
     class TelegramService {
 
-        drogon::Task<dto::BaseApiResponse> sendMessage(const std::string &chatId, const std::string &query);
+        drogon::Task<dto::BaseApiResponse> sendMessage(const std::string &token, const std::string &chatId, const std::string &message);
 
     };
 
