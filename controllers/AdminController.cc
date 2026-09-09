@@ -1,5 +1,6 @@
 #include "AdminController.h"
 
+#include "constants/ErrorCodes.h"
 #include "dto/AffiliateSettingsDto.h"
 #include "dto/AssignPartnerSubscriberPlanDto.h"
 #include "dto/CreateCampaignDto.h"
@@ -59,10 +60,11 @@ Task<HttpResponsePtr> AdminController::getAllPublications(HttpRequestPtr req) {
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &publicationService = plugin->getPublicationService();
 
-  auto result = co_await publicationService.getAllPublications(pageNo, pageSize, query);
+  auto apiResp = co_await publicationService.getAllPublications(pageNo, pageSize, query);
 
-  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-  co_return resp;
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 
 }
 
@@ -85,8 +87,10 @@ Task<HttpResponsePtr> AdminController::createPublication(HttpRequestPtr req) {
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &publicationService = plugin->getPublicationService();
 
-  auto result = co_await publicationService.create(dto);
-  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+  auto apiResp = co_await publicationService.create(dto);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 
 
 }
@@ -110,8 +114,10 @@ Task<HttpResponsePtr> AdminController::updatePublication(HttpRequestPtr req, con
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &publicationService = plugin->getPublicationService();
 
-  auto result = co_await publicationService.update(dto, publicationId);
-  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+  auto apiResp = co_await publicationService.update(dto, publicationId);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 
 }
 
@@ -129,8 +135,10 @@ Task<HttpResponsePtr> AdminController::activate(HttpRequestPtr req, const std::s
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &publicationService = plugin->getPublicationService();
 
-  auto result = co_await publicationService.activate(publicationId);
-  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+  auto apiResp = co_await publicationService.activate(publicationId);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 
 }
 
@@ -149,8 +157,10 @@ Task<HttpResponsePtr> AdminController::deactivate(HttpRequestPtr req, const std:
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &publicationService = plugin->getPublicationService();
 
-  auto result = co_await publicationService.deactivate(publicationId);
-  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+  auto apiResp = co_await publicationService.deactivate(publicationId);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 
 }
 
@@ -169,8 +179,10 @@ Task<HttpResponsePtr> AdminController::deletePublication(HttpRequestPtr req, con
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &publicationService = plugin->getPublicationService();
 
-  auto result = co_await publicationService.deletePublication(publicationId);
-  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+  auto apiResp = co_await publicationService.deletePublication(publicationId);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 
 }
 
@@ -225,11 +237,12 @@ Task<HttpResponsePtr> AdminController::getAllNewsPapers(const HttpRequestPtr req
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
-  auto result = co_await newsPaperService.listAllAsync(
+  auto apiResp = co_await newsPaperService.listAllAsync(
       pageNo, pageSize, publicationId, startDate, endDate, query, status);
 
-  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-  co_return resp;
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
 
@@ -283,10 +296,11 @@ Task<HttpResponsePtr> AdminController::getAllArchivedNewsPapers(const HttpReques
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
-  auto result = co_await newsPaperService.listAllArchivedAsync(pageNo, pageSize, publicationId, startDate, endDate, query, status);
+  auto apiResp = co_await newsPaperService.listAllArchivedAsync(pageNo, pageSize, publicationId, startDate, endDate, query, status);
 
-  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-  co_return resp;
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
 
@@ -304,8 +318,10 @@ Task<HttpResponsePtr> AdminController::getNewsPaperDetails(const HttpRequestPtr 
   auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
-  auto result = co_await newsPaperService.getDetails(newspaperId);
-  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+  auto apiResp = co_await newsPaperService.getDetails(newspaperId);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
 
@@ -324,8 +340,11 @@ Task<HttpResponsePtr> AdminController::publishNewsPaper(const HttpRequestPtr req
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
-  auto result = co_await newsPaperService.publishAsync(id);
-  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  auto apiResp = co_await newsPaperService.publishAsync(id);
+
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
   co_return resp;
 }
 
@@ -345,8 +364,10 @@ Task<HttpResponsePtr> AdminController::unPublishNewsPaper(const HttpRequestPtr r
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
-  auto result = co_await newsPaperService.unPublishAsync(id);
-  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  auto apiResp = co_await newsPaperService.unPublishAsync(id);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
   co_return resp;
 }
 
@@ -369,8 +390,11 @@ Task<HttpResponsePtr> AdminController::IngestNewsPaper(const HttpRequestPtr req)
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
-  auto result = co_await newsPaperService.ingestAsync(dto);
-  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+  auto apiResp = co_await newsPaperService.ingestAsync(dto);
+
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
 Task<HttpResponsePtr> AdminController::updateNewsPaper(HttpRequestPtr req, const std::string &newspaperId) {
@@ -392,8 +416,11 @@ Task<HttpResponsePtr> AdminController::updateNewsPaper(HttpRequestPtr req, const
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
-  auto result = co_await newsPaperService.update(dto, newspaperId);
-  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+  auto apiResp = co_await newsPaperService.update(dto, newspaperId);
+
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 
 }
 
@@ -414,8 +441,12 @@ Task<HttpResponsePtr> AdminController::deleteNewsPaper(const HttpRequestPtr req)
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &newsPaperService = plugin->getNewsPaperService();
 
-  auto result = co_await newsPaperService.deleteNewspaperAsync(id);
-  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+  auto apiResp = co_await newsPaperService.deleteNewspaperAsync(id);
+
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+
 }
 
 // users
@@ -451,9 +482,11 @@ drogon::Task<HttpResponsePtr> AdminController::getAllUsers(const HttpRequestPtr 
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &userService = plugin->getUserService();
 
-  auto result = co_await userService.getAll(pageNo, pageSize, query);
-  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-  co_return resp;
+  auto apiResp = co_await userService.getAll(pageNo, pageSize, query);
+
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
 void AdminController::createUser(const HttpRequestPtr &req,
@@ -484,6 +517,8 @@ drogon::Task<HttpResponsePtr> AdminController::lockUserAccount(const HttpRequest
   auto &userService = plugin->getUserService();
 
   auto apiResp = co_await userService.lockUserAccount(userId);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 
 }
@@ -506,6 +541,8 @@ drogon::Task<HttpResponsePtr> AdminController::unLockUserAccount(const HttpReque
   auto &userService = plugin->getUserService();
 
   auto apiResp = co_await userService.unlockUserAccount(userId);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 
 }
@@ -566,10 +603,11 @@ drogon::Task<HttpResponsePtr> AdminController::getAllSubscriptionPlans(const Htt
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &subscriptionPlanService = plugin->getSubscriptionPlanService();
 
-  auto result = co_await subscriptionPlanService.getAllPlansAsync(
-      pageNo, pageSize, query);
-  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-  co_return resp;
+  auto apiResp = co_await subscriptionPlanService.getAllPlansAsync(pageNo, pageSize, query);
+
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
 drogon::Task<HttpResponsePtr> AdminController::createSubscriptionPlan(HttpRequestPtr req) {
@@ -592,9 +630,11 @@ drogon::Task<HttpResponsePtr> AdminController::createSubscriptionPlan(HttpReques
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &subscriptionPlanService = plugin->getSubscriptionPlanService();
 
-  auto result = co_await subscriptionPlanService.createPlanAsync(dto);
-  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-  co_return resp;
+  auto apiResp = co_await subscriptionPlanService.createPlanAsync(dto);
+
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
 drogon::Task<HttpResponsePtr> AdminController::updateSubscriptionPlan(HttpRequestPtr req, const std::string &id) {
@@ -617,9 +657,11 @@ drogon::Task<HttpResponsePtr> AdminController::updateSubscriptionPlan(HttpReques
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &subscriptionPlanService = plugin->getSubscriptionPlanService();
 
-  auto result = co_await subscriptionPlanService.updatePlanAsync(dto, id);
-  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-  co_return resp;
+  auto apiResp = co_await subscriptionPlanService.updatePlanAsync(dto, id);
+
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
 drogon::Task<HttpResponsePtr> AdminController::deleteSubscriptionPlan(HttpRequestPtr req, const std::string &id) {
@@ -636,9 +678,12 @@ drogon::Task<HttpResponsePtr> AdminController::deleteSubscriptionPlan(HttpReques
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &subscriptionPlanService = plugin->getSubscriptionPlanService();
 
-  auto result = co_await subscriptionPlanService.deletePlanAsync(id);
-  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-  co_return resp;
+  auto apiResp = co_await subscriptionPlanService.deletePlanAsync(id);
+
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+
 }
 
 
@@ -685,9 +730,12 @@ drogon::Task<HttpResponsePtr> AdminController::getAllCoupons(HttpRequestPtr req)
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &couponService = plugin->getCouponService();
 
-  auto result = co_await couponService.getAll(pageNo, pageSize, status, expiry, couponCode);
-  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-  co_return resp;
+  auto apiResp = co_await couponService.getAll(pageNo, pageSize, status, expiry, couponCode);
+
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+
 }
 
 Task<HttpResponsePtr> AdminController::createCoupon(HttpRequestPtr req) {
@@ -710,9 +758,10 @@ Task<HttpResponsePtr> AdminController::createCoupon(HttpRequestPtr req) {
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &couponService = plugin->getCouponService();
 
-  auto result = co_await couponService.createAsync(dto);
-  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-  co_return resp;
+  auto apiResp = co_await couponService.createAsync(dto);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
 drogon::Task<HttpResponsePtr> AdminController::updateCoupon(HttpRequestPtr req) {
@@ -735,9 +784,10 @@ drogon::Task<HttpResponsePtr> AdminController::updateCoupon(HttpRequestPtr req) 
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &couponService = plugin->getCouponService();
 
-  auto result = co_await couponService.updateAsync(dto);
-  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-  co_return resp;
+  auto apiResp = co_await couponService.updateAsync(dto);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
 drogon::Task<HttpResponsePtr> AdminController::deleteCoupon(HttpRequestPtr req) {
@@ -756,9 +806,10 @@ drogon::Task<HttpResponsePtr> AdminController::deleteCoupon(HttpRequestPtr req) 
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &couponService = plugin->getCouponService();
 
-  auto result = co_await couponService.deleteCoupon(id);
-  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-  co_return resp;
+  auto apiResp = co_await couponService.deleteCoupon(id);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
 
@@ -785,23 +836,13 @@ void AdminController::renewUserSubscription(
 
 Task<HttpResponsePtr> AdminController::getPartnerSubscriberInfo(HttpRequestPtr req, const std::string &partnerId, const std::string &userId) {
 
-  // auto userId = req->attributes()->get<std::string>("userId"); //admin user id from token
-  //
-  // if (userId.empty()) {
-  //   gnp::dto::BaseApiResponse response;
-  //   response.success = false;
-  //   response.error["message"] = "Authorization token required";
-  //   auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
-  //   resp->setStatusCode(k400BadRequest);
-  //   co_return resp;
-  // }
-
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &commercialPartnerService = plugin->getCommercialPartnerService();
 
-  auto result = co_await commercialPartnerService.getSubscriberSubscriptionSummary(partnerId, userId);
-  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-  co_return resp;
+  auto apiResp = co_await commercialPartnerService.getSubscriberSubscriptionSummary(partnerId, userId);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 
 }
 
@@ -843,10 +884,10 @@ drogon::Task<HttpResponsePtr> AdminController::getAllCampaigns(const HttpRequest
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &campaignService = plugin->getCampaignService();
 
-  auto result =
-      co_await campaignService.getAll(pageNo, pageSize, query, channel);
-  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-  co_return resp;
+  auto apiResp =  co_await campaignService.getAll(pageNo, pageSize, query, channel);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
 drogon::Task<HttpResponsePtr> AdminController::createCampaign(HttpRequestPtr req) {
@@ -866,6 +907,8 @@ drogon::Task<HttpResponsePtr> AdminController::createCampaign(HttpRequestPtr req
   auto &campaignService = plugin->getCampaignService();
 
   auto apiResp = co_await campaignService.createAsync(dto);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
@@ -882,8 +925,11 @@ Task<HttpResponsePtr> AdminController::publishCampaign(const HttpRequestPtr req)
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &campaignService = plugin->getCampaignService();
 
-  auto result = co_await campaignService.publishCampaign(campaignId);
-  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+  auto apiResp = co_await campaignService.publishCampaign(campaignId);
+
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
 drogon::Task<HttpResponsePtr> AdminController::deleteCampaign(const HttpRequestPtr req) {
@@ -901,6 +947,8 @@ drogon::Task<HttpResponsePtr> AdminController::deleteCampaign(const HttpRequestP
   auto &campaignService = plugin->getCampaignService();
 
   auto apiResp = co_await campaignService.deleteCampaign(campaignId);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
@@ -911,8 +959,10 @@ drogon::Task<HttpResponsePtr> AdminController::getPartnerStats(HttpRequestPtr re
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &commercialPartnerService = plugin->getCommercialPartnerService();
 
-  auto result = co_await commercialPartnerService.getPartnerStats();
-  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+  auto apiResp = co_await commercialPartnerService.getPartnerStats();
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
 void AdminController::getPartnerDetails(
@@ -971,9 +1021,10 @@ drogon::Task<HttpResponsePtr> AdminController::getAllPartners(HttpRequestPtr req
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &commercialPartnerService = plugin->getCommercialPartnerService();
 
-  auto result = co_await commercialPartnerService.getAll(pageNo, pageSize, query);
-  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-  co_return resp;
+  auto apiResp = co_await commercialPartnerService.getAll(pageNo, pageSize, query);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
 drogon::Task<HttpResponsePtr> AdminController::getPartnerSubscribers(const HttpRequestPtr req) {
@@ -1009,10 +1060,11 @@ drogon::Task<HttpResponsePtr> AdminController::getPartnerSubscribers(const HttpR
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &userService = plugin->getUserService();
 
-  auto result = co_await userService.getPartnerSubscribers(partnerId, pageNo,
-                                                           pageSize, query);
-  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-  co_return resp;
+  auto apiResp = co_await userService.getPartnerSubscribers(partnerId, pageNo, pageSize, query);
+
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
 drogon::Task<HttpResponsePtr> AdminController::getPartnerSubscriptionSummary(const HttpRequestPtr req) {
@@ -1022,8 +1074,11 @@ drogon::Task<HttpResponsePtr> AdminController::getPartnerSubscriptionSummary(con
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &commercialPartnerService = plugin->getCommercialPartnerService();
 
-  auto result = co_await commercialPartnerService.getPartnerSubscriptionSummary(partnerId);
-  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+  auto apiResp = co_await commercialPartnerService.getPartnerSubscriptionSummary(partnerId);
+
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
 drogon::Task<HttpResponsePtr> AdminController::createPartner(HttpRequestPtr req) {
@@ -1043,6 +1098,9 @@ drogon::Task<HttpResponsePtr> AdminController::createPartner(HttpRequestPtr req)
   auto &commercialPartnerService = plugin->getCommercialPartnerService();
 
   auto apiResp = co_await commercialPartnerService.createPartner(dto);
+
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
@@ -1061,11 +1119,31 @@ drogon::Task<HttpResponsePtr> AdminController::createPartnerSubscriber(const Htt
   gnp::dto::CreatePartnerSubscriberDto dto;
   dto.fromJson(*jsonPtr);
 
-  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &commercialPartnerService = plugin->getCommercialPartnerService();
 
   auto apiResp = co_await commercialPartnerService.createPartnerSubscriber(dto);
-  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  if (!apiResp.success) {
+    if (apiResp.error.isMember("code")) {
+      int code = apiResp.error["code"].asInt();
+      if (code == gnp::constants::ERR_RESOURCE_NOT_FOUND) {
+        resp->setStatusCode(k404NotFound);
+      } else if (code == gnp::constants::ERR_DUPLICATE_EMAIL || 
+                 code == gnp::constants::ERR_DUPLICATE_PHONE || 
+                 code == gnp::constants::ERR_QUOTA_EXCEEDED) {
+        resp->setStatusCode(k400BadRequest);
+      } else {
+        resp->setStatusCode(k500InternalServerError);
+      }
+    } else {
+      resp->setStatusCode(k500InternalServerError);
+    }
+  }
+  co_return resp;
+
+
 }
 
 drogon::Task<HttpResponsePtr> AdminController::uploadPartnerSubscribers(const HttpRequestPtr req, const std::string &partnerId) {
@@ -1085,6 +1163,8 @@ drogon::Task<HttpResponsePtr> AdminController::uploadPartnerSubscribers(const Ht
   auto &commercialPartnerService = plugin->getCommercialPartnerService();
 
   auto apiResp = co_await commercialPartnerService.bulkUploadSubscribersJson(partnerId, *jsonPtr);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
@@ -1108,6 +1188,8 @@ drogon::Task<HttpResponsePtr> AdminController::updatePartnerQuota(const HttpRequ
   auto &commercialPartnerService = plugin->getCommercialPartnerService();
 
   auto apiResp = co_await commercialPartnerService.updatePartnerQuota(partnerId, dto);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
@@ -1129,6 +1211,8 @@ drogon::Task<HttpResponsePtr> AdminController::resetPartnerSubscriberPasswords(H
 
   auto apiResp = co_await commercialPartnerService.resetSubscriberPasswords(partnerId, exemptedEmails);
   auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
   
   co_return resp;
 }
@@ -1140,7 +1224,36 @@ drogon::Task<HttpResponsePtr> AdminController::resetPartnerSubscriberPasswordByU
 
   auto apiResp = co_await commercialPartnerService.resetSubscriberPasswordByUserId(partnerId, userId);
   auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
   
+  co_return resp;
+}
+
+drogon::Task<HttpResponsePtr> AdminController::activateDeactivatePartnerSubscriber(HttpRequestPtr req) {
+
+  auto jsonBody = req->getJsonObject();
+
+  if (!jsonBody) {
+    gnp::dto::BaseApiResponse response;
+    response.success = false;
+    response.error["message"] = "Invalid JSON body";
+    auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
+    resp->setStatusCode(k400BadRequest);
+    co_return resp;
+  }
+
+  gnp::dto::ActivateDeactivateSubscriberDto dto;
+  dto.fromJson(*jsonBody);
+
+  auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &commercialPartnerService = plugin->getCommercialPartnerService();
+
+  auto apiResp = co_await commercialPartnerService.activateDeactivatePartnerSubscriber(dto);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
+
   co_return resp;
 }
 
@@ -1162,6 +1275,8 @@ drogon::Task<HttpResponsePtr> AdminController::assignPartnerSubscribersPlan(Http
   auto &commercialPartnerService = plugin->getCommercialPartnerService();
 
   auto apiResp = co_await commercialPartnerService.assignPartnerSubscribersToPlan(dto);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
@@ -1182,6 +1297,8 @@ drogon::Task<HttpResponsePtr> AdminController::updatePartner(const HttpRequestPt
   auto &commercialPartnerService = plugin->getCommercialPartnerService();
 
   auto apiResp = co_await commercialPartnerService.updatePartner(dto);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
@@ -1200,6 +1317,8 @@ drogon::Task<HttpResponsePtr> AdminController::deletePartner(HttpRequestPtr req)
   auto &commercialPartnerService = plugin->getCommercialPartnerService();
 
   auto apiResp = co_await commercialPartnerService.deletePartner(partnerId);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
@@ -1245,6 +1364,8 @@ drogon::Task<HttpResponsePtr> AdminController::getAllAffiliates(HttpRequestPtr r
   auto &affiliateService = plugin->getAffiliateService();
 
   auto apiResp = co_await affiliateService.getAll(pageNo, pageSize, query, sortBy);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 
 }
@@ -1285,6 +1406,8 @@ drogon::Task<HttpResponsePtr> AdminController::getAffiliateApplicants(HttpReques
   auto &affiliateService = plugin->getAffiliateService();
 
   auto apiResp = co_await affiliateService.getAllApplicants(pageNo, pageSize, query, status);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 
 }
@@ -1337,6 +1460,8 @@ drogon::Task<HttpResponsePtr> AdminController::getAffiliateCommissions(HttpReque
   auto &affiliateService = plugin->getAffiliateService();
 
   auto apiResp = co_await affiliateService.getAllCommissions(pageNo, pageSize, affiliateId, startDate, endDate);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 
 }
@@ -1388,6 +1513,8 @@ drogon::Task<HttpResponsePtr> AdminController::getAffiliatePayouts(HttpRequestPt
   auto &affiliateService = plugin->getAffiliateService();
 
   auto apiResp = co_await affiliateService.getAllPayouts(pageNo, pageSize, affiliateId, startDate, endDate);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 
 }
@@ -1399,6 +1526,8 @@ drogon::Task<HttpResponsePtr> AdminController::getAffiliateProgramSettings(HttpR
   auto &affiliateService = plugin->getAffiliateService();
 
   auto apiResp = co_await affiliateService.getAffiliateSettings();
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 
 }
@@ -1425,9 +1554,10 @@ drogon::Task<HttpResponsePtr> AdminController::createAffiliateProgramSettings(Ht
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &affiliateService = plugin->getAffiliateService();
 
-  auto result = co_await affiliateService.createAffiliateSettings(dto);
-  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
-  co_return resp;
+  auto apiResp = co_await affiliateService.createAffiliateSettings(dto);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 
 }
 
@@ -1778,8 +1908,10 @@ drogon::Task<HttpResponsePtr> AdminController::updateSubscriber(HttpRequestPtr r
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &userService = plugin->getUserService();
 
-  auto result = co_await userService.update(dto, subscriberId);
-  co_return HttpResponse::newHttpJsonResponse(result.toJson());
+  auto apiResp = co_await userService.update(dto, subscriberId);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
+  co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 
 }
 
@@ -1797,6 +1929,8 @@ drogon::Task<HttpResponsePtr> AdminController::deleteSubscriber(HttpRequestPtr r
   auto &userService = plugin->getUserService();
 
   auto apiResp = co_await userService.deleteUser(subscriberId);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 
 }
@@ -1814,6 +1948,8 @@ drogon::Task<HttpResponsePtr> AdminController::resetSubscriberPassword(HttpReque
   auto &userService = plugin->getUserService();
 
   auto apiResp = co_await userService.resetUserPassword(subscriberId);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 
 }
@@ -1837,6 +1973,8 @@ drogon::Task<HttpResponsePtr> AdminController::deletePartnerSubscriber(HttpReque
   auto &partnerService = plugin->getCommercialPartnerService();
 
   auto apiResp = co_await partnerService.deletePartnerSubscriberAsync(partnerId, subscriberId);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
@@ -1857,6 +1995,8 @@ drogon::Task<HttpResponsePtr> AdminController::getPartnerApiKeys(HttpRequestPtr 
   auto &partnerService = plugin->getCommercialPartnerService();
 
   auto apiResp = co_await partnerService.getPartnerApiKeys(partnerId);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
@@ -1887,6 +2027,8 @@ drogon::Task<HttpResponsePtr> AdminController::generatePartnerApiKey(HttpRequest
   auto &partnerService = plugin->getCommercialPartnerService();
 
   auto apiResp = co_await partnerService.generatePartnerApiKey(dto);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
@@ -1897,8 +2039,7 @@ drogon::Task<HttpResponsePtr> AdminController::revokePartnerApiKey(HttpRequestPt
   if (partnerId.empty() || clientId.empty()) {
     gnp::dto::BaseApiResponse response;
     response.success = false;
-    response.error["message"] =
-        "Missing required parameters: partnerId or clientId";
+    response.error["message"] = "Missing required parameters: partnerId or clientId";
     auto resp = HttpResponse::newHttpJsonResponse(response.toJson());
     resp->setStatusCode(k400BadRequest);
     co_return resp;
@@ -1907,8 +2048,9 @@ drogon::Task<HttpResponsePtr> AdminController::revokePartnerApiKey(HttpRequestPt
   auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
   auto &partnerService = plugin->getCommercialPartnerService();
 
-  auto apiResp =
-      co_await partnerService.revokePartnerApiKey(partnerId, clientId);
+  auto apiResp = co_await partnerService.revokePartnerApiKey(partnerId, clientId);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 
@@ -1941,6 +2083,8 @@ drogon::Task<HttpResponsePtr> AdminController::updatePartnerApiKey(HttpRequestPt
   auto &partnerService = plugin->getCommercialPartnerService();
 
   auto apiResp = co_await partnerService.updatePartnerApiKey(dto);
+  auto resp = HttpResponse::newHttpJsonResponse(apiResp.toJson());
+  resp->setStatusCode(apiResp.success ? k200OK : (apiResp.error.isMember("code") && apiResp.error["code"].asInt() == gnp::constants::ERR_RESOURCE_NOT_FOUND ? k404NotFound : k500InternalServerError));
   co_return HttpResponse::newHttpJsonResponse(apiResp.toJson());
 }
 

@@ -36,6 +36,7 @@
 #include "services/subscription_plans/SubscriptionPlanService.h"
 #include "services/subscriptions/SubscriptionService.h"
 #include "services/tags/TagService.h"
+#include "services/telegram/TelegramService.h"
 #include "services/users/UserService.h"
 #include "services/user_invitations/AdminUserInvitationService.h"
 #include "utils/PasswordUtils.h"
@@ -79,6 +80,7 @@ public:
   ::gnp::services::G3StorageService &getG3StorageService() { return g3StorageService_; }
   ::gnp::services::SettingService &getSettingService() { return settingService_; }
   ::gnp::services::ContentService &getContentService() { return contentService_; }
+  ::gnp::services::TelegramService &getTelegramService() { return telegramService_; }
 
 private:
   services::RedisCacheManager redisCacheService_;
@@ -110,6 +112,7 @@ private:
   ::gnp::services::ReportingService reportingService_;
   ::gnp::services::G3StorageService g3StorageService_;
   ::gnp::services::SettingService settingService_;
+  ::gnp::services::TelegramService telegramService_;
 };
 
 } // namespace gnp::plugins

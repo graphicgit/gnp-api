@@ -553,8 +553,7 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartner(const
                   <p style="margin-top: 30px;">If you have any questions regarding your invoice or the onboarding process, please don't hesitate to contact our support team.</p>
                 </div>
                 <div class="footer">
-                  &copy; )html" +
-        trantor::Date::now().toCustomFormattedString("%Y") +
+                  &copy; )html" + trantor::Date::now().toCustomFormattedString("%Y") +
         R"html( Graphic News Plus. All rights reserved.<br>
                   Providing premium content solutions for our partners.
                 </div>
@@ -621,55 +620,119 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::updatePartner(const
   }
 }
 
+
 drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartnerSubscriber(const dto::CreatePartnerSubscriberDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mp(dbClient);
 
-  std::string password = utils::PasswordUtils::generateRandomPassword(8);
-
-  Users newUser;
-
-  newUser.setFirstName(dto.getFirstName());
-  newUser.setLastName(dto.getLastName());
-  newUser.setEmail(utils::StringUtils::trim(dto.getEmail()));
-  newUser.setUsername(dto.getEmail());
+  // Trim email and format phone number first for consistent validation
+  std::string email = utils::StringUtils::trim(dto.getEmail());
   std::string phoneNumber = dto.getPhoneNumber();
+
+  // Format phone number
   if (phoneNumber.length() >= 3 && phoneNumber.substr(0, 3) == "233") {
     phoneNumber = "0" + phoneNumber.substr(3);
   } else if (phoneNumber.length() >= 4 && phoneNumber.substr(0, 4) == "+233") {
     phoneNumber = "0" + phoneNumber.substr(4);
   }
-  newUser.setPhoneNumber(phoneNumber);
-  newUser.setPartnerId(dto.getPartnerId());
-  newUser.setCountry("GH");
-  newUser.setPasswordHash(bcrypt::generateHash(password));
-  newUser.setIsActive(true);
-  newUser.setIsLockedOut(false);
-  newUser.setCreatedAt(trantor::Date::now());
 
   try {
-    auto user = co_await mp.insert(newUser);
+    // 1. Check if email already exists
+    auto existingEmailUsers = co_await mp.findBy(
+        Criteria(Users::Cols::_email, CompareOperator::EQ, email));
 
-    LOG_INFO << "[createPartnerSubscriber] Created subscriber — email: "
-             << user.getValueOfEmail() << ", password: " << password;
+    if (!existingEmailUsers.empty()) {
+      dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.message = "A user with this email already exists";
+      errorResponse.error["code"] = constants::ERR_DUPLICATE_EMAIL;
+      errorResponse.error["field"] = "email";
+      errorResponse.error["detail"] = "Email address is already registered";
+      co_return errorResponse;
+    }
 
-    // 1. Fetch partner to get quota and subscription dates
+    // 2. Check if phone number already exists
+    auto existingPhoneUsers = co_await mp.findBy(
+        Criteria(Users::Cols::_phone_number, CompareOperator::EQ, phoneNumber));
 
+    if (!existingPhoneUsers.empty()) {
+      dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.message = "A user with this phone number already exists";
+      errorResponse.error["code"] = constants::ERR_DUPLICATE_PHONE;
+      errorResponse.error["field"] = "phoneNumber";
+      errorResponse.error["detail"] = "Phone number is already registered";
+      co_return errorResponse;
+    }
+
+    // 3. Validate partner exists and has available quota
     CoroMapper<CommercialPartners> partnerMapper(dbClient);
-    auto partner = co_await partnerMapper.findOne(
+    auto partners = co_await partnerMapper.findBy(
         Criteria(CommercialPartners::Cols::_id, CompareOperator::EQ, dto.getPartnerId()));
 
-    // 2. Fetch plan and newspapers for entitlements
+    if (partners.empty()) {
+      dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.message = "Partner record not found";
+      errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+      errorResponse.error["detail"] = "The specified partner does not exist";
+      co_return errorResponse;
+    }
+
+    auto& partner = partners[0];
+
+    if (partner.getValueOfRemainingQuota() <= 0) {
+      dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.message = "Partner has reached maximum subscriber quota";
+      errorResponse.error["code"] = constants::ERR_QUOTA_EXCEEDED;
+      errorResponse.error["detail"] = "No remaining subscriber slots available";
+      co_return errorResponse;
+    }
+
+    // 4. Generate password and create user
+    std::string password = utils::PasswordUtils::generateRandomPassword(8);
+
+    Users newUser;
+    newUser.setFirstName(dto.getFirstName());
+    newUser.setLastName(dto.getLastName());
+    newUser.setEmail(email);
+    newUser.setUsername(email);
+    newUser.setPhoneNumber(phoneNumber);
+    newUser.setPartnerId(dto.getPartnerId());
+    newUser.setCountry("GH");
+    newUser.setPasswordHash(bcrypt::generateHash(password));
+    newUser.setIsActive(true);
+    newUser.setIsLockedOut(false);
+    newUser.setCreatedAt(trantor::Date::now());
+
+    auto user = co_await mp.insert(newUser);
+
+    LOG_INFO << "[createPartnerSubscriber] Created subscriber — email: " << user.getValueOfEmail()
+             << ", password: " << password;
+
+    // 5. Fetch plan and newspapers for entitlements
     CoroMapper<SubscriptionPlans> planMapper(dbClient);
 
-    auto plan = co_await planMapper.findOne(
-        Criteria(SubscriptionPlans::Cols::_id, CompareOperator::EQ,
-                 partner.getValueOfDefaultSubscriptionPlanId()));
+    auto plans = co_await planMapper.findBy(
+        Criteria(SubscriptionPlans::Cols::_id, CompareOperator::EQ, partner.getValueOfDefaultSubscriptionPlanId()));
+
+    if (plans.empty()) {
+      dto::BaseApiResponse errorResponse;
+      errorResponse.success = false;
+      errorResponse.message = "Default subscription plan not found";
+      errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+      errorResponse.error["detail"] = "Partner has no valid subscription plan";
+      co_return errorResponse;
+    }
+
+    auto& plan = plans[0];
 
     auto startDateObj = partner.getValueOfSubscriptionStartDate();
     auto endDateObj = partner.getValueOfSubscriptionEndDate();
 
+    // 6. Get publications
     std::vector<std::string> pubIdsList;
     try {
       Json::Reader reader;
@@ -681,6 +744,9 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartnerSubscr
         }
       }
     } catch (...) {
+      // Log warning but continue with empty publications
+      LOG_WARN << "[createPartnerSubscriber] Failed to parse target publications for plan: "
+               << plan.getValueOfId();
     }
 
     CoroMapper<drogon_model::Gnp::Newspapers> newsMapper(dbClient);
@@ -695,7 +761,7 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartnerSubscr
                    CompareOperator::LE, endDateObj));
     }
 
-    // 3. Create subscription record in user subscription table
+    // 7. Create subscription record
     CoroMapper<UserSubscriptions> subMapper(dbClient);
     UserSubscriptions newSub;
     newSub.setUserId(user.getValueOfId());
@@ -720,6 +786,7 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartnerSubscr
     newSub.setSubscriptionIdentifier(utils::IdGeneratorUtils::generateRandomSixDigit());
     co_await subMapper.insert(newSub);
 
+    // 8. Determine billing cycle
     auto determineBillingCycle = [](const trantor::Date &start,
                                     const trantor::Date &end) -> std::string {
       int64_t diffDays =
@@ -736,7 +803,7 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartnerSubscr
       return "Annual";
     };
 
-    // 4. Create renewal record in subscription renewal history table
+    // 9. Create renewal history record
     CoroMapper<drogon_model::Gnp::SubscriptionRenewalHistory> renewalMapper(dbClient);
     drogon_model::Gnp::SubscriptionRenewalHistory renewal;
     renewal.setSubscriptionIdentifier(newSub.getValueOfSubscriptionIdentifier());
@@ -753,14 +820,15 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartnerSubscr
     renewal.setCreatedAt(trantor::Date::now());
     co_await renewalMapper.insert(renewal);
 
-    // 5. Send email with credentials
+    // 10. Send email with credentials
     auto plugin = drogon::app().getPlugin<plugins::GnpServicePlugin>();
     auto &emailService = plugin->getEmailService();
 
     dto::SendEmailDto emailDto;
-    emailDto.setTo(utils::StringUtils::trim(dto.getEmail()));
+    emailDto.setTo(email);
     emailDto.setSubject("Graphic News Plus Account Details");
 
+    // Email body construction (same as original)
     std::string emailBody = R"(
     <!DOCTYPE html>
     <html>
@@ -903,7 +971,7 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartnerSubscr
             <div class="credential-item">
               <div class="credential-label">Username (Email)</div>
               <div class="credential-value">)" +
-                            dto.getEmail() + R"(</div>
+                            email + R"(</div>
             </div>
 
             <div class="credential-item">
@@ -973,14 +1041,11 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartnerSubscr
     LOG_INFO << "[createPartnerSubscriber] Created subscriber — email: "
              << user.getValueOfEmail() << ", password: " << password;
 
-    // 6. Reduce subscriber slots for commercial partner
-    auto remainingQuota = partner.getValueOfRemainingQuota();
-    if (remainingQuota > 0) {
-      partner.setRemainingQuota(remainingQuota - 1);
-      co_await partnerMapper.update(partner);
-    }
+    // 11. Reduce subscriber slots for commercial partner
+    partner.setRemainingQuota(partner.getValueOfRemainingQuota() - 1);
+    co_await partnerMapper.update(partner);
 
-    // 7. Prepare success response
+    // 12. Prepare success response
     dto::BaseApiResponse successResponse;
     successResponse.success = true;
     successResponse.message = "Subscriber created successfully";
@@ -998,35 +1063,107 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::createPartnerSubscr
   }
 }
 
+
 drogon::Task<dto::BaseApiResponse> CommercialPartnerService::updatePartnerSubscriber(const dto::UpdatePartnerSubscriberDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mp(dbClient);
 
   try {
-    // Find the user by ID and Partner ID to ensure ownership
+    // 1. Find the user by ID and Partner ID to ensure ownership
     auto user = co_await mp.findOne(
         Criteria(Users::Cols::_id, CompareOperator::EQ, dto.getId()) &&
         Criteria(Users::Cols::_partner_id, CompareOperator::EQ,
                  dto.getPartnerId()));
 
-    user.setFirstName(dto.getFirstName());
-    user.setLastName(dto.getLastName());
-    user.setPhoneNumber(dto.getPhoneNumber());
+    // 2. Trim and sanitize input values
+    std::string newEmail = utils::StringUtils::trim(dto.getEmail());
+    std::string newPhoneNumber = dto.getPhoneNumber();
+    std::string newFirstName = utils::StringUtils::trim(dto.getFirstName());
+    std::string newLastName = utils::StringUtils::trim(dto.getLastName());
 
-    // If email changes, update both email and username
-    if (!dto.getEmail().empty()) {
-      user.setEmail(utils::StringUtils::trim(dto.getEmail()));
-      user.setUsername(dto.getEmail());
+    // Format phone number if it has country code
+    if (newPhoneNumber.length() >= 3 && newPhoneNumber.substr(0, 3) == "233") {
+      newPhoneNumber = "0" + newPhoneNumber.substr(3);
+    } else if (newPhoneNumber.length() >= 4 && newPhoneNumber.substr(0, 4) == "+233") {
+      newPhoneNumber = "0" + newPhoneNumber.substr(4);
     }
 
+    // 3. Check if email is being changed and if it already exists (excluding current user)
+    if (!newEmail.empty() && newEmail != user.getValueOfEmail()) {
+      auto existingEmailUsers = co_await mp.findBy(Criteria(Users::Cols::_email, CompareOperator::EQ, newEmail) &&
+          Criteria(Users::Cols::_id, CompareOperator::NE, dto.getId()));
+
+      if (!existingEmailUsers.empty()) {
+        dto::BaseApiResponse errorResponse;
+        errorResponse.success = false;
+        errorResponse.message = "A user with this email already exists";
+        errorResponse.error["code"] = constants::ERR_DUPLICATE_EMAIL;
+        errorResponse.error["field"] = "email";
+        errorResponse.error["detail"] = "Email address is already registered by another user";
+        co_return errorResponse;
+      }
+    }
+
+    // 4. Check if phone number is being changed and if it already exists (excluding current user)
+    if (!newPhoneNumber.empty() && newPhoneNumber != user.getValueOfPhoneNumber()) {
+      auto existingPhoneUsers = co_await mp.findBy(
+          Criteria(Users::Cols::_phone_number, CompareOperator::EQ, newPhoneNumber) &&
+          Criteria(Users::Cols::_id, CompareOperator::NE, dto.getId()));
+
+      if (!existingPhoneUsers.empty()) {
+        dto::BaseApiResponse errorResponse;
+        errorResponse.success = false;
+        errorResponse.message = "A user with this phone number already exists";
+        errorResponse.error["code"] = constants::ERR_DUPLICATE_PHONE;
+        errorResponse.error["field"] = "phoneNumber";
+        errorResponse.error["detail"] = "Phone number is already registered by another user";
+        co_return errorResponse;
+      }
+    }
+
+    // 5. Check if first name is provided
+    if (!newFirstName.empty()) {
+      user.setFirstName(newFirstName);
+    }
+
+    // 6. Check if last name is provided
+    if (!newLastName.empty()) {
+      user.setLastName(newLastName);
+    }
+
+    // 7. Update phone number if provided
+    if (!newPhoneNumber.empty()) {
+      user.setPhoneNumber(newPhoneNumber);
+    }
+
+    // 8. Update email and username if provided
+    if (!newEmail.empty()) {
+      user.setEmail(newEmail);
+      user.setUsername(newEmail);
+    }
+
+    // 9. Save changes
     co_await mp.update(user);
 
     dto::BaseApiResponse response;
     response.success = true;
     response.message = "Partner subscriber info updated successfully";
+    response.result["id"] = user.getValueOfId();
+    response.result["email"] = user.getValueOfEmail();
+    response.result["phoneNumber"] = user.getValueOfPhoneNumber();
+    response.result["firstName"] = user.getValueOfFirstName();
+    response.result["lastName"] = user.getValueOfLastName();
+
     co_return response;
 
+  } catch (const drogon::orm::UnexpectedRows &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Subscriber not found or does not belong to this partner";
+    errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+    errorResponse.error["detail"] = e.what();
+    co_return errorResponse;
   } catch (const DrogonDbException &e) {
     dto::BaseApiResponse errorResponse;
     errorResponse.success = false;
@@ -1036,6 +1173,7 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::updatePartnerSubscr
     co_return errorResponse;
   }
 }
+
 
 drogon::Task<dto::BaseApiResponse> CommercialPartnerService::assignPartnerSubscribersToPlan(
     const dto::AssignPartnerSubscriberPlanDto &dto) {
@@ -1395,6 +1533,8 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::deactivateSubscribe
   }
 }
 
+
+
 drogon::Task<dto::BaseApiResponse> CommercialPartnerService::resetSubscriberPassword(const std::string &partnerId, const std::string &id) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mp(dbClient);
@@ -1412,69 +1552,88 @@ drogon::Task<dto::BaseApiResponse> CommercialPartnerService::resetSubscriberPass
     user.setPasswordHash(bcrypt::generateHash(newPassword));
     co_await mp.update(user);
 
-    // 4. Send email with new credentials
-    auto plugin = drogon::app().getPlugin<plugins::GnpServicePlugin>();
-    auto &emailService = plugin->getEmailService();
+    // 4. Send notification (email or SMS based on email type)
+    std::string userEmail = user.getValueOfEmail();
+    std::string userPhone = user.getValueOfPhoneNumber();
 
-    dto::SendEmailDto emailDto;
-    emailDto.setTo(gnp::utils::StringUtils::trim(user.getValueOfEmail()));
-    emailDto.setSubject("Graphic News Plus - Password Reset");
+    if (isSystemGeneratedEmail(userEmail)) {
+      // Send SMS with new password
+      std::string message = "Your Graphic News Plus password has been reset. "
+                            "Your new password is: " + newPassword +
+                            ". Please login at https://new.graphicnewsplus.com";
+      co_await sendSmsNotification(userPhone, message);
+      LOG_INFO << "[resetSubscriberPassword] Password reset SMS sent to: " << userPhone;
 
-    std::string emailBody = R"html(
-      <!DOCTYPE html>
-      <html>
-      <head>
-      <meta charset="UTF-8">
-      <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
-        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .header { background-color: #D32F2F; color: #ffffff; padding: 20px; text-align: center; }
-        .content { padding: 30px; color: #333333; }
-        .credentials { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; }
-        .credential-item { margin: 10px 0; }
-        .credential-label { font-weight: bold; color: #666; }
-        .credential-value { font-size: 18px; color: #D32F2F; font-family: monospace; }
-        .footer { background-color: #f4f4f4; color: #666666; padding: 10px; text-align: center; font-size: 12px; }
-      </style>
-      </head>
-      <body>
-      <div class="container">
-        <div class="header">
-          <h1>Graphic News Plus</h1>
-        </div>
-        <div class="content">
-          <p>Hello )html" + user.getValueOfFirstName() + R"html(,</p>
-          <p>Your password for Graphic News Plus has been reset by your organization administrator.</p>
-          <p>Below are your new login credentials:</p>
-          <div class="credentials">
-            <div class="credential-item">
-              <div class="credential-label">Username (Email):</div>
-              <div class="credential-value">)html" + user.getValueOfEmail() + R"html(</div>
-            </div>
-            <div class="credential-item">
-              <div class="credential-label">New Password:</div>
-              <div class="credential-value">)html" + newPassword + R"html(</div>
-            </div>
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.message = "Password reset successfully. New password has been sent via SMS.";
+      response.result["userId"] = id;
+      co_return response;
+    } else {
+      // Send email with new credentials
+      auto plugin = drogon::app().getPlugin<plugins::GnpServicePlugin>();
+      auto &emailService = plugin->getEmailService();
+
+      dto::SendEmailDto emailDto;
+      emailDto.setTo(gnp::utils::StringUtils::trim(userEmail));
+      emailDto.setSubject("Graphic News Plus - Password Reset");
+
+      std::string emailBody = R"html(
+        <!DOCTYPE html>
+        <html>
+        <head>
+        <meta charset="UTF-8">
+        <style>
+          body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+          .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+          .header { background-color: #D32F2F; color: #ffffff; padding: 20px; text-align: center; }
+          .content { padding: 30px; color: #333333; }
+          .credentials { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; }
+          .credential-item { margin: 10px 0; }
+          .credential-label { font-weight: bold; color: #666; }
+          .credential-value { font-size: 18px; color: #D32F2F; font-family: monospace; }
+          .footer { background-color: #f4f4f4; color: #666666; padding: 10px; text-align: center; font-size: 12px; }
+        </style>
+        </head>
+        <body>
+        <div class="container">
+          <div class="header">
+            <h1>Graphic News Plus</h1>
           </div>
-          <p>Please keep these credentials secure and change your password after your next login.</p>
-          <p>You can access the platform at: <a href="https://new.graphicnewsplus.com">https://new.graphicnewsplus.com</a></p>
+          <div class="content">
+            <p>Hello )html" + user.getValueOfFirstName() + R"html(,</p>
+            <p>Your password for Graphic News Plus has been reset by your organization administrator.</p>
+            <p>Below are your new login credentials:</p>
+            <div class="credentials">
+              <div class="credential-item">
+                <div class="credential-label">Username (Email):</div>
+                <div class="credential-value">)html" + userEmail + R"html(</div>
+              </div>
+              <div class="credential-item">
+                <div class="credential-label">New Password:</div>
+                <div class="credential-value">)html" + newPassword + R"html(</div>
+              </div>
+            </div>
+            <p>Please keep these credentials secure and change your password after your next login.</p>
+            <p>You can access the platform at: <a href="https://new.graphicnewsplus.com">https://new.graphicnewsplus.com</a></p>
+          </div>
+          <div class="footer">
+            &copy; )html" + trantor::Date::now().toCustomFormattedString("%Y") + R"html( Graphic News Plus. All rights reserved.
+          </div>
         </div>
-        <div class="footer">
-          &copy; )html" + trantor::Date::now().toCustomFormattedString("%Y") + R"html( Graphic News Plus. All rights reserved.
-        </div>
-      </div>
-      </body>
-      </html>
-    )html";
+        </body>
+        </html>
+      )html";
 
-    emailDto.setBody(emailBody);
-    co_await emailService.sendEmailAsync(emailDto);
+      emailDto.setBody(emailBody);
+      co_await emailService.sendEmailAsync(emailDto);
 
-    dto::BaseApiResponse response;
-    response.success = true;
-    response.message = "Password reset successfully. New password has been sent to the subscriber's email.";
-    response.result["userId"] = id;
-    co_return response;
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.message = "Password reset successfully. New password has been sent to the subscriber's email.";
+      response.result["userId"] = id;
+      co_return response;
+    }
 
   } catch (const drogon::orm::UnexpectedRows &e) {
     dto::BaseApiResponse errorResponse;
@@ -4195,80 +4354,98 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::resetSubscri
   }
 }
 
+
 drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::resetSubscriberPasswordByUserId(const std::string &partnerId, const std::string &userId) {
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Users> mp(dbClient);
 
   try {
     auto user = co_await mp.findOne(Criteria(Users::Cols::_id, CompareOperator::EQ, userId) && Criteria(Users::Cols::_partner_id, CompareOperator::EQ, partnerId));
-    
-    drogon::async_run([user]() -> drogon::Task<void> {
+
+    // Capture 'this' in the lambda to call member functions
+    drogon::async_run([this, user]() -> drogon::Task<void> {
       try {
         auto dbClient = drogon::app().getDbClient();
         CoroMapper<Users> bg_mp(dbClient);
         auto plugin = drogon::app().getPlugin<plugins::GnpServicePlugin>();
         auto &emailService = plugin->getEmailService();
+        auto &hubtelSmsApi = plugin->getHubtelSmsApi();
 
         try {
           std::string newPassword = utils::PasswordUtils::generateRandomPassword(8);
           auto userToUpdate = user; // Copy to modify
           userToUpdate.setPasswordHash(bcrypt::generateHash(newPassword));
-          
+
           co_await bg_mp.update(userToUpdate);
-          
-          // send email
-          dto::SendEmailDto emailDto;
-          emailDto.setTo(gnp::utils::StringUtils::trim(userToUpdate.getValueOfEmail()));
-          emailDto.setSubject("Graphic News Plus - Password Reset");
-          
-          std::string emailBody = R"html(
-            <!DOCTYPE html>
-            <html>
-            <head>
-            <meta charset="UTF-8">
-            <style>
-              body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
-              .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-              .header { background-color: #D32F2F; color: #ffffff; padding: 20px; text-align: center; }
-              .content { padding: 30px; color: #333333; }
-              .credentials { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; }
-              .credential-item { margin: 10px 0; }
-              .credential-label { font-weight: bold; color: #666; }
-              .credential-value { font-size: 18px; color: #D32F2F; font-family: monospace; }
-              .footer { background-color: #f4f4f4; color: #666666; padding: 10px; text-align: center; font-size: 12px; }
-            </style>
-            </head>
-            <body>
-            <div class="container">
-              <div class="header">
-                <h1>Graphic News Plus</h1>
-              </div>
-              <div class="content">
-                <p>Hello )html" + userToUpdate.getValueOfFirstName() + R"html(,</p>
-                <p>Your password for Graphic News Plus has been reset by your organization.</p>
-                <p>Below are your new login credentials:</p>
-                <div class="credentials">
-                  <div class="credential-item">
-                    <div class="credential-label">Username (Email):</div>
-                    <div class="credential-value">)html" + userToUpdate.getValueOfEmail() + R"html(</div>
-                  </div>
-                  <div class="credential-item">
-                    <div class="credential-label">New Password:</div>
-                    <div class="credential-value">)html" + newPassword + R"html(</div>
-                  </div>
+
+          // Send notification (email or SMS based on email type)
+          std::string userEmail = userToUpdate.getValueOfEmail();
+          std::string userPhone = userToUpdate.getValueOfPhoneNumber();
+          std::string firstName = userToUpdate.getValueOfFirstName();
+
+          // Now 'this' is captured, so we can call isSystemGeneratedEmail
+          if (this->isSystemGeneratedEmail(userEmail)) {
+            // Send SMS with new password
+            std::string message = "Your Graphic News Plus password has been reset. "
+                                  "Your new password is: " + newPassword +
+                                  ". Please login at https://new.graphicnewsplus.com";
+            co_await hubtelSmsApi.sendSms(userPhone, message);
+            LOG_INFO << "[resetSubscriberPasswordByUserId] Password reset SMS sent to: " << userPhone;
+          } else {
+            // Send email with new credentials
+            dto::SendEmailDto emailDto;
+            emailDto.setTo(gnp::utils::StringUtils::trim(userEmail));
+            emailDto.setSubject("Graphic News Plus - Password Reset");
+
+            std::string emailBody = R"html(
+              <!DOCTYPE html>
+              <html>
+              <head>
+              <meta charset="UTF-8">
+              <style>
+                body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+                .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+                .header { background-color: #D32F2F; color: #ffffff; padding: 20px; text-align: center; }
+                .content { padding: 30px; color: #333333; }
+                .credentials { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; }
+                .credential-item { margin: 10px 0; }
+                .credential-label { font-weight: bold; color: #666; }
+                .credential-value { font-size: 18px; color: #D32F2F; font-family: monospace; }
+                .footer { background-color: #f4f4f4; color: #666666; padding: 10px; text-align: center; font-size: 12px; }
+              </style>
+              </head>
+              <body>
+              <div class="container">
+                <div class="header">
+                  <h1>Graphic News Plus</h1>
                 </div>
-                <p>Please keep these credentials secure and change your password after your next login.</p>
+                <div class="content">
+                  <p>Hello )html" + firstName + R"html(,</p>
+                  <p>Your password for Graphic News Plus has been reset by your organization.</p>
+                  <p>Below are your new login credentials:</p>
+                  <div class="credentials">
+                    <div class="credential-item">
+                      <div class="credential-label">Username (Email):</div>
+                      <div class="credential-value">)html" + userEmail + R"html(</div>
+                    </div>
+                    <div class="credential-item">
+                      <div class="credential-label">New Password:</div>
+                      <div class="credential-value">)html" + newPassword + R"html(</div>
+                    </div>
+                  </div>
+                  <p>Please keep these credentials secure and change your password after your next login.</p>
+                </div>
+                <div class="footer">
+                  &copy; )html" + trantor::Date::now().toCustomFormattedString("%Y") + R"html( Graphic News Plus. All rights reserved.
+                </div>
               </div>
-              <div class="footer">
-                &copy; )html" + trantor::Date::now().toCustomFormattedString("%Y") + R"html( Graphic News Plus. All rights reserved.
-              </div>
-            </div>
-            </body>
-            </html>
-          )html";
-          
-          emailDto.setBody(emailBody);
-          co_await emailService.sendEmailAsync(emailDto);
+              </body>
+              </html>
+            )html";
+
+            emailDto.setBody(emailBody);
+            co_await emailService.sendEmailAsync(emailDto);
+          }
         } catch (const std::exception& e) {
           LOG_ERROR << "Failed to process password reset for " << user.getValueOfEmail() << ": " << e.what();
         }
@@ -4297,5 +4474,561 @@ drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::resetSubscri
     co_return errorResponse;
   }
 }
+
+
+
+drogon::Task<::gnp::dto::BaseApiResponse> CommercialPartnerService::activateDeactivatePartnerSubscriber(const dto::ActivateDeactivateSubscriberDto &dto) {
+
+  auto dbClient = drogon::app().getDbClient();
+  CoroMapper<Users> userMapper(dbClient);
+  CoroMapper<UserSubscriptions> subMapper(dbClient);
+  CoroMapper<CommercialPartners> partnerMapper(dbClient);
+
+  try {
+    // 1. Verify user exists and belongs to the partner
+    auto user = co_await userMapper.findOne(
+        Criteria(Users::Cols::_id, CompareOperator::EQ, dto.getSubscriberId()) &&
+        Criteria(Users::Cols::_partner_id, CompareOperator::EQ, dto.getPartnerId()));
+
+    // 2. Get partner details for quota management and email
+    auto partner = co_await partnerMapper.findByPrimaryKey(dto.getPartnerId());
+
+    // 3. Check current user status
+    bool currentStatus = user.getValueOfIsActive();
+    bool targetStatus = (dto.getStatus() == "active");
+
+    // 4. If status is already the same, return early
+    if (currentStatus == targetStatus) {
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.message = "Subscriber is already " + dto.getStatus();
+      response.result["userId"] = dto.getSubscriberId();
+      response.result["status"] = dto.getStatus();
+      response.result["action"] = "No change";
+      co_return response;
+    }
+
+    // 5. Activate or deactivate based on target status
+    if (targetStatus) {
+      // --- ACTIVATION PATH ---
+
+      // 5a. Check if there's available quota before activating
+      if (partner.getValueOfRemainingQuota() <= 0) {
+        dto::BaseApiResponse errorResponse;
+        errorResponse.success = false;
+        errorResponse.message = "Cannot activate subscriber: No remaining quota available";
+        errorResponse.error["code"] = constants::ERR_QUOTA_EXCEEDED;
+        errorResponse.error["detail"] = "Partner has no remaining subscriber slots";
+        errorResponse.error["remainingQuota"] = partner.getValueOfRemainingQuota();
+        co_return errorResponse;
+      }
+
+      // 5b. Activate the user
+      user.setIsActive(true);
+      co_await userMapper.update(user);
+
+      // 5c. Check if user has an existing subscription, if not create one
+      auto subscriptions = co_await subMapper.findBy(
+          Criteria(UserSubscriptions::Cols::_user_id, CompareOperator::EQ, dto.getSubscriberId()) &&
+          Criteria(UserSubscriptions::Cols::_partner_id, CompareOperator::EQ, dto.getPartnerId()));
+
+      if (subscriptions.empty()) {
+        // Create a default subscription if none exists
+        CoroMapper<SubscriptionPlans> planMapper(dbClient);
+        auto plans = co_await planMapper.findBy(
+            Criteria(SubscriptionPlans::Cols::_id, CompareOperator::EQ,
+                     partner.getValueOfDefaultSubscriptionPlanId()));
+
+        if (!plans.empty()) {
+          auto& plan = plans[0];
+          UserSubscriptions newSub;
+          newSub.setUserId(dto.getSubscriberId());
+          newSub.setPartnerId(dto.getPartnerId());
+          newSub.setSubscriptionPlanId(plan.getValueOfId());
+          newSub.setSubscriptionPlanDescription(plan.getValueOfName());
+          newSub.setEmail(user.getValueOfEmail());
+          newSub.setStartDate(partner.getValueOfSubscriptionStartDate());
+          newSub.setEndDate(partner.getValueOfSubscriptionEndDate());
+          newSub.setIsActive(true);
+          newSub.setCreatedAt(trantor::Date::now());
+          newSub.setSubscriptionIdentifier(utils::IdGeneratorUtils::generateRandomSixDigit());
+          co_await subMapper.insert(newSub);
+        }
+      } else {
+        // Reactivate existing subscription
+        auto sub = subscriptions[0];
+        sub.setIsActive(true);
+        co_await subMapper.update(sub);
+      }
+
+      // 5d. Update partner quota (reduce remaining quota)
+      partner.setRemainingQuota(partner.getValueOfRemainingQuota() - 1);
+      co_await partnerMapper.update(partner);
+
+      LOG_INFO << "[activateDeactivatePartnerSubscriber] Activated subscriber — userId: "
+               << dto.getSubscriberId() << ", partnerId: " << dto.getPartnerId();
+
+      // 5e. Send notification (email or SMS based on email type)
+      std::string userEmail = user.getValueOfEmail();
+      if (isSystemGeneratedEmail(userEmail)) {
+        // Send SMS activation notification
+        std::string message = "Your Graphic News Plus account has been activated. "
+                              "You can now log in at https://new.graphicnewsplus.com";
+        co_await sendSmsNotification(user.getValueOfPhoneNumber(), message);
+        LOG_INFO << "[activateDeactivatePartnerSubscriber] Activation SMS sent to: "
+                 << user.getValueOfPhoneNumber();
+      } else {
+        // Send email activation notification
+        co_await sendActivationEmail(user, partner);
+      }
+
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.message = "Subscriber activated successfully";
+      response.result["userId"] = dto.getSubscriberId();
+      response.result["status"] = "Active";
+      response.result["action"] = "Activated";
+      response.result["remainingQuota"] = partner.getValueOfRemainingQuota();
+      co_return response;
+
+    } else {
+      // --- DEACTIVATION PATH ---
+
+      // 5a. Deactivate the user
+      user.setIsActive(false);
+      co_await userMapper.update(user);
+
+      // 5b. Deactivate all active subscriptions
+      auto subscriptions = co_await subMapper.findBy(
+          Criteria(UserSubscriptions::Cols::_user_id, CompareOperator::EQ, dto.getSubscriberId()) &&
+          Criteria(UserSubscriptions::Cols::_is_active, CompareOperator::EQ, true));
+
+      for (auto& sub : subscriptions) {
+        sub.setIsActive(false);
+        co_await subMapper.update(sub);
+      }
+
+      // 5c. Update partner quota (increase remaining quota)
+      partner.setRemainingQuota(partner.getValueOfRemainingQuota() + 1);
+      co_await partnerMapper.update(partner);
+
+      LOG_INFO << "[activateDeactivatePartnerSubscriber] Deactivated subscriber — userId: "
+               << dto.getSubscriberId() << ", partnerId: " << dto.getPartnerId();
+
+      // 5d. Send notification (email or SMS based on email type)
+      std::string userEmail = user.getValueOfEmail();
+      if (isSystemGeneratedEmail(userEmail)) {
+        // Send SMS deactivation notification
+        std::string message = "Your Graphic News Plus account has been deactivated. "
+                              "Please contact your organization administrator for assistance.";
+        co_await sendSmsNotification(user.getValueOfPhoneNumber(), message);
+        LOG_INFO << "[activateDeactivatePartnerSubscriber] Deactivation SMS sent to: "
+                 << user.getValueOfPhoneNumber();
+      } else {
+        // Send email deactivation notification
+        co_await sendDeactivationEmail(user, partner);
+      }
+
+      dto::BaseApiResponse response;
+      response.success = true;
+      response.message = "Subscriber deactivated successfully";
+      response.result["userId"] = dto.getSubscriberId();
+      response.result["status"] = "Inactive";
+      response.result["action"] = "Deactivated";
+      response.result["remainingQuota"] = partner.getValueOfRemainingQuota();
+      co_return response;
+    }
+
+  } catch (const drogon::orm::UnexpectedRows &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Subscriber not found or does not belong to this partner";
+    errorResponse.error["code"] = constants::ERR_RESOURCE_NOT_FOUND;
+    errorResponse.error["detail"] = e.what();
+    co_return errorResponse;
+  } catch (const DrogonDbException &e) {
+    dto::BaseApiResponse errorResponse;
+    errorResponse.success = false;
+    errorResponse.message = "Database error while updating subscriber status";
+    errorResponse.error["code"] = constants::ERR_DB_QUERY;
+    errorResponse.error["detail"] = e.base().what();
+    co_return errorResponse;
+  }
+}
+
+
+
+// Helper method to send activation email
+drogon::Task<void> CommercialPartnerService::sendActivationEmail(const drogon_model::Gnp::Users& user, const drogon_model::Gnp::CommercialPartners& partner) {
+
+  auto plugin = drogon::app().getPlugin<plugins::GnpServicePlugin>();
+  auto &emailService = plugin->getEmailService();
+
+  dto::SendEmailDto emailDto;
+  emailDto.setTo(gnp::utils::StringUtils::trim(user.getValueOfEmail()));
+  emailDto.setSubject("Graphic News Plus - Account Activated");
+
+  std::string fullName = user.getValueOfFirstName();
+  if (!user.getValueOfLastName().empty()) {
+    fullName += " " + user.getValueOfLastName();
+  }
+
+  std::string emailBody = R"html(
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: #f4f6f8;
+    font-family: 'Segoe UI', Arial, sans-serif;
+  }
+  .wrapper {
+    width: 100%;
+    padding: 30px 0;
+  }
+  .container {
+    max-width: 600px;
+    margin: 0 auto;
+    background: #ffffff;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  }
+  .header {
+    background: linear-gradient(135deg, #22C55E, #16A34A);
+    color: #ffffff;
+    padding: 30px 20px;
+    text-align: center;
+  }
+  .header h1 {
+    margin: 0;
+    font-size: 24px;
+  }
+  .header .subtitle {
+    margin: 8px 0 0;
+    font-size: 16px;
+    opacity: 0.9;
+  }
+  .content {
+    padding: 30px;
+    color: #333;
+    line-height: 1.6;
+  }
+  .status-badge {
+    display: inline-block;
+    padding: 8px 20px;
+    background-color: #22C55E;
+    color: #ffffff;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 14px;
+    margin: 10px 0;
+  }
+  .info-box {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+  }
+  .info-box .label {
+    font-weight: 600;
+    color: #16A34A;
+  }
+  .cta {
+    text-align: center;
+    margin: 30px 0 15px;
+  }
+  .btn {
+    display: inline-block;
+    padding: 12px 25px;
+    background-color: #22C55E;
+    color: #ffffff;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .btn:hover {
+    background-color: #16A34A;
+  }
+  .footer {
+    background: #f4f6f8;
+    color: #888;
+    text-align: center;
+    padding: 20px;
+    font-size: 12px;
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="container">
+    <div class="header">
+      <h1>✅ Account Activated</h1>
+      <div class="subtitle">Graphic News Plus</div>
+    </div>
+    <div class="content">
+      <p>Hello )html" + fullName + R"html(,</p>
+
+      <p>We are pleased to inform you that your Graphic News Plus account has been <strong>activated</strong>.</p>
+
+      <div style="text-align: center;">
+        <span class="status-badge">● ACTIVE</span>
+      </div>
+
+      <div class="info-box">
+        <p style="margin: 0;">
+          <span class="label">Organization:</span> )html" + partner.getValueOfName() + R"html(<br>
+          <span class="label">Email:</span> )html" + user.getValueOfEmail() + R"html(<br>
+          <span class="label">Status:</span> <span style="color: #16A34A; font-weight: 600;">Active</span>
+        </p>
+      </div>
+
+      <p>You can now log in to your account and access all the premium content available on our platform.</p>
+
+      <div class="cta">
+        <a href="https://new.graphicnewsplus.com?al=t" style="color:#ffffff !important; text-decoration:none;" class="btn">
+          Login to Your Account
+        </a>
+      </div>
+
+      <p style="font-size:13px; color:#777;">
+        If the button above doesn't work, copy and paste this link into your browser:<br>
+        <a href="https://new.graphicnewsplus.com?al=t" style="color: #22C55E;">
+          https://new.graphicnewsplus.com?al=t
+        </a>
+      </p>
+    </div>
+    <div class="footer">
+      <p>&copy; )html" + trantor::Date::now().toCustomFormattedString("%Y") + R"html( Graphic News Plus</p>
+      <p>All rights reserved.</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>
+)html";
+
+  emailDto.setBody(emailBody);
+  co_await emailService.sendEmailAsync(emailDto);
+
+  LOG_INFO << "[sendActivationEmail] Activation email sent to: " << user.getValueOfEmail();
+}
+
+// Helper method to send deactivation email
+drogon::Task<void> CommercialPartnerService::sendDeactivationEmail(const drogon_model::Gnp::Users& user, const drogon_model::Gnp::CommercialPartners& partner) {
+
+  auto plugin = drogon::app().getPlugin<plugins::GnpServicePlugin>();
+  auto &emailService = plugin->getEmailService();
+
+  dto::SendEmailDto emailDto;
+  emailDto.setTo(gnp::utils::StringUtils::trim(user.getValueOfEmail()));
+  emailDto.setSubject("Graphic News Plus - Account Deactivated");
+
+  std::string fullName = user.getValueOfFirstName();
+  if (!user.getValueOfLastName().empty()) {
+    fullName += " " + user.getValueOfLastName();
+  }
+
+  std::string emailBody = R"html(
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: #f4f6f8;
+    font-family: 'Segoe UI', Arial, sans-serif;
+  }
+  .wrapper {
+    width: 100%;
+    padding: 30px 0;
+  }
+  .container {
+    max-width: 600px;
+    margin: 0 auto;
+    background: #ffffff;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  }
+  .header {
+    background: linear-gradient(135deg, #EF4444, #DC2626);
+    color: #ffffff;
+    padding: 30px 20px;
+    text-align: center;
+  }
+  .header h1 {
+    margin: 0;
+    font-size: 24px;
+  }
+  .header .subtitle {
+    margin: 8px 0 0;
+    font-size: 16px;
+    opacity: 0.9;
+  }
+  .content {
+    padding: 30px;
+    color: #333;
+    line-height: 1.6;
+  }
+  .status-badge {
+    display: inline-block;
+    padding: 8px 20px;
+    background-color: #EF4444;
+    color: #ffffff;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 14px;
+    margin: 10px 0;
+  }
+  .info-box {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+  }
+  .info-box .label {
+    font-weight: 600;
+    color: #DC2626;
+  }
+  .reason-box {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 15px 0;
+    font-size: 14px;
+    color: #4b5563;
+  }
+  .footer {
+    background: #f4f6f8;
+    color: #888;
+    text-align: center;
+    padding: 20px;
+    font-size: 12px;
+  }
+  .contact-link {
+    color: #DC2626;
+    text-decoration: none;
+  }
+  .contact-link:hover {
+    text-decoration: underline;
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="container">
+    <div class="header">
+      <h1>⛔ Account Deactivated</h1>
+      <div class="subtitle">Graphic News Plus</div>
+    </div>
+    <div class="content">
+      <p>Hello )html" + fullName + R"html(,</p>
+
+      <p>We regret to inform you that your Graphic News Plus account has been <strong>deactivated</strong>.</p>
+
+      <div style="text-align: center;">
+        <span class="status-badge">● INACTIVE</span>
+      </div>
+
+      <div class="info-box">
+        <p style="margin: 0;">
+          <span class="label">Organization:</span> )html" + partner.getValueOfName() + R"html(<br>
+          <span class="label">Email:</span> )html" + user.getValueOfEmail() + R"html(<br>
+          <span class="label">Status:</span> <span style="color: #DC2626; font-weight: 600;">Inactive</span>
+        </p>
+      </div>
+
+      <div class="reason-box">
+        <strong>What does this mean?</strong><br>
+        <span style="color: #6b7280;">You will not be able to log in to Graphic News Plus until your account is reactivated by your organization administrator.</span>
+      </div>
+
+      <p>If you believe this was done in error, please contact your organization administrator:</p>
+
+      <p style="background: #f9fafb; padding: 10px 15px; border-radius: 6px; font-size: 14px;">
+        <strong>Organization:</strong> )html" + partner.getValueOfName() + R"html(<br>
+        <strong>Contact Email:</strong> <a href="mailto:)"html" + partner.getValueOfBillingEmail() + R"html(" style="color: #DC2626; text-decoration: none;">)html" + partner.getValueOfBillingEmail() + R"html(</a>
+      </p>
+
+      <p style="font-size:13px; color:#777; margin-top: 20px;">
+        If you have any questions, please contact our support team at
+        <a href="mailto:support@graphicnewsplus.com" style="color: #DC2626;">support@graphicnewsplus.com</a>
+      </p>
+    </div>
+    <div class="footer">
+      <p>&copy; )html" + trantor::Date::now().toCustomFormattedString("%Y") + R"html( Graphic News Plus</p>
+      <p>All rights reserved.</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>
+)html";
+
+  emailDto.setBody(emailBody);
+  co_await emailService.sendEmailAsync(emailDto);
+
+  LOG_INFO << "[sendDeactivationEmail] Deactivation email sent to: " << user.getValueOfEmail();
+}
+
+
+ bool CommercialPartnerService::isSystemGeneratedEmail(const std::string& email) const {
+  // Check if email matches pattern: [phoneNumber]@graphicnewsplus.com.gh
+  // Example: 0555305007@graphicnewsplus.com.gh
+
+  std::string trimmedEmail = utils::StringUtils::trim(email);
+
+  // Check if it ends with @graphicnewsplus.com.gh
+  std::string domain = "@graphicnewsplus.com.gh";
+  if (trimmedEmail.length() <= domain.length()) {
+    return false;
+  }
+
+  std::string emailDomain = trimmedEmail.substr(trimmedEmail.length() - domain.length());
+  if (emailDomain != domain) {
+    return false;
+  }
+
+  // Check if the part before @ is a valid phone number (starts with 0 and contains only digits)
+  std::string phonePart = trimmedEmail.substr(0, trimmedEmail.length() - domain.length());
+  if (phonePart.empty() || phonePart[0] != '0') {
+    return false;
+  }
+
+  // Check if all characters are digits
+  for (char c : phonePart) {
+    if (!std::isdigit(c)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+ drogon::Task<void> CommercialPartnerService::sendSmsNotification(const std::string& phoneNumber, const std::string& message) {
+
+  try {
+    auto plugin = drogon::app().getPlugin<plugins::GnpServicePlugin>();
+    auto &hubtelSmsApi = plugin->getHubtelSmsApi();
+
+    co_await hubtelSmsApi.sendSms(phoneNumber, message);
+    LOG_INFO << "[sendSmsNotification] SMS sent to: " << phoneNumber;
+  } catch (const std::exception& e) {
+    LOG_ERROR << "[sendSmsNotification] Failed to send SMS to " << phoneNumber << ": " << e.what();
+  }
+}
+
 
 } // namespace gnp::services

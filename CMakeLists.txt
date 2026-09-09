@@ -158,6 +158,9 @@ add_executable(${PROJECT_NAME} main.cc
         services/games/GameManager.cc
         services/rag/RagManager.h
         services/rag/RagManager.cc
+        services/telegram/TelegramService.cc
+        dto/ActivateDeactivateSubscriber.h
+        dto/UserEngagementDto.h
 )
 
 # ##############################################################################
