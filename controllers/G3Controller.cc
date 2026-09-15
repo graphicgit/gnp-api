@@ -74,6 +74,10 @@ Task<HttpResponsePtr> G3Controller::uploadFile(HttpRequestPtr req, const std::st
             bool thumbSuccess = g3StorageService.extractThumbnail(bucketName, fileName, thumbnailFileName);
             if (thumbSuccess) {
                 ret["thumbnailFileName"] = thumbnailFileName;
+            }else {
+                LOG_WARN << "[uploadFile] Thumbnail extraction failed for file: " << fileName;
+                // Optionally include a flag in the response
+                ret["thumbnailStatus"] = "failed";
             }
         }
         

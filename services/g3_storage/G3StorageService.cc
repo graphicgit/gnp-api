@@ -153,6 +153,14 @@ bool G3StorageService::extractThumbnail(const std::string &bucketName,
   auto customConfig = drogon::app().getCustomConfig();
   std::string thumbnailBucketName = customConfig["G3Bucket"]["ThumbnailBucketName"].asString();
 
+  if (thumbnailBucketName.empty()) {
+    // Fallback to a default bucket name (or use the same bucket)
+    thumbnailBucketName = "thumbnails";
+    LOG_WARN << "[extractThumbnail] ThumbnailBucketName not set, using default: " << thumbnailBucketName;
+  }
+
+  ensureBucketExists(thumbnailBucketName);
+
   std::string thumbnailFilePath = buildFilePath(thumbnailBucketName, thumbnailFileName);
 
   if (!std::filesystem::exists(pdfFilePath)) {
@@ -186,6 +194,7 @@ bool G3StorageService::extractThumbnail(const std::string &bucketName,
     // Save the pixmap as a PNG image
     fz_save_pixmap_as_png(ctx, pix, thumbnailFilePath.c_str());
     success = true;
+    LOG_DEBUG << "[extractThumbnail] Thumbnail saved successfully: " << thumbnailFilePath;
   }
   fz_always(ctx) {
     fz_drop_pixmap(ctx, pix);

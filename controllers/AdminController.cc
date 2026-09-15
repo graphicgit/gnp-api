@@ -2356,11 +2356,11 @@ Task<HttpResponsePtr> AdminController::generatePartnerInvoices(HttpRequestPtr re
 }
 
 
-Task<HttpResponsePtr> AdminController::dispatchDailyNewsUpdate(HttpRequestPtr req) {
-  drogon::async_run([]() -> Task<void> {
+Task<HttpResponsePtr> AdminController::dispatchDailyNewsUpdate(HttpRequestPtr req, const std::string &deliveryChannel) {
+  drogon::async_run([deliveryChannel]() -> Task<void> {
     auto plugin = app().getPlugin<gnp::plugins::GnpServicePlugin>();
     auto &newspaperService = plugin->getNewsPaperService();
-    co_await newspaperService.dispatchDailyNewsUpdate();
+    co_await newspaperService.dispatchDailyNewsUpdate(deliveryChannel);
   });
 
   gnp::dto::BaseApiResponse response;
