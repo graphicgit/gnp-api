@@ -1834,9 +1834,7 @@ drogon::Task<void> NewspaperService::dispatchDailyNewsUpdate(const std::string &
                 co_await sendDailyNewsEmail(user, newspaperCards, todayFormatted);
             }
 
-            // SMS goes out when explicitly requested OR when the user has no real email
-            // (preserving the original fallback behaviour).
-            if (sendSms || (sendEmail && !hasRealEmail && !user.getValueOfPhoneNumber().empty())) {
+            if (sendSms) {
                 co_await sendDailyNewsSms(user);
             }
         }
