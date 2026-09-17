@@ -1468,15 +1468,15 @@ void NewspaperService::incrementViewCount(
 
   try {
     // check if a newspaper exists for that publication date
-    Criteria criteria = Criteria(drogon_model::Gnp::Newspapers::Cols::_publication_date, CompareOperator::EQ, dto.getPublicationDate());
+    Criteria criteria = Criteria(Newspapers::Cols::_publication_date, CompareOperator::EQ, dto.getPublicationDate());
     auto newspapers = co_await mp_newspaper.limit(1).findBy(criteria);
 
-    drogon_model::Gnp::Newspapers newspaper;
+    Newspapers newspaper;
 
     //if newspaper is null, create a new news paper record and create a 1st detail record linked to the newspaper record
     if (newspapers.empty()) {
 
-      drogon_model::Gnp::Newspapers new_newspaper;
+      Newspapers new_newspaper;
 
       std::string dayStr = dto.getPublicationDate().toCustomFormattedString("%d");
       if (!dayStr.empty() && dayStr[0] == '0') {
@@ -1506,8 +1506,8 @@ void NewspaperService::incrementViewCount(
       new_newspaper.setPublicationId("485ac7f9-022d-4a30-818e-41732d90da18");
       new_newspaper.setPublicationName("Daily Graphic");
       new_newspaper.setCreatorName("System");
-      new_newspaper.setThumbnailId("--");
-      new_newspaper.setDocumentId("--");
+      new_newspaper.setThumbnailId("");
+      new_newspaper.setDocumentId("");
 
       new_newspaper.setFileType(dto.getFileType());
 

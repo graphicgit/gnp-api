@@ -332,6 +332,11 @@
             "BaseUrl": "https://api.paystack.co",
             "SecretKey": "sk_live_844f99e0b5acfff9b8b52bde395bb6fd39e4e346"
         },
+        "CloudinarySettings": {
+            "Cloud": "pkdbucv7",
+            "ApiKey": "658397586963537",
+            "ApiSecret": "fcBKkncCorXWaT7RD2j2gjmTUrE"
+        },
         "MailConfiguration": {
             "Host": "mail.graphicnewsplus.com",
             "Port": 465,
