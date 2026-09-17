@@ -25,6 +25,32 @@
 using namespace drogon::orm;
 using drogon_model::Gnp::Newspapers;
 
+namespace {
+
+  bool isUsableThumbnailUrl(const std::string &url) {
+    if (url.empty()) return false;
+    if (url == "null" || url == "undefined") return false;
+
+    // Must be an absolute http/https URL.
+    constexpr std::string_view http  = "http://";
+    constexpr std::string_view https = "https://";
+    if (url.compare(0, http.size(),  http)  != 0 &&
+        url.compare(0, https.size(), https) != 0) {
+      return false;
+        }
+
+    // Must have at least one character after the scheme://
+    const auto schemeLen = (url.rfind(https, 0) == 0) ? https.size() : http.size();
+    if (url.size() <= schemeLen) return false;
+
+    return true;
+  }
+
+  constexpr std::string_view kDefaultNewsThumbnail =
+      "https://archive.graphic.com.gh/img/news-avatar.png";
+
+}
+
 namespace gnp::services {
 
 // reduced information for public a
@@ -1573,6 +1599,7 @@ bool NewspaperService::isSystemGeneratedEmail(const std::string &email) {
     return true;
 }
 
+
 drogon::Task<std::string> NewspaperService::buildNewspaperCards(drogon::orm::CoroMapper<drogon_model::Gnp::Newspapers> &newsMapper,
     const std::string &todayIso) {
 
@@ -1593,8 +1620,9 @@ drogon::Task<std::string> NewspaperService::buildNewspaperCards(drogon::orm::Cor
         const std::string title     = newspaper.getValueOfTitle();
         const std::string id        = newspaper.getValueOfId();
         const std::string shortDesc = newspaper.getValueOfFullDescription();
+        const std::string thumbnailUrl = newspaper.getValueOfThumbnailId();
 
-        const std::string imgSrc = "https://archive.graphic.com.gh/img/news-avatar.png";
+        const std::string imgSrc = isUsableThumbnailUrl(thumbnailUrl) ? thumbnailUrl : std::string(kDefaultNewsThumbnail);
 
         cards += R"(
           <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px; background-color: #ffffff; border: 1px solid #fee2e2; border-left: 4px solid #dc2626; border-radius: 8px; border-collapse: separate; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.02);">
@@ -1642,6 +1670,7 @@ drogon::Task<std::string> NewspaperService::buildNewspaperCards(drogon::orm::Cor
 
     co_return cards;
 }
+
 
 
 std::string  NewspaperService::buildDailyNewsEmailBody(const std::string &firstName,
