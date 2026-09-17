@@ -53,9 +53,10 @@ namespace gnp::services {
          * @param bucketName The name of the bucket
          * @param fileName The name of the PDF file
          * @param thumbnailFileName The name to save the generated PNG thumbnail
+         * @param resourceId The resourceId
          * @return The URL of the uploaded thumbnail if successful, empty string otherwise
          */
-        drogon::Task<std::string> extractThumbnail(const std::string& bucketName, const std::string& fileName, const std::string& thumbnailFileName) const;
+        drogon::Task<std::string> extractThumbnail(const std::string& bucketName, const std::string& fileName, const std::string &resourceId, const std::string& thumbnailFileName) const;
 
     private:
         void ensureBucketExists(const std::string& bucketName) const;

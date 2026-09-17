@@ -11,6 +11,10 @@
 #include <fstream>
 #include <mupdf/fitz.h>
 #include <sstream>
+#include <drogon/orm/CoroMapper.h>
+
+#include "Newspapers.h"
+
 namespace gnp::services {
 
 G3StorageService::G3StorageService() {
@@ -66,8 +70,7 @@ bool G3StorageService::saveFile(const std::string &bucketName,
     LOG_DEBUG << "[saveFile] File opened successfully, writing "
               << fileData.size() << " bytes";
 
-    outFile.write(fileData.data(),
-                  static_cast<std::streamsize>(fileData.size()));
+    outFile.write(fileData.data(), static_cast<std::streamsize>(fileData.size()));
 
     if (!outFile.good()) {
       LOG_ERROR << "[saveFile] Stream error after write to '" << filePath
@@ -108,8 +111,7 @@ bool G3StorageService::deleteFile(const std::string &bucketName,
   }
 }
 
-std::optional<std::string>
-G3StorageService::getFilePath(const std::string &bucketName,
+std::optional<std::string> G3StorageService::getFilePath(const std::string &bucketName,
                               const std::string &fileName) const {
   std::string filePath = buildFilePath(bucketName, fileName);
   if (std::filesystem::exists(filePath) &&
@@ -119,8 +121,7 @@ G3StorageService::getFilePath(const std::string &bucketName,
   return std::nullopt;
 }
 
-std::optional<std::string>
-G3StorageService::getFileContent(const std::string &bucketName,
+std::optional<std::string> G3StorageService::getFileContent(const std::string &bucketName,
                                  const std::string &fileName) const {
 
   try {
@@ -196,14 +197,16 @@ bool G3StorageService::generateLocalThumbnail(const std::string& pdfFilePath, co
   return success;
 }
 
-drogon::Task<std::string> G3StorageService::extractThumbnail(
-    const std::string &bucketName, const std::string &fileName,
-    const std::string &thumbnailFileName) const {
+drogon::Task<std::string> G3StorageService::extractThumbnail(const std::string &bucketName, const std::string &fileName,
+   const std::string &resourceId, const std::string &thumbnailFileName) const {
+
+  auto dbClient = drogon::app().getDbClient();
+  auto newspaperMapper = drogon::orm::CoroMapper<drogon_model::Gnp::Newspapers>(dbClient);
+
   std::string pdfFilePath = buildFilePath(bucketName, fileName);
 
   auto customConfig = drogon::app().getCustomConfig();
-  std::string thumbnailBucketName =
-      customConfig["G3Bucket"]["ThumbnailBucketName"].asString();
+  std::string thumbnailBucketName = customConfig["G3Bucket"]["ThumbnailBucketName"].asString();
 
   if (thumbnailBucketName.empty()) {
     // Fallback to a default bucket name (or use the same bucket)
@@ -215,16 +218,14 @@ drogon::Task<std::string> G3StorageService::extractThumbnail(
 
   ensureBucketExists(thumbnailBucketName);
 
-  std::string thumbnailFilePath =
-      buildFilePath(thumbnailBucketName, thumbnailFileName);
+  std::string thumbnailFilePath = buildFilePath(thumbnailBucketName, thumbnailFileName);
 
   bool success = generateLocalThumbnail(pdfFilePath, thumbnailFilePath);
 
   if (!success) {
     co_return "";
   }
-  LOG_DEBUG << "[extractThumbnail] Thumbnail saved successfully locally: "
-            << thumbnailFilePath;
+  LOG_DEBUG << "[extractThumbnail] Thumbnail saved successfully locally: " << thumbnailFilePath;
 
   // upload the thumbnail to cloudinary ...
   std::string cloud = customConfig["CloudinarySettings"]["Cloud"].asString();
@@ -232,9 +233,7 @@ drogon::Task<std::string> G3StorageService::extractThumbnail(
   std::string apiSecret = customConfig["CloudinarySettings"]["ApiSecret"].asString();
 
   auto now = std::chrono::system_clock::now();
-  auto timestamp = std::to_string(
-      std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch())
-          .count());
+  auto timestamp = std::to_string(std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count());
 
   // parameters to sign must be sorted alphabetically: folder, timestamp
   std::string stringToSign = "folder=thumbnails&timestamp=" + timestamp + apiSecret;
@@ -250,17 +249,22 @@ drogon::Task<std::string> G3StorageService::extractThumbnail(
   req->setContentTypeCode(drogon::CT_MULTIPART_FORM_DATA);
 
   auto client = drogon::HttpClient::newHttpClient("https://api.cloudinary.com");
-  
+
+  std::string secureUrl;
+
   try {
+
     drogon::HttpResponsePtr resp = co_await client->sendRequestCoro(req);
 
     if (resp && resp->getStatusCode() == 200) {
       auto json = resp->getJsonObject();
+
       if (json && json->isMember("secure_url")) {
-        std::string url = (*json)["secure_url"].asString();
-        LOG_DEBUG << "[extractThumbnail] Cloudinary upload successful, URL: "
-                  << url;
-        co_return url;
+
+        secureUrl = (*json)["secure_url"].asString();
+
+        LOG_DEBUG << "[extractThumbnail] Cloudinary upload successful, URL: " << secureUrl;
+        co_return secureUrl;
       }
     }
 
@@ -275,6 +279,31 @@ drogon::Task<std::string> G3StorageService::extractThumbnail(
     // sendRequestCoro throws on transport-level failures (DNS, timeout, TLS, etc.)
     LOG_ERROR << "[extractThumbnail] Cloudinary request threw an exception: "
               << e.what();
+  }
+
+
+  try {
+    auto newspaper = co_await newspaperMapper.findByPrimaryKey(resourceId);
+    newspaper.setThumbnailId(secureUrl);
+
+    // Only the thumbnail_id column is written back.
+    co_await newspaperMapper.update(newspaper);
+
+    LOG_DEBUG << "[extractThumbnail] Newspaper " << resourceId
+              << " updated with thumbnail URL";
+
+    co_return secureUrl;
+
+  } catch (const drogon::orm::UnexpectedRows &e) {
+    LOG_WARN << "[extractThumbnail] Newspaper not found for id=" << resourceId
+             << " — thumbnail orphaned at " << secureUrl;
+    // Optional: delete the Cloudinary asset here to avoid orphans.
+    co_return "";
+
+  } catch (const std::exception &e) {
+    LOG_ERROR << "[extractThumbnail] DB update failed for id=" << resourceId << ": " << e.what() << " — thumbnail orphaned at " << secureUrl;
+    // Optional: delete the Cloudinary asset here.
+    co_return "";
   }
 
   co_return "";
