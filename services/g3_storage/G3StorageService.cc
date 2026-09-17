@@ -235,15 +235,22 @@ drogon::Task<std::string> G3StorageService::extractThumbnail(const std::string &
   auto now = std::chrono::system_clock::now();
   auto timestamp = std::to_string(std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count());
 
-  // parameters to sign must be sorted alphabetically: folder, timestamp
-  std::string stringToSign = "folder=thumbnails&timestamp=" + timestamp + apiSecret;
-  std::string signature = drogon::utils::getSha1(stringToSign);
+  // The public_id controls the asset name on Cloudinary.
+  // All parameters sent in the request (except file, api_key, resource_type)
+  // must be included in the string-to-sign, sorted alphabetically.
+  // Cloudinary requires SHA-256 (not SHA-1).
+  std::string publicId = "thumbnails/" + resourceId;
+  std::string stringToSign = "folder=thumbnails&public_id=" + publicId +
+                             "&timestamp=" + timestamp + apiSecret;
+  std::string signature = drogon::utils::getSha256(stringToSign);
 
   auto req = drogon::HttpRequest::newFileUploadRequest({drogon::UploadFile(thumbnailFilePath, "", "file")});
   req->setPath("/v1_1/" + cloud + "/image/upload");
   req->setMethod(drogon::Post);
+
   req->setParameter("api_key", apiKey);
   req->setParameter("folder", "thumbnails");
+  req->setParameter("public_id", publicId);
   req->setParameter("timestamp", timestamp);
   req->setParameter("signature", signature);
   req->setContentTypeCode(drogon::CT_MULTIPART_FORM_DATA);
