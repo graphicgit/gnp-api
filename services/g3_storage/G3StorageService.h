@@ -60,6 +60,7 @@ namespace gnp::services {
     private:
         void ensureBucketExists(const std::string& bucketName) const;
         std::string buildFilePath(const std::string& bucketName, const std::string& fileName) const;
+        bool generateLocalThumbnail(const std::string& pdfFilePath, const std::string& thumbnailFilePath) const;
 
         std::string baseStoragePath_;
     };

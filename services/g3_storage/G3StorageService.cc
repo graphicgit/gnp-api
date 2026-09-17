@@ -149,37 +149,16 @@ G3StorageService::getFileContent(const std::string &bucketName,
   }
 }
 
-drogon::Task<std::string> G3StorageService::extractThumbnail(
-    const std::string &bucketName, const std::string &fileName,
-    const std::string &thumbnailFileName) const {
-  std::string pdfFilePath = buildFilePath(bucketName, fileName);
-
-  auto customConfig = drogon::app().getCustomConfig();
-  std::string thumbnailBucketName =
-      customConfig["G3Bucket"]["ThumbnailBucketName"].asString();
-
-  if (thumbnailBucketName.empty()) {
-    // Fallback to a default bucket name (or use the same bucket)
-    thumbnailBucketName = "thumbnails";
-    LOG_WARN
-        << "[extractThumbnail] ThumbnailBucketName not set, using default: "
-        << thumbnailBucketName;
-  }
-
-  ensureBucketExists(thumbnailBucketName);
-
-  std::string thumbnailFilePath =
-      buildFilePath(thumbnailBucketName, thumbnailFileName);
-
+bool G3StorageService::generateLocalThumbnail(const std::string& pdfFilePath, const std::string& thumbnailFilePath) const {
   if (!std::filesystem::exists(pdfFilePath)) {
     LOG_ERROR << "[extractThumbnail] PDF file not found: " << pdfFilePath;
-    co_return "";
+    return false;
   }
 
   fz_context *ctx = fz_new_context(NULL, NULL, FZ_STORE_UNLIMITED);
   if (!ctx) {
     LOG_ERROR << "[extractThumbnail] Failed to create mupdf context";
-    co_return "";
+    return false;
   }
 
   // Register document handlers to be able to open PDFs
@@ -214,6 +193,32 @@ drogon::Task<std::string> G3StorageService::extractThumbnail(
   }
 
   fz_drop_context(ctx);
+  return success;
+}
+
+drogon::Task<std::string> G3StorageService::extractThumbnail(
+    const std::string &bucketName, const std::string &fileName,
+    const std::string &thumbnailFileName) const {
+  std::string pdfFilePath = buildFilePath(bucketName, fileName);
+
+  auto customConfig = drogon::app().getCustomConfig();
+  std::string thumbnailBucketName =
+      customConfig["G3Bucket"]["ThumbnailBucketName"].asString();
+
+  if (thumbnailBucketName.empty()) {
+    // Fallback to a default bucket name (or use the same bucket)
+    thumbnailBucketName = "thumbnails";
+    LOG_WARN
+        << "[extractThumbnail] ThumbnailBucketName not set, using default: "
+        << thumbnailBucketName;
+  }
+
+  ensureBucketExists(thumbnailBucketName);
+
+  std::string thumbnailFilePath =
+      buildFilePath(thumbnailBucketName, thumbnailFileName);
+
+  bool success = generateLocalThumbnail(pdfFilePath, thumbnailFilePath);
 
   if (!success) {
     co_return "";
