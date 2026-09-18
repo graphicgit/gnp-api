@@ -29,7 +29,7 @@ file(GLOB ROLE_SVC "../services/roles/*.cc")
 file(GLOB G3_STORAGE_SVC "../services/g3_storage/*.cc")
 file(GLOB MEDIA_SVC "../services/media/*.cc")
 file(GLOB UTILS_SVC "../utils/*.cc")
-file(GLOB JOOMLA_SVC "../joomla_api/*.cc")
+file(GLOB JOOMLA_SVC "../services/joomla_api/*.cc")
 file(GLOB SETTING_SVC "../services/settings/*.cc")
 
 
