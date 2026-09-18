@@ -239,7 +239,7 @@ drogon::Task<std::string> G3StorageService::extractThumbnail(const std::string &
   // All parameters sent in the request (except file, api_key, resource_type)
   // must be included in the string-to-sign, sorted alphabetically.
   // Cloudinary requires SHA-256 (not SHA-1).
-  std::string publicId = "thumbnails/" + resourceId;
+  const std::string& publicId = resourceId;
   std::string stringToSign = "folder=thumbnails&public_id=" + publicId +
                              "&timestamp=" + timestamp + apiSecret;
   std::string signature = drogon::utils::getSha256(stringToSign);
@@ -253,7 +253,6 @@ drogon::Task<std::string> G3StorageService::extractThumbnail(const std::string &
   req->setParameter("public_id", publicId);
   req->setParameter("timestamp", timestamp);
   req->setParameter("signature", signature);
-  req->setContentTypeCode(drogon::CT_MULTIPART_FORM_DATA);
 
   auto client = drogon::HttpClient::newHttpClient("https://api.cloudinary.com");
 
