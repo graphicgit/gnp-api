@@ -16,7 +16,6 @@ namespace gnp::services {
     public:
         drogon::Task<dto::BaseApiResponse> getArticles(int limit, int offset);
 
-
     };
 
 
