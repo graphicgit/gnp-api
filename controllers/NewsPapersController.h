@@ -13,6 +13,7 @@ public:
   METHOD_LIST_BEGIN
   ADD_METHOD_TO(NewsPapersController::getAll, std::string(PREFIX) + "/get-all", Get, Options);
   ADD_METHOD_TO(NewsPapersController::getLatest, std::string(PREFIX) + "/get-latest", Get, Options);
+  ADD_METHOD_TO(NewsPapersController::getTopStories, std::string(PREFIX) + "/get-top-stories", Get, Options);
   ADD_METHOD_TO(NewsPapersController::getRedactedDetails, std::string(PREFIX) + "/get-redacted-details", Get, Options);
   ADD_METHOD_TO(NewsPapersController::getFullDetails, std::string(PREFIX) + "/get-full-details", Get);
 
@@ -37,6 +38,7 @@ public:
   // handler methods
   drogon::Task<HttpResponsePtr> getAll(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> getLatest(HttpRequestPtr req);
+  drogon::Task<HttpResponsePtr> getTopStories(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> getRedactedDetails(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> getFullDetails(HttpRequestPtr req);
   drogon::Task<HttpResponsePtr> GetFreeNewsPaperDetailsByPublication(HttpRequestPtr req);

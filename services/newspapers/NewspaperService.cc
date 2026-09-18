@@ -25,6 +25,32 @@
 using namespace drogon::orm;
 using drogon_model::Gnp::Newspapers;
 
+namespace {
+
+  bool isUsableThumbnailUrl(const std::string &url) {
+    if (url.empty()) return false;
+    if (url == "null" || url == "undefined") return false;
+
+    // Must be an absolute http/https URL.
+    constexpr std::string_view http  = "http://";
+    constexpr std::string_view https = "https://";
+    if (url.compare(0, http.size(),  http)  != 0 &&
+        url.compare(0, https.size(), https) != 0) {
+      return false;
+        }
+
+    // Must have at least one character after the scheme://
+    const auto schemeLen = (url.rfind(https, 0) == 0) ? https.size() : http.size();
+    if (url.size() <= schemeLen) return false;
+
+    return true;
+  }
+
+  constexpr std::string_view kDefaultNewsThumbnail =
+      "https://archive.graphic.com.gh/img/news-avatar.png";
+
+}
+
 namespace gnp::services {
 
 // reduced information for public a
@@ -1442,15 +1468,15 @@ void NewspaperService::incrementViewCount(
 
   try {
     // check if a newspaper exists for that publication date
-    Criteria criteria = Criteria(drogon_model::Gnp::Newspapers::Cols::_publication_date, CompareOperator::EQ, dto.getPublicationDate());
+    Criteria criteria = Criteria(Newspapers::Cols::_publication_date, CompareOperator::EQ, dto.getPublicationDate());
     auto newspapers = co_await mp_newspaper.limit(1).findBy(criteria);
 
-    drogon_model::Gnp::Newspapers newspaper;
+    Newspapers newspaper;
 
     //if newspaper is null, create a new news paper record and create a 1st detail record linked to the newspaper record
     if (newspapers.empty()) {
 
-      drogon_model::Gnp::Newspapers new_newspaper;
+      Newspapers new_newspaper;
 
       std::string dayStr = dto.getPublicationDate().toCustomFormattedString("%d");
       if (!dayStr.empty() && dayStr[0] == '0') {
@@ -1480,8 +1506,8 @@ void NewspaperService::incrementViewCount(
       new_newspaper.setPublicationId("485ac7f9-022d-4a30-818e-41732d90da18");
       new_newspaper.setPublicationName("Daily Graphic");
       new_newspaper.setCreatorName("System");
-      new_newspaper.setThumbnailId("--");
-      new_newspaper.setDocumentId("--");
+      new_newspaper.setThumbnailId("");
+      new_newspaper.setDocumentId("");
 
       new_newspaper.setFileType(dto.getFileType());
 
@@ -1543,46 +1569,62 @@ void NewspaperService::incrementViewCount(
 }
 
 
-  drogon::Task<void> NewspaperService::dispatchDailyNewsUpdate() {
-    auto dbClient = drogon::app().getDbClient();
-    drogon::orm::CoroMapper<drogon_model::Gnp::Users> mp(dbClient);
+NewspaperService::DeliveryChannel  NewspaperService::parseDeliveryChannel(const std::string &channel) {
+    std::string c;
+    c.reserve(channel.size());
+    for (char ch : channel)
+        c.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(ch))));
 
-    try {
-      // Get all active users
-      auto users = co_await mp.findBy(
-          drogon::orm::Criteria(drogon_model::Gnp::Users::Cols::_is_active,
-                                drogon::orm::CompareOperator::EQ, true));
+    if (c.empty() || c == "both" || c == "all") return DeliveryChannel::Both;
+    if (c == "sms")   return DeliveryChannel::Sms;
+    if (c == "email") return DeliveryChannel::Email;
 
-      // Formatted date for editorial layout (e.g., "12 Aug, 2026")
-      auto rawDate = ::trantor::Date::now();
-      auto todayFormatted = rawDate.toCustomFormattedStringLocal("%d %b, %Y");
-      auto todayIso = rawDate.toCustomFormattedStringLocal("%Y-%m-%d");
+    LOG_WARN << "Unknown delivery channel '" << channel << "', defaulting to both.";
+    return DeliveryChannel::Both;
+}
 
-      CoroMapper<Newspapers> newsMapper(dbClient);
+bool NewspaperService::isSystemGeneratedEmail(const std::string &email) {
+    static const std::string domain = "@graphicnewsplus.com.gh";
+    if (email.length() <= domain.length()) return false;
 
-      Criteria newsCriteria =
-          Criteria(Newspapers::Cols::_publication_date, CompareOperator::EQ, todayIso) &&
-          Criteria(Newspapers::Cols::_is_published,     CompareOperator::EQ, true) &&
-          Criteria(Newspapers::Cols::_is_archived,      CompareOperator::EQ, false);
+    const std::string emailDomain = email.substr(email.length() - domain.length());
+    if (emailDomain != domain) return false;
 
-      auto todaysNewspapers = co_await newsMapper
-          .orderBy(Newspapers::Cols::_publication_date, SortOrder::DESC)
-          .findBy(newsCriteria);
+    const std::string phonePart = email.substr(0, email.length() - domain.length());
+    if (phonePart.empty() || phonePart[0] != '0') return false;
 
-      auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
-      auto &emailService = plugin->getEmailService();
-      auto &hubtelSmsApi = plugin->getHubtelSmsApi();
+    for (char c : phonePart) {
+        if (!std::isdigit(static_cast<unsigned char>(c))) return false;
+    }
+    return true;
+}
 
-      // Generate newspaper cards HTML
-      std::string newspaperCards;
-      for (const auto &newspaper : todaysNewspapers) {
+
+drogon::Task<std::string> NewspaperService::buildNewspaperCards(drogon::orm::CoroMapper<drogon_model::Gnp::Newspapers> &newsMapper,
+    const std::string &todayIso) {
+
+    using namespace drogon::orm;
+    using Newspapers = drogon_model::Gnp::Newspapers;
+
+    Criteria newsCriteria =
+        Criteria(Newspapers::Cols::_publication_date, CompareOperator::EQ, todayIso) &&
+        Criteria(Newspapers::Cols::_is_published,     CompareOperator::EQ, true) &&
+        Criteria(Newspapers::Cols::_is_archived,      CompareOperator::EQ, false);
+
+    auto todaysNewspapers = co_await newsMapper
+        .orderBy(Newspapers::Cols::_publication_date, SortOrder::DESC)
+        .findBy(newsCriteria);
+
+    std::string cards;
+    for (const auto &newspaper : todaysNewspapers) {
         const std::string title     = newspaper.getValueOfTitle();
         const std::string id        = newspaper.getValueOfId();
         const std::string shortDesc = newspaper.getValueOfFullDescription();
+        const std::string thumbnailUrl = newspaper.getValueOfThumbnailId();
 
-        std::string imgSrc = "https://archive.graphic.com.gh/img/news-avatar.png";
+        const std::string imgSrc = isUsableThumbnailUrl(thumbnailUrl) ? thumbnailUrl : std::string(kDefaultNewsThumbnail);
 
-        newspaperCards += R"(
+        cards += R"(
           <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px; background-color: #ffffff; border: 1px solid #fee2e2; border-left: 4px solid #dc2626; border-radius: 8px; border-collapse: separate; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.02);">
             <tr>
               <td style="padding: 20px;">
@@ -1610,11 +1652,10 @@ void NewspaperService::incrementViewCount(
             </tr>
           </table>
         )";
-      }
+    }
 
-      // Fall-back message when no newspapers are available
-      if (newspaperCards.empty()) {
-        newspaperCards = R"(
+    if (cards.empty()) {
+        cards = R"(
           <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fff1f2; border: 1px dashed #fca5a5; border-radius: 8px; margin-bottom: 24px;">
             <tr>
               <td style="padding: 32px; text-align: center;">
@@ -1625,169 +1666,209 @@ void NewspaperService::incrementViewCount(
             </tr>
           </table>
         )";
-      }
+    }
 
-      CoroMapper<drogon_model::Gnp::UserNotificationSubscriptions> notifMapper(dbClient);
+    co_return cards;
+}
 
-      // Helper to check if email is system-generated
-      auto isSystemGeneratedEmail = [](const std::string& email) -> bool {
-        std::string domain = "@graphicnewsplus.com.gh";
-        if (email.length() <= domain.length()) {
-          return false;
-        }
-        std::string emailDomain = email.substr(email.length() - domain.length());
-        if (emailDomain != domain) {
-          return false;
-        }
-        std::string phonePart = email.substr(0, email.length() - domain.length());
-        if (phonePart.empty() || phonePart[0] != '0') {
-          return false;
-        }
-        for (char c : phonePart) {
-          if (!std::isdigit(c)) {
-            return false;
-          }
-        }
-        return true;
-      };
 
-      for (const auto &user : users) {
-        if (user.getValueOfEmail().empty()) continue;
 
-        // Check if user has opted out of DAILY_NEWS_UPDATE notifications
-        Criteria optOutCriteria =
-            Criteria(drogon_model::Gnp::UserNotificationSubscriptions::Cols::_user_id,
-                     CompareOperator::EQ, user.getValueOfId()) &&
-            Criteria(drogon_model::Gnp::UserNotificationSubscriptions::Cols::_notification_type,
-                     CompareOperator::EQ,
-                     static_cast<int32_t>(gnp::constants::NotificationTypes::DAILY_NEWS_UPDATE)) &&
-            Criteria(drogon_model::Gnp::UserNotificationSubscriptions::Cols::_subscription_status,
-                     CompareOperator::EQ,
-                     static_cast<int32_t>(gnp::constants::SubscriptionStatus::UNSUBSCRIBED));
+std::string  NewspaperService::buildDailyNewsEmailBody(const std::string &firstName,
+                                          const std::string &todayFormatted,
+                                          const std::string &newspaperCards,
+                                          const std::string &userId) {
+    return R"(<!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+      <title>Graphic NewsPlus - Daily Briefing</title>
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #fcf8f8; -webkit-font-smoothing: antialiased;">
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fcf8f8; padding: 40px 10px;">
+        <tr>
+          <td align="center">
+            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(185, 28, 28, 0.08); border: 1px solid #fee2e2;">
 
-        auto optOutRecords = co_await notifMapper.findBy(optOutCriteria);
-        if (!optOutRecords.empty()) {
-          LOG_INFO << "Skipping daily news update for user " << user.getValueOfId()
-                   << " (opted out)";
-          continue;
-        }
+              <tr>
+                <td style="background-color: #991b1b; background: linear-gradient(135deg, #7f1d1d 0%, #b91c1c 100%); padding: 36px 32px; text-align: left;">
+                  <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                    <tr>
+                      <td>
+                        <span style="display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #fecdd3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                          Graphic NewsPlus
+                        </span>
+                        <h1 style="margin: 6px 0 0 0; font-size: 24px; font-weight: 700; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; letter-spacing: -0.3px;">
+                          Your Daily Digest
+                        </h1>
+                      </td>
+                      <td align="right" valign="bottom">
+                        <span style="font-size: 13px; font-weight: 600; color: #fecdd3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                          )" + todayFormatted + R"(
+                        </span>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
 
-        std::string userEmail = user.getValueOfEmail();
-        std::string userPhone = user.getValueOfPhoneNumber();
-        const std::string firstName = user.getValueOfFirstName().empty() ? "GNP User" : user.getValueOfFirstName();
+              <tr>
+                <td style="background-color: #dc2626; height: 4px; line-height: 4px; font-size: 4px;">&nbsp;</td>
+              </tr>
 
-        // Check if email is system-generated
-        if (isSystemGeneratedEmail(userEmail)) {
-          // Send SMS notification instead of email
-          if (!userPhone.empty()) {
-            std::string smsMessage = "Good morning! Your daily news update from Graphic NewsPlus is ready. "
-                                     "Visit https://new.graphicnewsplus.com to read today's editions.";
+              <tr>
+                <td style="padding: 32px;">
+                  <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #374151; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                    Hello <strong style="color: #991b1b;">)" + firstName + R"(</strong>,<br/>
+                    Here are today's featured editions curated for you. Click any edition to start reading instantly.
+                  </p>
 
-            try {
-              co_await hubtelSmsApi.sendSms(userPhone, smsMessage);
-              LOG_INFO << "Daily news SMS sent to: " << userPhone;
-            } catch (const std::exception& e) {
-              LOG_ERROR << "Failed to send daily news SMS to " << userPhone << ": " << e.what();
-            }
-          }
-          continue; // Skip email sending for system-generated emails
-        }
+                  )" + newspaperCards + R"(
 
-        // Send email for users with real email addresses
-        std::string emailBody = R"(<!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="UTF-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-          <title>Graphic NewsPlus - Daily Briefing</title>
-        </head>
-        <body style="margin: 0; padding: 0; background-color: #fcf8f8; -webkit-font-smoothing: antialiased;">
-          <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fcf8f8; padding: 40px 10px;">
-            <tr>
-              <td align="center">
-                <!-- Main Container -->
-                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(185, 28, 28, 0.08); border: 1px solid #fee2e2;">
+                </td>
+              </tr>
 
-                  <!-- Deep Crimson Header -->
-                  <tr>
-                    <td style="background-color: #991b1b; background: linear-gradient(135deg, #7f1d1d 0%, #b91c1c 100%); padding: 36px 32px; text-align: left;">
-                      <table border="0" cellpadding="0" cellspacing="0" width="100%">
-                        <tr>
-                          <td>
-                            <span style="display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #fecdd3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-                              Graphic NewsPlus
-                            </span>
-                            <h1 style="margin: 6px 0 0 0; font-size: 24px; font-weight: 700; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; letter-spacing: -0.3px;">
-                              Your Daily Digest
-                            </h1>
-                          </td>
-                          <td align="right" valign="bottom">
-                            <span style="font-size: 13px; font-weight: 600; color: #fecdd3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-                              )" + todayFormatted + R"(
-                            </span>
-                          </td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
+              <tr>
+                <td style="background-color: #fff1f2; padding: 24px 32px; text-align: center; border-top: 1px solid #ffe4e6;">
+                  <p style="margin: 0 0 8px 0; font-size: 12px; line-height: 1.5; color: #9f1239; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                    You are receiving this daily update as an active subscriber to <strong>Graphic NewsPlus</strong>.
+                  </p>
+                  <p style="margin: 0 0 12px 0; font-size: 12px; color: #f43f5e; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                    &copy; Graphic NewsPlus. All rights reserved.
+                  </p>
+                  <p style="margin: 0; font-size: 11px; color: #6b7280; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                    Don&apos;t want these emails?
+                    <a href="https://new.graphicnewsplus.com/notifications/unsubscribe?userId=)" + userId + R"(&type=0" target="_blank" style="color: #dc2626; text-decoration: underline; font-weight: 600;">Unsubscribe from Daily Digest</a>
+                  </p>
+                </td>
+              </tr>
 
-                  <!-- Red Decorative Accent Strip -->
-                  <tr>
-                    <td style="background-color: #dc2626; height: 4px; line-height: 4px; font-size: 4px;">&nbsp;</td>
-                  </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>)";
+}
 
-                  <!-- Body Content -->
-                  <tr>
-                    <td style="padding: 32px;">
-                      <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #374151; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-                        Hello <strong style="color: #991b1b;">)" + firstName + R"(</strong>,<br/>
-                        Here are today's featured editions curated for you. Click any edition to start reading instantly.
-                      </p>
+std::string NewspaperService::buildDailyNewsSmsBody() {
+    return "Good morning! Your daily news update from Graphic NewsPlus is ready. "
+           "Visit https://new.graphicnewsplus.com to read today's editions.";
+}
 
-                      <!-- Newspaper Cards Injection -->
-                      )" + newspaperCards + R"(
+drogon::Task<bool> NewspaperService::hasOptedOutOfDailyNews(
+    drogon::orm::CoroMapper<drogon_model::Gnp::UserNotificationSubscriptions> &notifMapper,
+    const std::string &userId) {
 
-                    </td>
-                  </tr>
+    using namespace drogon::orm;
+    using UNS = drogon_model::Gnp::UserNotificationSubscriptions;
 
-                  <!-- Footer -->
-                  <tr>
-                    <td style="background-color: #fff1f2; padding: 24px 32px; text-align: center; border-top: 1px solid #ffe4e6;">
-                      <p style="margin: 0 0 8px 0; font-size: 12px; line-height: 1.5; color: #9f1239; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-                        You are receiving this daily update as an active subscriber to <strong>Graphic NewsPlus</strong>.
-                      </p>
-                      <p style="margin: 0 0 12px 0; font-size: 12px; color: #f43f5e; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-                        &copy; Graphic NewsPlus. All rights reserved.
-                      </p>
-                      <p style="margin: 0; font-size: 11px; color: #6b7280; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-                        Don&apos;t want these emails?
-                        <a href="https://new.graphicnewsplus.com/notifications/unsubscribe?userId=)" + user.getValueOfId() + R"(&type=0" target="_blank" style="color: #dc2626; text-decoration: underline; font-weight: 600;">Unsubscribe from Daily Digest</a>
-                      </p>
-                    </td>
-                  </tr>
+    Criteria optOutCriteria =
+        Criteria(UNS::Cols::_user_id,             CompareOperator::EQ, userId) &&
+        Criteria(UNS::Cols::_notification_type,   CompareOperator::EQ,
+                 static_cast<int32_t>(gnp::constants::NotificationTypes::DAILY_NEWS_UPDATE)) &&
+        Criteria(UNS::Cols::_subscription_status, CompareOperator::EQ,
+                 static_cast<int32_t>(gnp::constants::SubscriptionStatus::UNSUBSCRIBED));
 
-                </table>
-              </td>
-            </tr>
-          </table>
-        </body>
-        </html>)";
+    auto optOutRecords = co_await notifMapper.findBy(optOutCriteria);
+    co_return !optOutRecords.empty();
+}
 
-        gnp::dto::SendEmailDto emailDto;
-        emailDto.setTo(userEmail);
-        emailDto.setSubject("Your Daily News Update — " + todayFormatted);
-        emailDto.setBody(emailBody);
+drogon::Task<void> NewspaperService::sendDailyNewsEmail(const drogon_model::Gnp::Users &user,
+                                     const std::string &newspaperCards,
+                                     const std::string &todayFormatted) {
+    const std::string userEmail = user.getValueOfEmail();
+    if (userEmail.empty() || isSystemGeneratedEmail(userEmail)) co_return;
 
-        try {
-          co_await emailService.sendEmailAsync(emailDto);
-          LOG_INFO << "Daily news email sent to: " << userEmail;
-        } catch (const std::exception& e) {
-          LOG_ERROR << "Failed to send daily news email to " << userEmail << ": " << e.what();
-        }
-      }
+    const std::string firstName =
+        user.getValueOfFirstName().empty() ? "GNP User" : user.getValueOfFirstName();
+
+    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto &emailService = plugin->getEmailService();
+
+    gnp::dto::SendEmailDto emailDto;
+    emailDto.setTo(userEmail);
+    emailDto.setSubject("Your Daily News Update — " + todayFormatted);
+    emailDto.setBody(buildDailyNewsEmailBody(firstName, todayFormatted,
+                                             newspaperCards, user.getValueOfId()));
+
+    try {
+        co_await emailService.sendEmailAsync(emailDto);
+        LOG_INFO << "Daily news email sent to: " << userEmail;
     } catch (const std::exception &e) {
-      LOG_ERROR << "Failed to dispatch daily news update: " << e.what();
+        LOG_ERROR << "Failed to send daily news email to " << userEmail << ": " << e.what();
+    }
+}
+
+drogon::Task<void> NewspaperService::sendDailyNewsSms(const drogon_model::Gnp::Users &user) {
+    const std::string userPhone = user.getValueOfPhoneNumber();
+    if (userPhone.empty()) co_return;
+
+    auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+    auto &hubtelSmsApi = plugin->getHubtelSmsApi();
+
+    try {
+        co_await hubtelSmsApi.sendSms(userPhone, buildDailyNewsSmsBody());
+        LOG_INFO << "Daily news SMS sent to: " << userPhone;
+    } catch (const std::exception &e) {
+        LOG_ERROR << "Failed to send daily news SMS to " << userPhone << ": " << e.what();
+    }
+}
+
+drogon::Task<void> NewspaperService::dispatchDailyNewsUpdate(const std::string &deliveryChannel) {
+
+    const auto channel   = parseDeliveryChannel(deliveryChannel);
+    const bool sendEmail = (channel == DeliveryChannel::Email || channel == DeliveryChannel::Both);
+    const bool sendSms   = (channel == DeliveryChannel::Sms   || channel == DeliveryChannel::Both);
+
+    auto dbClient = drogon::app().getDbClient();
+
+    try {
+        using namespace drogon::orm;
+        using Users = drogon_model::Gnp::Users;
+
+        CoroMapper<Users> userMapper(dbClient);
+        auto users = co_await userMapper.findBy(
+            Criteria(Users::Cols::_is_active, CompareOperator::EQ, true));
+
+        // Build the shared date strings up-front.
+        auto rawDate        = ::trantor::Date::now();
+        auto todayFormatted = rawDate.toCustomFormattedStringLocal("%d %b, %Y");
+        auto todayIso       = rawDate.toCustomFormattedStringLocal("%Y-%m-%d");
+
+        // Newspaper cards are only needed for email dispatches.
+        std::string newspaperCards;
+        if (sendEmail) {
+            CoroMapper<drogon_model::Gnp::Newspapers> newsMapper(dbClient);
+            newspaperCards = co_await buildNewspaperCards(newsMapper, todayIso);
+        }
+
+        CoroMapper<drogon_model::Gnp::UserNotificationSubscriptions> notifMapper(dbClient);
+
+        for (const auto &user : users) {
+            if (user.getValueOfEmail().empty() && user.getValueOfPhoneNumber().empty()) continue;
+
+            // Skip users who opted out of DAILY_NEWS_UPDATE.
+            if (co_await hasOptedOutOfDailyNews(notifMapper, user.getValueOfId())) {
+                LOG_INFO << "Skipping daily news update for user " << user.getValueOfId()
+                         << " (opted out)";
+                continue;
+            }
+
+            const bool hasRealEmail =
+                !user.getValueOfEmail().empty() && !isSystemGeneratedEmail(user.getValueOfEmail());
+
+            if (sendEmail && hasRealEmail) {
+                co_await sendDailyNewsEmail(user, newspaperCards, todayFormatted);
+            }
+
+            if (sendSms) {
+                co_await sendDailyNewsSms(user);
+            }
+        }
+    } catch (const std::exception &e) {
+        LOG_ERROR << "Failed to dispatch daily news update: " << e.what();
     }
 }
 

@@ -154,7 +154,7 @@ public:
    // scheduled actions
    ADD_METHOD_TO(AdminController::regenerateNewspaperEntitlements, std::string(PREFIX) + "regenerate-newspaper-entitlements", Post, Options);
    ADD_METHOD_TO(AdminController::generatePartnerInvoices, std::string(PREFIX) + "generate-partner-invoices/{1}", Post, Options);
-   ADD_METHOD_TO(AdminController::dispatchDailyNewsUpdate, std::string(PREFIX) + "dispatch-daily-news-update", Post, Options);
+   ADD_METHOD_TO(AdminController::dispatchDailyNewsUpdate, std::string(PREFIX) + "dispatch-daily-news-update/{1}", Post, Options);
    ADD_METHOD_TO(AdminController::dispatchSubscriptionRenewalReminder, std::string(PREFIX) + "dispatch-subscription-renewal-reminder", Post, Options);
 
   METHOD_LIST_END
@@ -298,7 +298,7 @@ public:
     // scheduled actions
     Task<HttpResponsePtr> regenerateNewspaperEntitlements(HttpRequestPtr req);
     Task<HttpResponsePtr> generatePartnerInvoices(HttpRequestPtr req, const std::string &date);
-    Task<HttpResponsePtr> dispatchDailyNewsUpdate(HttpRequestPtr req);
+    Task<HttpResponsePtr> dispatchDailyNewsUpdate(HttpRequestPtr req, const std::string &deliveryChannel);
     Task<HttpResponsePtr> dispatchSubscriptionRenewalReminder(HttpRequestPtr req);
 
     // settings

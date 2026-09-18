@@ -8,6 +8,7 @@
 #include <drogon/utils/coroutine.h>
 #include <string>
 
+#include "UserSubscriptions.h"
 #include "dto/GrantNewsPaperAccessDto.h"
 #include "dto/GuestOnetimeBuyDto.h"
 #include "dto/GuestSubscriptionDto.h"
@@ -58,6 +59,7 @@ public:
   drogon::Task<void> dispatchSubscriptionRenewalReminder();
 
   drogon::Task<void> unsubscribeNotifications(const std::string &userId, int notificationType);
+
 
 };
 

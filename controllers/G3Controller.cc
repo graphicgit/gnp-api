@@ -71,9 +71,13 @@ Task<HttpResponsePtr> G3Controller::uploadFile(HttpRequestPtr req, const std::st
             std::string thumbnailFileName = resourceId + ".png";
             LOG_DEBUG << "[uploadFile] Extracting thumbnail for PDF file: " << thumbnailFileName;
 
-            bool thumbSuccess = g3StorageService.extractThumbnail(bucketName, fileName, thumbnailFileName);
-            if (thumbSuccess) {
-                ret["thumbnailFileName"] = thumbnailFileName;
+            std::string thumbnailUrl = co_await g3StorageService.extractThumbnail(bucketName, fileName, resourceId, thumbnailFileName);
+            if (!thumbnailUrl.empty()) {
+                ret["thumbnailUrl"] = thumbnailUrl;
+            }else {
+                LOG_WARN << "[uploadFile] Thumbnail extraction failed for file: " << fileName;
+                // Optionally include a flag in the response
+                ret["thumbnailStatus"] = "failed";
             }
         }
         

@@ -105,8 +105,6 @@ drogon::Task<dto::BaseApiResponse> CouponService::getAll(int pageNo, int pageSiz
 }
 
 
-
-
 drogon::Task<::gnp::dto::BaseApiResponse> CouponService::createAsync(const ::gnp::dto::CreateCouponDto &dto) {
 
   auto dbClient = drogon::app().getDbClient();
@@ -249,8 +247,7 @@ drogon::Task<::gnp::dto::BaseApiResponse> CouponService::updateAsync(const ::gnp
   }
 }
 
-drogon::Task<::gnp::dto::BaseApiResponse>
-CouponService::deleteCoupon(const std::string &couponId) {
+drogon::Task<::gnp::dto::BaseApiResponse> CouponService::deleteCoupon(const std::string &couponId) {
 
   auto dbClient = drogon::app().getDbClient();
   CoroMapper<Coupons> mapper(dbClient);

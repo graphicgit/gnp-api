@@ -88,7 +88,6 @@ add_executable(${PROJECT_NAME} main.cc
         dto/MediaMetadataDto.h
         controllers/PartnerController.h
         filters/PartnerJwtAuthFilter.h
-        services/enms/EnmsApi.h
         dto/UpdatePartnerSubscriberDto.h
         services/roles/RoleService.h
         services/roles/RoleService.h
@@ -161,6 +160,9 @@ add_executable(${PROJECT_NAME} main.cc
         services/telegram/TelegramService.cc
         dto/ActivateDeactivateSubscriber.h
         dto/UserEngagementDto.h
+        services/joomla_api/JoomlaApi.h
+        services/joomla_api/JoomlaApi.cc
+        dto/JoomlaApiArticleResponse.h
 )
 
 # ##############################################################################

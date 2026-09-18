@@ -7,6 +7,7 @@
 
 #include <string>
 #include <optional>
+#include <drogon/utils/coroutine.h>
 
 namespace gnp::services {
 
@@ -48,17 +49,19 @@ namespace gnp::services {
         std::optional<std::string> getFileContent(const std::string& bucketName, const std::string& fileName) const;
 
         /**
-         * @brief Extracts the first page of a PDF file as a PNG thumbnail.
+         * @brief Extracts the first page of a PDF file as a PNG thumbnail and uploads to Cloudinary.
          * @param bucketName The name of the bucket
          * @param fileName The name of the PDF file
          * @param thumbnailFileName The name to save the generated PNG thumbnail
-         * @return true if successful, false otherwise
+         * @param resourceId The resourceId
+         * @return The URL of the uploaded thumbnail if successful, empty string otherwise
          */
-        bool extractThumbnail(const std::string& bucketName, const std::string& fileName, const std::string& thumbnailFileName) const;
+        drogon::Task<std::string> extractThumbnail(const std::string& bucketName, const std::string& fileName, const std::string &resourceId, const std::string& thumbnailFileName) const;
 
     private:
         void ensureBucketExists(const std::string& bucketName) const;
         std::string buildFilePath(const std::string& bucketName, const std::string& fileName) const;
+        bool generateLocalThumbnail(const std::string& pdfFilePath, const std::string& thumbnailFilePath) const;
 
         std::string baseStoragePath_;
     };

@@ -8,6 +8,10 @@
 #include "dto/BaseApiResponse.h"
 #include "dto/IngestNewsPaperDto.h"
 #include <drogon/drogon.h>
+
+#include "Newspapers.h"
+#include "UserNotificationSubscriptions.h"
+#include "Users.h"
 #include "dto/NewsPaperDto.h"
 #include "dto/OcrIngestionDto.h"
 #include "dto/ReportDto.h"
@@ -18,10 +22,7 @@ namespace gnp::services {
 class NewspaperService {
 
 public:
-  drogon::Task<dto::BaseApiResponse> getAllAsync(int pageNo, int pageSize, const std::string &publicationId,
-              const std::string &startDate, const std::string &endDate,
-              const std::string &query);
-
+  drogon::Task<dto::BaseApiResponse> getAllAsync(int pageNo, int pageSize, const std::string &publicationId, const std::string &startDate, const std::string &endDate, const std::string &query);
 
     drogon::Task<dto::BaseApiResponse> listAllAsync(int pageNo, int pageSize, const std::string &publicationId,
     const std::string &startDate, const std::string &endDate,
@@ -60,7 +61,7 @@ public:
    //ocr ingestion ...
    drogon::Task<gnp::dto::BaseApiResponse> handleOcrIngestion(const dto::OcrIngestionDto &dto);
 
-    drogon::Task<void> dispatchDailyNewsUpdate();
+    drogon::Task<void> dispatchDailyNewsUpdate(const std::string &deliveryChannel);
 
     drogon::Task<gnp::dto::BaseApiResponse> trackUserEngagement(const dto::UserEngagementDto &dto, const std::string &userId);
 
@@ -70,6 +71,39 @@ public:
     drogon::Task<::gnp::dto::BaseApiResponse> getNewspaperEngagementReport(const gnp::dto::ReportDto &dto);
 
     drogon::Task<gnp::dto::BaseApiResponse> getRecentNewspapersForAffiliate(int pageNo, int pageSize, const std::string &affiliateId);
+
+private:
+    enum class DeliveryChannel { Email, Sms, Both };
+
+    static DeliveryChannel parseDeliveryChannel(const std::string &channel);
+
+    static bool isSystemGeneratedEmail(const std::string &email);
+
+    // Build the shared pieces of the daily update.
+    drogon::Task<std::string> buildNewspaperCards(
+        drogon::orm::CoroMapper<drogon_model::Gnp::Newspapers> &newsMapper,
+        const std::string &todayIso);
+
+    static std::string buildDailyNewsEmailBody(
+        const std::string &firstName,
+        const std::string &todayFormatted,
+        const std::string &newspaperCards,
+        const std::string &userId);
+
+    static std::string buildDailyNewsSmsBody();
+
+    // Per-user senders
+    drogon::Task<void> sendDailyNewsEmail(
+        const drogon_model::Gnp::Users &user,
+        const std::string &newspaperCards,
+        const std::string &todayFormatted);
+
+    drogon::Task<void> sendDailyNewsSms(const drogon_model::Gnp::Users &user);
+
+    // Opt-out check
+    drogon::Task<bool> hasOptedOutOfDailyNews(
+        drogon::orm::CoroMapper<drogon_model::Gnp::UserNotificationSubscriptions> &notifMapper,
+        const std::string &userId);
 };
 
 } // namespace gnp::services

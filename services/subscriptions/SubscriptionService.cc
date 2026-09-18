@@ -1454,6 +1454,7 @@ drogon::Task<gnp::dto::BaseApiResponse> SubscriptionService::fulFillBuyCopy(cons
   co_return response;
 }
 
+
 drogon::Task<void> SubscriptionService::dispatchSubscriptionRenewalReminder() {
 
   auto dbClient = drogon::app().getDbClient();
@@ -1657,6 +1658,7 @@ drogon::Task<void> SubscriptionService::dispatchSubscriptionRenewalReminder() {
     LOG_ERROR << "Failed to dispatch subscription renewal reminder: " << e.what();
   }
 }
+
 
 
 drogon::Task<void> SubscriptionService::unsubscribeNotifications(const std::string &userId, int notificationType) {
