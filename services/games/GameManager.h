@@ -7,6 +7,8 @@
 
 #include <drogon/drogon.h>
 
+#include "dto/BaseApiResponse.h"
+
 namespace gnp::services {
 
     // Forward declarations
@@ -93,6 +95,11 @@ namespace gnp::services {
 
     class GameManager {
     public:
+
+
+        // ============= Get Game Types =============
+
+        drogon::Task<dto::BaseApiResponse> getAllGameCategories();
 
         // ============= Session Management =============
 

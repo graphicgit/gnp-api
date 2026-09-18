@@ -22,10 +22,7 @@ namespace gnp::services {
 class NewspaperService {
 
 public:
-  drogon::Task<dto::BaseApiResponse> getAllAsync(int pageNo, int pageSize, const std::string &publicationId,
-              const std::string &startDate, const std::string &endDate,
-              const std::string &query);
-
+  drogon::Task<dto::BaseApiResponse> getAllAsync(int pageNo, int pageSize, const std::string &publicationId, const std::string &startDate, const std::string &endDate, const std::string &query);
 
     drogon::Task<dto::BaseApiResponse> listAllAsync(int pageNo, int pageSize, const std::string &publicationId,
     const std::string &startDate, const std::string &endDate,

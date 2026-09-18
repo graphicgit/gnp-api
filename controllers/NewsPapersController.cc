@@ -60,6 +60,7 @@ drogon::Task<HttpResponsePtr> NewsPapersController::getAll(const HttpRequestPtr 
 }
 
 
+
 drogon::Task<HttpResponsePtr> NewsPapersController::getLatest(const HttpRequestPtr req) {
   int pageSize = 10; // Default page size
   int pageNo = 1;    //  Default page number
@@ -90,6 +91,20 @@ drogon::Task<HttpResponsePtr> NewsPapersController::getLatest(const HttpRequestP
   auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
   co_return resp;
 }
+
+
+
+drogon::Task<HttpResponsePtr> NewsPapersController::getTopStories(const HttpRequestPtr req) {
+
+  auto plugin = drogon::app().getPlugin<gnp::plugins::GnpServicePlugin>();
+  auto &joomlaApi = plugin->getJoomlaApi();
+
+  auto result = co_await joomlaApi.getArticles(4, 0);
+
+  auto resp = HttpResponse::newHttpJsonResponse(result.toJson());
+  co_return resp;
+}
+
 
 
 drogon::Task<HttpResponsePtr> NewsPapersController::getRedactedDetails(const HttpRequestPtr req) {

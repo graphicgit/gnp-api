@@ -19,6 +19,7 @@
 #include "services/g3_storage/G3StorageService.h"
 #include "services/hubtel_sms/HubtelSmsApi.h"
 #include "services/ingestion_jobs/IngestionJobService.h"
+#include "services/joomla_api/JoomlaApi.h"
 #include "services/media/MediaService.h"
 #include "services/newspapers/NewspaperService.h"
 #include "services/partners/CommercialPartnerService.h"
@@ -81,6 +82,7 @@ public:
   ::gnp::services::SettingService &getSettingService() { return settingService_; }
   ::gnp::services::ContentService &getContentService() { return contentService_; }
   ::gnp::services::TelegramService &getTelegramService() { return telegramService_; }
+  ::gnp::services::JoomlaApi &getJoomlaApi() { return joomlaApi_; }
 
 private:
   services::RedisCacheManager redisCacheService_;
@@ -113,6 +115,7 @@ private:
   ::gnp::services::G3StorageService g3StorageService_;
   ::gnp::services::SettingService settingService_;
   ::gnp::services::TelegramService telegramService_;
+  ::gnp::services::JoomlaApi joomlaApi_;
 };
 
 } // namespace gnp::plugins
