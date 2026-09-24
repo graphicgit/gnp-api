@@ -38,6 +38,7 @@
 #include "services/subscriptions/SubscriptionService.h"
 #include "services/tags/TagService.h"
 #include "services/telegram/TelegramService.h"
+#include "services/games/GameManager.h"
 #include "services/users/UserService.h"
 #include "services/user_invitations/AdminUserInvitationService.h"
 #include "utils/PasswordUtils.h"
@@ -83,6 +84,7 @@ public:
   ::gnp::services::ContentService &getContentService() { return contentService_; }
   ::gnp::services::TelegramService &getTelegramService() { return telegramService_; }
   ::gnp::services::JoomlaApi &getJoomlaApi() { return joomlaApi_; }
+  ::gnp::services::GameManager &getGameManager() { return gameManager_; }
 
 private:
   services::RedisCacheManager redisCacheService_;
@@ -116,6 +118,7 @@ private:
   ::gnp::services::SettingService settingService_;
   ::gnp::services::TelegramService telegramService_;
   ::gnp::services::JoomlaApi joomlaApi_;
+  ::gnp::services::GameManager gameManager_;
 };
 
 } // namespace gnp::plugins
