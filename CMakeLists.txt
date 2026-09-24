@@ -159,6 +159,8 @@ add_executable(${PROJECT_NAME} main.cc
         services/games/Corpus.h
         services/games/PublicationLexicon.h
         services/games/PublicationLexicon.cc
+        services/games/G3DocumentScanner.h
+        services/games/G3DocumentScanner.cc
         services/games/PuzzleGenerator.h
         services/games/PuzzleGenerator.cc
         services/rag/RagManager.h

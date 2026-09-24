@@ -2243,7 +2243,9 @@ drogon::Task<dto::BaseApiResponse> GameManager::publicationSourcesView(const std
         }
         Json::Value result;
         result["sources"] = co_await PublicationLexicon::listSources(publicationId, 12);
-        result["note"] = "Puzzles use page text already extracted from editions, and fall back to the PDF stored in G3.";
+        result["storage"] = PublicationLexicon::describeStorage();
+        result["note"] = "Puzzle words are read from the newest edition PDFs in the G3 master document bucket. "
+                         "A file with usableWords = 0 has no text layer (scanned image) or is too short to use.";
         co_return ok("Publication sources loaded.", result);
     } catch (const std::exception &e) {
         co_return fail(constants::ERR_DB_QUERY, "Could not list publication sources.", e.what());

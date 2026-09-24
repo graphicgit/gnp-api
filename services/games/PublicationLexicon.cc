@@ -15,6 +15,7 @@
 #include <drogon/drogon.h>
 #include <mupdf/fitz.h>
 
+#include "services/games/G3DocumentScanner.h"
 #include "services/games/GameTypes.h"
 
 namespace gnp::services {
@@ -28,8 +29,17 @@ struct CacheEntry {
 std::unordered_map<std::string, CacheEntry> gCache;
 constexpr int kCacheTtlSeconds = 1800;
 constexpr int kMaxRawChars = 160000;
-constexpr int kMaxPages = 24;
-constexpr int kMaxPdfPages = 8;
+// Reading stops early once this much text is in hand, so a single long edition is enough.
+constexpr int kTargetRawChars = 90000;
+// Newest PDFs considered per corpus build, and how many of them must yield text. Scans without a
+// text layer are cheap to reject, so the candidate window is wider than the readable target.
+constexpr int kMaxCorpusDocuments = 8;
+constexpr int kMaxReadableDocuments = 3;
+constexpr int kMaxPdfPagesPerDocument = 16;
+constexpr int kMaxPdfPagesForReport = 8;
+constexpr int kMinPageChars = 40;
+constexpr std::size_t kMinLexemes = 8;
+constexpr int kHintedDocuments = 5;
 
 const std::unordered_set<std::string> kStopwords = {
     "THE", "AND", "FOR", "ARE", "BUT", "NOT", "YOU", "ALL", "CAN", "HER", "WAS", "ONE", "OUR", "OUT",
@@ -124,121 +134,190 @@ std::string snippetAround(const std::string &text, const std::string &word) {
     return snippet;
 }
 
-void collectStrings(const Json::Value &node, std::string &out) {
-    if (node.isString()) {
-        out.push_back(' ');
-        out += node.asString();
-        return;
+std::string joinList(const std::vector<std::string> &values, const char *separator) {
+    std::string out;
+    for (const auto &value : values) {
+        if (!out.empty()) out += separator;
+        out += value;
     }
-    if (node.isArray()) {
-        for (const auto &item : node) collectStrings(item, out);
-        return;
-    }
-    if (node.isObject()) {
-        for (const auto &name : node.getMemberNames()) collectStrings(node[name], out);
-    }
+    return out;
 }
 
-std::string extractPdfText(const std::string &path, int maxPages) {
-    if (!std::filesystem::exists(path)) return "";
+// ---------------------------------------------------------------------------------------------
+// G3 storage lookup: puzzle words come from the edition PDFs in the master document bucket.
+// ---------------------------------------------------------------------------------------------
+
+std::string resolveBasePath() {
+    auto custom = drogon::app().getCustomConfig();
+    if (custom.isMember("G3Bucket") && custom["G3Bucket"].isMember("BaseStoragePath")) {
+        const std::string configured = custom["G3Bucket"]["BaseStoragePath"].asString();
+        if (!configured.empty()) return configured;
+    }
+    return "./g3-storage";
+}
+
+std::vector<std::string> masterBucketNames() {
+    std::vector<std::string> buckets;
+    auto custom = drogon::app().getCustomConfig();
+    if (custom.isMember("G3Bucket") && custom["G3Bucket"].isMember("MasterDocumentBucketName")) {
+        const std::string configured = custom["G3Bucket"]["MasterDocumentBucketName"].asString();
+        if (!configured.empty()) buckets.push_back(configured);
+    }
+    if (std::find(buckets.begin(), buckets.end(), "gnp-master-documents") == buckets.end()) {
+        buckets.emplace_back("gnp-master-documents");
+    }
+    return buckets;
+}
+
+struct MasterBuckets {
+    std::string basePath;
+    std::string bucket;                       // bucket that supplied the documents (or the first checked)
+    std::string directory;                    // "<basePath>/<bucket>"
+    bool directoryExists = false;
+    std::vector<std::string> checked;         // bucket names looked at, in order
+    std::vector<ScannedDocument> documents;   // newest first; a hinted document is moved to the front
+};
+
+MasterBuckets locateMasterDocuments(std::size_t maxDocuments, const std::string &preferredDocumentId) {
+    MasterBuckets result;
+    result.basePath = resolveBasePath();
+    const std::vector<std::string> buckets = masterBucketNames();
+
+    for (const auto &bucket : buckets) {
+        const BucketScan scan = scanBucket(result.basePath, bucket, maxDocuments, preferredDocumentId);
+        result.checked.push_back(bucket);
+        if (result.bucket.empty()) {
+            result.bucket = bucket;
+            result.directory = scan.directory;
+            result.directoryExists = scan.directoryExists;
+        }
+        if (!scan.documents.empty()) {
+            result.bucket = bucket;
+            result.directory = scan.directory;
+            result.directoryExists = true;
+            result.documents = scan.documents;
+            break;
+        }
+    }
+    return result;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Optional database metadata. The newspapers table is used for titles, publication names and for
+// resolving an explicit publicationId/newspaperId filter to a document id. It is never required:
+// puzzles are built from whatever the bucket holds, even when the database has no matching row.
+// ---------------------------------------------------------------------------------------------
+
+struct EditionMeta {
+    bool found = false;
+    std::string newspaperId;
+    std::string title;
+    std::string publicationName;
+    std::string publicationId;
+    std::string publicationDate;
+};
+
+drogon::Task<EditionMeta> lookupEditionMeta(const std::string &documentId) {
+    EditionMeta meta;
+    if (documentId.empty()) co_return meta;
+    auto db = drogon::app().getDbClient();
+    if (!db) co_return meta;
+    try {
+        auto rows = co_await db->execSqlCoro(
+            "SELECT id::text AS id, COALESCE(title, '') AS title, COALESCE(publication_name, '') AS publication_name, "
+            "COALESCE(publication_id::text, '') AS publication_id, COALESCE(publication_date::text, '') AS publication_date "
+            "FROM newspapers WHERE document_id = $1::text ORDER BY publication_date DESC NULLS LAST LIMIT 1",
+            documentId);
+        if (!rows.empty()) {
+            const auto &row = rows[0];
+            meta.newspaperId = row["id"].isNull() ? "" : row["id"].as<std::string>();
+            meta.title = row["title"].isNull() ? "" : row["title"].as<std::string>();
+            meta.publicationName = row["publication_name"].isNull() ? "" : row["publication_name"].as<std::string>();
+            meta.publicationId = row["publication_id"].isNull() ? "" : row["publication_id"].as<std::string>();
+            meta.publicationDate = row["publication_date"].isNull() ? "" : row["publication_date"].as<std::string>();
+            meta.found = !meta.newspaperId.empty();
+        }
+    } catch (const std::exception &e) {
+        LOG_DEBUG << "[games] Edition metadata lookup skipped for " << documentId << ": " << e.what();
+    }
+    co_return meta;
+}
+
+drogon::Task<std::vector<std::string>> hintedDocumentIds(const std::string &publicationId,
+                                                         const std::string &newspaperId,
+                                                         int limit = kHintedDocuments) {
+    std::vector<std::string> ids;
+    if (publicationId.empty() && newspaperId.empty()) co_return ids;
+    auto db = drogon::app().getDbClient();
+    if (!db) co_return ids;
+    try {
+        if (!newspaperId.empty()) {
+            auto rows = co_await db->execSqlCoro(
+                "SELECT document_id FROM newspapers WHERE id = $1::uuid AND COALESCE(document_id, '') <> '' LIMIT 1",
+                newspaperId);
+            for (size_t i = 0; i < rows.size(); ++i) {
+                if (!rows[i]["document_id"].isNull()) ids.push_back(rows[i]["document_id"].as<std::string>());
+            }
+        } else {
+            auto rows = co_await db->execSqlCoro(
+                "SELECT document_id FROM newspapers WHERE publication_id = $1::uuid AND COALESCE(document_id, '') <> '' "
+                "ORDER BY publication_date DESC NULLS LAST LIMIT $2",
+                publicationId, limit);
+            for (size_t i = 0; i < rows.size(); ++i) {
+                if (!rows[i]["document_id"].isNull()) ids.push_back(rows[i]["document_id"].as<std::string>());
+            }
+        }
+    } catch (const std::exception &e) {
+        LOG_DEBUG << "[games] Edition filter lookup skipped: " << e.what();
+    }
+    co_return ids;
+}
+
+// ---------------------------------------------------------------------------------------------
+// PDF text layer extraction.
+// ---------------------------------------------------------------------------------------------
+
+std::vector<std::string> extractPdfPages(const std::string &path, int maxPages) {
+    std::vector<std::string> pages;
+    if (maxPages <= 0) return pages;
+
+    std::error_code pathEc;
+    if (!std::filesystem::exists(path, pathEc) || pathEc) return pages;
 
     fz_context *ctx = fz_new_context(nullptr, nullptr, FZ_STORE_DEFAULT);
-    if (!ctx) return "";
+    if (!ctx) return pages;
     fz_register_document_handlers(ctx);
 
     fz_document *doc = nullptr;
-    char *text = nullptr;
-    size_t textLen = 0;
     fz_var(doc);
-    fz_var(text);
 
     fz_try(ctx) {
         doc = fz_open_document(ctx, path.c_str());
-        const int pages = fz_count_pages(ctx, doc);
-        const int limit = std::min(pages, maxPages);
-        fz_buffer *joined = fz_new_buffer(ctx, 1024);
+        const int count = fz_count_pages(ctx, doc);
+        const int limit = std::min(count, maxPages);
+        size_t accumulated = 0;
         for (int i = 0; i < limit; ++i) {
             fz_stext_page *stext = fz_new_stext_page_from_page_number(ctx, doc, i, nullptr);
-            fz_buffer *pageBuf = fz_new_buffer_from_stext_page(ctx, stext);
-            fz_append_buffer(ctx, joined, pageBuf);
-            fz_append_byte(ctx, joined, '\n');
-            fz_drop_buffer(ctx, pageBuf);
+            fz_buffer *pageBuffer = fz_new_buffer_from_stext_page(ctx, stext);
+            unsigned char *data = nullptr;
+            const size_t len = fz_buffer_storage(ctx, pageBuffer, &data);
+            pages.emplace_back();
+            if (data && len > 0) pages.back().assign(reinterpret_cast<const char *>(data), len);
+            fz_drop_buffer(ctx, pageBuffer);
             fz_drop_stext_page(ctx, stext);
-            if (fz_buffer_storage(ctx, joined, nullptr) > static_cast<size_t>(kMaxRawChars)) break;
+            accumulated += len;
+            if (accumulated > static_cast<size_t>(kMaxRawChars)) break;
         }
-        unsigned char *data = nullptr;
-        const size_t len = fz_buffer_storage(ctx, joined, &data);
-        text = static_cast<char *>(malloc(len + 1));
-        if (text && data) {
-            memcpy(text, data, len);
-            text[len] = '\0';
-            textLen = len;
-        }
-        fz_drop_buffer(ctx, joined);
     }
     fz_always(ctx) {
         fz_drop_document(ctx, doc);
     }
     fz_catch(ctx) {
         LOG_ERROR << "[games] MuPDF text extraction failed for " << path << ": " << fz_caught_message(ctx);
-        free(text);
-        text = nullptr;
-        textLen = 0;
+        pages.clear();
     }
     fz_drop_context(ctx);
-
-    std::string result;
-    if (text) {
-        result.assign(text, textLen);
-        free(text);
-    }
-    return result;
-}
-
-std::vector<std::string> candidatePdfPaths(const std::string &documentId, const std::string &storageService) {
-    std::vector<std::string> paths;
-    if (documentId.empty()) return paths;
-    if (documentId.find("..") != std::string::npos) return paths;
-
-    auto custom = drogon::app().getCustomConfig();
-    std::string base = "./g3-storage";
-    std::vector<std::string> buckets;
-    if (custom.isMember("G3Bucket")) {
-        const auto &bucket = custom["G3Bucket"];
-        if (bucket.isMember("BaseStoragePath") && !bucket["BaseStoragePath"].asString().empty()) {
-            base = bucket["BaseStoragePath"].asString();
-        }
-        if (bucket.isMember("MasterDocumentBucketName")) buckets.push_back(bucket["MasterDocumentBucketName"].asString());
-        if (bucket.isMember("SplitDocumentBucketName")) buckets.push_back(bucket["SplitDocumentBucketName"].asString());
-    }
-    const std::string service = lowerCopy(storageService);
-    if (!storageService.empty() && service.find("google") == std::string::npos &&
-        service.find("http") == std::string::npos && service.find("drive") == std::string::npos &&
-        storageService.find('/') == std::string::npos && storageService.find("..") == std::string::npos) {
-        buckets.push_back(storageService);
-    }
-    buckets.emplace_back("gnp-master-documents");
-    buckets.emplace_back("newspapers");
-    buckets.emplace_back("publications");
-
-    if (std::filesystem::exists(documentId)) paths.push_back(documentId);
-
-    auto addFile = [&](const std::string &bucket, const std::string &fileName) {
-        if (bucket.empty() || fileName.empty()) return;
-        if (fileName.find("..") != std::string::npos || fileName.find('/') != std::string::npos) return;
-        paths.push_back((std::filesystem::path(base) / bucket / fileName).string());
-    };
-
-    std::vector<std::string> names{documentId};
-    if (documentId.size() < 4 || lowerCopy(documentId.substr(documentId.size() - 4)) != ".pdf") {
-        names.push_back(documentId + ".pdf");
-        names.push_back(documentId + ".PDF");
-    }
-
-    for (const auto &bucket : buckets) {
-        for (const auto &name : names) addFile(bucket, name);
-    }
-    return paths;
+    return pages;
 }
 
 struct PageBlob {
@@ -246,6 +325,40 @@ struct PageBlob {
     SourceRef source;
     bool fromPdf = false;
 };
+
+/**
+ * Normalises page text the same way the corpus does, so a page that only carries whitespace (a
+ * scan without a text layer) counts as empty and is reported as such.
+ */
+std::vector<std::string> collapsedPages(const std::vector<std::string> &pageTexts) {
+    std::vector<std::string> pages;
+    pages.reserve(pageTexts.size());
+    for (const auto &pageText : pageTexts) pages.push_back(collapseSpace(pageText));
+    return pages;
+}
+
+std::vector<PageBlob> pagesFromDocument(const ScannedDocument &document,
+                                        const std::vector<std::string> &pageTexts,
+                                        const EditionMeta &meta) {
+    std::vector<PageBlob> pages;
+    SourceRef source;
+    source.newspaperId = meta.newspaperId;
+    source.publicationId = meta.publicationId;
+    source.publicationName = meta.publicationName;
+    source.newspaperTitle = meta.title.empty() ? document.stem : meta.title;
+    source.publicationDate = meta.publicationDate;
+    if (source.publicationDate.empty() && document.modifiedAt.size() >= 10) {
+        source.publicationDate = document.modifiedAt.substr(0, 10);
+    }
+
+    for (size_t i = 0; i < pageTexts.size(); ++i) {
+        if (pageTexts[i].size() < static_cast<size_t>(kMinPageChars)) continue;
+        SourceRef pageSource = source;
+        pageSource.pageNumber = static_cast<int>(i) + 1;
+        pages.push_back(PageBlob{pageTexts[i], pageSource, true});
+    }
+    return pages;
+}
 
 void absorbText(std::unordered_map<std::string, Lexeme> &words,
                  std::string &letterBag,
@@ -407,7 +520,22 @@ void PublicationLexicon::clearCache() {
 drogon::Task<Corpus> PublicationLexicon::load(const std::string &publicationId,
                                               const std::string &newspaperId,
                                               const std::vector<std::string> &topics) {
-    const std::string key = cacheKey(publicationId, newspaperId, topics);
+    // An explicit publicationId/newspaperId only picks which stored edition is preferred; the words
+    // themselves always come from the PDFs in G3 storage.
+    const std::vector<std::string> hints = co_await hintedDocumentIds(publicationId, newspaperId);
+    const std::string preferred = hints.empty() ? std::string() : hints.front();
+    MasterBuckets location = locateMasterDocuments(kMaxCorpusDocuments, preferred);
+
+    if (location.documents.empty()) {
+        throw std::runtime_error("LEXICON: No newspaper PDF was found in G3 storage. Looked in " + location.directory +
+                                 " (bucket '" + location.bucket + "'). Upload the edition PDF to the master document "
+                                 "bucket configured as G3Bucket.MasterDocumentBucketName, then retry.");
+    }
+
+    // The stamp keeps a freshly uploaded edition from being masked by a cached corpus.
+    const ScannedDocument &newest = location.documents.front();
+    const std::string key = cacheKey(publicationId, newspaperId, topics) + "|" + newest.fileName + "@" +
+                            std::to_string(newest.modifiedEpochSeconds);
     {
         std::lock_guard<std::mutex> lock(gCacheMutex);
         auto it = gCache.find(key);
@@ -415,226 +543,182 @@ drogon::Task<Corpus> PublicationLexicon::load(const std::string &publicationId,
             const auto age = std::chrono::duration_cast<std::chrono::seconds>(
                                  std::chrono::steady_clock::now() - it->second.loadedAt)
                                  .count();
-            if (age < kCacheTtlSeconds && it->second.corpus.lexemes.size() >= 8) {
+            if (age < kCacheTtlSeconds && it->second.corpus.lexemes.size() >= kMinLexemes) {
                 co_return it->second.corpus;
             }
         }
     }
 
-    auto db = drogon::app().getDbClient();
-    if (!db) {
-        throw std::runtime_error("LEXICON: Database client is not configured.");
-    }
-
-    std::string sql =
-        "SELECT nd.page_text, nd.supporting_text, nd.page_number, "
-        "nd.publication_name, nd.publication_id::text AS publication_id, nd.newspaper_id::text AS newspaper_id, "
-        "n.title, n.document_id, n.storage_service, n.full_description, "
-        "COALESCE(n.publication_date::text, nd.publication_date::text, '') AS publication_date, "
-        "n.featured_stories::text AS featured_stories "
-        "FROM newspaper_details nd "
-        "JOIN newspapers n ON n.id = nd.newspaper_id "
-        "WHERE COALESCE(n.is_published, FALSE) = TRUE "
-        "AND COALESCE(n.is_archived, FALSE) = FALSE "
-        "AND nd.page_text IS NOT NULL AND length(nd.page_text) > 40 ";
-    if (!publicationId.empty()) sql += "AND nd.publication_id = $1::uuid ";
-    if (!newspaperId.empty()) sql += publicationId.empty() ? "AND nd.newspaper_id = $1::uuid " : "AND nd.newspaper_id = $2::uuid ";
-    sql += "ORDER BY n.publication_date DESC NULLS LAST, nd.page_number ASC LIMIT " + std::to_string(kMaxPages);
-
-    drogon::orm::Result pageRows(nullptr);
-    try {
-        if (!publicationId.empty() && !newspaperId.empty()) {
-            pageRows = co_await db->execSqlCoro(sql, publicationId, newspaperId);
-        } else if (!publicationId.empty()) {
-            pageRows = co_await db->execSqlCoro(sql, publicationId);
-        } else if (!newspaperId.empty()) {
-            pageRows = co_await db->execSqlCoro(sql, newspaperId);
-        } else {
-            pageRows = co_await db->execSqlCoro(sql);
-        }
-    } catch (const std::exception &e) {
-        throw std::runtime_error(std::string("LEXICON: Failed to read newspaper page text: ") + e.what());
-    }
-
     std::vector<PageBlob> pages;
-    std::unordered_map<std::string, SourceRef> pdfCandidates;
+    std::vector<std::string> report;
+    int opened = 0;
+    int readable = 0;
+    int totalChars = 0;
+    int totalRawChars = 0;   // everything MuPDF returned, before the per-page filter
 
-    for (size_t i = 0; i < pageRows.size(); ++i) {
-        const auto &row = pageRows[i];
-        SourceRef source;
-        if (!row["newspaper_id"].isNull()) source.newspaperId = row["newspaper_id"].as<std::string>();
-        if (!row["publication_id"].isNull()) source.publicationId = row["publication_id"].as<std::string>();
-        if (!row["publication_name"].isNull()) source.publicationName = row["publication_name"].as<std::string>();
-        if (!row["title"].isNull()) source.newspaperTitle = row["title"].as<std::string>();
-        if (!row["publication_date"].isNull()) source.publicationDate = row["publication_date"].as<std::string>();
-        if (!row["page_number"].isNull()) source.pageNumber = row["page_number"].as<int>();
+    for (const auto &document : location.documents) {
+        if (readable >= kMaxReadableDocuments || totalChars >= kTargetRawChars) break;
+        ++opened;
 
-        std::string text;
-        if (!row["page_text"].isNull()) text += row["page_text"].as<std::string>();
-        if (!row["supporting_text"].isNull()) {
-            text.push_back('\n');
-            text += row["supporting_text"].as<std::string>();
-        }
-        if (!row["full_description"].isNull()) {
-            text.push_back('\n');
-            text += row["full_description"].as<std::string>();
-        }
-        if (!row["featured_stories"].isNull()) {
-            const std::string featured = row["featured_stories"].as<std::string>();
-            Json::Value parsed;
-            Json::CharReaderBuilder builder;
-            std::string errs;
-            std::istringstream stream(featured);
-            if (Json::parseFromStream(builder, stream, &parsed, &errs)) {
-                std::string extra;
-                collectStrings(parsed, extra);
-                text += extra;
-            } else {
-                text.push_back('\n');
-                text += featured;
-            }
-        }
-        if (!text.empty()) {
-            pages.push_back(PageBlob{text, source, false});
-        }
-        if (!row["document_id"].isNull()) {
-            SourceRef pdfSource = source;
-            pdfSource.pageNumber = 0;
-            const std::string documentId = row["document_id"].as<std::string>();
-            const std::string storage = row["storage_service"].isNull() ? "" : row["storage_service"].as<std::string>();
-            if (!documentId.empty() && pdfCandidates.find(documentId) == pdfCandidates.end()) {
-                pdfSource.newspaperTitle = source.newspaperTitle;
-                pdfCandidates.emplace(documentId + "\n" + storage, pdfSource);
-            }
-        }
+        const std::vector<std::string> pageTexts = collapsedPages(extractPdfPages(document.path, kMaxPdfPagesPerDocument));
+        const EditionMeta meta = co_await lookupEditionMeta(document.stem);
+        std::vector<PageBlob> documentPages = pagesFromDocument(document, pageTexts, meta);
+
+        int documentChars = 0;
+        int documentRawChars = 0;
+        for (const auto &pageText : pageTexts) documentRawChars += static_cast<int>(pageText.size());
+        for (const auto &page : documentPages) documentChars += static_cast<int>(page.text.size());
+        totalChars += documentChars;
+        totalRawChars += documentRawChars;
+        if (documentChars > 0) ++readable;
+
+        pages.insert(pages.end(), documentPages.begin(), documentPages.end());
+        report.push_back(document.fileName + " (" + std::to_string(documentPages.size()) + " pages, " +
+                         std::to_string(documentChars) + " chars)");
+        LOG_INFO << "[games] Read " << document.fileName << " from " << location.bucket << ": "
+                 << documentPages.size() << " pages, " << documentChars << " chars"
+                 << (meta.found ? " (" + meta.title + ")" : "");
     }
 
     Corpus corpus = buildCorpus(pages, topics);
-    if (corpus.lexemes.size() < 8) {
-        LOG_INFO << "[games] Page text yielded " << corpus.lexemes.size()
-                 << " words. Falling back to PDF extraction.";
-        int extracted = 0;
-        for (const auto &entry : pdfCandidates) {
-            if (extracted >= 3 || corpus.lexemes.size() >= 40) break;
-            const auto split = entry.first.find('\n');
-            const std::string documentId = entry.first.substr(0, split);
-            const std::string storage = entry.first.substr(split + 1);
-            for (const auto &path : candidatePdfPaths(documentId, storage)) {
-                std::string pdfText = extractPdfText(path, kMaxPdfPages);
-                if (pdfText.size() < 40) continue;
-                SourceRef source = entry.second;
-                pages.push_back(PageBlob{pdfText, source, true});
-                ++extracted;
-                LOG_INFO << "[games] Extracted " << pdfText.size() << " chars from " << path;
-                break;
-            }
-        }
 
-        if (pages.empty() || extracted > 0) {
-            // Also pull recent edition metadata when page rows were missing entirely.
-            if (pageRows.empty()) {
-                std::string editionSql =
-                    "SELECT id::text AS newspaper_id, title, document_id, storage_service, full_description, "
-                    "publication_name, publication_id::text AS publication_id, "
-                    "COALESCE(publication_date::text, '') AS publication_date, featured_stories::text AS featured_stories "
-                    "FROM newspapers "
-                    "WHERE COALESCE(is_published, FALSE) = TRUE AND COALESCE(is_archived, FALSE) = FALSE ";
-                if (!publicationId.empty()) editionSql += "AND publication_id = $1::uuid ";
-                if (!newspaperId.empty()) editionSql += publicationId.empty() ? "AND id = $1::uuid " : "AND id = $2::uuid ";
-                editionSql += "ORDER BY publication_date DESC NULLS LAST LIMIT 5";
-                drogon::orm::Result editions(nullptr);
-                if (!publicationId.empty() && !newspaperId.empty()) editions = co_await db->execSqlCoro(editionSql, publicationId, newspaperId);
-                else if (!publicationId.empty()) editions = co_await db->execSqlCoro(editionSql, publicationId);
-                else if (!newspaperId.empty()) editions = co_await db->execSqlCoro(editionSql, newspaperId);
-                else editions = co_await db->execSqlCoro(editionSql);
-
-                for (size_t i = 0; i < editions.size() && extracted < 3; ++i) {
-                    const auto &row = editions[i];
-                    SourceRef source;
-                    source.newspaperId = row["newspaper_id"].isNull() ? "" : row["newspaper_id"].as<std::string>();
-                    source.publicationId = row["publication_id"].isNull() ? "" : row["publication_id"].as<std::string>();
-                    source.publicationName = row["publication_name"].isNull() ? "" : row["publication_name"].as<std::string>();
-                    source.newspaperTitle = row["title"].isNull() ? "" : row["title"].as<std::string>();
-                    source.publicationDate = row["publication_date"].isNull() ? "" : row["publication_date"].as<std::string>();
-                    std::string text = source.newspaperTitle + "\n" + source.publicationName;
-                    if (!row["full_description"].isNull()) text += "\n" + row["full_description"].as<std::string>();
-                    if (!row["featured_stories"].isNull()) text += "\n" + row["featured_stories"].as<std::string>();
-                    if (!row["document_id"].isNull()) {
-                        const std::string documentId = row["document_id"].as<std::string>();
-                        const std::string storage = row["storage_service"].isNull() ? "" : row["storage_service"].as<std::string>();
-                        for (const auto &path : candidatePdfPaths(documentId, storage)) {
-                            std::string pdfText = extractPdfText(path, kMaxPdfPages);
-                            if (pdfText.size() < 40) continue;
-                            text += "\n" + pdfText;
-                            ++extracted;
-                            break;
-                        }
-                    }
-                    pages.push_back(PageBlob{text, source, true});
-                }
-            }
-            corpus = buildCorpus(pages, topics);
-        }
-    }
-
-    if (corpus.lexemes.size() < 8 && !topics.empty()) {
+    if (corpus.lexemes.size() < kMinLexemes && !topics.empty()) {
         throw std::runtime_error("LEXICON: Not enough publication words matched the requested topics.");
     }
-    if (corpus.lexemes.size() < 8) {
-        throw std::runtime_error(
-            "LEXICON: Not enough text in stored newspaper publications to build a puzzle. "
-            "Publish an edition with page text or a PDF in G3 storage.");
+    if (corpus.lexemes.size() < kMinLexemes) {
+        std::string message = "LEXICON: Not enough text in the newspaper PDFs stored in G3 to build a puzzle. ";
+        if (totalRawChars == 0) {
+            // A scan without a text layer returns nothing at all, which needs a different fix than
+            // an edition that simply carries too little text for a puzzle.
+            message += "None of the " + std::to_string(opened) + " newest file(s) in " + location.directory +
+                       " contained an extractable text layer (" + joinList(report, ", ") +
+                       "). Upload a PDF with selectable text, or OCR the scan before uploading.";
+        } else {
+            message += "Only " + std::to_string(corpus.lexemes.size()) + " usable words came out of " +
+                       joinList(report, ", ") + " in " + location.directory + " (" +
+                       std::to_string(totalRawChars) + " characters of extractable text). Upload an edition with more text.";
+        }
+        if (readable == 0 && totalRawChars > 0) {
+            message += " Pages shorter than " + std::to_string(kMinPageChars) + " characters are ignored.";
+        }
+        LOG_WARN << message;
+        throw std::runtime_error(message);
     }
 
     {
         std::lock_guard<std::mutex> lock(gCacheMutex);
-        gCache[key] = CacheEntry{corpus, std::chrono::steady_clock::now()};
+        // Drop corpora whose edition has been replaced so the cache cannot grow across editions.
+        const auto now = std::chrono::steady_clock::now();
+        for (auto it = gCache.begin(); it != gCache.end();) {
+            const auto age = std::chrono::duration_cast<std::chrono::seconds>(now - it->second.loadedAt).count();
+            if (age >= kCacheTtlSeconds) {
+                it = gCache.erase(it);
+            } else {
+                ++it;
+            }
+        }
+        gCache[key] = CacheEntry{corpus, now};
     }
     LOG_INFO << "[games] Lexicon ready: " << corpus.lexemes.size() << " words from " << corpus.pageCount
-             << " pages (pdf=" << corpus.fromPdf << ", pageText=" << corpus.fromPageText << ")";
+             << " pages in " << location.bucket << " (pdf=" << corpus.fromPdf << ", pageText=" << corpus.fromPageText << ")";
     co_return corpus;
 }
 
 drogon::Task<Json::Value> PublicationLexicon::listSources(const std::string &publicationId, int limit) {
-    auto db = drogon::app().getDbClient();
     Json::Value data(Json::arrayValue);
-    if (!db) co_return data;
     if (limit < 1) limit = 1;
     if (limit > 30) limit = 30;
 
-    std::string sql =
-        "SELECT n.id::text AS newspaper_id, n.title, n.publication_name, n.publication_id::text AS publication_id, "
-        "COALESCE(n.publication_date::text, '') AS publication_date, "
-        "COUNT(nd.id)::int AS pages_with_text, "
-        "COALESCE(SUM(length(nd.page_text)), 0)::int AS text_chars, "
-        "CASE WHEN n.document_id IS NULL OR n.document_id = '' THEN FALSE ELSE TRUE END AS has_document "
-        "FROM newspapers n "
-        "LEFT JOIN newspaper_details nd ON nd.newspaper_id = n.id AND nd.page_text IS NOT NULL AND length(nd.page_text) > 40 "
-        "WHERE COALESCE(n.is_published, FALSE) = TRUE AND COALESCE(n.is_archived, FALSE) = FALSE ";
-    if (!publicationId.empty()) sql += "AND n.publication_id = $1::uuid ";
-    sql += "GROUP BY n.id, n.title, n.publication_name, n.publication_id, n.publication_date, n.document_id "
-           "ORDER BY n.publication_date DESC NULLS LAST LIMIT " +
-           std::to_string(limit);
+    std::vector<std::string> filterIds;
+    if (!publicationId.empty()) filterIds = co_await hintedDocumentIds(publicationId, "", limit);
 
-    drogon::orm::Result rows(nullptr);
-    if (!publicationId.empty()) rows = co_await db->execSqlCoro(sql, publicationId);
-    else rows = co_await db->execSqlCoro(sql);
+    const std::string preferred = filterIds.empty() ? std::string() : filterIds.front();
+    MasterBuckets location = locateMasterDocuments(static_cast<size_t>(limit), preferred);
+    std::vector<ScannedDocument> documents = location.documents;
 
-    for (size_t i = 0; i < rows.size(); ++i) {
-        const auto &row = rows[i];
+    if (!filterIds.empty()) {
+        std::vector<ScannedDocument> matched;
+        for (const auto &document : documents) {
+            for (const auto &id : filterIds) {
+                if (documentIdMatches(document, id)) {
+                    matched.push_back(document);
+                    break;
+                }
+            }
+        }
+        // Only narrow the listing when the database actually points at stored files.
+        if (!matched.empty()) documents = matched;
+    }
+
+    for (const auto &document : documents) {
+        const std::vector<std::string> pageTexts = collapsedPages(extractPdfPages(document.path, kMaxPdfPagesForReport));
+        const EditionMeta meta = co_await lookupEditionMeta(document.stem);
+        const Corpus corpus = buildCorpus(pagesFromDocument(document, pageTexts, meta), {});
+
+        int pagesWithText = 0;
+        int textChars = 0;
+        int rawTextChars = 0;
+        for (const auto &pageText : pageTexts) {
+            rawTextChars += static_cast<int>(pageText.size());
+            if (pageText.size() < static_cast<size_t>(kMinPageChars)) continue;
+            ++pagesWithText;
+            textChars += static_cast<int>(pageText.size());
+        }
+
         Json::Value item;
-        item["newspaperId"] = row["newspaper_id"].isNull() ? "" : row["newspaper_id"].as<std::string>();
-        item["title"] = row["title"].isNull() ? "" : row["title"].as<std::string>();
-        item["publicationName"] = row["publication_name"].isNull() ? "" : row["publication_name"].as<std::string>();
-        item["publicationId"] = row["publication_id"].isNull() ? "" : row["publication_id"].as<std::string>();
-        item["publicationDate"] = row["publication_date"].isNull() ? "" : row["publication_date"].as<std::string>();
-        item["pagesWithText"] = row["pages_with_text"].isNull() ? 0 : row["pages_with_text"].as<int>();
-        item["textChars"] = row["text_chars"].isNull() ? 0 : row["text_chars"].as<int>();
-        item["hasDocument"] = !row["has_document"].isNull() && row["has_document"].as<bool>();
-        item["ready"] = item["pagesWithText"].asInt() > 0 || item["hasDocument"].asBool();
+        item["fileName"] = document.fileName;
+        item["documentId"] = document.stem;
+        item["path"] = document.path;
+        item["bucket"] = location.bucket;
+        item["sizeBytes"] = static_cast<Json::UInt64>(document.sizeBytes);
+        item["modifiedAt"] = document.modifiedAt;
+        item["pagesRead"] = static_cast<int>(pageTexts.size());
+        item["pagesWithText"] = pagesWithText;
+        item["textChars"] = textChars;
+        item["rawTextChars"] = rawTextChars;
+        item["usableWords"] = static_cast<int>(corpus.lexemes.size());
+        item["hasDocument"] = true;
+        item["ready"] = corpus.lexemes.size() >= kMinLexemes;
+        item["title"] = meta.title.empty() ? document.stem : meta.title;
+        item["publicationName"] = meta.publicationName;
+        item["publicationId"] = meta.publicationId;
+        item["publicationDate"] = meta.publicationDate;
+        item["newspaperId"] = meta.newspaperId;
+        if (rawTextChars == 0) {
+            item["note"] = "No extractable text layer in the first " + std::to_string(kMaxPdfPagesForReport) +
+                           " page(s). Upload a PDF with selectable text, or OCR the scan first.";
+        } else if (corpus.lexemes.size() < kMinLexemes) {
+            item["note"] = "Only " + std::to_string(corpus.lexemes.size()) + " usable words; at least " +
+                           std::to_string(kMinLexemes) + " are needed to build a puzzle.";
+            if (pagesWithText == 0) {
+                item["note"] = item["note"].asString() + " Every page was under " + std::to_string(kMinPageChars) +
+                               " characters of extractable text.";
+            }
+        } else {
+            item["note"] = "";
+        }
         data.append(item);
     }
     co_return data;
+}
+
+Json::Value PublicationLexicon::describeStorage() {
+    const MasterBuckets location = locateMasterDocuments(kMaxCorpusDocuments, "");
+    Json::Value storage;
+    storage["basePath"] = location.basePath;
+    storage["bucket"] = location.bucket;
+    storage["directory"] = location.directory;
+    storage["directoryExists"] = location.directoryExists;
+    storage["bucketsChecked"] = Json::Value(Json::arrayValue);
+    for (const auto &bucket : location.checked) storage["bucketsChecked"].append(bucket);
+    storage["documentsFound"] = static_cast<int>(location.documents.size());
+    storage["newestDocument"] = location.documents.empty() ? "" : location.documents.front().fileName;
+    storage["newestDocumentModifiedAt"] = location.documents.empty() ? "" : location.documents.front().modifiedAt;
+    storage["pagesReadPerDocument"] = kMaxPdfPagesPerDocument;
+    storage["documentsScannedPerCorpus"] = kMaxCorpusDocuments;
+    storage["readableDocumentsPerCorpus"] = kMaxReadableDocuments;
+    storage["minUsableWords"] = static_cast<int>(kMinLexemes);
+    return storage;
 }
 
 } // namespace gnp::services
