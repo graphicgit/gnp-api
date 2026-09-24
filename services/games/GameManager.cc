@@ -374,27 +374,42 @@ drogon::Task<void> GameManager::ensureAchievementCatalog() {
         {"Daily Challenge", "Shared daily puzzles and news questions from the latest edition, with bonus points."},
     };
 
+    // $2 is used twice in each statement below, so PostgreSQL has to deduce one type for it from
+    // two different contexts. Without the explicit ::text casts it deduces character varying from
+    // the inserted column and text from lower($2), then fails the whole statement with
+    // "inconsistent types deduced for parameter $2" (DETAIL: text versus character varying).
+    bool gamesSeeded = true;
     try {
         for (const auto &game : games) {
             co_await db->execSqlCoro(
                 "INSERT INTO games (id, title, description, is_active) "
-                "SELECT $1::uuid, $2, $3, TRUE "
-                "WHERE NOT EXISTS (SELECT 1 FROM games WHERE lower(title) = lower($2))",
+                "SELECT $1::uuid, $2::text, $3, TRUE "
+                "WHERE NOT EXISTS (SELECT 1 FROM games WHERE lower(title) = lower($2::text))",
                 utils::IdGeneratorUtils::generateGuid(), std::string(game.title), std::string(game.description));
         }
+    } catch (const std::exception &e) {
+        gamesSeeded = false;
+        LOG_WARN << "[games] Game catalog seed skipped: " << e.what();
+    }
+
+    bool achievementsSeeded = true;
+    try {
         for (const auto &seed : seeds) {
             co_await db->execSqlCoro(
                 "INSERT INTO achievements_definitions "
                 "(id, name, description, points_required, games_required, game_type, achievement_type, bonus_points) "
-                "SELECT $1::uuid, $2, $3, $4, $5, $6, $7, $8 "
-                "WHERE NOT EXISTS (SELECT 1 FROM achievements_definitions WHERE name = $2)",
+                "SELECT $1::uuid, $2::text, $3, $4, $5, $6, $7, $8 "
+                "WHERE NOT EXISTS (SELECT 1 FROM achievements_definitions WHERE name = $2::text)",
                 utils::IdGeneratorUtils::generateGuid(), std::string(seed.name), std::string(seed.description),
                 seed.points, seed.games, std::string(seed.gameType), std::string(seed.type), seed.bonus);
         }
-        gCatalogReady.store(true);
     } catch (const std::exception &e) {
+        achievementsSeeded = false;
         LOG_WARN << "[games] Achievement catalog seed skipped: " << e.what();
     }
+
+    // Only mark the catalog ready when both seeds completed; otherwise the next call retries.
+    if (gamesSeeded && achievementsSeeded) gCatalogReady.store(true);
     co_return;
 }
 
