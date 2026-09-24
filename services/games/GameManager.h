@@ -325,6 +325,10 @@ namespace gnp::services {
         // Generate unique ID
         std::string generateSessionId();
 
+        drogon::Task<void> ensureAchievementCatalog();
+        drogon::Task<GameSession> openSession(const StartOptions& options);
+        drogon::Task<std::string> ensureDailyChallenges();
+
         // Calculate points based on difficulty
         int getDifficultyMultiplier(const std::string& difficulty);
 

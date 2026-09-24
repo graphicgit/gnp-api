@@ -268,6 +268,11 @@ struct Placed {
     int number = 0;
 };
 
+std::vector<std::string> &placedGrid() {
+    static thread_local std::vector<std::string> grid;
+    return grid;
+}
+
 std::vector<Placed> placeCrossword(const std::vector<const Lexeme *> &words, int size, Rng &rng) {
     std::vector<std::string> grid(static_cast<size_t>(size), std::string(static_cast<size_t>(size), '.'));
     std::vector<Placed> placed;
@@ -340,11 +345,6 @@ std::vector<Placed> placeCrossword(const std::vector<const Lexeme *> &words, int
     // The caller rebuilds from placements, so keep the grid on a well-known side store.
     placedGrid() = grid;
     return placed;
-}
-
-std::vector<std::string> &placedGrid() {
-    static thread_local std::vector<std::string> grid;
-    return grid;
 }
 
 BuiltPuzzle buildCrossword(const Corpus &corpus, const std::string &difficulty, Rng &rng) {

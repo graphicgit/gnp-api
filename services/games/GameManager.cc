@@ -150,7 +150,7 @@ std::chrono::system_clock::time_point fromTrantor(const trantor::Date &date) {
 std::string isoFromTrantor(const drogon::orm::Row &row, const char *name) {
     try {
         if (row[name].isNull()) return "";
-        return row[name].as<trantor::Date>().toDbStringLocal();
+        return trantor::Date::fromDbStringLocal(row[name].as<std::string>()).toDbStringLocal();
     } catch (...) {
         return cellText(row, name);
     }
@@ -274,7 +274,7 @@ GameSession sessionFromRow(const drogon::orm::Row &row) {
     session.completionTimeSeconds = cellInt(row, "completion_time_seconds");
     session.progressData = parseJson(cellText(row, "progress_data"));
     try {
-        if (!row["start_time"].isNull()) session.startTime = fromTrantor(row["start_time"].as<trantor::Date>());
+        if (!row["start_time"].isNull()) session.startTime = fromTrantor(trantor::Date::fromDbStringLocal(row["start_time"].as<std::string>()));
         else session.startTime = std::chrono::system_clock::now();
     } catch (...) {
         session.startTime = std::chrono::system_clock::now();
@@ -428,7 +428,7 @@ drogon::Task<dto::BaseApiResponse> GameManager::getAllGameCategories() {
         item["gameType"] = type;
         item["title"] = catalogTitle(type);
         item["isActive"] = active[type];
-        item["basePoints"] = type == "daily" ? constants::GamePoints::DAILY_CHALLENGE_BONUS : basePointsFor(type);
+        item["basePoints"] = std::string(type) == "daily" ? constants::GamePoints::DAILY_CHALLENGE_BONUS : basePointsFor(type);
         item["gameTypeCode"] = gameTypeCode(type);
         if (std::string(type) == "sudoku") {
             item["description"] = "Fill a 9x9 grid with nine letters drawn from a word in a stored newspaper.";
@@ -544,6 +544,7 @@ drogon::Task<dto::BaseApiResponse> GameManager::startGame(const StartOptions &op
         co_await ensureAchievementCatalog();
         StartOptions resolved = options;
         if (!resolved.topics.empty()) {
+            bool topicsFailed = false;
             try {
                 auto session = co_await openSession(resolved);
                 Json::Value result = sessionClientJson(session, false);
@@ -552,6 +553,9 @@ drogon::Task<dto::BaseApiResponse> GameManager::startGame(const StartOptions &op
             } catch (const std::exception &e) {
                 const std::string message = e.what();
                 if (message.find("requested topics") == std::string::npos) throw;
+                topicsFailed = true;
+            }
+            if (topicsFailed) {
                 resolved.topics.clear();
                 auto session = co_await openSession(resolved);
                 Json::Value result = sessionClientJson(session, false);
@@ -757,7 +761,7 @@ drogon::Task<int> GameManager::calculateStreakBonus(const std::string &userId) {
             "SELECT COALESCE(MAX(current_streak), 0)::int AS streak FROM user_game_stats WHERE user_id = $1::uuid",
             userId);
         const int streak = rows.empty() ? 0 : cellInt(rows[0], "streak");
-        co_return std::min(streak, constants::GamePoints::MAX_STREAK_BONUS) * kStreakBonusPerDay;
+        co_return std::min(streak, static_cast<int>(constants::GamePoints::MAX_STREAK_BONUS)) * kStreakBonusPerDay;
     } catch (...) {
         co_return 0;
     }
@@ -1306,7 +1310,7 @@ drogon::Task<UserStats> GameManager::getUserStats(const std::string &userId) {
         }
         try {
             if (!rows[i]["last_played"].isNull()) {
-                auto playedAt = fromTrantor(rows[i]["last_played"].as<trantor::Date>());
+                auto playedAt = fromTrantor(trantor::Date::fromDbStringLocal(rows[i]["last_played"].as<std::string>()));
                 if (playedAt > stats.lastPlayed) stats.lastPlayed = playedAt;
             }
         } catch (...) {}
@@ -1469,7 +1473,7 @@ drogon::Task<std::vector<Achievement>> GameManager::getUserAchievements(const st
         item.gamesRequired = cellInt(rows[i], "games_required");
         item.isUnlocked = true;
         try {
-            if (!rows[i]["unlocked_at"].isNull()) item.unlockedAt = fromTrantor(rows[i]["unlocked_at"].as<trantor::Date>());
+            if (!rows[i]["unlocked_at"].isNull()) item.unlockedAt = fromTrantor(trantor::Date::fromDbStringLocal(rows[i]["unlocked_at"].as<std::string>()));
         } catch (...) {}
         items.push_back(std::move(item));
     }
@@ -1612,7 +1616,7 @@ drogon::Task<std::vector<LeaderboardEntry>> GameManager::getGlobalLeaderboard(in
         entry.winRate = cellDouble(rows[i], "win_rate");
         entry.rank = cellInt(rows[i], "rank");
         try {
-            if (!rows[i]["last_active"].isNull()) entry.lastActive = fromTrantor(rows[i]["last_active"].as<trantor::Date>());
+            if (!rows[i]["last_active"].isNull()) entry.lastActive = fromTrantor(trantor::Date::fromDbStringLocal(rows[i]["last_active"].as<std::string>()));
         } catch (...) {}
         entries.push_back(std::move(entry));
     }
@@ -2304,23 +2308,6 @@ drogon::Task<dto::BaseApiResponse> GameManager::seedAchievementsView() {
 drogon::Task<dto::BaseApiResponse> GameManager::refreshLexiconView() {
     PublicationLexicon::clearCache();
     co_return ok("Publication lexicon cache cleared. The next puzzle will reread stored editions.");
-}
-
-} // namespace gnp::services
-o_return ok("Achievement catalog is ready.", result);
-}
-
-drogon::Task<dto::BaseApiResponse> GameManager::refreshLexiconView() {
-    PublicationLexicon::clearCache();
-    co_return ok("Publication lexicon cache cleared. The next puzzle will reread stored editions.");
-}
-
-} // namespace gnp::services
-o_return ok("Publication lexicon cache cleared. The next puzzle will reread stored editions.");
-}
-
-} // namespace gnp::services
-he cleared. The next puzzle will reread stored editions.");
 }
 
 } // namespace gnp::services
