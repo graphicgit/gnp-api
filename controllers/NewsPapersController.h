@@ -9,30 +9,30 @@ using namespace drogon;
 class NewsPapersController
     : public drogon::HttpController<NewsPapersController> {
 public:
-    static constexpr const char *PREFIX = "/api/v1/news-papers";
+    static constexpr const char *PREFIX = "/api/v1/news-papers/";
   METHOD_LIST_BEGIN
-  ADD_METHOD_TO(NewsPapersController::getAll, std::string(PREFIX) + "/get-all", Get, Options);
-  ADD_METHOD_TO(NewsPapersController::getLatest, std::string(PREFIX) + "/get-latest", Get, Options);
-  ADD_METHOD_TO(NewsPapersController::getTopStories, std::string(PREFIX) + "/get-top-stories", Get, Options);
-  ADD_METHOD_TO(NewsPapersController::getRedactedDetails, std::string(PREFIX) + "/get-redacted-details", Get, Options);
-  ADD_METHOD_TO(NewsPapersController::getFullDetails, std::string(PREFIX) + "/get-full-details", Get);
+  ADD_METHOD_TO(NewsPapersController::getAll, std::string(PREFIX) + "get-all", Get, Options);
+  ADD_METHOD_TO(NewsPapersController::getLatest, std::string(PREFIX) + "get-latest", Get, Options);
+  ADD_METHOD_TO(NewsPapersController::getTopStories, std::string(PREFIX) + "get-top-stories", Get, Options);
+  ADD_METHOD_TO(NewsPapersController::getRedactedDetails, std::string(PREFIX) + "get-redacted-details", Get, Options);
+  ADD_METHOD_TO(NewsPapersController::getFullDetails, std::string(PREFIX) + "get-full-details", Get);
 
-  ADD_METHOD_TO(NewsPapersController::GetFreeNewsPaperDetailsByPublication, std::string(PREFIX) + "/get-free-newspaper-details-by-publication", Get, Options);
+  ADD_METHOD_TO(NewsPapersController::GetFreeNewsPaperDetailsByPublication, std::string(PREFIX) + "get-free-newspaper-details-by-publication", Get, Options);
 
-  ADD_METHOD_TO(NewsPapersController::GetPaidNewsPaperDetailsByPublication, std::string(PREFIX) + "/get-paid-newspaper-details-by-publication", Get, Options);
+  ADD_METHOD_TO(NewsPapersController::GetPaidNewsPaperDetailsByPublication, std::string(PREFIX) + "get-paid-newspaper-details-by-publication", Get, Options);
 
-  ADD_METHOD_TO(NewsPapersController::publish, std::string(PREFIX) + "/publish", Get);
+  ADD_METHOD_TO(NewsPapersController::publish, std::string(PREFIX) + "publish", Get);
 
-  ADD_METHOD_TO(NewsPapersController::incrementViewCount, std::string(PREFIX) + "/increment-view-count", Get, Options, "JwtAuthFilter");
+  ADD_METHOD_TO(NewsPapersController::incrementViewCount, std::string(PREFIX) + "increment-view-count", Get, Options, "JwtAuthFilter");
 
-  ADD_METHOD_TO(NewsPapersController::trackUserEngagement, std::string(PREFIX) + "/track-user-engagement", Post, Options, "JwtAuthFilter");
+  ADD_METHOD_TO(NewsPapersController::trackUserEngagement, std::string(PREFIX) + "track-user-engagement", Post, Options, "JwtAuthFilter");
 
-  ADD_METHOD_TO(NewsPapersController::updateUserEngagement, std::string(PREFIX) + "/update-user-engagement", Post, Options, "JwtAuthFilter");
+  ADD_METHOD_TO(NewsPapersController::updateUserEngagement, std::string(PREFIX) + "update-user-engagement", Post, Options, "JwtAuthFilter");
 
-  ADD_METHOD_TO(NewsPapersController::unPublish, std::string(PREFIX) + "/unpublish", Get);
-  ADD_METHOD_TO(NewsPapersController::ingestPublication, std::string(PREFIX) + "/ingest", Post);
-  ADD_METHOD_TO(NewsPapersController::update, std::string(PREFIX) + "/update", Post);
-  ADD_METHOD_TO(NewsPapersController::deleteNewsPaper, std::string(PREFIX) + "/delete", Delete);
+  ADD_METHOD_TO(NewsPapersController::unPublish, std::string(PREFIX) + "unpublish", Get);
+  ADD_METHOD_TO(NewsPapersController::ingestPublication, std::string(PREFIX) + "ingest", Post);
+  ADD_METHOD_TO(NewsPapersController::update, std::string(PREFIX) + "update", Post);
+  ADD_METHOD_TO(NewsPapersController::deleteNewsPaper, std::string(PREFIX) + "delete", Delete);
   METHOD_LIST_END
 
   // handler methods

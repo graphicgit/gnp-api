@@ -32,8 +32,8 @@ namespace gnp::services {
         req->setParameter("page[limit]", std::to_string(limit));
         req->setParameter("page[offset]", std::to_string(offset));
         req->addHeader("Authorization", "Bearer " + joomlaApiKey);
-        req->addHeader("Accept", "application/json");
-
+        //  req->addHeader("Accept", "application/json");
+        req->addHeader("Accept", "application/vnd.api+json");
         auto resp = co_await client->sendRequestCoro(req);
 
         if (!resp) {
