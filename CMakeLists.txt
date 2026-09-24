@@ -155,6 +155,12 @@ add_executable(${PROJECT_NAME} main.cc
         dto/AffiliateSettingsDto.h
         services/games/GameManager.h
         services/games/GameManager.cc
+        services/games/GameTypes.h
+        services/games/Corpus.h
+        services/games/PublicationLexicon.h
+        services/games/PublicationLexicon.cc
+        services/games/PuzzleGenerator.h
+        services/games/PuzzleGenerator.cc
         services/rag/RagManager.h
         services/rag/RagManager.cc
         services/telegram/TelegramService.cc
