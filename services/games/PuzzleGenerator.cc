@@ -225,12 +225,18 @@ bool canPlace(const std::vector<std::string> &grid, const std::string &word, int
     const int size = static_cast<int>(grid.size());
     const int dr = across ? 0 : 1;
     const int dc = across ? 1 : 0;
+    // Only a cell that already holds a letter blocks a placement; '.' is still free space, the same
+    // rule the per-cell checks below use. Testing for '#' here rejected every word on an empty grid,
+    // because nothing is '#' before the grid is filled, so no crossword could ever be placed.
+    auto holdsLetter = [&](int rr, int cc) {
+        return inBounds(size, rr, cc) && grid[rr][cc] != '.' && grid[rr][cc] != '#';
+    };
     const int beforeR = row - dr;
     const int beforeC = col - dc;
-    if (inBounds(size, beforeR, beforeC) && grid[beforeR][beforeC] != '#') return false;
+    if (holdsLetter(beforeR, beforeC)) return false;
     const int afterR = row + dr * static_cast<int>(word.size());
     const int afterC = col + dc * static_cast<int>(word.size());
-    if (inBounds(size, afterR, afterC) && grid[afterR][afterC] != '#') return false;
+    if (holdsLetter(afterR, afterC)) return false;
 
     int intersections = 0;
     for (size_t i = 0; i < word.size(); ++i) {
@@ -772,7 +778,14 @@ BuiltPuzzle buildRiddle(const Corpus &corpus, const std::string &difficulty, Rng
         if (anagram) {
             prompt = "Unscramble this word from " + publicationLabel(lexeme->source) + ": " + scramble(lexeme->word, rng) +
                      " (" + std::to_string(lexeme->word.size()) + " letters).";
-            if (!lexeme->snippet.empty()) prompt += " Context: \"" + (lexeme->snippet.size() > 120 ? lexeme->snippet.substr(0, 117) + "..." : lexeme->snippet) + "\"";
+            // The lexicon cuts the snippet around the answer, so an untouched snippet spells the
+            // answer out and the leak guard below would drop every anagram. Mask it before attaching.
+            if (!lexeme->snippet.empty()) {
+                const std::string context = blankWord(lexeme->snippet, lexeme->word);
+                if (!context.empty()) {
+                    prompt += " Context: \"" + (context.size() > 120 ? context.substr(0, 117) + "..." : context) + "\"";
+                }
+            }
         } else {
             std::string blanked = blankWord(lexeme->sentence.empty() ? lexeme->snippet : lexeme->sentence, lexeme->word);
             if (blanked.empty()) continue;
